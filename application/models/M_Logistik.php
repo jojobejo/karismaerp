@@ -4680,12 +4680,18 @@ FROM (
                     WHEN COALESCE(a.qty_kecil, 0) > 0 THEN COALESCE(a.qty_kecil, 0)
                     ELSE COALESCE(a.qty, 0) * {$dimensiExpr}
                 END)";
-        $qtyOrderBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyOrderKecilExpr} / {$dimensiExpr} ELSE COALESCE(a.qty, 0) END)";
+        $qtyOrderBoxExpr = "(CASE
+                    WHEN {$unitKeyExpr} = 'box' AND {$dimensiExpr} > 0 THEN {$qtyOrderKecilExpr} / {$dimensiExpr}
+                    ELSE 0
+                END)";
         $qtyOrderKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END) ELSE 0 END)";
         $qtyDiterimaKecilExpr = "COALESCE(r.qty_diterima, 0)";
         $qtyInKecilExpr = "(COALESCE(r.qty_diterima, 0) + COALESCE(tmp.qty_in, 0))";
         $qtyDiterimaBaseExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
-        $qtyDiterimaBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
+        $qtyDiterimaBoxExpr = "(CASE
+                    WHEN {$unitKeyExpr} = 'box' AND {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr}
+                    ELSE 0
+                END)";
         $qtyDiterimaKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END) ELSE 0 END)";
         $hargaSatuanExcludeExpr = "COALESCE(NULLIF(a.harga_satuan_kecil_exclude, 0), NULLIF(a.harga_satuan_exclude, 0), NULLIF(a.hrg_satuan, 0), 0)";
         $hargaSatuanIncludeExpr = "(CASE
@@ -7528,6 +7534,97 @@ FROM (
         return $this->db->get('tb_lpb_log')->result_array();
     }
 
+    public function get_lpb_sales_unpost_blockers($idLpb)
+    {
+        $idLpb = (int) $idLpb;
+        if ($idLpb <= 0 || !$this->db->table_exists('tb_lpb_detail')) {
+            return [];
+        }
+
+        $blockers = [];
+
+        if ($this->db->table_exists('tbso_faktur_penjualan') && $this->db->table_exists('tbso_faktur_detail')) {
+            $rows = $this->db->query("
+                SELECT
+                    ld.id_detail_lpb,
+                    fd.id AS source_pk,
+                    f.id_faktur,
+                    fd.id AS id_faktur_detail,
+                    f.no_faktur,
+                    f.tanggal_faktur,
+                    f.status AS status_faktur,
+                    fd.kd_barang,
+                    COALESCE(NULLIF(TRIM(fd.nama_barang), ''), fd.kd_barang) AS nama_barang,
+                    fd.no_lot,
+                    fd.expired_date,
+                    COALESCE(ld.qty_diterima, 0) AS qty_lpb,
+                    COALESCE(fd.qty, 0) AS qty_terjual,
+                    'tbso_faktur_detail' AS source_table
+                FROM tb_lpb_detail ld
+                INNER JOIN tb_lpb l ON l.id_lpb = ld.id_lpb
+                INNER JOIN tbso_faktur_detail fd
+                    ON TRIM(fd.kd_barang) = TRIM(ld.kd_barang)
+                    AND COALESCE(NULLIF(TRIM(fd.no_lot), ''), '-') = COALESCE(NULLIF(TRIM(ld.no_lot), ''), '-')
+                    AND COALESCE(fd.expired_date, '1000-01-01') = COALESCE(ld.expired_date, '1000-01-01')
+                    AND (
+                        fd.gudang_id IS NULL
+                        OR fd.gudang_id = ''
+                        OR l.gudang_id IS NULL
+                        OR CAST(fd.gudang_id AS CHAR) = CAST(l.gudang_id AS CHAR)
+                    )
+                INNER JOIN tbso_faktur_penjualan f
+                    ON f.id_faktur = fd.id_faktur
+                    AND COALESCE(f.status, 'confirmed') <> 'cancelled'
+                WHERE ld.id_lpb = ?
+                ORDER BY f.tanggal_faktur DESC, f.no_faktur ASC, fd.kd_barang ASC
+                LIMIT 200
+            ", [$idLpb])->result_array();
+
+            $blockers = array_merge($blockers, $rows);
+        }
+
+        if ($this->db->table_exists('tb_detail_do')) {
+            $rows = $this->db->query("
+                SELECT
+                    ld.id_detail_lpb,
+                    dd.id AS source_pk,
+                    f.id_faktur,
+                    NULL AS id_faktur_detail,
+                    dd.kd_faktur AS no_faktur,
+                    dd.tgl_transaksi AS tanggal_faktur,
+                    COALESCE(f.status, CAST(dd.status AS CHAR)) AS status_faktur,
+                    dd.kd_barang,
+                    COALESCE(NULLIF(TRIM(dd.nama_barang), ''), dd.kd_barang) AS nama_barang,
+                    dd.no_lot,
+                    dd.tgl_exp AS expired_date,
+                    COALESCE(ld.qty_diterima, 0) AS qty_lpb,
+                    COALESCE(dd.qty, 0) AS qty_terjual,
+                    'tb_detail_do' AS source_table
+                FROM tb_lpb_detail ld
+                INNER JOIN tb_detail_do dd
+                    ON TRIM(dd.kd_barang) = TRIM(ld.kd_barang)
+                    AND COALESCE(NULLIF(TRIM(dd.no_lot), ''), '-') = COALESCE(NULLIF(TRIM(ld.no_lot), ''), '-')
+                    AND (
+                        dd.tgl_exp = ld.expired_date
+                        OR DATE(STR_TO_DATE(dd.tgl_exp, '%Y-%m-%d')) = ld.expired_date
+                        OR DATE(STR_TO_DATE(dd.tgl_exp, '%d/%m/%Y')) = ld.expired_date
+                        OR DATE(STR_TO_DATE(dd.tgl_exp, '%d-%m-%Y')) = ld.expired_date
+                    )
+                LEFT JOIN tbso_faktur_penjualan f
+                    ON f.no_faktur = dd.kd_faktur
+                WHERE ld.id_lpb = ?
+                    AND COALESCE(dd.status, 0) = 4
+                    AND (f.no_faktur IS NULL OR COALESCE(f.status, 'confirmed') <> 'cancelled')
+                ORDER BY dd.tgl_transaksi DESC, dd.kd_faktur ASC, dd.kd_barang ASC
+                LIMIT 200
+            ", [$idLpb])->result_array();
+
+            $blockers = array_merge($blockers, $rows);
+        }
+
+        return $blockers;
+    }
+
     public function update_lpb_status($idLpb, $status, $dilakukanOleh, $keterangan = '')
     {
         $row = $this->db
@@ -7541,6 +7638,10 @@ FROM (
         }
 
         $status = (int) $status === 0 ? 0 : 1;
+        if ($status === 0 && !empty($this->get_lpb_sales_unpost_blockers($idLpb))) {
+            return FALSE;
+        }
+
         $updated = $this->db
             ->where('id_lpb', (int) $idLpb)
             ->update('tb_lpb', ['status_lpb' => $status]);

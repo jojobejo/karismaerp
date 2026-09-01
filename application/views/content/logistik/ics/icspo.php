@@ -11,6 +11,7 @@ $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
 $canLpbManual = !empty($can_lpb_manual);
 $canLpbReport = !empty($can_lpb_report);
+$lpbRevisionBadgeCount = isset($lpb_revision_badge_count) ? (int) $lpb_revision_badge_count : 0;
 $canViewLpbNominal = !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal);
 $isDataLpbPage = !empty($is_data_lpb_page);
 $isAdmlpbUser = !empty($is_admlpb_user);
@@ -275,6 +276,12 @@ $formatDate = function ($dateStr) {
                                         </a>
                                     </div>
                                     <?php endif; ?>
+                                    <div class="col-md-2 col-sm-6 mb-2">
+                                        <a class="btn btn-danger btn-block" href="<?= base_url('ics/lpb_revision') ?>">
+                                            <i class="fas fa-exclamation-triangle"></i> List Revisi Harga LPB
+                                            <span class="badge badge-light ml-1"><?= $lpbRevisionBadgeCount ?></span>
+                                        </a>
+                                    </div>
                                     <?php if ($canSyncPo && $showLpbActions) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
