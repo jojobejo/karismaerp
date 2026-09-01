@@ -857,10 +857,10 @@ function addNewRow(d) {
     html += '</td>';
 
     // Qty Box
-    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + qtyBox + '" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + (qtyBox > 0 ? qtyBox : '') + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Eceran
-    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + qtySat + '" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + (qtySat > 0 ? qtySat : '') + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Total Pcs
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-total-pcs">' + fmtNum(qTotal,0) + '</td>';
@@ -869,10 +869,10 @@ function addNewRow(d) {
     html += '<td style="text-align:center;"><input type="text" name="satuan[]" class="cell-input input-satuan" style="text-align:center;" value="' + escAttr(sat) + '" readonly /></td>';
 
     // Harga Satuan
-    html += '<td><input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" class="cell-input input-hrg-satuan" style="text-align:right;" value="' + (hrg > 0 ? formatHargaInput(hrg) : '') + '" placeholder="0" oninput="onHargaInput(this)" /></td>';
+    html += '<td><input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" class="cell-input input-hrg-satuan" style="text-align:right;" value="' + (hrg > 0 ? formatHargaInput(hrg) : '') + '" placeholder="0" onfocus="this.select()" oninput="onHargaInput(this)" /></td>';
 
     // Disc %
-    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + disc + '" oninput="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + (disc > 0 ? disc : '') + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" /></td>';
 
     // Subtotal
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-subtotal">' + fmtNum(sub, 0) + '</td>';
@@ -1179,8 +1179,8 @@ function pilihBarang() {
     }
     $selExp.trigger('change');
 
-    $tr.find('.input-qty-box').val(0);
-    $tr.find('.input-qty-ecer').val(0);
+    $tr.find('.input-qty-box').val('');
+    $tr.find('.input-qty-ecer').val('');
     calcRow($tr);
 
     $('#modalBarang').modal('hide');
