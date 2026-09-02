@@ -25,7 +25,7 @@ class C_Ics extends CI_Controller
 
     private function is_retur_method($method)
     {
-        return in_array($method, ['dash_retur', 'detail_retur', 'retur_pembelian', 'retur_pembelian_adjustment'], true)
+        return in_array($method, ['dash_retur', 'detail_retur', 'retur_pembelian', 'retur_pembelian_adjustment', 'retur_pembelian_monitoring'], true)
             || strpos((string)$method, 'ajax_retur') === 0;
     }
 
@@ -5368,6 +5368,11 @@ class C_Ics extends CI_Controller
     // RETUR
     public function dash_retur()
     {
+        if ($this->is_strict_admlpb_user()) {
+            redirect('ics/retur/pembelian/monitoring');
+            return;
+        }
+
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $this->M_ReturPembelian->ensure_schema();
         $data['retur_all']  = $this->M_Ics->get_retur_dashboard();
@@ -5395,6 +5400,11 @@ class C_Ics extends CI_Controller
 
     public function retur_pembelian()
     {
+        if ($this->is_strict_admlpb_user()) {
+            redirect('ics/retur/pembelian/monitoring');
+            return;
+        }
+
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $this->M_ReturPembelian->ensure_schema();
         $data['retur_pembelian_rows'] = $this->M_ReturPembelian->header_rows(100);
@@ -5403,6 +5413,121 @@ class C_Ics extends CI_Controller
         $this->load->view('content/logistik/ics/returform_pembelian.php', $data);
         $this->load->view('content/logistik/ics/ajax_retur_pembelian.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function retur_pembelian_monitoring()
+    {
+        $data['page_title'] = 'KARISMA - PROGRESS & MONITORING RETUR PEMBELIAN';
+        $this->M_ReturPembelian->ensure_schema();
+
+        $filters = [
+            'status_persiapan' => $this->input->get('status_persiapan', true),
+            'status_dokumen'   => $this->input->get('status_dokumen', true),
+            'start_date'       => $this->input->get('start_date', true),
+            'end_date'         => $this->input->get('end_date', true),
+            'search'           => $this->input->get('search', true),
+        ];
+
+        $data['filters'] = $filters;
+        $data['monitoring_rows'] = $this->M_ReturPembelian->monitoring_rows(200, $filters);
+        $data['is_admlpb_user'] = $this->is_admlpb_user();
+        $data['is_admin_po'] = $this->is_admin_po_jobdesk();
+        $data['can_update_persiapan'] = $this->can_update_persiapan_retur();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/retur_pembelian_monitoring.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_retur_pembelian_monitoring_detail($idRetur = null)
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $idRetur = (int)($idRetur ?: $this->input->get('id_retur_pembelian', true));
+        if ($idRetur <= 0) {
+            $this->json_response(['status' => false, 'message' => 'ID Retur Pembelian tidak valid.', 'items' => []]);
+            return;
+        }
+
+        $items = $this->M_ReturPembelian->retur_items_detail($idRetur);
+        $this->json_response([
+            'status' => true,
+            'message' => 'Detail barang retur berhasil dimuat.',
+            'items' => $items
+        ]);
+    }
+
+    public function ajax_retur_pembelian_update_persiapan()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        if (!$this->can_update_persiapan_retur()) {
+            $this->json_response([
+                'status' => false,
+                'message' => 'Akses ditolak. Hanya bagian Logistik / Adm LPB yang dapat mengupdate status persiapan barang retur.',
+                'errors' => ['ACCESS_DENIED']
+            ]);
+            return;
+        }
+
+        $idRetur = (int)$this->input->post('id_retur_pembelian', true);
+        $statusPersiapan = $this->input->post('status_persiapan', true);
+        $catatan = $this->input->post('catatan_persiapan', true);
+
+        if ($idRetur <= 0 || empty($statusPersiapan)) {
+            $this->json_response([
+                'status' => false,
+                'message' => 'Data input tidak lengkap.',
+                'errors' => ['INVALID_INPUT']
+            ]);
+            return;
+        }
+
+        $result = $this->M_ReturPembelian->update_status_persiapan(
+            $idRetur,
+            $statusPersiapan,
+            $catatan,
+            $this->active_user_name()
+        );
+
+        $this->json_response([
+            'status'  => !empty($result['success']),
+            'success' => !empty($result['success']),
+            'message' => $result['message'] ?? '',
+            'data'    => $result['data'] ?? [],
+            'errors'  => $result['errors'] ?? []
+        ]);
+    }
+
+    private function can_update_persiapan_retur()
+    {
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        if ($username === 'admin' || (bool)$this->session->userdata('is_admin_dashboard')) {
+            return true;
+        }
+
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+
+        return in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'LOGISTIK', 'ADMINICS', 'CHECKER'], true)
+            || strpos($departemen, 'LOGISTIK') !== false
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true);
+    }
+
+    private function is_strict_admlpb_user()
+    {
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        if ($username === 'admin' || (bool)$this->session->userdata('is_admin_dashboard')) {
+            return false;
+        }
+
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        return in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], true)
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true);
     }
 
     public function ajax_retur_pembelian_lpb_select2()
@@ -5539,6 +5664,11 @@ class C_Ics extends CI_Controller
 
     public function retur_pembelian_adjustment()
     {
+        if ($this->is_strict_admlpb_user()) {
+            redirect('ics/retur/pembelian/monitoring');
+            return;
+        }
+
         if (!$this->can_view_lpb_nominal()) {
             show_error('Akses adjustment harga LPB ditolak karena berisi nominal rupiah.', 403, 'Akses Ditolak');
             return;

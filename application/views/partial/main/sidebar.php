@@ -669,26 +669,46 @@
             <li class="nav-item">
               <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
-                <p>
-                  Dashboard
-                </p>
+                <p>Dashboard</p>
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('sales_order') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-signature"></i>
+                <p>Sales Order</p>
+              </a>
+            </li>
+            <?php if ($this->session->userdata('jobdesk') === 'ADMPNJ') : ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('admin/transaksi') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>Faktur Penjualan</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order_loby') ?>" class="nav-link">
+                <i class="nav-icon fas fa-store"></i>
+                <p>Sales Order Loby</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_report') ?>" class="nav-link">
+                <i class="nav-icon fas fa-chart-bar"></i>
+                <p>Sales Report</p>
+              </a>
+            </li>
+            <?php endif; ?>
+            <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan') ?>" class="nav-link">
                 <i class="nav-icon fas fa-file-invoice"></i>
-                <p>
-                  Daftar SPR
-                </p>
+                <p>Daftar SPR</p>
               </a>
             </li>
             <?php if ($this->session->userdata('jobdesk') !== 'ADMPNJ') : ?>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
-                <p>
-                  Retur Penjualan
-                </p>
+                <p>Retur Penjualan</p>
               </a>
             </li>
             <?php endif; ?>
@@ -701,17 +721,13 @@
             <li class="nav-item">
               <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
                 <i class="nav-icon fas fa-money-bill-wave"></i>
-                <p>
-                  Kas Bon
-                </p>
+                <p>Kas Bon</p>
               </a>
             </li>
             <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
-                <p>
-                  Log Out
-                </p>
+                <p>Log Out</p>
               </a>
             </li>
           </ul>

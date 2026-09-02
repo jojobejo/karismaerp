@@ -885,7 +885,7 @@ class M_SalesOrderLoby extends CI_Model
             'tanggal_faktur'     => $tgl_faktur,
             'tanggal_selesai_do' => $tgl_faktur, // Langsung selesai untuk LOBY
             'catatan'            => $faktur_header['catatan'] ?? 'Penjualan Langsung Loby',
-            'status'             => 'selesai_do', // Siap masuk pembayaran keuangan
+            'status'             => 'selesai', // Siap masuk pembayaran keuangan
             'so_source'          => 'LOBY',
             'cara_pembayaran'    => 'cash',
             'create_by'          => $faktur_header['create_by'],

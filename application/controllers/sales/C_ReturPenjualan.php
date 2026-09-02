@@ -27,9 +27,15 @@ class C_ReturPenjualan extends CI_Controller
             redirect('Auth');
         }
 
+        // Method get_pending_notifications dipanggil secara global oleh footer.php untuk polling notifikasi
+        $method = $this->router->fetch_method();
+        if ($method === 'get_pending_notifications') {
+            return;
+        }
+
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
+        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
         if (!in_array($jobdesk, $allowed_jobdesks)) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }

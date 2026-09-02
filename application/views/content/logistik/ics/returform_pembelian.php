@@ -22,6 +22,9 @@
                             <a href="<?= base_url('ics/retur') ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
                         </div>
                         <div class="col-auto">
+                            <a href="<?= base_url('ics/retur/pembelian/monitoring') ?>" class="btn btn-info"><i class="fas fa-tasks"></i> Progres/Monitor Retur</a>
+                        </div>
+                        <div class="col-auto">
                             <a href="<?= base_url('ics/retur/pembelian/adjustment') ?>" class="btn btn-warning"><i class="fas fa-balance-scale"></i> Adjustment Harga LPB</a>
                         </div>
                     </div>

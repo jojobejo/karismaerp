@@ -709,9 +709,9 @@ class M_Transaksi extends CI_Model
                     $res = $this->accounting_source_service->post_sales_invoice($faktur['no_faktur'], '', $userId, true);
                     if (!$res['success']) throw new Exception('Gagal posting jurnal faktur: ' . ($res['message'] ?? ''));
 
-                    // Pastikan status faktur posted
+                    // Kembalikan status faktur ke selesai setelah berhasil diposting ulang
                     $this->db->where('id_faktur', (int)$faktur['id_faktur'])->update('tbso_faktur_penjualan', [
-                        'status' => 'posted',
+                        'status'    => 'selesai',
                         'update_by' => $userId,
                         'update_at' => date('Y-m-d H:i:s'),
                     ]);
@@ -789,6 +789,160 @@ class M_Transaksi extends CI_Model
 
             $this->db->trans_commit();
             return ['success' => true, 'message' => 'Transaksi berhasil di-repost dan jurnal akuntansi kembali aktif.'];
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    // =========================================================================
+    // 4b. UNPOST TRANSAKSI — Bersihkan jurnal & kembalikan status ke draft
+    // =========================================================================
+
+    /**
+     * Melakukan unpost transaksi: menghapus jurnal yang terkait dan mengubah
+     * status transaksi menjadi 'draft' sehingga dapat diposting kembali.
+     */
+    public function unpost_transaction($category, $idTransaksi, $userId = null)
+    {
+        $category = strtolower(trim((string)$category));
+        $this->db->trans_begin();
+
+        try {
+            $user_nama     = $this->session->userdata('nama') ?: ($this->session->userdata('username') ?: 'Admin');
+            $user_username = $this->session->userdata('username') ?: 'admin';
+            $now           = date('Y-m-d H:i:s');
+
+            switch ($category) {
+                case 'penjualan':
+                case 'faktur_penjualan':
+                    $faktur = $this->db
+                        ->where('id_faktur', (int)$idTransaksi)
+                        ->or_where('no_faktur', $idTransaksi)
+                        ->get('tbso_faktur_penjualan')
+                        ->row_array();
+                    if (!$faktur) throw new Exception('Faktur penjualan tidak ditemukan.');
+
+                    // Hapus jurnal terkait
+                    $this->_delete_old_journals('SALES', 'FAKTUR_PENJUALAN', $faktur['no_faktur'], 'SALES_INVOICE-FAKTUR-' . $faktur['no_faktur']);
+                    if ($this->db->table_exists('tbso_faktur_jurnal')) {
+                        $this->db->delete('tbso_faktur_jurnal', ['id_faktur' => (int)$faktur['id_faktur']]);
+                    }
+
+                    // Kembalikan status faktur ke draft
+                    $this->db->where('id_faktur', (int)$faktur['id_faktur'])
+                        ->update('tbso_faktur_penjualan', [
+                            'status'    => 'draft',
+                            'update_by' => $userId,
+                            'update_at' => $now,
+                        ]);
+
+                    // Catat log ke tbso_faktur_log
+                    if ($this->db->table_exists('tbso_faktur_log')) {
+                        $this->db->insert('tbso_faktur_log', [
+                            'no_so'          => $faktur['no_so'],
+                            'no_faktur'      => $faktur['no_faktur'],
+                            'id_faktur'      => (int)$faktur['id_faktur'],
+                            'aksi'           => 'UNPOST_FAKTUR',
+                            'keterangan'     => 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.',
+                            'dilakukan_oleh' => $user_nama . ' (' . $user_username . ')',
+                            'ip_address'     => $this->input->ip_address(),
+                            'created_at'     => $now,
+                        ]);
+                    }
+                    break;
+
+                case 'pembelian':
+                case 'lpb':
+                    $lpb = $this->db->where('id_lpb', (int)$idTransaksi)->get('tb_lpb')->row_array();
+                    if (!$lpb) throw new Exception('LPB pembelian tidak ditemukan.');
+
+                    // Hapus jurnal LPB
+                    $this->_delete_old_journals('LOGISTIK', 'LPB_FINAL', (string)$lpb['id_lpb'], 'GOODS_RECEIPT-LPB-' . $lpb['id_lpb']);
+
+                    // Kembalikan status LPB ke draft (status_lpb = 0)
+                    $this->db->where('id_lpb', (int)$lpb['id_lpb'])
+                        ->update('tb_lpb', [
+                            'status_lpb' => 0,
+                            'updated_at' => $now,
+                        ]);
+                    break;
+
+                case 'pembayaran_customer':
+                    $pf = $this->db->where('id_pembayaran', (int)$idTransaksi)->get('tbkeu_pembayaran_faktur')->row_array();
+                    if (!$pf) throw new Exception('Pembayaran customer tidak ditemukan.');
+
+                    $this->_delete_old_journals('KEUANGAN', 'PEMBAYARAN_FAKTUR', (string)$pf['id_pembayaran']);
+
+                    // Kembalikan status kasir ke draft
+                    $this->db->where('id_pembayaran', (int)$pf['id_pembayaran'])
+                        ->update('tbkeu_pembayaran_faktur', [
+                            'status_kasir' => 'draft',
+                            'updated_at'   => $now,
+                        ]);
+                    break;
+
+                case 'pembayaran_supplier':
+                    $ps = $this->db->where('id_pembayaran', (int)$idTransaksi)->get('tbkeu_pembayaran')->row_array();
+                    if (!$ps) throw new Exception('Pembayaran supplier tidak ditemukan.');
+
+                    if (!empty($ps['id_jurnal'])) {
+                        $this->_delete_journal_by_id((int)$ps['id_jurnal']);
+                    }
+                    $this->_delete_old_journals('KEUANGAN', 'SUPPLIER_PAYMENT', (string)$ps['id_pembayaran']);
+
+                    // Kembalikan status ke draft
+                    $this->db->where('id_pembayaran', (int)$ps['id_pembayaran'])
+                        ->update('tbkeu_pembayaran', [
+                            'status'     => 'draft',
+                            'updated_at' => $now,
+                        ]);
+                    break;
+
+                case 'retur_penjualan':
+                    $rp = $this->db
+                        ->where('id_retur', (int)$idTransaksi)
+                        ->or_where('no_retur', $idTransaksi)
+                        ->get('tbrp_retur_penjualan_header')
+                        ->row_array();
+                    if (!$rp) throw new Exception('Retur penjualan tidak ditemukan.');
+
+                    $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$rp['id_retur'], '', $rp['no_retur']);
+
+                    // Kembalikan status retur ke draft
+                    $this->db->where('id_retur', (int)$rp['id_retur'])
+                        ->update('tbrp_retur_penjualan_header', [
+                            'status_retur' => 'draft',
+                            'updated_at'   => $now,
+                        ]);
+                    break;
+
+                case 'retur_pembelian':
+                    $rb = $this->db->where('id_retur_pembelian', (int)$idTransaksi)->get('tb_retur_pembelian')->row_array();
+                    if (!$rb) throw new Exception('Retur pembelian tidak ditemukan.');
+
+                    if (!empty($rb['id_jurnal'])) {
+                        $this->_delete_journal_by_id((int)$rb['id_jurnal']);
+                    }
+                    $this->_delete_old_journals('LOGISTIK', 'RETUR_PEMBELIAN', (string)$rb['id_retur_pembelian']);
+
+                    // Kembalikan status retur pembelian ke draft
+                    $this->db->where('id_retur_pembelian', (int)$rb['id_retur_pembelian'])
+                        ->update('tb_retur_pembelian', [
+                            'status_retur' => 'draft',
+                            'updated_at'   => $now,
+                        ]);
+                    break;
+
+                default:
+                    throw new Exception('Kategori transaksi tidak dikenali: ' . $category);
+            }
+
+            $this->db->trans_commit();
+            return [
+                'success' => true,
+                'message' => 'Transaksi berhasil di-unpost. Jurnal akuntansi telah dibersihkan dan status dikembalikan ke Draft — siap diposting kembali.',
+            ];
         } catch (Exception $e) {
             $this->db->trans_rollback();
             return ['success' => false, 'message' => $e->getMessage()];
@@ -977,6 +1131,17 @@ class M_Transaksi extends CI_Model
         $postRes = $this->accounting_source_service->post_sales_invoice($faktur['no_faktur'], '', $userId, true);
         if (!$postRes['success']) {
             throw new Exception('Gagal sinkronisasi jurnal faktur penjualan: ' . ($postRes['message'] ?? ''));
+        }
+
+        // Jika status faktur masih 'draft' (hasil unpost), kembalikan ke 'selesai'
+        // setelah jurnal berhasil diposting ulang via edit & simpan
+        $status_saat_ini = (string)($faktur['status'] ?? '');
+        if ($status_saat_ini === 'draft' || $status_saat_ini === '') {
+            $this->db->where('id_faktur', (int)$idFaktur)->update('tbso_faktur_penjualan', [
+                'status'    => 'selesai',
+                'update_by' => $userId,
+                'update_at' => date('Y-m-d H:i:s'),
+            ]);
         }
 
         // Sinkronisasi tabel tbso_faktur_jurnal jika ada

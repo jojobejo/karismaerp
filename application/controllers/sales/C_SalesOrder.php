@@ -619,8 +619,8 @@ class C_SalesOrder extends CI_Controller
 
         $this->db->query("
             ALTER TABLE tbso_faktur_penjualan
-            MODIFY COLUMN status ENUM('confirmed','selesai_do','cancelled')
-            NOT NULL DEFAULT 'confirmed' COMMENT 'confirmed | selesai_do | cancelled'
+            MODIFY COLUMN status ENUM('draft','confirmed','proses_do','selesai','selesai_do','cancelled')
+            NOT NULL DEFAULT 'confirmed' COMMENT 'draft | confirmed | proses_do | selesai | cancelled'
         ");
     }
 

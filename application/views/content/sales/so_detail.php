@@ -512,6 +512,7 @@ $format_payment = function($value) {
                                             'draft'       => 'warning',
                                             'cancelled'   => 'danger',
                                             'proses_do'   => 'info',
+                                            'selesai'     => 'success',
                                             'selesai_do'  => 'success',
                                         ];
                                         $fs_label = [
@@ -519,7 +520,8 @@ $format_payment = function($value) {
                                             'draft'       => 'Draft',
                                             'cancelled'   => 'Cancelled',
                                             'proses_do'   => 'Proses DO',
-                                            'selesai_do'  => 'Selesai DO',
+                                            'selesai'     => 'Selesai',
+                                            'selesai_do'  => 'Selesai',
                                         ];
                                         ?>
                                         <span class="badge badge-<?= $fs_badge[$f['status']] ?? 'secondary' ?>">

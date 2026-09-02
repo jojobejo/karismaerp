@@ -233,7 +233,7 @@ $formatDate = function ($dateStr) {
                                 </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/retur') ?>" class="btn btn-md btn-primary w-100 mb-3">
+                                <a href="<?= base_url($isAdmlpbUser ? 'ics/retur/pembelian/monitoring' : 'ics/retur') ?>" class="btn btn-md btn-primary w-100 mb-3">
                                     <i class="fas fa-plus-circle"></i> Data Retur
                                 </a>
                             </div>
@@ -265,7 +265,7 @@ $formatDate = function ($dateStr) {
                                         </div>
                                     <?php endif; ?>
                                     <div class="col-md-2 col-sm-6 mb-2">
-                                        <a class="btn btn-warning btn-block" href="<?= base_url('ics/retur') ?>">
+                                        <a class="btn btn-warning btn-block" href="<?= base_url($isAdmlpbUser ? 'ics/retur/pembelian/monitoring' : 'ics/retur') ?>">
                                             <i class="fas fa-undo"></i> Retur
                                         </a>
                                     </div>

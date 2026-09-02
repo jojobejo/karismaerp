@@ -361,13 +361,15 @@
                                             'confirmed'   => 'success',
                                             'draft'       => 'warning',
                                             'proses_do'   => 'info',
+                                            'selesai'     => 'success',
                                             'selesai_do'  => 'success',
                                         ];
                                         $status_label = [
                                             'confirmed'   => 'Confirmed',
                                             'draft'       => 'Draft',
                                             'proses_do'   => 'Proses DO',
-                                            'selesai_do'  => 'Selesai DO',
+                                            'selesai'     => 'Selesai',
+                                            'selesai_do'  => 'Selesai',
                                         ];
                                         $payment = strtolower(trim((string)($f['cara_pembayaran'] ?? '')));
                                         $payment_label = [
@@ -432,7 +434,7 @@
                                                 class="btn btn-sm btn-secondary" target="_blank" title="Cetak Faktur">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <?php if (in_array($status, ['confirmed', 'proses_do', 'selesai_do'])): ?>
+                                                <?php if (in_array($status, ['confirmed', 'proses_do', 'selesai', 'selesai_do'])): ?>
                                                     <button class="btn btn-sm btn-warning btn-repost-faktur ml-1"
                                                             data-id="<?= (int)$f['id_faktur'] ?>"
                                                             data-nofaktur="<?= htmlspecialchars($f['no_faktur']) ?>"

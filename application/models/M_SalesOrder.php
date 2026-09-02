@@ -1565,7 +1565,7 @@ class M_SalesOrder extends CI_Model
             LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), c.kd_rute)
             LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
-            WHERE f.status = 'selesai_do'
+            WHERE f.status IN ('selesai', 'selesai_do')
             AND DATE(od_log.create_at) = CURDATE()
             AND h.status = 5
             {$whereRoute}
