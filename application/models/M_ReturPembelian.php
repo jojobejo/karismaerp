@@ -119,7 +119,9 @@ class M_ReturPembelian extends CI_Model
     public function header_rows($limit = 100)
     {
         $this->ensure_schema();
-        $sql = "SELECT r.*, l.nomor_lpb, s.nama_suplier,
+        $sql = "SELECT r.*, 
+                    MAX(l.nomor_lpb) AS nomor_lpb, 
+                    MAX(s.nama_suplier) AS nama_suplier,
                     COUNT(d.id_detail_retur_pembelian) AS total_item
                 FROM tb_retur_pembelian r
                 LEFT JOIN tb_lpb l ON l.id_lpb = r.id_lpb
@@ -165,7 +167,9 @@ class M_ReturPembelian extends CI_Model
         $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
         $params[] = (int)$limit;
 
-        $sql = "SELECT r.*, l.nomor_lpb, s.nama_suplier,
+        $sql = "SELECT r.*, 
+                    MAX(l.nomor_lpb) AS nomor_lpb, 
+                    MAX(s.nama_suplier) AS nama_suplier,
                     COUNT(d.id_detail_retur_pembelian) AS total_item,
                     COALESCE(SUM(d.qty_retur), 0) AS total_qty_retur,
                     GROUP_CONCAT(DISTINCT COALESCE(b.nama_barang, d.kd_barang) SEPARATOR ', ') AS ringkasan_barang
