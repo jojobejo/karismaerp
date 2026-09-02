@@ -363,7 +363,7 @@ class M_pembayaran extends CI_Model
         $this->db->join('(' . $this->_total_tagihan_sql() . ') ft', 'ft.id_faktur = f.id_faktur', 'left');
         $this->db->join('(' . $this->_total_pembayaran_sql() . ') fp', 'fp.id_faktur = f.id_faktur', 'left');
         $this->db->join('(' . $this->_nama_barang_sql() . ') fnb', 'fnb.id_faktur = f.id_faktur', 'left');
-        $this->db->where('f.status', 'selesai_do');
+        $this->db->where_in('f.status', ['selesai', 'selesai_do']);
     }
 
     public function get_customers_with_unpaid_faktur($keyword = '')
@@ -423,7 +423,7 @@ class M_pembayaran extends CI_Model
             FROM tbso_faktur_penjualan f
             JOIN (" . $this->_total_tagihan_sql() . ") ft ON ft.id_faktur = f.id_faktur
             LEFT JOIN (" . $this->_total_pembayaran_sql() . ") fp ON fp.id_faktur = f.id_faktur
-            WHERE f.status = 'selesai_do'
+            WHERE f.status IN ('selesai', 'selesai_do')
               {$whereCust}
               AND (COALESCE(ft.total_tagihan, 0) - COALESCE(fp.total_pembayaran, 0)) > 0
         ";

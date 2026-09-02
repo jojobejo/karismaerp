@@ -24,6 +24,7 @@ class M_Dashboard extends CI_Model
     public function module_sections($context = array())
     {
         $retur_pj_route = $this->get_retur_penjualan_route($context);
+        $retur_pb_route = $this->get_retur_pembelian_route($context);
         $piutang_customer_route = $this->get_piutang_customer_route($context);
         $sections = array(
             'keuangan' => array(
@@ -36,7 +37,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Jurnal Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul jurnal pembelian dan monitoring PO keuangan.'),
                     $this->menu('Pembayaran Supplier', 'keuangan/pembayaran-supplier', 'fas fa-money-check-alt', 'green', 'Bayar hutang supplier dari LPB, retur, invoice, dan jurnal hutang.'),
                     $this->menu('Jurnal Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul jurnal penjualan dan jurnal pembayaran.'),
-                    $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'red', 'Akses retur pembelian untuk verifikasi dampak stok serta jurnal.'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'red', 'Akses retur pembelian untuk verifikasi dampak stok serta jurnal.'),
                     $this->menu('Penyesuaian Barang', 'persediaan/penyesuaian_barang', 'fas fa-sliders-h', 'teal', 'Kelola penyesuaian persediaan barang gudang (penambahan/pengurangan stok).'),
                     $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
@@ -78,7 +79,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data Purchase Order untuk kontrol barang masuk.'),
                     $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau progress penerimaan barang dari PO berdasarkan status belum, partial, dan done.'),
                     $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual dan LPB hasil input Logistik.'),
-                    $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian berbasis stok gudang.'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian berbasis stok gudang.'),
                     $this->menu('Master Barang PIC', 'ics/barangpic', 'fas fa-user-check', 'lime', 'Atur daftar barang yang menjadi tanggung jawab PIC.'),
                     $this->menu('Barang Per Gudang', 'ics/barangpergudang', 'fas fa-dolly-flatbed', 'purple', 'Cek komposisi barang pada setiap gudang.'),
                     $this->menu('Mutasi Barang Gudang', 'ics/mutasi_barang', 'fas fa-exchange-alt', 'teal', 'Telusuri perpindahan barang antar gudang secara operasional.'),
@@ -100,7 +101,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau data LPB dan progress penerimaan barang dari PO.'),
                     $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.'),
                     $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual Purchasing dan LPB hasil input Logistik.'),
-                    $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.'),
                     $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Pantau PO yang masih membutuhkan tindak lanjut.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-box', 'slate', 'Buka master barang untuk referensi pembelian.'),
                 ),
@@ -138,7 +139,15 @@ class M_Dashboard extends CI_Model
             $sections = array('admin' => $this->admin_section($sections)) + $sections;
         }
 
-        return $this->apply_access_rules($sections, $context);
+        $sections = $this->apply_access_rules($sections, $context);
+
+        // Batasi tampilan dashboard ADMPNJ hanya section penjualan/sales
+        $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
+        if ($jobdesk === 'ADMPNJ' && isset($sections['sales'])) {
+            $sections = array('sales' => $sections['sales']);
+        }
+
+        return $sections;
     }
 
     public function default_active_section(array $context, array $sections)
@@ -206,7 +215,7 @@ class M_Dashboard extends CI_Model
             }
 
             $sections[$key]['menus'] = array_values(array_filter($section['menus'], function ($menu) use ($context, $has_retur_pj) {
-                if (($menu['route'] ?? '') === 'ics/retur') {
+                if (($menu['route'] ?? '') === 'ics/retur' || strpos(($menu['route'] ?? ''), 'ics/retur/pembelian/monitoring') === 0) {
                     return $this->has_retur_access($context);
                 }
 
@@ -223,6 +232,20 @@ class M_Dashboard extends CI_Model
         }
 
         return $sections;
+    }
+
+    private function get_retur_pembelian_route($context)
+    {
+        $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
+        $username = strtolower((string)($context['username'] ?? ''));
+        $departemen = strtoupper((string)($context['departemen'] ?? ''));
+
+        if (in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'), true)
+            || in_array($username, array('admlpb', 'adminloglpb', 'admlpb2'), true)
+            || ($departemen === 'LOGISTIK' && strpos($jobdesk, 'LPB') !== false)) {
+            return 'ics/retur/pembelian/monitoring';
+        }
+        return 'ics/retur';
     }
 
     private function get_retur_penjualan_route($context)
@@ -290,7 +313,7 @@ class M_Dashboard extends CI_Model
         $menus = array();
         $seenRoutes = array();
         $adminMenus = array(
-            $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, repost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.'),
+            $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, unpost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.'),
             $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.'),
             $this->menu('Fasilitas Per User', 'master/user-facility', 'fas fa-user-lock', 'blue', 'Kelola fasilitas menu, aksi, data sensitif, cabang, gudang, dan status dokumen per user.'),
             $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.'),

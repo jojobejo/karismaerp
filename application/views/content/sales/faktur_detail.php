@@ -372,6 +372,7 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                             'draft'       => 'secondary',
                                             'cancelled'   => 'danger',
                                             'proses_do'   => 'info',
+                                            'selesai'     => 'success',
                                             'selesai_do'  => 'success',
                                         ];
                                         $fs_label = [
@@ -379,7 +380,8 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                             'draft'       => 'Draft',
                                             'cancelled'   => 'Cancelled',
                                             'proses_do'   => 'Proses DO',
-                                            'selesai_do'  => 'Selesai DO',
+                                            'selesai'     => 'Selesai',
+                                            'selesai_do'  => 'Selesai',
                                         ];
                                         ?>
                                         <span class="badge badge-<?= $fs_badge[$faktur['status']] ?? 'secondary' ?>">

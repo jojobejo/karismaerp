@@ -11,6 +11,10 @@ class M_ReturPembelian extends CI_Model
     const STATUS_POSTING_EXCEPTION = 'POSTING_EXCEPTION';
     const STATUS_VOID = 'VOID';
 
+    const PERSIAPAN_BELUM = 'BELUM_DISIAPKAN';
+    const PERSIAPAN_SEDANG = 'SEDANG_DISIAPKAN';
+    const PERSIAPAN_SUDAH = 'SUDAH_DISIAPKAN';
+
     public function ensure_schema()
     {
         $this->db->query("CREATE TABLE IF NOT EXISTS `tb_retur_pembelian` (
@@ -23,10 +27,12 @@ class M_ReturPembelian extends CI_Model
             `tanggal_retur` DATE NOT NULL,
             `gudang_id` VARCHAR(30) DEFAULT NULL,
             `status` VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
+            `status_persiapan` VARCHAR(30) NOT NULL DEFAULT 'BELUM_DISIAPKAN',
             `jenis_penyelesaian` VARCHAR(40) NOT NULL DEFAULT 'POTONG_HUTANG',
             `alasan_retur` TEXT DEFAULT NULL,
             `catatan_purchasing` TEXT DEFAULT NULL,
             `catatan_accounting` TEXT DEFAULT NULL,
+            `catatan_persiapan` TEXT DEFAULT NULL,
             `total_dpp` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
             `total_ppn` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
             `grand_total` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
@@ -46,12 +52,30 @@ class M_ReturPembelian extends CI_Model
             `posted_at` DATETIME DEFAULT NULL,
             `reversed_by` VARCHAR(100) DEFAULT NULL,
             `reversed_at` DATETIME DEFAULT NULL,
+            `disiapkan_oleh` VARCHAR(100) DEFAULT NULL,
+            `disiapkan_at` DATETIME DEFAULT NULL,
             PRIMARY KEY (`id_retur_pembelian`),
             UNIQUE KEY `uk_no_retur_pembelian` (`no_retur_pembelian`),
             KEY `idx_lpb` (`id_lpb`),
             KEY `idx_status` (`status`),
+            KEY `idx_status_persiapan` (`status_persiapan`),
             KEY `idx_jurnal` (`id_jurnal`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        $fields = $this->db->list_fields('tb_retur_pembelian');
+        if (!in_array('status_persiapan', $fields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD COLUMN `status_persiapan` VARCHAR(30) NOT NULL DEFAULT 'BELUM_DISIAPKAN' AFTER `status`");
+            $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD KEY `idx_status_persiapan` (`status_persiapan`)");
+        }
+        if (!in_array('catatan_persiapan', $fields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD COLUMN `catatan_persiapan` TEXT NULL AFTER `catatan_accounting`");
+        }
+        if (!in_array('disiapkan_oleh', $fields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD COLUMN `disiapkan_oleh` VARCHAR(100) NULL AFTER `reversed_at`");
+        }
+        if (!in_array('disiapkan_at', $fields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD COLUMN `disiapkan_at` DATETIME NULL AFTER `disiapkan_oleh`");
+        }
 
         $this->db->query("CREATE TABLE IF NOT EXISTS `tb_retur_pembelian_detail` (
             `id_detail_retur_pembelian` INT(11) NOT NULL AUTO_INCREMENT,
@@ -105,6 +129,121 @@ class M_ReturPembelian extends CI_Model
                 ORDER BY r.created_at DESC, r.id_retur_pembelian DESC
                 LIMIT ?";
         return $this->db->query($sql, [(int)$limit])->result_array();
+    }
+
+    public function monitoring_rows($limit = 100, $filters = [])
+    {
+        $this->ensure_schema();
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['status_persiapan'])) {
+            $where[] = "r.status_persiapan = ?";
+            $params[] = $filters['status_persiapan'];
+        }
+        if (!empty($filters['status_dokumen'])) {
+            $where[] = "r.status = ?";
+            $params[] = $filters['status_dokumen'];
+        }
+        if (!empty($filters['start_date'])) {
+            $where[] = "r.tanggal_retur >= ?";
+            $params[] = $filters['start_date'];
+        }
+        if (!empty($filters['end_date'])) {
+            $where[] = "r.tanggal_retur <= ?";
+            $params[] = $filters['end_date'];
+        }
+        if (!empty($filters['search'])) {
+            $like = '%' . trim((string)$filters['search']) . '%';
+            $where[] = "(r.no_retur_pembelian LIKE ? OR l.nomor_lpb LIKE ? OR r.no_po LIKE ? OR s.nama_suplier LIKE ?)";
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+        $params[] = (int)$limit;
+
+        $sql = "SELECT r.*, l.nomor_lpb, s.nama_suplier,
+                    COUNT(d.id_detail_retur_pembelian) AS total_item,
+                    COALESCE(SUM(d.qty_retur), 0) AS total_qty_retur,
+                    GROUP_CONCAT(DISTINCT COALESCE(b.nama_barang, d.kd_barang) SEPARATOR ', ') AS ringkasan_barang
+                FROM tb_retur_pembelian r
+                LEFT JOIN tb_lpb l ON l.id_lpb = r.id_lpb
+                LEFT JOIN tbpo_suplier s ON s.kd_suplier = r.kd_supplier
+                LEFT JOIN tb_retur_pembelian_detail d ON d.id_retur_pembelian = r.id_retur_pembelian
+                LEFT JOIN tbpo_barang b ON b.kode_barang = d.kd_barang
+                {$whereClause}
+                GROUP BY r.id_retur_pembelian
+                ORDER BY r.created_at DESC, r.id_retur_pembelian DESC
+                LIMIT ?";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function retur_items_detail($idRetur)
+    {
+        $sql = "SELECT d.*, 
+                    COALESCE(b.nama_barang, d.kd_barang) AS nama_barang,
+                    COALESCE(b.satuan, 'PCS') AS satuan
+                FROM tb_retur_pembelian_detail d
+                LEFT JOIN tbpo_barang b ON b.kode_barang = d.kd_barang
+                WHERE d.id_retur_pembelian = ?
+                ORDER BY d.id_detail_retur_pembelian ASC";
+        return $this->db->query($sql, [(int)$idRetur])->result_array();
+    }
+
+    public function update_status_persiapan($idRetur, $statusPersiapan, $catatan, $user)
+    {
+        $this->ensure_schema();
+        $allowedStatus = [self::PERSIAPAN_BELUM, self::PERSIAPAN_SEDANG, self::PERSIAPAN_SUDAH];
+        $statusPersiapan = strtoupper(trim((string)$statusPersiapan));
+        if (!in_array($statusPersiapan, $allowedStatus, true)) {
+            return $this->fail('Status persiapan barang tidak valid.', ['INVALID_STATUS_PERSIAPAN']);
+        }
+
+        $header = $this->header((int)$idRetur);
+        if (!$header) {
+            return $this->fail('Dokumen retur pembelian tidak ditemukan.', ['RETUR_NOT_FOUND']);
+        }
+
+        $updateData = [
+            'status_persiapan' => $statusPersiapan,
+            'catatan_persiapan' => trim((string)$catatan),
+            'disiapkan_oleh' => $user,
+            'disiapkan_at' => date('Y-m-d H:i:s'),
+            'updated_by' => $user,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $this->db->trans_begin();
+        $this->db->where('id_retur_pembelian', (int)$idRetur)->update('tb_retur_pembelian', $updateData);
+
+        $after = $this->header((int)$idRetur);
+        $this->write_log(
+            (int)$idRetur,
+            'UPDATE_PERSIAPAN',
+            $header['status_persiapan'] ?? self::PERSIAPAN_BELUM,
+            $statusPersiapan,
+            $header,
+            $after,
+            'Update status persiapan barang oleh ' . $user . ': ' . $statusPersiapan . ($catatan !== '' ? ' (' . $catatan . ')' : ''),
+            $user
+        );
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->fail('Gagal memperbarui status persiapan barang.', ['DATABASE_ERROR']);
+        }
+
+        $this->db->trans_commit();
+        return $this->ok('Status persiapan barang berhasil diperbarui.', [
+            'id_retur_pembelian' => (int)$idRetur,
+            'status_persiapan' => $statusPersiapan,
+            'catatan_persiapan' => trim((string)$catatan),
+            'disiapkan_oleh' => $user,
+            'disiapkan_at' => $updateData['disiapkan_at']
+        ]);
     }
 
     public function lpb_options($search = '')

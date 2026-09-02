@@ -534,7 +534,7 @@ class C_pembayaran extends CI_Controller
     {
         $faktur = $this->M_pembayaran->get_faktur_summary($id_faktur);
 
-        if (!$faktur || $faktur['status'] !== 'selesai_do') {
+        if (!$faktur || !in_array($faktur['status'], ['selesai', 'selesai_do'], true)) {
             $this->session->set_flashdata('error', 'Faktur tidak ditemukan atau belum selesai DO.');
             redirect('keuangan/pembayaran');
         }
@@ -665,7 +665,7 @@ class C_pembayaran extends CI_Controller
     {
         $faktur = $this->M_pembayaran->get_faktur_summary($id_faktur);
 
-        if (!$faktur || $faktur['status'] !== 'selesai_do') {
+        if (!$faktur || !in_array($faktur['status'], ['selesai', 'selesai_do'], true)) {
             $this->session->set_flashdata('error', 'Faktur tidak ditemukan atau belum selesai DO.');
             redirect('keuangan/pembayaran/kasir');
         }

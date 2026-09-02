@@ -60,8 +60,8 @@ class C_Logistik extends CI_Controller
 
         $this->db->query("
             ALTER TABLE tbso_faktur_penjualan
-            MODIFY COLUMN status ENUM('confirmed','selesai_do','cancelled')
-            NOT NULL DEFAULT 'confirmed' COMMENT 'confirmed | selesai_do | cancelled'
+            MODIFY COLUMN status ENUM('draft','confirmed','proses_do','selesai','selesai_do','cancelled')
+            NOT NULL DEFAULT 'confirmed' COMMENT 'draft | confirmed | proses_do | selesai | cancelled'
         ");
     }
 
@@ -1822,7 +1822,7 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
-        $this->M_Logistik->sync_faktur_status_by_do($kd, 'selesai_do');
+        $this->M_Logistik->sync_faktur_status_by_do($kd, 'selesai');
 
         if ($do_before_rekam && (string)$do_before_rekam->status === '3') {
             $this->M_Checker->sync_do_activity($kd, 'cetak_do', $this->session->userdata('nama'));
@@ -1877,7 +1877,7 @@ class C_Logistik extends CI_Controller
                 $this->M_Checker->sync_do_activity($kd_do, 'siap_loading', $confirm_by);
 
                 // Update status faktur sesuai status DO.
-                $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'selesai_do');
+                $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'selesai');
             }
 
             echo json_encode([

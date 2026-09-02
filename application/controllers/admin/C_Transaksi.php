@@ -249,6 +249,41 @@ class C_Transaksi extends CI_Controller
     }
 
     /**
+     * Endpoint AJAX: Memproses unpost transaksi — bersihkan jurnal & kembalikan status ke draft
+     */
+    public function ajax_unpost_transaction()
+    {
+        try {
+            $category    = trim((string)$this->input->post('category'));
+            $idTransaksi = trim((string)$this->input->post('id_transaksi'));
+
+            $is_admin = !empty($this->user_context['is_admin']);
+            $jobdesk  = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
+            $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
+
+            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+                $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat memproses Faktur Penjualan.'], 403);
+                return;
+            }
+
+            if (empty($category) || empty($idTransaksi)) {
+                $this->_json(['success' => false, 'message' => 'Kategori dan ID transaksi wajib diisi.'], 400);
+                return;
+            }
+
+            $userId = (int)($this->session->userdata('id_karyawan')
+                ?: $this->session->userdata('id')
+                ?: $this->session->userdata('id_user')
+                ?: 1);
+
+            $res = $this->m_transaksi->unpost_transaction($category, $idTransaksi, $userId);
+            $this->_json($res, $res['success'] ? 200 : 422);
+        } catch (Exception $e) {
+            $this->_json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Endpoint AJAX: Memproses delete/void transaksi & pembersihan jurnal
      */
     public function ajax_delete_transaction()

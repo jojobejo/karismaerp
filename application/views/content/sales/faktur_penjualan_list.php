@@ -55,7 +55,7 @@
                         <select name="status" class="form-control form-control-sm mr-2">
                             <option value="all" <?= $filter['status'] === 'all' ? 'selected' : '' ?>>Semua Status</option>
                             <option value="confirmed" <?= $filter['status'] === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
-                            <option value="selesai_do" <?= $filter['status'] === 'selesai_do' ? 'selected' : '' ?>>Selesai DO</option>
+                            <option value="selesai" <?= in_array($filter['status'], ['selesai', 'selesai_do']) ? 'selected' : '' ?>>Selesai</option>
                             <option value="cancelled" <?= $filter['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                         </select>
 
@@ -90,8 +90,8 @@
                                     <td>
                                         <?php if ($f['status'] === 'confirmed'): ?>
                                             <span class="badge badge-info">Confirmed</span>
-                                        <?php elseif ($f['status'] === 'selesai_do'): ?>
-                                            <span class="badge badge-success">Selesai DO</span>
+                                        <?php elseif (in_array($f['status'], ['selesai', 'selesai_do'])): ?>
+                                            <span class="badge badge-success">Selesai</span>
                                         <?php elseif ($f['status'] === 'cancelled'): ?>
                                             <span class="badge badge-danger">Cancelled</span>
                                         <?php else: ?>

@@ -858,7 +858,7 @@ class M_Logistik extends CI_Model
         if ($this->db->trans_status() && !empty($faktur_ids)) {
             $this->db->where_in('id_faktur', array_values($faktur_ids));
             $this->db->update('tbso_faktur_penjualan', [
-                'status'    => 'selesai_do',
+                'status'    => 'selesai',
                 'update_by' => $confirm_by,
             ]);
         }
@@ -887,7 +887,7 @@ class M_Logistik extends CI_Model
                 JOIN tb_do h ON h.kd_do = d.kd_do
                 WHERE h.status = 5
             ) od ON od.kd_faktur = f.no_faktur
-            SET f.status = 'selesai_do',
+            SET f.status = 'selesai',
                 f.update_by = COALESCE(f.update_by, 'system')
             WHERE f.status = 'proses_do'
         ");
@@ -1065,7 +1065,7 @@ class M_Logistik extends CI_Model
         $status_map = [
             '1' => 'list_do',
             '2' => 'proses_do',     // masuk draft DO
-            '3' => 'selesai_do',    // on delivery
+            '3' => 'selesai',       // on delivery
             '4' => 'proses_do',
         ];
 

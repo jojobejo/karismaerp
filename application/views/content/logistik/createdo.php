@@ -361,8 +361,8 @@
                     } else if (l.data_sts === 'proses_do') {
                         statusBadge = '<span class="badge badge-info">PROSES DO</span>';
                         canAdd      = false;
-                    } else if (l.data_sts === 'selesai_do') {
-                        statusBadge = '<span class="badge badge-success">SELESAI DO</span>';
+                    } else if (l.data_sts === 'selesai' || l.data_sts === 'selesai_do') {
+                        statusBadge = '<span class="badge badge-success">SELESAI</span>';
                         canAdd      = false;
                     } else if (l.data_sts === 'in_delivery') {
                         statusBadge = '<span class="badge badge-success">ON DRAFT</span>';

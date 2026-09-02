@@ -104,6 +104,11 @@ if (!function_exists('retur_dashboard_format_money')) {
                                             <i class="fas fa-plus-circle"></i> Input Retur
                                         </a>
                                     </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-info" href="<?= base_url('ics/retur/pembelian/monitoring') ?>">
+                                            <i class="fas fa-tasks"></i> Progres/Monitor Retur
+                                        </a>
+                                    </div>
                                 </div>
                                 <?php if ($this->session->userdata('jobdesk') == 'ADMINLOGLPB') : ?>
                                     <div class="row">

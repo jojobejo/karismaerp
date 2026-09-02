@@ -153,7 +153,7 @@
                                 <select class="form-control form-control-sm" id="filter-status">
                                     <option value="all">Semua Status</option>
                                     <option value="POSTED">Sudah Posting Jurnal</option>
-                                    <option value="UNPOSTED">Belum / Butuh Repost</option>
+                                    <option value="UNPOSTED">Belum Posting / Unpost</option>
                                     <option value="CANCELLED">Batal / Ditolak / Void</option>
                                 </select>
                             </div>
@@ -640,8 +640,8 @@ $(document).ready(function() {
                             <button type="button" class="btn btn-teal text-white btn-xs btn-edit" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Edit & Sinkronkan Jurnal">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-warning btn-xs btn-repost" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Repost Transaksi & Jurnal">
-                                <i class="fas fa-sync-alt"></i>
+                            <button type="button" class="btn btn-warning btn-xs btn-repost" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Unpost Transaksi & Jurnal">
+                                <i class="fas fa-undo"></i>
                             </button>
                             <button type="button" class="btn btn-danger btn-xs btn-delete" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Hapus Transaksi & Bersihkan Jurnal">
                                 <i class="fas fa-trash"></i>
@@ -1203,40 +1203,44 @@ $(document).ready(function() {
         });
     });
 
-    // Repost Button Click
+    // Unpost Button Click
     $(document).on('click', '.btn-repost', function() {
         const cat = $(this).data('category');
         const id = $(this).data('id');
 
         Swal.fire({
-            title: 'Posting Ulang Transaksi?',
-            text: 'Jurnal lama akan dibersihkan dan jurnal baru akan diposting kembali sesuai data transaksi terkini.',
+            title: 'Unpost Transaksi?',
+            html: '<p>Jurnal akuntansi transaksi ini akan <strong>dihapus</strong> dan status transaksi akan dikembalikan ke <span class="badge badge-secondary">DRAFT</span>.</p><p class="text-muted small mb-0">Setelah unpost, transaksi dapat diposting kembali melalui tombol <strong>Post</strong>.</p>',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ffc107',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-sync-alt text-dark"></i> <span class="text-dark">Ya, Repost Transaksi</span>',
+            confirmButtonText: '<i class="fas fa-undo text-dark"></i> <span class="text-dark">Ya, Unpost ke Draft</span>',
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
                 Swal.fire({
-                    title: 'Memproses Repost...',
-                    text: 'Sedang meregenerasi jurnal akuntansi...',
+                    title: 'Memproses Unpost...',
+                    text: 'Sedang membersihkan jurnal dan mengubah status ke draft...',
                     allowOutsideClick: false,
                     didOpen: () => { Swal.showLoading(); }
                 });
 
                 $.ajax({
-                    url: "<?= base_url('admin/transaksi/repost') ?>",
+                    url: "<?= base_url('admin/transaksi/unpost') ?>",
                     type: "POST",
                     data: { category: cat, id_transaksi: id },
                     dataType: "json",
                     success: function(res) {
                         if (res.success) {
-                            Swal.fire('Berhasil Repost!', res.message, 'success');
+                            Swal.fire({
+                                title: 'Berhasil Unpost!',
+                                html: res.message + '<br><span class="badge badge-secondary mt-2">Status: DRAFT</span>',
+                                icon: 'success'
+                            });
                             loadTransactions();
                         } else {
-                            Swal.fire('Gagal Repost!', res.message || 'Gagal memposting ulang.', 'error');
+                            Swal.fire('Gagal Unpost!', res.message || 'Gagal unpost transaksi.', 'error');
                         }
                     },
                     error: function(xhr) {
