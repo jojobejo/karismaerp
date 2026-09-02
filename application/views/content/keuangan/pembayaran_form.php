@@ -1,3 +1,6 @@
+<?php
+$is_draft_mode = isset($is_draft_mode) && $is_draft_mode && !empty($draft_payment);
+?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <?php
 $pending_bg = $pending_bg ?? null;
@@ -300,13 +303,13 @@ $default_metode = '';
                     </div>
 
                     <div class="col-md-7">
-                        <div class="card card-outline <?= $is_bg_cair_mode ? 'card-warning' : 'card-success' ?>">
+                        <div class="card card-outline <?= ($is_draft_mode || $is_bg_cair_mode) ? 'card-warning' : 'card-success' ?>">
                             <div class="card-header">
                                 <h3 class="card-title font-weight-bold">
-                                    <i class="fas <?= $is_validasi_kasir_mode ? 'fa-cash-register' : ($is_bg_cair_mode ? 'fa-check-circle' : 'fa-plus-circle') ?> mr-1"></i>
-                                    <?= $is_validasi_kasir_mode ? 'Validasi Pembayaran Kasir' : ($is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran') ?>
+                                    <i class="fas <?= $is_draft_mode ? 'fa-file-invoice' : ($is_validasi_kasir_mode ? 'fa-cash-register' : ($is_bg_cair_mode ? 'fa-check-circle' : 'fa-plus-circle')) ?> mr-1"></i>
+                                    <?= $is_draft_mode ? 'Edit & Posting Draft Pembayaran' : ($is_validasi_kasir_mode ? 'Validasi Pembayaran Kasir' : ($is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran')) ?>
                                 </h3>
-                                <?php if ($is_bg_cair_mode): ?>
+                                <?php if ($is_bg_cair_mode || $is_draft_mode): ?>
                                     <div class="card-tools">
                                         <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-xs btn-outline-secondary">
                                             <i class="fas fa-arrow-left mr-1"></i> Batal / Form Pembayaran Baru
@@ -318,7 +321,14 @@ $default_metode = '';
                                   method="post"
                                   <?= $is_validasi_kasir_mode ? "onsubmit=\"return confirm('Validasi dan proses pembayaran kasir ini?');\"" : ($is_bg_cair_mode ? "onsubmit=\"return confirm('Tandai BG ini sudah cair dan kurangi sisa tagihan?');\"" : '') ?>>
                                 <div class="card-body">
-                                    <?php if (isset($is_lunas) && $is_lunas && !$is_validasi_kasir_mode && !$is_bg_cair_mode): ?>
+                                    <?php if ($is_draft_mode): ?>
+                                        <input type="hidden" name="id_pembayaran_draft" value="<?= $draft_payment['id_pembayaran'] ?>">
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-edit mr-1"></i>
+                                            <strong>Mode Draft Pembayaran:</strong> Menampilkan draft pembayaran <strong>#PAY-<?= sprintf('%05d', $draft_payment['id_pembayaran']) ?></strong> yang belum terposting. Silakan periksa atau sesuaikan data di bawah, lalu klik <strong>Simpan & Posting</strong>.
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (isset($is_lunas) && $is_lunas && !$is_validasi_kasir_mode && !$is_bg_cair_mode && !$is_draft_mode): ?>
                                         <div class="alert alert-success">
                                             <i class="fas fa-check-circle mr-1"></i>
                                             Faktur ini sudah dibayar lunas. Anda dapat melihat riwayat pembayarannya di samping.
@@ -335,7 +345,7 @@ $default_metode = '';
                                         <label>Metode Pembayaran <span class="text-danger">*</span></label>
                                         <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required <?= $is_validasi_kasir_mode ? 'readonly style="pointer-events: none;"' : '' ?>>
                                             <?php
-                                             $selected_metode = $is_validasi_kasir_mode ? 'Q Kas' : ($is_bg_cair_mode ? ($pending_bg['metode_pembayaran'] ?? $default_metode) : $default_metode);
+                                             $selected_metode = $is_draft_mode ? ($draft_payment['metode_pembayaran'] ?? $default_metode) : ($is_validasi_kasir_mode ? 'Q Kas' : ($is_bg_cair_mode ? ($pending_bg['metode_pembayaran'] ?? $default_metode) : $default_metode));
                                              foreach ($metode_options as $value => $label):
                                                  $disabled_attr = '';
                                                  if (($value === $nama_akun_retur || $value === 'Q Hutang Non Dagang') && (float)$saldo_retur <= 0) {
@@ -355,7 +365,7 @@ $default_metode = '';
                                     <div class="form-group mb-3">
                                         <div class="custom-control custom-checkbox">
                                             <?php
-                                            $is_bg_checked = $is_bg_cair_mode ? true : false;
+                                            $is_bg_checked = $is_draft_mode ? (strtolower($draft_payment['metode_pembayaran'] ?? '') === 'bg' || ($draft_payment['status_bg'] ?? '') !== 'not_bg') : ($is_bg_cair_mode ? true : false);
                                             ?>
                                             <input type="checkbox" class="custom-control-input" id="check_is_bg" name="is_bg" value="1" <?= $is_bg_checked ? 'checked' : '' ?> <?= $is_validasi_kasir_mode ? 'disabled' : '' ?>>
                                             <label class="custom-control-label font-weight-bold" for="check_is_bg">
@@ -370,14 +380,14 @@ $default_metode = '';
                                             <div class="form-group">
                                                 <label>No. BG / Cek</label>
                                                 <input type="text" name="no_bg" class="form-control" placeholder="Contoh: BG-123456"
-                                                       value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['no_bg'] ?? '') : '' ?>">
+                                                       value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['no_bg'] ?? '') : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['no_bg'] ?? '') : '') ?>">
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label>Nama Bank Pembayar / Penerbit</label>
                                                 <input type="text" name="nama_bank" class="form-control" placeholder="Contoh: BCA / Mandiri / BRI"
-                                                       value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['nama_bank'] ?? '') : '' ?>">
+                                                       value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['nama_bank'] ?? '') : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['nama_bank'] ?? '') : '') ?>">
                                             </div>
                                         </div>
                                     </div>
@@ -385,7 +395,7 @@ $default_metode = '';
                                     <div class="form-group">
                                         <label>Tanggal Pembayaran <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal_pembayaran" class="form-control" required
-                                               value="<?= $is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d')) ?>">
+                                               value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_pembayaran']) : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d'))) ?>">
                                     </div>
                                     <div class="form-group">
                                         <label>Jumlah Pembayaran <span class="text-danger">*</span></label>
@@ -397,7 +407,9 @@ $default_metode = '';
                                             $max_bayar += (float)($pending_bg['jumlah_pembayaran'] ?? 0);
                                         }
 
-                                        if ($is_validasi_kasir_mode) {
+                                        if ($is_draft_mode) {
+                                            $raw_bayar = (float)$draft_payment['jumlah_pembayaran'];
+                                        } elseif ($is_validasi_kasir_mode) {
                                             $raw_bayar = (float)$validasi_kasir['jumlah_pembayaran'];
                                         } elseif ($is_bg_cair_mode) {
                                             $raw_bayar = (float)$pending_bg['jumlah_pembayaran'];
@@ -420,12 +432,12 @@ $default_metode = '';
                                     </div>
                                     <div class="form-group" <?= $is_bg_cair_mode ? 'style="display:none;"' : '' ?>>
                                         <label>Jumlah Diskon</label>
-                                        <input type="text" name="jumlah_diskon" id="jumlah_diskon" class="form-control input-currency" value="0">
+                                        <input type="text" name="jumlah_diskon" id="jumlah_diskon" class="form-control input-currency" value="<?= $is_draft_mode ? number_format((float)($draft_payment['jumlah_diskon'] ?? 0), 0, ',', '.') : '0' ?>">
                                     </div>
                                     <div class="form-group" id="tanggal_bg_cair_group" style="<?= (!$is_bg_cair_mode && $default_metode !== 'bg') ? 'display:none' : '' ?>">
                                         <label>Tanggal BG Cair <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal_bg_cair" class="form-control"
-                                               value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_bg_cair']) : date('Y-m-d') ?>">
+                                               value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_bg_cair'] ?? date('Y-m-d')) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_bg_cair']) : date('Y-m-d')) ?>">
                                         <small class="text-muted">Tanggal estimasi atau tanggal realisasi pencairan Bilyet Giro / BG.</small>
                                     </div>
                                     <div class="form-group" id="saldo_retur_group" style="display:none;">
@@ -440,11 +452,18 @@ $default_metode = '';
                                     </div>
                                     <div class="form-group mb-0">
                                         <label>Keterangan</label>
-                                        <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran"><?= $is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['keterangan'] ?? '') : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['keterangan'] ?? '') : '') ?></textarea>
+                                        <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran"><?= $is_draft_mode ? htmlspecialchars($draft_payment['keterangan'] ?? '') : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['keterangan'] ?? '') : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['keterangan'] ?? '') : '')) ?></textarea>
                                     </div>
                                 </div>
                                 <div class="card-footer text-right">
-                                    <?php if ($is_bg_cair_mode): ?>
+                                    <?php if ($is_draft_mode): ?>
+                                        <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-secondary mr-2">
+                                            <i class="fas fa-times mr-1"></i> Batal
+                                        </a>
+                                        <button type="submit" class="btn btn-warning font-weight-bold">
+                                            <i class="fas fa-check-circle mr-1"></i> Simpan & Posting
+                                        </button>
+                                    <?php elseif ($is_bg_cair_mode): ?>
                                         <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-secondary mr-2">
                                             <i class="fas fa-times mr-1"></i> Batal
                                         </a>

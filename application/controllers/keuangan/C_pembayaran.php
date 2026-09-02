@@ -200,9 +200,24 @@ class C_pembayaran extends CI_Controller
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN FAKTUR';
         $data['faktur'] = $faktur;
         $data['is_lunas'] = (float)$faktur['sisa_tagihan'] <= 0;
-        $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
+        $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur'], true);
         $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
         $data['saldo_retur'] = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
+
+        // Mode edit draft pembayaran yang belum terposting
+        $draft_id = $this->input->get('draft');
+        $data['draft_payment'] = null;
+        $data['is_draft_mode'] = false;
+        if ($draft_id && is_numeric($draft_id)) {
+            $draft_row = $this->db->get_where('tbkeu_pembayaran_faktur', [
+                'id_pembayaran' => (int)$draft_id,
+                'id_faktur'     => (int)$faktur['id_faktur']
+            ])->row_array();
+            if ($draft_row && in_array(strtoupper((string)($draft_row['status'] ?? '')), ['DRAFT', 'UNPOST'], true)) {
+                $data['is_draft_mode'] = true;
+                $data['draft_payment'] = $draft_row;
+            }
+        }
 
         $validasi_kasir_id = $this->input->get('validasi_kasir');
         $data['validasi_kasir'] = null;
@@ -357,7 +372,16 @@ class C_pembayaran extends CI_Controller
             'create_at'           => date('Y-m-d H:i:s'),
         ];
 
-        if ($this->M_pembayaran->insert_payment($data)) {
+        $id_pembayaran_draft = (int)$this->input->post('id_pembayaran_draft');
+        $save_success = false;
+
+        if ($id_pembayaran_draft > 0) {
+            $save_success = $this->M_pembayaran->update_and_post_draft($id_pembayaran_draft, $data);
+        } else {
+            $save_success = $this->M_pembayaran->insert_payment($data);
+        }
+
+        if ($save_success) {
             // Restore plafon
             if (!$is_pending && ($jumlah_pembayaran + $jumlah_diskon) > 0) {
                 $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
@@ -372,7 +396,8 @@ class C_pembayaran extends CI_Controller
             if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
                 $this->M_pembayaran->update_cara_pembayaran($faktur['id_faktur'], $cara_pembayaran_faktur);
             }
-            $this->session->set_flashdata('success', 'Pembayaran faktur berhasil disimpan.');
+            $msg_sukses = ($id_pembayaran_draft > 0) ? 'Draft pembayaran faktur berhasil diposting.' : 'Pembayaran faktur berhasil disimpan.';
+            $this->session->set_flashdata('success', $msg_sukses);
             redirect('keuangan/pembayaran/customer/' . rawurlencode($faktur['kd_customer']));
         }
 
@@ -574,7 +599,7 @@ class C_pembayaran extends CI_Controller
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN CASH KASIR';
         $data['faktur'] = $faktur;
         $data['is_lunas'] = (float)$faktur['sisa_tagihan'] <= 0;
-        $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
+        $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur'], true);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/kasir_pembayaran_form.php', $data);
@@ -651,5 +676,110 @@ class C_pembayaran extends CI_Controller
         }
 
         return $faktur;
+    }
+
+    /**
+     * AJAX endpoint untuk unpost pembayaran faktur dan membatalkan jurnal terkait
+     */
+    public function ajax_unpost_pembayaran()
+    {
+        if ($this->input->method() !== 'post') {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Metode request tidak valid.']));
+        }
+
+        $id_pembayaran = (int)$this->input->post('id_pembayaran');
+        $reason = trim((string)$this->input->post('reason', true));
+
+        if ($id_pembayaran <= 0) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'ID Pembayaran tidak valid.']));
+        }
+
+        $user = $this->session->userdata('nm_karyawan')
+            ?: $this->session->userdata('nama')
+            ?: $this->session->userdata('username')
+            ?: 'User Keuangan';
+
+        $result = $this->M_pembayaran->unpost_payment($id_pembayaran, $user, $reason);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
+    }
+
+    /**
+     * AJAX endpoint untuk posting kembali pembayaran faktur yang unposted
+     */
+    public function ajax_post_pembayaran()
+    {
+        if ($this->input->method() !== 'post') {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Metode request tidak valid.']));
+        }
+
+        $id_pembayaran = (int)$this->input->post('id_pembayaran');
+
+        if ($id_pembayaran <= 0) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'ID Pembayaran tidak valid.']));
+        }
+
+        $user = $this->session->userdata('nm_karyawan')
+            ?: $this->session->userdata('nama')
+            ?: $this->session->userdata('username')
+            ?: 'User Keuangan';
+
+        $result = $this->M_pembayaran->post_payment($id_pembayaran, $user);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
+    }
+
+    /**
+     * Tampilan cetak bukti/voucher pembayaran faktur
+     */
+    public function print_bukti($id_pembayaran = null)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        if ($id_pembayaran <= 0) {
+            show_404();
+        }
+
+        $payment = $this->M_pembayaran->get_payment_detail_for_print($id_pembayaran);
+        if (!$payment) {
+            show_404();
+        }
+
+        $total_bayar = (float)$payment['jumlah_pembayaran'] + (float)($payment['jumlah_diskon'] ?? 0);
+        $data['payment'] = $payment;
+        $data['terbilang'] = $this->M_pembayaran->terbilang($total_bayar);
+        $data['page_title'] = 'BUKTI PEMBAYARAN FAKTUR - ' . ($payment['no_faktur'] ?? '');
+
+        $this->load->view('content/keuangan/pembayaran_bukti_print.php', $data);
+    }
+
+    /**
+     * AJAX endpoint: Hapus pembayaran berstatus draft secara permanen
+     */
+    public function ajax_delete_pembayaran()
+    {
+        $id_pembayaran = (int)$this->input->post('id_pembayaran');
+        if ($id_pembayaran <= 0) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'ID pembayaran tidak valid.']));
+        }
+
+        $result = $this->M_pembayaran->delete_draft_payment($id_pembayaran);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
     }
 }

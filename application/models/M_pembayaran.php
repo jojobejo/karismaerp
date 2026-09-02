@@ -91,6 +91,30 @@ class M_pembayaran extends CI_Model
                     'null' => true,
                     'after' => 'kasir_approved_by',
                 ],
+                'status' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 20,
+                    'default'    => 'POSTED',
+                    'null'       => false,
+                    'after'      => 'kasir_approved_at',
+                ],
+                'unpost_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => true,
+                    'after'      => 'status',
+                ],
+                'unpost_at' => [
+                    'type' => 'DATETIME',
+                    'null' => true,
+                    'after' => 'unpost_by',
+                ],
+                'unpost_reason' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 255,
+                    'null'       => true,
+                    'after'      => 'unpost_at',
+                ],
             ] as $field => $definition) {
                 if (!$this->db->field_exists($field, $this->payment_table)) {
                     $this->dbforge->add_column($this->payment_table, [$field => $definition]);
@@ -174,6 +198,25 @@ class M_pembayaran extends CI_Model
                 'type' => 'DATETIME',
                 'null' => true,
             ],
+            'status' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'default'    => 'POSTED',
+            ],
+            'unpost_by' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'unpost_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
+            'unpost_reason' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'null'       => true,
+            ],
             'keterangan' => [
                 'type' => 'TEXT',
                 'null' => true,
@@ -212,6 +255,7 @@ class M_pembayaran extends CI_Model
                 id_faktur,
                 COALESCE(SUM(
                     CASE
+                        WHEN COALESCE(status, 'POSTED') IN ('UNPOST', 'DRAFT') THEN 0
                         WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN 0
                         WHEN COALESCE(status_kasir, 'valid') = 'pending_kasir' THEN 0
                         ELSE (jumlah_pembayaran + jumlah_diskon)
@@ -219,12 +263,14 @@ class M_pembayaran extends CI_Model
                 ), 0) AS total_pembayaran,
                 COALESCE(SUM(
                     CASE
+                        WHEN COALESCE(status, 'POSTED') IN ('UNPOST', 'DRAFT') THEN 0
                         WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN (jumlah_pembayaran + jumlah_diskon)
                         ELSE 0
                     END
                 ), 0) AS total_bg_pending,
                 MIN(
                     CASE
+                        WHEN COALESCE(status, 'POSTED') IN ('UNPOST', 'DRAFT') THEN NULL
                         WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN id_pembayaran
                         ELSE NULL
                     END
@@ -453,14 +499,20 @@ class M_pembayaran extends CI_Model
         return $this->db->get()->row_array();
     }
 
-    public function get_payment_history($id_faktur)
+    public function get_payment_history($id_faktur, $only_posted = false)
     {
         if ($this->db->table_exists('tbkeu_jurnal')) {
-            return $this->db
+            $this->db
                 ->select('p.*, MAX(j.id_jurnal) AS id_jurnal, MAX(j.nomor_jurnal) AS nomor_jurnal, MAX(j.status) AS status_jurnal')
                 ->from($this->payment_table . ' p')
                 ->join('tbkeu_jurnal j', 'j.source_module = "KEUANGAN" AND (j.source_id = CAST(p.id_pembayaran AS CHAR) OR CAST(j.source_id AS UNSIGNED) = p.id_pembayaran)', 'left')
-                ->where('p.id_faktur', (int)$id_faktur)
+                ->where('p.id_faktur', (int)$id_faktur);
+
+            if ($only_posted && $this->db->field_exists('status', $this->payment_table)) {
+                $this->db->where("COALESCE(p.status, 'POSTED') = 'POSTED'");
+            }
+
+            return $this->db
                 ->group_by('p.id_pembayaran')
                 ->order_by('p.tanggal_pembayaran', 'DESC')
                 ->order_by('p.id_pembayaran', 'DESC')
@@ -468,8 +520,12 @@ class M_pembayaran extends CI_Model
                 ->result_array();
         }
 
+        $this->db->where('id_faktur', (int)$id_faktur);
+        if ($only_posted && $this->db->field_exists('status', $this->payment_table)) {
+            $this->db->where("COALESCE(status, 'POSTED') = 'POSTED'");
+        }
+
         return $this->db
-            ->where('id_faktur', (int)$id_faktur)
             ->order_by('tanggal_pembayaran', 'DESC')
             ->order_by('id_pembayaran', 'DESC')
             ->get($this->payment_table)
@@ -554,6 +610,9 @@ class M_pembayaran extends CI_Model
         $this->db->from($this->payment_table . ' p');
         $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur');
         $this->db->where('f.kd_customer', $kd_customer);
+        if ($this->db->field_exists('status', $this->payment_table)) {
+            $this->db->where("COALESCE(p.status, 'POSTED') NOT IN ('UNPOST', 'DRAFT')");
+        }
         $this->db->group_start();
         $this->db->where('p.metode_pembayaran', 'retur');
         $this->db->or_where('p.metode_pembayaran', 'Q Hutang Non Dagang');
@@ -677,5 +736,372 @@ class M_pembayaran extends CI_Model
         $this->db->order_by('a.nama_akun', 'ASC');
         return $this->db->get()->result_array();
     }
-}
 
+    /**
+     * Unpost pembayaran faktur dan batalkan jurnal terkait
+     *
+     * @param int $id_pembayaran
+     * @param string $user
+     * @param string $reason
+     * @return array
+     */
+    public function unpost_payment($id_pembayaran, $user, $reason = '')
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $payment = $this->get_payment($id_pembayaran);
+
+        if (!$payment) {
+            return ['success' => false, 'message' => 'Data pembayaran tidak ditemukan.'];
+        }
+
+        if (in_array(($payment['status'] ?? 'POSTED'), ['DRAFT', 'UNPOST'], true)) {
+            return ['success' => false, 'message' => 'Pembayaran ini sudah berstatus DRAFT.'];
+        }
+
+        $this->db->trans_start();
+
+        // 1. Update status pembayaran menjadi UNPOST
+        $update_payload = [
+            'status'        => 'DRAFT',
+            'unpost_by'     => $user,
+            'unpost_at'     => date('Y-m-d H:i:s'),
+            'unpost_reason' => $reason !== '' ? $reason : null,
+        ];
+        $this->db->where('id_pembayaran', $id_pembayaran)->update($this->payment_table, $update_payload);
+
+        // 2. Kembalikan status jurnal umum terkait ke DRAFT
+        if ($this->db->table_exists('tbkeu_jurnal')) {
+            $user_id = (int)($this->session->userdata('id_karyawan') 
+                ?: $this->session->userdata('id') 
+                ?: $this->session->userdata('id_user') 
+                ?: 0);
+
+            $this->db->where('source_module', 'KEUANGAN')
+                ->group_start()
+                    ->where('source_id', (string)$id_pembayaran)
+                    ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->update('tbkeu_jurnal', [
+                    'status'      => 'DRAFT',
+                    'updated_at'  => date('Y-m-d H:i:s'),
+                    'reversed_by' => $user_id > 0 ? $user_id : null,
+                    'reversed_at' => date('Y-m-d H:i:s'),
+                ]);
+        }
+
+        // 3. Reversal Plafon Customer (kurangi kembali plafon yang bertambah saat pembayaran)
+        $is_pending_bg = (($payment['status_bg'] ?? '') === 'pending');
+        $is_pending_kasir = (($payment['status_kasir'] ?? '') === 'pending_kasir');
+
+        if (!$is_pending_bg && !$is_pending_kasir) {
+            $total_bayar = (float)$payment['jumlah_pembayaran'] + (float)($payment['jumlah_diskon'] ?? 0);
+            if ($total_bayar > 0) {
+                $faktur = $this->db->select('kd_customer')->get_where('tbso_faktur_penjualan', ['id_faktur' => $payment['id_faktur']])->row_array();
+                if ($faktur && !empty($faktur['kd_customer'])) {
+                    $kd_customer = $faktur['kd_customer'];
+                    $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
+                    if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                        $this->db->set('plafon_aktif', 'plafon_aktif - ' . $total_bayar, false);
+                        $this->db->where('kd_customer', $kd_customer);
+                        $this->db->update('tb_customer');
+                    }
+                }
+            }
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['success' => false, 'message' => 'Gagal melakukan unpost pembayaran pada database.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Pembayaran faktur berhasil di-unpost (status DRAFT). Status jurnal telah dikembalikan ke DRAFT.',
+            'id_faktur' => (int)$payment['id_faktur']
+        ];
+    }
+
+    /**
+     * Posting kembali pembayaran faktur yang sebelumnya berstatus UNPOST
+     *
+     * @param int $id_pembayaran
+     * @param string $user
+     * @return array
+     */
+    public function post_payment($id_pembayaran, $user)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $payment = $this->get_payment($id_pembayaran);
+
+        if (!$payment) {
+            return ['success' => false, 'message' => 'Data pembayaran tidak ditemukan.'];
+        }
+
+        if (($payment['status'] ?? 'POSTED') === 'POSTED') {
+            return ['success' => false, 'message' => 'Pembayaran ini sudah berstatus POSTED.'];
+        }
+
+        $this->db->trans_start();
+
+        // 1. Update status pembayaran menjadi POSTED
+        $this->db->where('id_pembayaran', $id_pembayaran)->update($this->payment_table, [
+            'status'        => 'POSTED',
+            'unpost_by'     => null,
+            'unpost_at'     => null,
+            'unpost_reason' => null,
+        ]);
+
+        // 2. Update status jurnal menjadi POSTED jika sudah ada, atau generate jika belum
+        $is_pending_bg = (($payment['status_bg'] ?? '') === 'pending');
+        $is_pending_kasir = (($payment['status_kasir'] ?? '') === 'pending_kasir');
+
+        if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal')) {
+            $user_id = (int)($this->session->userdata('id_karyawan') 
+                ?: $this->session->userdata('id') 
+                ?: $this->session->userdata('id_user') 
+                ?: 0);
+
+            $existing_journal = $this->db->where('source_module', 'KEUANGAN')
+                ->group_start()
+                    ->where('source_id', (string)$id_pembayaran)
+                    ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->get('tbkeu_jurnal')
+                ->row_array();
+
+            if ($existing_journal) {
+                $this->db->where('id_jurnal', $existing_journal['id_jurnal'])->update('tbkeu_jurnal', [
+                    'status'     => 'POSTED',
+                    'posted_by'  => $user_id > 0 ? $user_id : null,
+                    'posted_at'  => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            } else {
+                $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
+            }
+        }
+
+        // 3. Restore Plafon Customer
+        if (!$is_pending_bg && !$is_pending_kasir) {
+            $total_bayar = (float)$payment['jumlah_pembayaran'] + (float)($payment['jumlah_diskon'] ?? 0);
+            if ($total_bayar > 0) {
+                $faktur = $this->db->select('kd_customer')->get_where('tbso_faktur_penjualan', ['id_faktur' => $payment['id_faktur']])->row_array();
+                if ($faktur && !empty($faktur['kd_customer'])) {
+                    $kd_customer = $faktur['kd_customer'];
+                    $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
+                    if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                        $this->db->set('plafon_aktif', 'plafon_aktif + ' . $total_bayar, false);
+                        $this->db->where('kd_customer', $kd_customer);
+                        $this->db->update('tb_customer');
+                    }
+                }
+            }
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['success' => false, 'message' => 'Gagal memposting kembali pembayaran pada database.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Pembayaran faktur berhasil diposting kembali.',
+            'id_faktur' => (int)$payment['id_faktur']
+        ];
+    }
+
+    /**
+     * Mengambil detail lengkap pembayaran untuk cetak voucher / bukti kas bank
+     *
+     * @param int $id_pembayaran
+     * @return array|null
+     */
+    public function get_payment_detail_for_print($id_pembayaran)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $this->db->select('
+            p.*,
+            f.no_faktur,
+            f.tanggal_faktur,
+            f.tanggal_jatuh_tempo,
+            f.no_so,
+            c.kd_customer,
+            c.nama_customer,
+            c.alamat_kios AS alamat_customer,
+            c.telp1 AS no_telp,
+            j.nomor_jurnal,
+            j.status AS status_jurnal
+        ');
+        $this->db->from($this->payment_table . ' p');
+        $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->join('tbkeu_jurnal j', 'j.source_module = "KEUANGAN" AND (j.source_id = CAST(p.id_pembayaran AS CHAR) OR CAST(j.source_id AS UNSIGNED) = p.id_pembayaran)', 'left');
+        $this->db->where('p.id_pembayaran', $id_pembayaran);
+        $data = $this->db->get()->row_array();
+
+        if ($data && !empty($data['id_faktur'])) {
+            $faktur_summary = $this->get_faktur_summary($data['id_faktur']);
+            $data['total_tagihan'] = $faktur_summary['total_tagihan'] ?? 0;
+            $data['total_pembayaran_kumulatif'] = $faktur_summary['total_pembayaran'] ?? 0;
+            $data['sisa_tagihan'] = $faktur_summary['sisa_tagihan'] ?? 0;
+            $data['status_pembayaran_faktur'] = $faktur_summary['status_pembayaran'] ?? '';
+        }
+
+        return $data;
+    }
+
+    /**
+     * Helper rekursif penyebut angka Bahasa Indonesia
+     *
+     * @param float|int $nilai
+     * @return string
+     */
+    private function _penyebut($nilai)
+    {
+        $nilai = abs((float)$nilai);
+        $huruf = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
+        $temp = "";
+        if ($nilai < 12) {
+            $temp = " " . $huruf[(int)$nilai];
+        } else if ($nilai < 20) {
+            $temp = $this->_penyebut($nilai - 10) . " belas";
+        } else if ($nilai < 100) {
+            $temp = $this->_penyebut((int)($nilai / 10)) . " puluh" . $this->_penyebut($nilai % 10);
+        } else if ($nilai < 200) {
+            $temp = " seratus" . $this->_penyebut($nilai - 100);
+        } else if ($nilai < 1000) {
+            $temp = $this->_penyebut((int)($nilai / 100)) . " ratus" . $this->_penyebut($nilai % 100);
+        } else if ($nilai < 2000) {
+            $temp = " seribu" . $this->_penyebut($nilai - 1000);
+        } else if ($nilai < 1000000) {
+            $temp = $this->_penyebut((int)($nilai / 1000)) . " ribu" . $this->_penyebut(fmod($nilai, 1000));
+        } else if ($nilai < 1000000000) {
+            $temp = $this->_penyebut((int)($nilai / 1000000)) . " juta" . $this->_penyebut(fmod($nilai, 1000000));
+        } else if ($nilai < 1000000000000) {
+            $temp = $this->_penyebut((int)($nilai / 1000000000)) . " milyar" . $this->_penyebut(fmod($nilai, 1000000000));
+        } else if ($nilai < 1000000000000000) {
+            $temp = $this->_penyebut((int)($nilai / 1000000000000)) . " trilyun" . $this->_penyebut(fmod($nilai, 1000000000000));
+        }
+        return $temp;
+    }
+
+    /**
+     * Konversi angka nominal uang menjadi teks terbilang Bahasa Indonesia
+     *
+     * @param float|int $nilai
+     * @return string
+     */
+    public function terbilang($nilai)
+    {
+        $penyebut = trim($this->_penyebut($nilai));
+        return empty($penyebut) ? 'Nol Rupiah' : ucwords(strtolower($penyebut)) . ' Rupiah';
+    }
+
+    /**
+     * Update data draft pembayaran dan langsung posting ke POSTED
+     *
+     * @param int $id_pembayaran
+     * @param array $data
+     * @return bool
+     */
+    public function update_and_post_draft($id_pembayaran, $data)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $existing = $this->get_payment($id_pembayaran);
+        if (!$existing) {
+            return false;
+        }
+
+        $this->db->trans_start();
+
+        $data['status'] = 'POSTED';
+        $data['unpost_by'] = null;
+        $data['unpost_at'] = null;
+        $data['unpost_reason'] = null;
+
+        $this->db->where('id_pembayaran', $id_pembayaran)->update($this->payment_table, $data);
+
+        $is_pending_bg = (($data['status_bg'] ?? '') === 'pending');
+        $is_pending_kasir = (($data['status_kasir'] ?? 'valid') === 'pending_kasir');
+
+        if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            $this->load->model('M_Journal');
+            // Hapus jurnal lama jika pernah ada agar tidak duplikat
+            $old_journal = $this->db->where('source_module', 'KEUANGAN')
+                ->group_start()
+                    ->where('source_id', (string)$id_pembayaran)
+                    ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->get('tbkeu_jurnal')
+                ->row_array();
+
+            if ($old_journal) {
+                $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal_detail');
+                $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal');
+            }
+            $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    /**
+     * Hapus data draft pembayaran secara permanen beserta jurnalnya jika ada
+     *
+     * @param int $id_pembayaran
+     * @return array
+     */
+    public function delete_draft_payment($id_pembayaran)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $payment = $this->get_payment($id_pembayaran);
+        if (!$payment) {
+            return ['success' => false, 'message' => 'Data pembayaran tidak ditemukan.'];
+        }
+
+        $status = strtoupper((string)($payment['status'] ?? 'POSTED'));
+        if (!in_array($status, ['DRAFT', 'UNPOST'], true)) {
+            return ['success' => false, 'message' => 'Hanya pembayaran berstatus DRAFT yang dapat dihapus. Silakan unpost terlebih dahulu jika ingin menghapus.'];
+        }
+
+        $this->db->trans_start();
+
+        // 1. Hapus jurnal terkait jika ada
+        if ($this->db->table_exists('tbkeu_jurnal')) {
+            $journals = $this->db->where('source_module', 'KEUANGAN')
+                ->group_start()
+                    ->where('source_id', (string)$id_pembayaran)
+                    ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->get('tbkeu_jurnal')
+                ->result_array();
+
+            foreach ($journals as $j) {
+                if ($this->db->table_exists('tbkeu_jurnal_detail')) {
+                    $this->db->where('id_jurnal', $j['id_jurnal'])->delete('tbkeu_jurnal_detail');
+                }
+                $this->db->where('id_jurnal', $j['id_jurnal'])->delete('tbkeu_jurnal');
+            }
+        }
+
+        // 2. Hapus record pembayaran
+        $this->db->where('id_pembayaran', $id_pembayaran)->delete($this->payment_table);
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['success' => false, 'message' => 'Gagal menghapus pembayaran dari database.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Draft pembayaran faktur berhasil dihapus secara permanen.',
+            'id_faktur' => (int)$payment['id_faktur']
+        ];
+    }
+
+}

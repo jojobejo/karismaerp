@@ -24,16 +24,25 @@
     .history-row.selected td {
         background-color: #e2e8f0 !important;
     }
+    .history-row.row-unposted {
+        background-color: #fef2f2 !important;
+    }
+    .history-row.row-unposted td {
+        color: #64748b !important;
+    }
+    .history-row.row-unposted:hover td {
+        background-color: #fee2e2 !important;
+    }
 
     /* Context Menu Styles */
     .context-menu {
         position: absolute;
         background: #ffffff;
         border: 1px solid #cbd5e1;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
         border-radius: 6px;
         z-index: 1050;
-        min-width: 170px;
+        min-width: 210px;
         overflow: hidden;
     }
     .context-menu ul {
@@ -53,6 +62,23 @@
     .context-menu li:hover {
         background: #f1f5f9;
         color: #0284c7;
+    }
+    .context-menu li.text-danger:hover {
+        background: #fee2e2;
+        color: #dc2626 !important;
+    }
+    .context-menu li.text-success:hover {
+        background: #dcfce7;
+        color: #16a34a !important;
+    }
+    .context-menu li.disabled {
+        color: #94a3b8 !important;
+        cursor: not-allowed !important;
+        background: transparent !important;
+        opacity: 0.5;
+    }
+    .context-menu li.disabled i {
+        color: #cbd5e1 !important;
     }
 
     /* Modal Styling */
@@ -212,7 +238,7 @@
                         </h3>
                         <div class="card-tools ml-auto d-flex align-items-center">
                             <small class="text-white-50 mr-3 d-none d-md-inline">
-                                <i class="fas fa-mouse-pointer mr-1"></i>Klik kanan baris pembayaran untuk <b>Detail Jurnal</b>
+                                <i class="fas fa-mouse-pointer mr-1"></i>Klik kanan baris: <b>Detail Jurnal</b>, <b>Print</b>, atau <b>Unpost</b>
                             </small>
                             <span class="badge badge-light" id="badgeJumlahHistory">0 pembayaran</span>
                         </div>
@@ -226,19 +252,20 @@
                             <table class="table table-bordered table-hover table-striped table-sm mb-0" id="tabelHistoriPembayaran">
                                 <thead class="thead-dark">
                                     <tr>
-                                        <th style="width: 15%;">Tanggal Pembayaran</th>
+                                        <th style="width: 13%;">Tanggal Pembayaran</th>
                                         <th style="width: 15%;">Metode Pembayaran</th>
-                                        <th style="width: 18%;">No. Referensi / Bank</th>
-                                        <th style="width: 14%;">Status BG / Kasir</th>
+                                        <th style="width: 16%;">No. Referensi / Bank</th>
+                                        <th style="width: 13%;">Status BG / Kasir</th>
+                                        <th style="width: 12%;" class="text-center">Status Posting</th>
                                         <th style="width: 15%;" class="text-right">Jumlah Bayar</th>
-                                        <th style="width: 12%;" class="text-right">Diskon / Potongan</th>
-                                        <th style="width: 11%;">Keterangan</th>
+                                        <th style="width: 10%;" class="text-right">Diskon</th>
+                                        <th style="width: 6%;">Ket.</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bodyHistoriPembayaran">
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
-                                            <i class="fas fa-info-circle mr-1"></i>Silakan klik salah satu faktur di atas untuk melihat riwayat pembayaran.
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                             <i class="fas fa-info-circle mr-1"></i>Silakan klik salah satu faktur di atas untuk melihat riwayat pembayaran.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -257,10 +284,20 @@
 </div>
 
 <!-- Context Menu for Right Click -->
-<div id="context-menu-pembayaran" class="context-menu" style="display:none;">
+<div id="context-menu-pembayaran" class="context-menu shadow-lg" style="display:none;">
     <ul>
         <li id="menu-detail-jurnal-pembayaran">
             <i class="fas fa-book-open text-primary mr-2"></i>Detail Jurnal
+        </li>
+        <li id="menu-print-pembayaran">
+            <i class="fas fa-print text-info mr-2"></i>Print Bukti Pembayaran
+        </li>
+        <li style="border-top: 1px solid #e2e8f0; margin: 4px 0; padding: 0;"></li>
+        <li id="menu-unpost-pembayaran" class="text-danger">
+            <i class="fas fa-undo-alt text-danger mr-2"></i><span id="label-menu-unpost">Unpost Pembayaran</span>
+        </li>
+        <li id="menu-hapus-pembayaran" class="text-danger">
+            <i class="fas fa-trash-alt text-danger mr-2"></i><span>Hapus Pembayaran</span>
         </li>
     </ul>
 </div>
@@ -337,6 +374,7 @@ $(function () {
     let activeFakturId = null;
     let contextMenuPaymentId = null;
     let contextMenuJurnalId = null;
+    let contextMenuPostingStatus = 'POSTED';
 
     // Helper: format angka rupiah
     function formatRupiah(num) {
@@ -379,7 +417,7 @@ $(function () {
                     if (history.length === 0) {
                         $('#bodyHistoriPembayaran').html(`
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     <i class="fas fa-info-circle mr-1"></i>Belum ada riwayat pembayaran untuk faktur <strong>${noFaktur}</strong>.
                                 </td>
                             </tr>
@@ -392,6 +430,8 @@ $(function () {
                         let isBg = (item.metode_pembayaran || '').toLowerCase() === 'bg';
                         let isBgCair = (item.status_bg || '') === 'cair';
                         let statusKasir = item.status_kasir || '';
+                        let statusPosting = (item.status || 'POSTED').toUpperCase();
+                        let isDraftOrUnpost = (statusPosting === 'DRAFT' || statusPosting === 'UNPOST');
 
                         // Status BG / Kasir badge
                         let statusBadge = '';
@@ -405,6 +445,11 @@ $(function () {
                             statusBadge = '<span class="badge badge-secondary">Langsung Masuk</span>';
                         }
 
+                        // Status Posting Badge (DRAFT kuning, POSTED hijau)
+                        let statusPostingBadge = isDraftOrUnpost
+                            ? '<span class="badge badge-warning font-weight-bold" title="Status Draft (belum terposting)"><i class="fas fa-file-alt mr-1"></i>DRAFT</span>'
+                            : '<span class="badge badge-success font-weight-bold" title="Pembayaran terposting"><i class="fas fa-check-circle mr-1"></i>POSTED</span>';
+
                         // Info bank / BG
                         let refBankInfo = '-';
                         if (item.no_bg || item.nama_bank) {
@@ -413,16 +458,31 @@ $(function () {
                             if (item.nama_bank) parts.push('Bank: ' + item.nama_bank);
                             refBankInfo = parts.join(' | ');
                         } else if (item.nomor_jurnal) {
-                            refBankInfo = '<span class="text-primary font-weight-bold"><i class="fas fa-book mr-1"></i>' + item.nomor_jurnal + '</span>';
+                            let jurnalBadgeColor = isDraftOrUnpost ? 'text-muted' : 'text-primary';
+                            refBankInfo = '<span class="' + jurnalBadgeColor + ' font-weight-bold"><i class="fas fa-book mr-1"></i>' + item.nomor_jurnal + '</span>';
                         }
 
                         let diskonText = parseFloat(item.jumlah_diskon) > 0 ? formatRupiah(item.jumlah_diskon) : '-';
+                        let jumlahText = formatRupiah(item.jumlah_pembayaran);
+
+                        let bayarCellHtml = isDraftOrUnpost
+                            ? `<del class="text-danger font-weight-bold">${jumlahText}</del>`
+                            : `<span class="text-success font-weight-bold">${jumlahText}</span>`;
+
+                        let rowClass = isDraftOrUnpost ? 'history-row row-unposted cursor-pointer' : 'history-row';
+                        let rowTitle = isDraftOrUnpost 
+                            ? 'Klik 2x untuk membuka form & memposting draft ini | Klik kanan untuk menu' 
+                            : 'Klik kanan untuk Detail Jurnal, Print, atau Unpost';
 
                         rowsHtml += `
-                            <tr class="history-row" 
+                            <tr class="${rowClass}" 
                                 data-id-pembayaran="${item.id_pembayaran}" 
                                 data-id-jurnal="${item.id_jurnal || ''}"
-                                title="Klik kanan untuk melihat Detail Jurnal">
+                                data-status-posting="${statusPosting}"
+                                data-no-faktur="${item.no_faktur || noFaktur}"
+                                data-id-faktur="${item.id_faktur || activeFakturId}"
+                                data-jumlah-bayar="${item.jumlah_pembayaran}"
+                                title="${rowTitle}">
                                 <td>${formatTanggal(item.tanggal_pembayaran)}</td>
                                 <td>
                                     <strong>${item.metode_pembayaran || '-'}</strong>
@@ -430,7 +490,8 @@ $(function () {
                                 </td>
                                 <td><small>${refBankInfo}</small></td>
                                 <td>${statusBadge}</td>
-                                <td class="text-right font-weight-bold text-success">${formatRupiah(item.jumlah_pembayaran)}</td>
+                                <td class="text-center">${statusPostingBadge}</td>
+                                <td class="text-right">${bayarCellHtml}</td>
                                 <td class="text-right text-info">${diskonText}</td>
                                 <td><small class="text-muted">${item.keterangan || '-'}</small></td>
                             </tr>
@@ -441,7 +502,7 @@ $(function () {
                 } else {
                     $('#bodyHistoriPembayaran').html(`
                         <tr>
-                            <td colspan="7" class="text-center text-danger py-4">Gagal memuat riwayat pembayaran.</td>
+                            <td colspan="8" class="text-center text-danger py-4">Gagal memuat riwayat pembayaran.</td>
                         </tr>
                     `);
                 }
@@ -451,7 +512,7 @@ $(function () {
                 $('#containerTabelHistori').show();
                 $('#bodyHistoriPembayaran').html(`
                     <tr>
-                        <td colspan="7" class="text-center text-danger py-4">Terjadi kesalahan sistem saat memuat data.</td>
+                        <td colspan="8" class="text-center text-danger py-4">Terjadi kesalahan sistem saat memuat data.</td>
                     </tr>
                 `);
             }
@@ -495,15 +556,48 @@ $(function () {
         e.preventDefault();
         contextMenuPaymentId = idPembayaran;
         contextMenuJurnalId = $(this).data('id-jurnal') || null;
+        contextMenuPostingStatus = $(this).data('status-posting') || 'POSTED';
 
         $('#bodyHistoriPembayaran tr.history-row').removeClass('selected');
         $(this).addClass('selected');
+
+        // Sesuaikan teks dan ikon tombol unpost/posting berdasarkan status
+        let isDraftOrUnpostMenu = (contextMenuPostingStatus === 'DRAFT' || contextMenuPostingStatus === 'UNPOST');
+        if (isDraftOrUnpostMenu) {
+            $('#label-menu-unpost').text('Buka Form Draft');
+            $('#menu-unpost-pembayaran')
+                .removeClass('text-danger text-success')
+                .addClass('text-warning');
+            $('#menu-unpost-pembayaran i')
+                .removeClass('fa-undo-alt text-danger fa-check-circle text-success')
+                .addClass('fa-edit text-warning');
+
+            // Menu Hapus AKTIF jika berstatus draft / unpost
+            $('#menu-hapus-pembayaran')
+                .removeClass('disabled')
+                .css({'pointer-events': 'auto', 'opacity': '1'})
+                .attr('title', 'Hapus data draft pembayaran ini secara permanen');
+        } else {
+            $('#label-menu-unpost').text('Unpost Pembayaran');
+            $('#menu-unpost-pembayaran')
+                .removeClass('text-success text-warning')
+                .addClass('text-danger');
+            $('#menu-unpost-pembayaran i')
+                .removeClass('fa-check-circle text-success fa-edit text-warning')
+                .addClass('fa-undo-alt text-danger');
+
+            // Menu Hapus NONAKTIF jika status masih POSTED
+            $('#menu-hapus-pembayaran')
+                .addClass('disabled')
+                .css({'pointer-events': 'none', 'opacity': '0.45'})
+                .attr('title', 'Pembayaran harus di-unpost menjadi draft terlebih dahulu sebelum dapat dihapus');
+        }
 
         let posX = e.pageX;
         let posY = e.pageY;
 
         // Cegah menu keluar dari viewport
-        let menuWidth = 180;
+        let menuWidth = 220;
         if (posX + menuWidth > $(window).width()) {
             posX = $(window).width() - menuWidth - 10;
         }
@@ -521,6 +615,222 @@ $(function () {
         if (!contextMenuPaymentId && !contextMenuJurnalId) return;
         showDetailJurnalModal(contextMenuJurnalId, contextMenuPaymentId);
     });
+
+    // Klik "Print" pada context menu
+    $('#menu-print-pembayaran').on('click', function() {
+        $('#context-menu-pembayaran').hide();
+        if (!contextMenuPaymentId) return;
+        let printUrl = '<?= base_url("keuangan/pembayaran/print_bukti/") ?>' + contextMenuPaymentId;
+        window.open(printUrl, '_blank');
+    });
+
+    // Klik 2x (Double Click) pada baris riwayat pembayaran -> Buka form bayar dengan data draft
+    $(document).on('dblclick', '#bodyHistoriPembayaran tr.history-row', function() {
+        let idPembayaran = $(this).data('id-pembayaran');
+        let statusPosting = ($(this).data('status-posting') || 'POSTED').toUpperCase();
+        let idFaktur = $(this).data('id-faktur') || activeFakturId;
+
+        if (statusPosting === 'DRAFT' || statusPosting === 'UNPOST') {
+            window.location.href = '<?= base_url("keuangan/pembayaran/bayar/") ?>' + idFaktur + '?draft=' + idPembayaran;
+        }
+    });
+
+    // Klik "Unpost / Buka Draft" pada context menu
+    $('#menu-unpost-pembayaran').on('click', function() {
+        $('#context-menu-pembayaran').hide();
+        if (!contextMenuPaymentId) return;
+
+        let isCurrentlyDraft = (contextMenuPostingStatus === 'DRAFT' || contextMenuPostingStatus === 'UNPOST');
+
+        if (isCurrentlyDraft) {
+            // Arahkan langsung ke form pembayaran mode draft
+            window.location.href = '<?= base_url("keuangan/pembayaran/bayar/") ?>' + activeFakturId + '?draft=' + contextMenuPaymentId;
+        } else {
+            let confirmTitle = 'Unpost Pembayaran?';
+            let confirmText = 'Pembayaran ini akan di-unpost dan dikembalikan menjadi status DRAFT, status jurnal akuntansi terkait kembali DRAFT, dan sisa tagihan faktur akan kembali utuh.';
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: confirmTitle,
+                    text: confirmText,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-undo-alt mr-1"></i> Ya, Unpost Pembayaran!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        executeTogglePost(contextMenuPaymentId, 'unpost');
+                    }
+                });
+            } else {
+                if (confirm(confirmText)) {
+                    executeTogglePost(contextMenuPaymentId, 'unpost');
+                }
+            }
+        }
+    });
+
+    // Klik "Hapus Pembayaran" pada context menu
+    $('#menu-hapus-pembayaran').on('click', function() {
+        $('#context-menu-pembayaran').hide();
+        if (!contextMenuPaymentId) return;
+
+        let isDraft = (contextMenuPostingStatus === 'DRAFT' || contextMenuPostingStatus === 'UNPOST');
+        if (!isDraft) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tidak Dapat Dihapus',
+                    text: 'Hanya pembayaran yang berstatus DRAFT yang dapat dihapus. Silakan unpost pembayaran terlebih dahulu.'
+                });
+            } else {
+                alert('Hanya pembayaran yang berstatus DRAFT yang dapat dihapus. Silakan unpost pembayaran terlebih dahulu.');
+            }
+            return;
+        }
+
+        let confirmTitle = 'Hapus Draft Pembayaran?';
+        let confirmText = 'Apakah Anda yakin ingin menghapus data pembayaran draft ini secara permanen? Data yang dihapus tidak dapat dikembalikan.';
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: confirmTitle,
+                text: confirmText,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    executeDeletePayment(contextMenuPaymentId);
+                }
+            });
+        } else {
+            if (confirm(confirmText)) {
+                executeDeletePayment(contextMenuPaymentId);
+            }
+        }
+    });
+
+    // Fungsi eksekusi hapus draft pembayaran via AJAX
+    function executeDeletePayment(idPembayaran) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Menghapus Pembayaran...',
+                text: 'Mohon tunggu sebentar...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+        }
+
+        $.ajax({
+            url: '<?= base_url("keuangan/pembayaran/ajax_delete_pembayaran") ?>',
+            type: 'POST',
+            data: { id_pembayaran: idPembayaran },
+            dataType: 'json',
+            success: function(res) {
+                if (res && res.success) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        alert(res.message);
+                        window.location.reload();
+                    }
+                } else {
+                    let msg = (res && res.message) ? res.message : 'Gagal menghapus pembayaran.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+                    } else {
+                        alert(msg);
+                    }
+                }
+            },
+            error: function() {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan Sistem',
+                        text: 'Terjadi kesalahan sistem saat menghubungi server.'
+                    });
+                } else {
+                    alert('Terjadi kesalahan sistem saat menghubungi server.');
+                }
+            }
+        });
+    }
+
+    // Fungsi eksekusi Unpost atau Posting via AJAX
+    function executeTogglePost(idPembayaran, action) {
+        let targetUrl = (action === 'unpost') 
+            ? '<?= base_url("keuangan/pembayaran/ajax_unpost_pembayaran") ?>' 
+            : '<?= base_url("keuangan/pembayaran/ajax_post_pembayaran") ?>';
+
+        let loadingTitle = (action === 'unpost') ? 'Memproses Unpost...' : 'Memproses Posting...';
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: loadingTitle,
+                text: 'Mohon tunggu sebentar...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+        }
+
+        $.ajax({
+            url: targetUrl,
+            type: 'POST',
+            data: { id_pembayaran: idPembayaran },
+            dataType: 'json',
+            success: function(res) {
+                if (res && res.success) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: res.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        alert(res.message);
+                        window.location.reload();
+                    }
+                } else {
+                    let msg = (res && res.message) ? res.message : 'Gagal memproses transaksi.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+                    } else {
+                        alert(msg);
+                    }
+                }
+            },
+            error: function() {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan Sistem',
+                        text: 'Terjadi kesalahan sistem saat menghubungi server.'
+                    });
+                } else {
+                    alert('Terjadi kesalahan sistem saat menghubungi server.');
+                }
+            }
+        });
+    }
 
     // Fungsi menampilkan modal detail jurnal
     function showDetailJurnalModal(idJurnal, idPembayaran) {

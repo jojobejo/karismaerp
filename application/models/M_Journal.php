@@ -270,6 +270,8 @@ class M_Journal extends CI_Model
         $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
         $this->db->where('j.source_module', 'KEUANGAN');
         $this->db->where('j.source_type', 'PEMBAYARAN_FAKTUR');
+        $this->db->where('j.status', 'POSTED');
+        $this->db->where("COALESCE(p.status, 'POSTED') = 'POSTED'");
         
         if ($search !== '') {
             $this->db->group_start();
