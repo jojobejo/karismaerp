@@ -14,6 +14,7 @@ class M_ReturPembelian extends CI_Model
     const PERSIAPAN_BELUM = 'BELUM_DISIAPKAN';
     const PERSIAPAN_SEDANG = 'SEDANG_DISIAPKAN';
     const PERSIAPAN_SUDAH = 'SUDAH_DISIAPKAN';
+    const PERSIAPAN_SELESAI = 'SELESAI';
 
     public function ensure_schema()
     {
@@ -75,6 +76,18 @@ class M_ReturPembelian extends CI_Model
         }
         if (!in_array('disiapkan_at', $fields, true)) {
             $this->db->query("ALTER TABLE `tb_retur_pembelian` ADD COLUMN `disiapkan_at` DATETIME NULL AFTER `disiapkan_oleh`");
+        }
+
+        $detailFields = $this->db->list_fields('tb_retur_pembelian_detail');
+        if (!in_array('is_disiapkan', $detailFields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian_detail` ADD COLUMN `is_disiapkan` TINYINT(1) NOT NULL DEFAULT 0 AFTER `alasan_retur`");
+            $this->db->query("ALTER TABLE `tb_retur_pembelian_detail` ADD KEY `idx_detail_is_disiapkan` (`is_disiapkan`)");
+        }
+        if (!in_array('disiapkan_at', $detailFields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian_detail` ADD COLUMN `disiapkan_at` DATETIME NULL AFTER `is_disiapkan`");
+        }
+        if (!in_array('disiapkan_oleh', $detailFields, true)) {
+            $this->db->query("ALTER TABLE `tb_retur_pembelian_detail` ADD COLUMN `disiapkan_oleh` VARCHAR(100) NULL AFTER `disiapkan_at`");
         }
 
         $this->db->query("CREATE TABLE IF NOT EXISTS `tb_retur_pembelian_detail` (
@@ -172,6 +185,7 @@ class M_ReturPembelian extends CI_Model
                     MAX(s.nama_suplier) AS nama_suplier,
                     COUNT(d.id_detail_retur_pembelian) AS total_item,
                     COALESCE(SUM(d.qty_retur), 0) AS total_qty_retur,
+                    COALESCE(SUM(CASE WHEN d.is_disiapkan = 1 THEN 1 ELSE 0 END), 0) AS total_item_disiapkan,
                     GROUP_CONCAT(DISTINCT COALESCE(b.nama_barang, d.kd_barang) SEPARATOR ', ') AS ringkasan_barang
                 FROM tb_retur_pembelian r
                 LEFT JOIN tb_lpb l ON l.id_lpb = r.id_lpb
@@ -197,10 +211,10 @@ class M_ReturPembelian extends CI_Model
         return $this->db->query($sql, [(int)$idRetur])->result_array();
     }
 
-    public function update_status_persiapan($idRetur, $statusPersiapan, $catatan, $user)
+    public function update_status_persiapan($idRetur, $statusPersiapan, $catatan, $user, $itemsDisiapkan = null)
     {
         $this->ensure_schema();
-        $allowedStatus = [self::PERSIAPAN_BELUM, self::PERSIAPAN_SEDANG, self::PERSIAPAN_SUDAH];
+        $allowedStatus = [self::PERSIAPAN_BELUM, self::PERSIAPAN_SEDANG, self::PERSIAPAN_SUDAH, self::PERSIAPAN_SELESAI];
         $statusPersiapan = strtoupper(trim((string)$statusPersiapan));
         if (!in_array($statusPersiapan, $allowedStatus, true)) {
             return $this->fail('Status persiapan barang tidak valid.', ['INVALID_STATUS_PERSIAPAN']);
@@ -223,6 +237,20 @@ class M_ReturPembelian extends CI_Model
         $this->db->trans_begin();
         $this->db->where('id_retur_pembelian', (int)$idRetur)->update('tb_retur_pembelian', $updateData);
 
+        // Jika ada checklist item yang dikirim
+        if (is_array($itemsDisiapkan)) {
+            $allDetails = $this->details((int)$idRetur);
+            foreach ($allDetails as $det) {
+                $detId = (int)$det['id_detail_retur_pembelian'];
+                $isSiap = in_array($detId, $itemsDisiapkan, false) || in_array((string)$detId, $itemsDisiapkan, true);
+                $this->db->where('id_detail_retur_pembelian', $detId)->update('tb_retur_pembelian_detail', [
+                    'is_disiapkan' => $isSiap ? 1 : 0,
+                    'disiapkan_at' => $isSiap ? (!empty($det['disiapkan_at']) ? $det['disiapkan_at'] : date('Y-m-d H:i:s')) : null,
+                    'disiapkan_oleh' => $isSiap ? (!empty($det['disiapkan_oleh']) ? $det['disiapkan_oleh'] : $user) : null,
+                ]);
+            }
+        }
+
         $after = $this->header((int)$idRetur);
         $this->write_log(
             (int)$idRetur,
@@ -241,12 +269,89 @@ class M_ReturPembelian extends CI_Model
         }
 
         $this->db->trans_commit();
+
+        $detailSummary = $this->db->query(
+            "SELECT COUNT(id_detail_retur_pembelian) AS total_item, 
+                    COALESCE(SUM(CASE WHEN is_disiapkan = 1 THEN 1 ELSE 0 END), 0) AS total_item_disiapkan
+             FROM tb_retur_pembelian_detail
+             WHERE id_retur_pembelian = ?",
+            [(int)$idRetur]
+        )->row_array();
+
         return $this->ok('Status persiapan barang berhasil diperbarui.', [
-            'id_retur_pembelian' => (int)$idRetur,
-            'status_persiapan' => $statusPersiapan,
-            'catatan_persiapan' => trim((string)$catatan),
-            'disiapkan_oleh' => $user,
-            'disiapkan_at' => $updateData['disiapkan_at']
+            'id_retur_pembelian'   => (int)$idRetur,
+            'status_persiapan'     => $statusPersiapan,
+            'catatan_persiapan'    => trim((string)$catatan),
+            'disiapkan_oleh'       => $user,
+            'disiapkan_at'         => $updateData['disiapkan_at'],
+            'total_item'           => (int)($detailSummary['total_item'] ?? 0),
+            'total_item_disiapkan' => (int)($detailSummary['total_item_disiapkan'] ?? 0),
+        ]);
+    }
+
+    public function toggle_item_persiapan($idDetail, $isDisiapkan, $user)
+    {
+        $this->ensure_schema();
+        $detail = $this->db->where('id_detail_retur_pembelian', (int)$idDetail)->get('tb_retur_pembelian_detail')->row_array();
+        if (!$detail) {
+            return $this->fail('Detail item retur tidak ditemukan.', ['DETAIL_NOT_FOUND']);
+        }
+        $idRetur = (int)$detail['id_retur_pembelian'];
+        $isDisiapkan = ((int)$isDisiapkan === 1) ? 1 : 0;
+
+        $this->db->trans_begin();
+        $this->db->where('id_detail_retur_pembelian', (int)$idDetail)->update('tb_retur_pembelian_detail', [
+            'is_disiapkan' => $isDisiapkan,
+            'disiapkan_at' => $isDisiapkan ? date('Y-m-d H:i:s') : null,
+            'disiapkan_oleh' => $isDisiapkan ? $user : null,
+        ]);
+
+        $detailSummary = $this->db->query(
+            "SELECT COUNT(id_detail_retur_pembelian) AS total_item, 
+                    COALESCE(SUM(CASE WHEN is_disiapkan = 1 THEN 1 ELSE 0 END), 0) AS total_item_disiapkan
+             FROM tb_retur_pembelian_detail
+             WHERE id_retur_pembelian = ?",
+            [$idRetur]
+        )->row_array();
+
+        $total = (int)($detailSummary['total_item'] ?? 0);
+        $siap = (int)($detailSummary['total_item_disiapkan'] ?? 0);
+
+        $header = $this->header($idRetur);
+        $newStatus = $header['status_persiapan'];
+        if ($header['status_persiapan'] !== self::PERSIAPAN_SELESAI) {
+            if ($siap === 0) {
+                $newStatus = self::PERSIAPAN_BELUM;
+            } elseif ($siap === $total) {
+                $newStatus = self::PERSIAPAN_SUDAH;
+            } else {
+                $newStatus = self::PERSIAPAN_SEDANG;
+            }
+            if ($newStatus !== $header['status_persiapan']) {
+                $this->db->where('id_retur_pembelian', $idRetur)->update('tb_retur_pembelian', [
+                    'status_persiapan' => $newStatus,
+                    'disiapkan_oleh'   => $user,
+                    'disiapkan_at'     => date('Y-m-d H:i:s'),
+                    'updated_by'       => $user,
+                    'updated_at'       => date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->fail('Gagal memperbarui status item.', ['DATABASE_ERROR']);
+        }
+
+        $this->db->trans_commit();
+
+        return $this->ok('Status persiapan item berhasil diperbarui.', [
+            'id_retur'             => $idRetur,
+            'id_detail'            => (int)$idDetail,
+            'is_disiapkan'         => $isDisiapkan,
+            'total_item'           => $total,
+            'total_item_disiapkan' => $siap,
+            'status_persiapan'     => $newStatus
         ]);
     }
 

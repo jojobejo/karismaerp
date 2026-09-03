@@ -26,6 +26,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
         background-color: #28a745;
         color: #fff;
     }
+    .status-persiapan-selesai {
+        background-color: #007bff;
+        color: #fff;
+    }
     .table-monitoring th {
         vertical-align: middle !important;
         font-size: 12px;
@@ -124,6 +128,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                                 <option value="BELUM_DISIAPKAN" <?= ($filters['status_persiapan'] ?? '') === 'BELUM_DISIAPKAN' ? 'selected' : '' ?>>Belum Disiapkan</option>
                                                 <option value="SEDANG_DISIAPKAN" <?= ($filters['status_persiapan'] ?? '') === 'SEDANG_DISIAPKAN' ? 'selected' : '' ?>>Sedang Disiapkan</option>
                                                 <option value="SUDAH_DISIAPKAN" <?= ($filters['status_persiapan'] ?? '') === 'SUDAH_DISIAPKAN' ? 'selected' : '' ?>>Sudah Disiapkan</option>
+                                                <option value="SELESAI" <?= ($filters['status_persiapan'] ?? '') === 'SELESAI' ? 'selected' : '' ?>>Selesai</option>
                                             </select>
                                         </div>
                                         <div class="col-md-2 col-sm-6 mb-2">
@@ -182,7 +187,11 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                                 <?php foreach ($monitoring_rows as $row) : ?>
                                                     <?php
                                                     $stPersiapan = $row['status_persiapan'] ?? 'BELUM_DISIAPKAN';
-                                                    if ($stPersiapan === 'SUDAH_DISIAPKAN') {
+                                                    if ($stPersiapan === 'SELESAI') {
+                                                        $badgePersiapan = 'status-persiapan-selesai';
+                                                        $iconPersiapan = 'fas fa-check-double';
+                                                        $textPersiapan = 'Selesai';
+                                                    } elseif ($stPersiapan === 'SUDAH_DISIAPKAN') {
                                                         $badgePersiapan = 'status-persiapan-sudah';
                                                         $iconPersiapan = 'fas fa-check-circle';
                                                         $textPersiapan = 'Sudah Disiapkan';
@@ -221,8 +230,21 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                                                 <?= html_escape($row['ringkasan_barang'] ?: '-') ?>
                                                             </div>
                                                         </td>
-                                                        <td class="text-center font-weight-bold">
-                                                            <?= (int)$row['total_item'] ?>
+                                                        <td class="text-center font-weight-bold cell-item-col" id="cell_item_<?= (int)$row['id_retur_pembelian'] ?>">
+                                                            <div class="text-item-count"><?= (int)$row['total_item'] ?> Item</div>
+                                                            <?php 
+                                                                $totSiap = (int)($row['total_item_disiapkan'] ?? 0);
+                                                                $totItem = (int)$row['total_item'];
+                                                                $badgeSiap = 'secondary';
+                                                                if ($totSiap === $totItem && $totItem > 0) {
+                                                                    $badgeSiap = 'success';
+                                                                } elseif ($totSiap > 0) {
+                                                                    $badgeSiap = 'info';
+                                                                }
+                                                            ?>
+                                                            <span class="badge badge-<?= $badgeSiap ?> px-1 py-0 cell-item-siap-badge <?= ($totItem <= 1 && $totSiap === 0) ? 'd-none' : '' ?>" style="font-size: 11px;" title="<?= $totSiap ?> dari <?= $totItem ?> item telah disiapkan">
+                                                                <i class="fas fa-check-square mr-1"></i><span class="siap-count"><?= $totSiap ?></span>/<?= $totItem ?> Siap
+                                                            </span>
                                                         </td>
                                                         <td class="text-right font-weight-bold text-primary">
                                                             <?= number_format((float)$row['total_qty_retur'], 2, ',', '.') ?>
@@ -287,7 +309,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
         <!-- Modal Detail Barang -->
         <div class="modal fade" id="modalDetailBarang" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title font-weight-bold">
@@ -305,18 +327,19 @@ defined('BASEPATH') or exit('No direct script access allowed');
                             <table class="table table-bordered table-striped table-sm" id="table_modal_items">
                                 <thead class="thead-light text-center">
                                     <tr>
-                                        <th style="width: 50px;">No</th>
+                                        <th style="width: 40px;">No</th>
                                         <th>Kode Barang</th>
                                         <th>Nama Barang</th>
                                         <th>No Lot</th>
                                         <th>Expired Date</th>
-                                        <th style="width: 100px;">Qty Retur</th>
+                                        <th style="width: 110px;">Qty Retur</th>
+                                        <th style="width: 140px;">Kesiapan Fisik</th>
                                         <th>Alasan Retur Item</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody_detail_items">
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-3">Memuat data...</td>
+                                        <td colspan="8" class="text-center text-muted py-3">Memuat data...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -332,7 +355,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
         <!-- Modal Update Status Persiapan (Khusus Adm LPB / Logistik) -->
         <?php if (!empty($can_update_persiapan)) : ?>
         <div class="modal fade" id="modalUpdatePersiapan" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title font-weight-bold">
@@ -345,33 +368,75 @@ defined('BASEPATH') or exit('No direct script access allowed');
                     <form id="form_update_persiapan">
                         <div class="modal-body">
                             <input type="hidden" id="form_id_retur_pembelian" name="id_retur_pembelian">
+                            <input type="hidden" name="has_items_submitted" value="1">
                             
-                            <div class="alert alert-secondary py-2 mb-3">
-                                <span class="text-muted small d-block">Nomor Retur Pembelian:</span>
-                                <strong id="form_noretur_display" class="text-primary font-weight-bold">-</strong>
+                            <div class="d-flex justify-content-between align-items-center alert alert-secondary py-2 mb-3">
+                                <div>
+                                    <span class="text-muted small d-block">Nomor Retur Pembelian:</span>
+                                    <strong id="form_noretur_display" class="text-primary font-weight-bold">-</strong>
+                                </div>
+                                <div>
+                                    <span class="badge badge-info px-2 py-1" id="badge_persiapan_count">Memuat item...</span>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label class="font-weight-bold">Status Persiapan Fisik Barang <span class="text-danger">*</span></label>
-                                <div class="custom-control custom-radio mb-2">
-                                    <input type="radio" id="radio_belum" name="status_persiapan" value="BELUM_DISIAPKAN" class="custom-control-input">
-                                    <label class="custom-control-label font-weight-normal" for="radio_belum">
-                                        <span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i> Belum Disiapkan</span> 
-                                        <span class="text-muted small ml-1">&mdash; Barang belum disiapkan atau masih di rak gudang.</span>
+                            <!-- Section Checklist Item -->
+                            <div class="form-group mb-3" id="section_items_persiapan">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="font-weight-bold text-dark mb-0">
+                                        <i class="fas fa-boxes text-success mr-1"></i> Kesiapan Fisik Per Item Barang:
                                     </label>
+                                    <div id="wrapper_item_bulk_buttons" style="display: none;">
+                                        <button type="button" class="btn btn-xs btn-outline-success mr-1" id="btn_check_all_items">
+                                            <i class="fas fa-check-double mr-1"></i> Ceklis Semua
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary" id="btn_uncheck_all_items">
+                                            <i class="fas fa-times mr-1"></i> Batal Semua
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="custom-control custom-radio mb-2">
-                                    <input type="radio" id="radio_sedang" name="status_persiapan" value="SEDANG_DISIAPKAN" class="custom-control-input">
-                                    <label class="custom-control-label font-weight-normal" for="radio_sedang">
-                                        <span class="badge badge-info px-2 py-1"><i class="fas fa-spinner fa-spin mr-1"></i> Sedang Disiapkan</span> 
-                                        <span class="text-muted small ml-1">&mdash; Barang sedang dicari / dikumpulkan di area transit retur.</span>
-                                    </label>
+                                <div class="table-responsive border rounded" style="max-height: 220px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover mb-0" id="table_items_persiapan">
+                                        <thead class="thead-light" style="position: sticky; top: 0; z-index: 1;">
+                                            <tr>
+                                                <th style="width: 70px;" class="text-center">Ceklis</th>
+                                                <th>Nama & Kode Barang</th>
+                                                <th>No Lot / Exp</th>
+                                                <th class="text-right" style="width: 110px;">Qty Retur</th>
+                                                <th class="text-center" style="width: 130px;">Kesiapan Fisik</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody_items_persiapan">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-3">
+                                                    <i class="fas fa-spinner fa-spin mr-1"></i> Memuat item barang retur...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div class="custom-control custom-radio mb-2">
-                                    <input type="radio" id="radio_sudah" name="status_persiapan" value="SUDAH_DISIAPKAN" class="custom-control-input">
-                                    <label class="custom-control-label font-weight-normal" for="radio_sudah">
-                                        <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Sudah Disiapkan</span> 
-                                        <span class="text-muted small ml-1">&mdash; Barang lengkap disiapkan dan siap diambil/dikirim ke supplier.</span>
+                                <small class="text-muted mt-1 d-block">
+                                    <i class="fas fa-info-circle text-info mr-1"></i> Klik centang/ceklis pada masing-masing barang yang telah disiapkan di area gudang.
+                                </small>
+                            </div>
+
+                            <input type="hidden" id="form_status_persiapan" name="status_persiapan" value="BELUM_DISIAPKAN">
+
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold d-block">Status Persiapan Dokumen Retur</label>
+                                
+                                <div class="alert alert-light border d-flex justify-content-between align-items-center py-2 px-3 mb-2">
+                                    <span class="small text-muted"><i class="fas fa-magic text-primary mr-1"></i> Status Kesiapan Fisik (Otomatis):</span>
+                                    <span id="label_status_otomatis_badge" class="badge badge-secondary px-2 py-1 font-weight-bold">
+                                        <i class="fas fa-clock mr-1"></i> Belum Disiapkan
+                                    </span>
+                                </div>
+
+                                <div class="custom-control custom-checkbox mb-2">
+                                    <input type="checkbox" id="check_selesai" class="custom-control-input">
+                                    <label class="custom-control-label font-weight-normal" for="check_selesai">
+                                        <span class="badge badge-primary px-2 py-1"><i class="fas fa-check-double mr-1"></i> Selesai</span> 
+                                        <span class="text-muted small ml-1">&mdash; Persiapan dan serah terima fisik barang retur telah selesai.</span>
                                     </label>
                                 </div>
                             </div>
@@ -417,6 +482,63 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 });
             }
 
+            var canUpdatePersiapan = <?= !empty($can_update_persiapan) ? 'true' : 'false' ?>;
+
+            function updateTableRowPersiapan(idRetur, status, totalItem, totalSiap, disiapkanOleh, catatan) {
+                var $row = $('#row_retur_' + idRetur);
+                if ($row.length === 0) return;
+
+                var badgeClass = 'status-persiapan-belum';
+                var icon = 'fas fa-clock';
+                var textStatus = 'Belum Disiapkan';
+
+                if (status === 'SELESAI') {
+                    badgeClass = 'status-persiapan-selesai';
+                    icon = 'fas fa-check-double';
+                    textStatus = 'Selesai';
+                } else if (status === 'SUDAH_DISIAPKAN') {
+                    badgeClass = 'status-persiapan-sudah';
+                    icon = 'fas fa-check-circle';
+                    textStatus = 'Sudah Disiapkan';
+                } else if (status === 'SEDANG_DISIAPKAN') {
+                    badgeClass = 'status-persiapan-sedang';
+                    icon = 'fas fa-spinner fa-spin';
+                    textStatus = 'Sedang Disiapkan';
+                }
+
+                $row.find('.cell-status-persiapan').html(
+                    '<span class="badge-status-lg ' + badgeClass + '">' +
+                    '<i class="' + icon + ' mr-1"></i> ' + textStatus +
+                    '</span>'
+                );
+
+                if (typeof totalItem !== 'undefined' && typeof totalSiap !== 'undefined') {
+                    var badgeItemClass = totalSiap === totalItem && totalItem > 0 ? 'badge-success' : (totalSiap > 0 ? 'badge-info' : 'badge-secondary');
+                    var $itemBadge = $row.find('.cell-item-siap-badge');
+                    if (totalItem > 1 || totalSiap > 0) {
+                        $itemBadge.removeClass('badge-success badge-info badge-secondary d-none')
+                                  .addClass('badge-' + badgeItemClass)
+                                  .html('<i class="fas fa-check-square mr-1"></i>' + totalSiap + '/' + totalItem + ' Siap')
+                                  .attr('title', totalSiap + ' dari ' + totalItem + ' item telah disiapkan');
+                    }
+                }
+
+                if (typeof disiapkanOleh !== 'undefined') {
+                    var disiapkanText = disiapkanOleh || 'Anda';
+                    var nowStr = 'Baru saja';
+                    $row.find('.cell-catatan-persiapan').html(
+                        '<div class="text-primary font-weight-bold"><i class="fas fa-user-check mr-1"></i> ' + disiapkanText + ' <span class="text-muted font-weight-normal">(' + nowStr + ')</span></div>' +
+                        '<div class="text-muted mt-1 text-catatan">' + (catatan ? catatan.replace(/\n/g, '<br>') : '<span class="text-muted italic">Tidak ada catatan</span>') + '</div>'
+                    );
+                }
+
+                var $btnUpdate = $row.find('.btn-update-persiapan');
+                $btnUpdate.data('status', status);
+                if (typeof catatan !== 'undefined') {
+                    $btnUpdate.data('catatan', catatan);
+                }
+            }
+
             // Modal Detail Barang
             $('.btn-detail-barang').on('click', function () {
                 var idRetur = $(this).data('id');
@@ -425,7 +547,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
                 $('#modal_noretur_title').text(noRetur);
                 $('#modal_supplier_title').text(supplier);
-                $('#tbody_detail_items').html('<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>Memuat daftar barang...</td></tr>');
+                $('#tbody_detail_items').html('<tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin fa-2x mb-2 d-block"></i>Memuat daftar barang...</td></tr>');
                 $('#modalDetailBarang').modal('show');
 
                 $.ajax({
@@ -436,28 +558,215 @@ defined('BASEPATH') or exit('No direct script access allowed');
                         if (res.status && res.items && res.items.length > 0) {
                             var html = '';
                             $.each(res.items, function (index, item) {
-                                html += '<tr>';
+                                var isSiap = parseInt(item.is_disiapkan) === 1;
+                                var statusFisikHtml = '';
+                                if (canUpdatePersiapan) {
+                                    if (isSiap) {
+                                        statusFisikHtml = '<button type="button" class="btn btn-xs btn-success btn-toggle-item-inline" data-id="' + item.id_detail_retur_pembelian + '" data-retur="' + idRetur + '" data-state="0" title="Klik untuk membatalkan status siap"><i class="fas fa-check-circle mr-1"></i> Disiapkan</button>';
+                                    } else {
+                                        statusFisikHtml = '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-item-inline" data-id="' + item.id_detail_retur_pembelian + '" data-retur="' + idRetur + '" data-state="1" title="Klik untuk menandai sudah disiapkan"><i class="fas fa-clock mr-1"></i> Belum Siap</button>';
+                                    }
+                                } else {
+                                    if (isSiap) {
+                                        statusFisikHtml = '<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Disiapkan</span>';
+                                    } else {
+                                        statusFisikHtml = '<span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i> Belum Siap</span>';
+                                    }
+                                }
+
+                                html += '<tr id="detail_item_row_' + item.id_detail_retur_pembelian + '" class="' + (isSiap ? 'table-success' : '') + '">';
                                 html += '<td class="text-center font-weight-bold">' + (index + 1) + '</td>';
                                 html += '<td><code>' + (item.kd_barang || '-') + '</code></td>';
                                 html += '<td class="font-weight-bold">' + (item.nama_barang || item.kd_barang) + '</td>';
                                 html += '<td class="text-center">' + (item.no_lot || '-') + '</td>';
                                 html += '<td class="text-center">' + (item.expired_date ? item.expired_date : '-') + '</td>';
                                 html += '<td class="text-right font-weight-bold text-primary">' + parseFloat(item.qty_retur || 0).toLocaleString('id-ID', {minimumFractionDigits: 2}) + ' ' + (item.satuan || 'PCS') + '</td>';
+                                html += '<td class="text-center cell-item-toggle">' + statusFisikHtml + '</td>';
                                 html += '<td><small class="text-muted">' + (item.alasan_retur || '-') + '</small></td>';
                                 html += '</tr>';
                             });
                             $('#tbody_detail_items').html(html);
                         } else {
-                            $('#tbody_detail_items').html('<tr><td colspan="7" class="text-center text-muted py-3">Tidak ada data item barang.</td></tr>');
+                            $('#tbody_detail_items').html('<tr><td colspan="8" class="text-center text-muted py-3">Tidak ada data item barang.</td></tr>');
                         }
                     },
                     error: function () {
-                        $('#tbody_detail_items').html('<tr><td colspan="7" class="text-center text-danger py-3">Gagal mengambil detail barang dari server.</td></tr>');
+                        $('#tbody_detail_items').html('<tr><td colspan="8" class="text-center text-danger py-3">Gagal mengambil detail barang dari server.</td></tr>');
+                    }
+                });
+            });
+
+            // Toggle item persiapan langsung dari modal detail barang
+            $(document).on('click', '.btn-toggle-item-inline', function () {
+                var $btn = $(this);
+                var idDetail = $btn.data('id');
+                var idRetur = $btn.data('retur');
+                var nextState = $btn.data('state');
+
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                $.ajax({
+                    url: "<?= base_url('ics/retur/pembelian/monitoring/toggle_item') ?>",
+                    type: "POST",
+                    data: {
+                        id_detail_retur_pembelian: idDetail,
+                        is_disiapkan: nextState
+                    },
+                    dataType: "json",
+                    success: function (res) {
+                        $btn.prop('disabled', false);
+                        if (res && res.status) {
+                            var isNowSiap = parseInt(res.data.is_disiapkan) === 1;
+                            var $row = $('#detail_item_row_' + idDetail);
+                            if (isNowSiap) {
+                                $row.addClass('table-success');
+                                $btn.removeClass('btn-outline-secondary').addClass('btn-success').data('state', 0).html('<i class="fas fa-check-circle mr-1"></i> Disiapkan');
+                            } else {
+                                $row.removeClass('table-success');
+                                $btn.removeClass('btn-success').addClass('btn-outline-secondary').data('state', 1).html('<i class="fas fa-clock mr-1"></i> Belum Siap');
+                            }
+
+                            // Update baris tabel monitoring
+                            updateTableRowPersiapan(idRetur, res.data.status_persiapan, res.data.total_item, res.data.total_item_disiapkan);
+                        } else {
+                            alert(res.message || 'Gagal mengubah status item.');
+                        }
+                    },
+                    error: function () {
+                        $btn.prop('disabled', false);
+                        alert('Gagal menghubungi server.');
                     }
                 });
             });
 
             <?php if (!empty($can_update_persiapan)) : ?>
+            function renderModalUpdateItems(items) {
+                var html = '';
+                var total = items.length;
+                var siapCount = 0;
+
+                if (total === 0) {
+                    html = '<tr><td colspan="5" class="text-center text-muted py-3">Tidak ada detail item barang retur.</td></tr>';
+                    $('#tbody_items_persiapan').html(html);
+                    $('#wrapper_item_bulk_buttons').hide();
+                    $('#badge_persiapan_count').text('0 Item');
+                    return;
+                }
+
+                $.each(items, function (idx, item) {
+                    var isSiap = parseInt(item.is_disiapkan) === 1;
+                    if (isSiap) siapCount++;
+
+                    html += '<tr class="item-prep-row ' + (isSiap ? 'table-success' : '') + '" data-id="' + item.id_detail_retur_pembelian + '">';
+                    html += '<td class="text-center align-middle">';
+                    html += '<div class="custom-control custom-checkbox">';
+                    html += '<input type="checkbox" class="custom-control-input chk-item-persiapan" id="chk_prep_' + item.id_detail_retur_pembelian + '" name="items_disiapkan[]" value="' + item.id_detail_retur_pembelian + '" ' + (isSiap ? 'checked' : '') + '>';
+                    html += '<label class="custom-control-label font-weight-bold" for="chk_prep_' + item.id_detail_retur_pembelian + '"></label>';
+                    html += '</div>';
+                    html += '</td>';
+                    html += '<td class="align-middle">';
+                    html += '<span class="font-weight-bold d-block">' + (item.nama_barang || item.kd_barang) + '</span>';
+                    html += '<small class="text-muted"><code>' + (item.kd_barang || '-') + '</code></small>';
+                    html += '</td>';
+                    html += '<td class="align-middle small">';
+                    html += '<div><strong>Lot:</strong> ' + (item.no_lot || '-') + '</div>';
+                    html += '<div class="text-muted"><strong>Exp:</strong> ' + (item.expired_date || '-') + '</div>';
+                    html += '</td>';
+                    html += '<td class="text-right align-middle font-weight-bold text-primary">';
+                    html += parseFloat(item.qty_retur || 0).toLocaleString('id-ID', {minimumFractionDigits: 2}) + ' ' + (item.satuan || 'PCS');
+                    html += '</td>';
+                    html += '<td class="text-center align-middle col-item-status">';
+                    if (isSiap) {
+                        html += '<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Disiapkan</span>';
+                    } else {
+                        html += '<span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i> Belum Siap</span>';
+                    }
+                    html += '</td>';
+                    html += '</tr>';
+                });
+
+                $('#tbody_items_persiapan').html(html);
+                $('#wrapper_item_bulk_buttons').show();
+                updateCounterSummary(siapCount, total);
+                updateStatusPersiapanUI();
+            }
+
+            function updateCounterSummary(siapCount, total) {
+                var badgeClass = siapCount === total && total > 0 ? 'badge-success' : (siapCount > 0 ? 'badge-info' : 'badge-secondary');
+                $('#badge_persiapan_count').attr('class', 'badge px-2 py-1 ' + badgeClass)
+                    .html('<i class="fas fa-check-square mr-1"></i> ' + siapCount + ' dari ' + total + ' item disiapkan');
+            }
+
+            function updateStatusPersiapanUI() {
+                var isSelesai = $('#check_selesai').is(':checked');
+                var total = $('.chk-item-persiapan').length;
+                var checkedCount = $('.chk-item-persiapan:checked').length;
+                var autoStatus = 'BELUM_DISIAPKAN';
+                var autoText = 'Belum Disiapkan';
+                var autoClass = 'badge-secondary';
+                var autoIcon = 'fas fa-clock';
+
+                if (checkedCount === 0) {
+                    autoStatus = 'BELUM_DISIAPKAN';
+                    autoText = 'Belum Disiapkan';
+                    autoClass = 'badge-secondary';
+                    autoIcon = 'fas fa-clock';
+                } else if (checkedCount === total && total > 0) {
+                    autoStatus = 'SUDAH_DISIAPKAN';
+                    autoText = 'Sudah Disiapkan';
+                    autoClass = 'badge-success';
+                    autoIcon = 'fas fa-check-circle';
+                } else {
+                    autoStatus = 'SEDANG_DISIAPKAN';
+                    autoText = 'Sedang Disiapkan';
+                    autoClass = 'badge-info';
+                    autoIcon = 'fas fa-spinner fa-spin';
+                }
+
+                if (isSelesai) {
+                    $('#form_status_persiapan').val('SELESAI');
+                    $('#label_status_otomatis_badge').attr('class', 'badge badge-primary px-2 py-1 font-weight-bold')
+                        .html('<i class="fas fa-check-double mr-1"></i> Selesai');
+                } else {
+                    $('#form_status_persiapan').val(autoStatus);
+                    $('#label_status_otomatis_badge').attr('class', 'badge ' + autoClass + ' px-2 py-1 font-weight-bold')
+                        .html('<i class="' + autoIcon + ' mr-1"></i> ' + autoText);
+                }
+            }
+
+            // Handler checkbox Selesai
+            $(document).on('change', '#check_selesai', function () {
+                updateStatusPersiapanUI();
+            });
+
+            // Checkbox change handler inside modal
+            $(document).on('change', '.chk-item-persiapan', function () {
+                var $chk = $(this);
+                var $tr = $chk.closest('tr');
+                var isChecked = $chk.is(':checked');
+
+                if (isChecked) {
+                    $tr.addClass('table-success');
+                    $tr.find('.col-item-status').html('<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Disiapkan</span>');
+                } else {
+                    $tr.removeClass('table-success');
+                    $tr.find('.col-item-status').html('<span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i> Belum Siap</span>');
+                }
+
+                var total = $('.chk-item-persiapan').length;
+                var checkedCount = $('.chk-item-persiapan:checked').length;
+                updateCounterSummary(checkedCount, total);
+                updateStatusPersiapanUI();
+            });
+
+            // Bulk buttons
+            $('#btn_check_all_items').on('click', function () {
+                $('.chk-item-persiapan').prop('checked', true).trigger('change');
+            });
+            $('#btn_uncheck_all_items').on('click', function () {
+                $('.chk-item-persiapan').prop('checked', false).trigger('change');
+            });
+
             // Modal Update Persiapan (Logistik / Adm LPB)
             $('.btn-update-persiapan').on('click', function () {
                 var idRetur = $(this).data('id');
@@ -469,8 +778,37 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 $('#form_noretur_display').text(noRetur);
                 $('#form_catatan_persiapan').val(catatan);
 
-                $('input[name="status_persiapan"][value="' + currentStatus + '"]').prop('checked', true);
+                if (currentStatus === 'SELESAI') {
+                    $('#check_selesai').prop('checked', true);
+                    $('#form_status_persiapan').val('SELESAI');
+                    $('#label_status_otomatis_badge').attr('class', 'badge badge-primary px-2 py-1 font-weight-bold')
+                        .html('<i class="fas fa-check-double mr-1"></i> Selesai');
+                } else {
+                    $('#check_selesai').prop('checked', false);
+                    $('#form_status_persiapan').val(currentStatus);
+                }
+
+                $('#tbody_items_persiapan').html('<tr><td colspan="5" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat item barang retur...</td></tr>');
+                $('#wrapper_item_bulk_buttons').hide();
+                $('#badge_persiapan_count').attr('class', 'badge badge-info px-2 py-1').text('Memuat item...');
                 $('#modalUpdatePersiapan').modal('show');
+
+                // Muat daftar detail item untuk checklist
+                $.ajax({
+                    url: "<?= base_url('ics/retur/pembelian/monitoring/detail/') ?>" + idRetur,
+                    type: "GET",
+                    dataType: "json",
+                    success: function (res) {
+                        if (res && res.status && res.items) {
+                            renderModalUpdateItems(res.items);
+                        } else {
+                            $('#tbody_items_persiapan').html('<tr><td colspan="5" class="text-center text-muted py-3">Tidak ada data item.</td></tr>');
+                        }
+                    },
+                    error: function () {
+                        $('#tbody_items_persiapan').html('<tr><td colspan="5" class="text-center text-danger py-3">Gagal memuat item dari server.</td></tr>');
+                    }
+                });
             });
 
             // Submit Form Update Persiapan via AJAX
@@ -479,7 +817,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 var $btn = $('#btn_save_persiapan');
                 var formData = $(this).serialize();
                 var idRetur = $('#form_id_retur_pembelian').val();
-                var selectedStatus = $('input[name="status_persiapan"]:checked').val();
+                var selectedStatus = $('#form_status_persiapan').val();
                 var catatan = $('#form_catatan_persiapan').val();
 
                 $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
@@ -494,39 +832,11 @@ defined('BASEPATH') or exit('No direct script access allowed');
                         if (res && (res.status === true || res.success === true)) {
                             $('#modalUpdatePersiapan').modal('hide');
                             
-                            // Update UI baris tabel secara dinamis
-                            var $row = $('#row_retur_' + idRetur);
-                            var badgeClass = 'status-persiapan-belum';
-                            var icon = 'fas fa-clock';
-                            var textStatus = 'Belum Disiapkan';
-
-                            if (selectedStatus === 'SUDAH_DISIAPKAN') {
-                                badgeClass = 'status-persiapan-sudah';
-                                icon = 'fas fa-check-circle';
-                                textStatus = 'Sudah Disiapkan';
-                            } else if (selectedStatus === 'SEDANG_DISIAPKAN') {
-                                badgeClass = 'status-persiapan-sedang';
-                                icon = 'fas fa-spinner fa-spin';
-                                textStatus = 'Sedang Disiapkan';
-                            }
-
-                            $row.find('.cell-status-persiapan').html(
-                                '<span class="badge-status-lg ' + badgeClass + '">' +
-                                '<i class="' + icon + ' mr-1"></i> ' + textStatus +
-                                '</span>'
-                            );
-
+                            var totalItem = res.data && typeof res.data.total_item !== 'undefined' ? res.data.total_item : undefined;
+                            var totalSiap = res.data && typeof res.data.total_item_disiapkan !== 'undefined' ? res.data.total_item_disiapkan : undefined;
                             var disiapkanOleh = res.data && res.data.disiapkan_oleh ? res.data.disiapkan_oleh : 'Anda';
-                            var nowStr = 'Baru saja';
-                            $row.find('.cell-catatan-persiapan').html(
-                                '<div class="text-primary font-weight-bold"><i class="fas fa-user-check mr-1"></i> ' + disiapkanOleh + ' <span class="text-muted font-weight-normal">(' + nowStr + ')</span></div>' +
-                                '<div class="text-muted mt-1 text-catatan">' + (catatan ? catatan.replace(/\n/g, '<br>') : '<span class="text-muted italic">Tidak ada catatan</span>') + '</div>'
-                            );
 
-                            // Update data attributes tombol update
-                            var $btnUpdate = $row.find('.btn-update-persiapan');
-                            $btnUpdate.data('status', selectedStatus);
-                            $btnUpdate.data('catatan', catatan);
+                            updateTableRowPersiapan(idRetur, selectedStatus, totalItem, totalSiap, disiapkanOleh, catatan);
 
                             if (typeof Swal !== 'undefined') {
                                 Swal.fire({

@@ -340,6 +340,7 @@ $route['ics/retur/pembelian/adjustment/post']       = 'logistik/C_Ics/ajax_retur
 $route['ics/retur/pembelian/monitoring']                          = 'logistik/C_Ics/retur_pembelian_monitoring';
 $route['ics/retur/pembelian/monitoring/detail/(:num)']           = 'logistik/C_Ics/ajax_retur_pembelian_monitoring_detail/$1';
 $route['ics/retur/pembelian/monitoring/update_status']           = 'logistik/C_Ics/ajax_retur_pembelian_update_persiapan';
+$route['ics/retur/pembelian/monitoring/toggle_item']             = 'logistik/C_Ics/ajax_retur_pembelian_toggle_item_persiapan';
 $route['ics/lpb_revision']                          = 'logistik/C_Ics/lpb_revision';
 $route['ics/lpb_revision/create']                   = 'logistik/C_Ics/ajax_lpb_revision_create';
 $route['ics/lpb_revision/detail']                   = 'logistik/C_Ics/ajax_lpb_revision_detail';

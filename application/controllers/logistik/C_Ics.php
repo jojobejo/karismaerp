@@ -5477,6 +5477,12 @@ class C_Ics extends CI_Controller
         $idRetur = (int)$this->input->post('id_retur_pembelian', true);
         $statusPersiapan = $this->input->post('status_persiapan', true);
         $catatan = $this->input->post('catatan_persiapan', true);
+        $hasItemsSubmitted = (bool)$this->input->post('has_items_submitted');
+        $itemsDisiapkan = null;
+        if ($hasItemsSubmitted) {
+            $postItems = $this->input->post('items_disiapkan');
+            $itemsDisiapkan = is_array($postItems) ? array_map('intval', $postItems) : [];
+        }
 
         if ($idRetur <= 0 || empty($statusPersiapan)) {
             $this->json_response([
@@ -5491,6 +5497,49 @@ class C_Ics extends CI_Controller
             $idRetur,
             $statusPersiapan,
             $catatan,
+            $this->active_user_name(),
+            $itemsDisiapkan
+        );
+
+        $this->json_response([
+            'status'  => !empty($result['success']),
+            'success' => !empty($result['success']),
+            'message' => $result['message'] ?? '',
+            'data'    => $result['data'] ?? [],
+            'errors'  => $result['errors'] ?? []
+        ]);
+    }
+
+    public function ajax_retur_pembelian_toggle_item_persiapan()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        if (!$this->can_update_persiapan_retur()) {
+            $this->json_response([
+                'status' => false,
+                'message' => 'Akses ditolak. Hanya bagian Logistik / Adm LPB yang dapat mengupdate status persiapan barang retur.',
+                'errors' => ['ACCESS_DENIED']
+            ]);
+            return;
+        }
+
+        $idDetail = (int)$this->input->post('id_detail_retur_pembelian', true);
+        $isDisiapkan = (int)$this->input->post('is_disiapkan', true);
+
+        if ($idDetail <= 0) {
+            $this->json_response([
+                'status' => false,
+                'message' => 'ID detail item tidak valid.',
+                'errors' => ['INVALID_INPUT']
+            ]);
+            return;
+        }
+
+        $result = $this->M_ReturPembelian->toggle_item_persiapan(
+            $idDetail,
+            $isDisiapkan,
             $this->active_user_name()
         );
 
