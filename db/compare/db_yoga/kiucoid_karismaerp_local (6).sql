@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 29 Agu 2026 pada 01.40
+-- Waktu pembuatan: 03 Sep 2026 pada 09.01
 -- Versi server: 8.0.30
 -- Versi PHP: 7.4.33
 
@@ -1082,9 +1082,12 @@ INSERT INTO `tberp_stock_batch` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `expi
 (2, 'QPUPU16', '2', '333221', '2027-02-03', 25.000, 0.000, '2026-08-28 09:48:56', '2026-08-28 10:07:07'),
 (3, 'QSPON081', '2', '77878', '2027-01-09', 1000.000, 0.000, '2026-08-28 09:48:56', '2026-08-28 09:48:56'),
 (4, 'QROUN011', '2', '22788', '2027-04-22', 5832.000, 0.000, '2026-08-28 09:48:56', '2026-08-28 10:07:07'),
-(5, 'QTOMA06', '2', '445451', '2027-01-01', 25.000, 0.000, '2026-08-28 09:51:08', '2026-08-28 10:23:54'),
-(6, 'QPADI45', '2', '335551PPP', '2027-02-16', 1990.000, 0.000, '2026-08-28 09:53:48', '2026-08-28 10:57:30'),
-(7, 'QPUPU16', '2', '333221', '2027-03-02', 1.000, 0.000, '2026-08-28 10:38:10', '2026-08-28 10:38:10');
+(5, 'QTOMA06', '2', '445451', '2027-01-01', 25.000, 0.000, '2026-08-28 09:51:08', '2026-09-03 15:58:38'),
+(6, 'QPADI45', '2', '335551PPP', '2027-02-16', 2489.000, 500.000, '2026-08-28 09:53:48', '2026-09-03 15:50:58'),
+(7, 'QPUPU16', '2', '333221', '2027-03-02', 1.000, 0.000, '2026-08-28 10:38:10', '2026-08-28 10:38:10'),
+(8, 'QPUPU16', '2', '12413', '2027-01-01', 10.000, 0.000, '2026-08-29 11:08:59', '2026-08-29 11:08:59'),
+(9, 'QPUPU16', '2', '00099', '2027-01-01', 10.000, 0.000, '2026-08-29 11:29:20', '2026-08-29 11:29:20'),
+(10, 'QPUPU16', '2', '22123', '2026-08-29', 10.000, 0.000, '2026-08-29 11:36:52', '2026-08-29 11:36:52');
 
 -- --------------------------------------------------------
 
@@ -1129,7 +1132,24 @@ INSERT INTO `tberp_stock_ledger` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `exp
 (17, 'QTOMA06', '2', '445451', '2027-01-01', 35.000, 'RBELI', 'RBELI-20260828-0001', 'RETUR_PEMBELIAN', '2026-08-28 10:23:54'),
 (18, 'QPUPU16', '2', '333221', '2027-03-02', 1.000, 'RJUAL', 'RP/280826/0001', 'RETUR_PENJUALAN', '2026-08-28 10:38:10'),
 (19, 'QPADI45', '2', '335551PPP', '2027-02-16', 10.000, 'RESERVE', 'SO-LBY/280826/0001', 'SALES_ORDER_LOBY', '2026-08-28 10:55:07'),
-(20, 'QPADI45', '2', '335551PPP', '2027-02-16', 10.000, 'OUT', 'SO-LBY/280826/0001', 'FAKTUR PENJUALAN LOBY', '2026-08-28 10:57:30');
+(20, 'QPADI45', '2', '335551PPP', '2027-02-16', 10.000, 'OUT', 'SO-LBY/280826/0001', 'FAKTUR PENJUALAN LOBY', '2026-08-28 10:57:30'),
+(21, 'QPUPU16', '2', '12413', '2027-01-01', 10.000, 'IN', 'SKPO290826PUPUK030001', 'PO_RECEIVED', '2026-08-29 11:08:59'),
+(22, 'QPUPU16', '2', '00099', '2027-01-01', 10.000, 'IN', 'SKPO290826PUPUK030002', 'PO_RECEIVED', '2026-08-29 11:29:20'),
+(23, 'QPUPU16', '2', '22123', '2026-08-29', 10.000, 'IN', 'SKPO290826PUPUK030003', 'PO_RECEIVED', '2026-08-29 11:36:52'),
+(24, 'QPADI45', '2', '335551PPP', '2027-02-16', 1.000, 'RESERVE', 'SO-LBY/010926/0001', 'SALES_ORDER_LOBY', '2026-09-01 13:43:36'),
+(25, 'QPADI45', '2', '335551PPP', '2027-02-16', 1.000, 'OUT', 'SO-LBY/010926/0001', 'FAKTUR PENJUALAN LOBY', '2026-09-01 13:44:56'),
+(26, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'IN', 'SO/280826/0002', 'REPOST_FAKTUR', '2026-09-03 09:20:17'),
+(27, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'RESERVE', 'SO/280826/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-03 09:20:17'),
+(28, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'IN', 'SO/280826/0002', 'REPOST_FAKTUR', '2026-09-03 09:20:17'),
+(29, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'RESERVE', 'SO/280826/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-03 09:20:17'),
+(30, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'OUT', 'SO/280826/0002', 'FAKTUR PENJUALAN', '2026-09-03 09:53:00'),
+(31, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'OUT', 'SO/280826/0002', 'FAKTUR PENJUALAN', '2026-09-03 09:53:00'),
+(32, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'IN', 'SO/280826/0002', 'REPOST_FAKTUR', '2026-09-03 09:56:16'),
+(33, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'RESERVE', 'SO/280826/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-03 09:56:16'),
+(34, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'IN', 'SO/280826/0002', 'REPOST_FAKTUR', '2026-09-03 09:56:16'),
+(35, 'QTOMA06', '2', '445451', '2027-01-01', 5.000, 'RESERVE', 'SO/280826/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-03 09:56:16'),
+(36, 'QPADI45', '2', '335551PPP', '2027-02-16', 500.000, 'IN', 'SO/280826/0002', 'REPOST_FAKTUR', '2026-09-03 15:50:58'),
+(37, 'QPADI45', '2', '335551PPP', '2027-02-16', 500.000, 'RESERVE', 'SO/280826/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-03 15:50:58');
 
 -- --------------------------------------------------------
 
@@ -2483,8 +2503,6 @@ INSERT INTO `tbkeu_jurnal` (`id_jurnal`, `nomor_jurnal`, `id_jenis_jurnal`, `tan
 (1, 'PJ-202608-00005', 11, '2026-08-03', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '1', '2600001', 'GOODS_RECEIPT', 'POSTED', 540000000.23470, 540000000.23470, NULL, 'GOODS_RECEIPT-LPB-1', 207, '2026-08-28 09:48:56', 207, '2026-08-28 09:48:56', 207, '2026-08-28 09:48:56', NULL, NULL, NULL, NULL, NULL, 0),
 (2, 'PJ-202608-00006', 11, '2026-08-13', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '2', '2600001B', 'GOODS_RECEIPT', 'POSTED', 2450000.00000, 2450000.00000, NULL, 'GOODS_RECEIPT-LPB-2', 207, '2026-08-28 09:51:08', 207, '2026-08-28 09:51:08', 207, '2026-08-28 09:51:08', NULL, NULL, NULL, NULL, NULL, 0),
 (3, 'PJ-202608-00007', 11, '2026-08-15', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '3', '2600002B', 'GOODS_RECEIPT', 'POSTED', 237500000.00000, 237500000.00000, NULL, 'GOODS_RECEIPT-LPB-3', 207, '2026-08-28 09:53:48', 207, '2026-08-28 09:53:48', 207, '2026-08-28 09:53:48', NULL, NULL, NULL, NULL, NULL, 0),
-(4, 'SJ-010826-0003', 10, '2026-08-01', 26, 'Penjualan, Manunggal Agro Sentosa,PT', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2808260001', 'DINV2808260001', 'SALES_INVOICE', 'POSTED', 52725000.00000, 52725000.00000, NULL, 'SALES_INVOICE-FAKTUR-DINV2808260001', 213, '2026-08-28 10:06:12', 213, '2026-08-28 10:06:12', 213, '2026-08-28 10:06:12', NULL, NULL, NULL, NULL, NULL, 0),
-(5, 'SJ-010826-0004', 10, '2026-08-01', 26, 'Penyesuaian persediaan, untuk SJ-010826-0004', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2808260001', 'DINV2808260001', 'GOODS_ISSUE', 'POSTED', 47850000.00000, 47850000.00000, NULL, 'GOODS_ISSUE-FAKTUR-DINV2808260001', 213, '2026-08-28 10:06:12', 213, '2026-08-28 10:06:12', 213, '2026-08-28 10:06:12', NULL, NULL, NULL, NULL, NULL, 0),
 (9, 'GJ-28082600002', 1, '2026-08-14', 26, 'pembelian tulangan anjing', 'ACCOUNTING', 'MANUAL', 'GJ-28082600002', 'GJ-28082600002', 'MANUAL_JOURNAL', 'POSTED', 100000.00000, 100000.00000, NULL, NULL, 205, '2026-08-28 10:15:35', 205, '2026-08-28 10:15:35', 205, '2026-08-28 10:15:35', NULL, NULL, NULL, NULL, NULL, 1),
 (10, 'MR-28082600001', 17, '2026-08-25', NULL, 'Penerimaan dari Rizky Jaya, CV via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '1', 'DINV2808260002', NULL, 'POSTED', 10000000.00000, 10000000.00000, NULL, NULL, 205, '2026-08-28 10:16:48', NULL, '2026-08-28 10:16:48', 205, '2026-08-28 10:16:48', NULL, NULL, NULL, NULL, NULL, 0),
 (11, 'MR-28082600002', 17, '2026-08-28', NULL, 'Penerimaan dari Rizky Jaya, CV via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '2', 'DINV2808260002', NULL, 'POSTED', 1690000.00000, 1690000.00000, NULL, NULL, 205, '2026-08-28 10:19:05', NULL, '2026-08-28 10:19:05', 205, '2026-08-28 10:19:05', NULL, NULL, NULL, NULL, NULL, 0),
@@ -2493,14 +2511,20 @@ INSERT INTO `tbkeu_jurnal` (`id_jurnal`, `nomor_jurnal`, `id_jenis_jurnal`, `tan
 (14, 'GJ-28082600003', 1, '2026-08-28', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-28082600003', 'GJ-28082600003', 'MANUAL_JOURNAL', 'POSTED', 500000.00000, 500000.00000, NULL, NULL, 205, '2026-08-28 10:34:16', 205, '2026-08-28 10:34:16', 205, '2026-08-28 10:34:16', NULL, NULL, NULL, NULL, NULL, 1),
 (15, 'RJP-28082600001', NULL, '2026-08-30', NULL, 'Retur Penjualan RP/280826/0001 (Customer: Rizky Jaya, CV)', 'SALES', 'RETUR_PENJUALAN', '1', 'RP/280826/0001', NULL, 'POSTED', 91441.44140, 91441.44140, NULL, NULL, 222, '2026-08-28 10:39:10', NULL, '2026-08-28 12:49:31', 222, '2026-08-28 10:39:10', NULL, NULL, NULL, NULL, NULL, 0),
 (16, 'MR-28082600004', 17, '2026-08-30', NULL, 'Penerimaan dari Rizky Jaya, CV via Q Hutang Non Dagang (Retur Penjualan yg blm dipot)', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '4', 'DINV2808260002', NULL, 'POSTED', 50000.00000, 50000.00000, NULL, NULL, 205, '2026-08-28 10:40:30', NULL, '2026-08-28 13:23:09', 205, '2026-08-28 10:40:30', NULL, NULL, NULL, NULL, NULL, 0),
-(17, 'SJ-280826-0001', 10, '2026-08-28', 26, 'Penjualan, Agoes', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV2808260001', 'LBYINV2808260001', 'SALES_INVOICE', 'POSTED', 95000.00000, 95000.00000, NULL, 'SALES_INVOICE-FAKTUR-LBYINV2808260001', 68, '2026-08-28 10:57:30', 68, '2026-08-28 10:57:30', 68, '2026-08-28 10:57:30', NULL, NULL, NULL, NULL, NULL, 0),
-(18, 'SJ-280826-0002', 10, '2026-08-28', 26, 'Penyesuaian persediaan, untuk SJ-280826-0002', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV2808260001', 'LBYINV2808260001', 'GOODS_ISSUE', 'POSTED', 950000.00000, 950000.00000, NULL, 'GOODS_ISSUE-FAKTUR-LBYINV2808260001', 68, '2026-08-28 10:57:30', 68, '2026-08-28 10:57:30', 68, '2026-08-28 10:57:30', NULL, NULL, NULL, NULL, NULL, 0),
 (19, 'B250000003', 2, '2026-08-28', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00001', 'BYS-202608-00001', 'SUPPLIER_PAYMENT', 'POSTED', 100000000.00000, 100000000.00000, NULL, 'SUPPLIER_PAYMENT-BYS-202608-00001', 205, '2026-08-28 10:59:36', 205, '2026-08-28 10:59:36', 205, '2026-08-28 10:59:36', NULL, NULL, NULL, NULL, NULL, 0),
 (20, 'B250000004', 2, '2026-08-28', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00002', 'BYS-202608-00002', 'SUPPLIER_PAYMENT', 'POSTED', 20000000.00000, 20000000.00000, NULL, 'SUPPLIER_PAYMENT-BYS-202608-00002', 205, '2026-08-28 11:00:41', 205, '2026-08-28 11:00:41', 205, '2026-08-28 11:00:41', NULL, NULL, NULL, NULL, NULL, 0),
 (21, 'GJ-28082600004', 1, '2026-08-28', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-28082600004', 'GJ-28082600004', 'MANUAL_JOURNAL', 'POSTED', 23529412.00000, 23529412.00000, NULL, NULL, 205, '2026-08-28 11:02:01', 205, '2026-08-28 11:02:01', 205, '2026-08-28 11:02:01', NULL, NULL, NULL, NULL, NULL, 1),
 (22, 'B250000005', 2, '2026-08-28', 26, 'Pembayaran supplier  PT.Syngenta Seed', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00003', 'BYS-202608-00003', 'SUPPLIER_PAYMENT', 'POSTED', 1225000.00000, 1225000.00000, NULL, 'SUPPLIER_PAYMENT-BYS-202608-00003', 205, '2026-08-28 13:44:23', 205, '2026-08-28 13:44:23', 205, '2026-08-28 13:44:23', NULL, NULL, NULL, NULL, NULL, 0),
 (23, 'SJ-060826-0003', 10, '2026-08-06', 26, 'Penjualan, Rizky Jaya, CV', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2808260002', 'DINV2808260002', 'SALES_INVOICE', 'POSTED', 14440000.00000, 14440000.00000, NULL, 'SALES_INVOICE-FAKTUR-DINV2808260002', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', NULL, NULL, NULL, NULL, NULL, 0),
-(24, 'SJ-060826-0004', 10, '2026-08-06', 26, 'Penyesuaian persediaan, untuk SJ-060826-0004', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2808260002', 'DINV2808260002', 'GOODS_ISSUE', 'POSTED', 11574774.78000, 11574774.78000, NULL, 'GOODS_ISSUE-FAKTUR-DINV2808260002', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', NULL, NULL, NULL, NULL, NULL, 0);
+(24, 'SJ-060826-0004', 10, '2026-08-06', 26, 'Penyesuaian persediaan, untuk SJ-060826-0004', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2808260002', 'DINV2808260002', 'GOODS_ISSUE', 'POSTED', 11574774.78000, 11574774.78000, NULL, 'GOODS_ISSUE-FAKTUR-DINV2808260002', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', 205, '2026-08-28 14:01:30', NULL, NULL, NULL, NULL, NULL, 0),
+(25, 'PJ-202608-00009', 11, '2026-08-29', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '4', '2600002', 'GOODS_RECEIPT', 'POSTED', 499999.99950, 499999.99950, NULL, 'GOODS_RECEIPT-LPB-4', NULL, '2026-08-29 11:08:59', NULL, '2026-08-29 11:08:59', NULL, '2026-08-29 11:08:59', NULL, NULL, NULL, NULL, NULL, 0),
+(26, 'PJ-202608-00010', 11, '2026-08-31', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '5', '2600003', 'GOODS_RECEIPT', 'POSTED', 549999.99940, 549999.99940, NULL, 'GOODS_RECEIPT-LPB-5', 207, '2026-08-29 11:29:20', 207, '2026-08-29 11:29:20', 207, '2026-08-29 11:29:20', NULL, NULL, NULL, NULL, NULL, 0),
+(27, 'PJ-202608-00011', 11, '2026-08-29', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '6', '2600004', 'GOODS_RECEIPT', 'POSTED', 529999.99940, 529999.99940, NULL, 'GOODS_RECEIPT-LPB-6', 207, '2026-08-29 11:36:52', 205, '2026-09-02 10:13:30', 207, '2026-08-29 11:36:52', 205, '2026-09-02 10:13:30', NULL, NULL, NULL, 1),
+(30, 'REV-202609-00001', 3, '2026-09-02', 26, 'UNPOST LPB: ok', 'ACCOUNTING', 'REVERSAL', '27', 'PJ-202608-00011', 'REVERSAL', 'POSTED', 529999.99940, 529999.99940, 27, 'REVERSAL-27', 205, '2026-09-02 10:13:30', 205, '2026-09-02 10:13:30', 205, '2026-09-02 10:13:30', NULL, NULL, NULL, NULL, NULL, 0),
+(31, 'SJ-010926-0005', 10, '2026-09-01', 26, 'Penjualan, Agoes', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV0109260001', 'LBYINV0109260001', 'SALES_INVOICE', 'POSTED', 55000.00000, 55000.00000, NULL, 'SALES_INVOICE-FAKTUR-LBYINV0109260001', 205, '2026-09-02 13:05:31', 205, '2026-09-02 13:05:31', 205, '2026-09-02 13:05:31', NULL, NULL, NULL, NULL, NULL, 0),
+(32, 'SJ-010926-0006', 10, '2026-09-01', 26, 'Penyesuaian persediaan, untuk SJ-010926-0006', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV0109260001', 'LBYINV0109260001', 'GOODS_ISSUE', 'POSTED', 95000.00000, 95000.00000, NULL, 'GOODS_ISSUE-FAKTUR-LBYINV0109260001', 205, '2026-09-02 13:05:31', 205, '2026-09-02 13:05:31', 205, '2026-09-02 13:05:31', NULL, NULL, NULL, NULL, NULL, 0),
+(39, 'SJ-280826-0009', 10, '2026-08-28', 26, 'Penjualan, Agoes', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV2808260001', 'LBYINV2808260001', 'SALES_INVOICE', 'POSTED', 95000.00000, 95000.00000, NULL, 'SALES_INVOICE-FAKTUR-LBYINV2808260001', 205, '2026-09-02 14:33:13', 205, '2026-09-02 14:33:13', 205, '2026-09-02 14:33:13', NULL, NULL, NULL, NULL, NULL, 0),
+(40, 'SJ-280826-0010', 10, '2026-08-28', 26, 'Penyesuaian persediaan, untuk SJ-280826-0010', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV2808260001', 'LBYINV2808260001', 'GOODS_ISSUE', 'POSTED', 950000.00000, 950000.00000, NULL, 'GOODS_ISSUE-FAKTUR-LBYINV2808260001', 205, '2026-09-02 14:33:13', 205, '2026-09-02 14:33:13', 205, '2026-09-02 14:33:13', NULL, NULL, NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -2539,10 +2563,6 @@ INSERT INTO `tbkeu_jurnal_detail` (`id_jurnal_detail`, `id_jurnal`, `nomor_baris
 (5, 2, 2, 462, 'Hutang Usaha', 0.00000, 2450000.00000, NULL, 185, NULL, 2, NULL, NULL, '2600001B', '2026-08-28 09:51:08', '2026-08-28 09:51:08'),
 (6, 3, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 237500000.00000, 0.00000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-08-28 09:53:48', '2026-08-28 09:53:48'),
 (7, 3, 2, 462, 'Hutang Usaha', 0.00000, 237500000.00000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-08-28 09:53:48', '2026-08-28 09:53:48'),
-(8, 4, 1, 461, 'Penjualan, Manunggal Agro Sentosa,PT - Piutang', 52725000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-08-31', 'DINV2808260001', '2026-08-28 10:06:12', '2026-08-28 10:06:12'),
-(9, 4, 2, 308, 'Penjualan, Manunggal Agro Sentosa,PT - Pendapatan', 0.00000, 52725000.00000, NULL, NULL, NULL, NULL, NULL, '2026-08-31', 'DINV2808260001', '2026-08-28 10:06:12', '2026-08-28 10:06:12'),
-(10, 5, 1, 321, 'Penyesuaian persediaan, untuk SJ-010826-0004 - HPP', 47850000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-08-31', 'DINV2808260001', '2026-08-28 10:06:12', '2026-08-28 10:06:12'),
-(11, 5, 2, 224, 'Penyesuaian persediaan, untuk SJ-010826-0004 - Persediaan', 0.00000, 47850000.00000, NULL, NULL, NULL, NULL, NULL, '2026-08-31', 'DINV2808260001', '2026-08-28 10:06:12', '2026-08-28 10:06:12'),
 (19, 9, 1, 453, 'pembelian tulangan anjing', 100000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-28082600002', '2026-08-28 10:15:35', '2026-08-28 10:15:35'),
 (20, 9, 2, 95, 'pembelian tulangan anjing', 0.00000, 100000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-28082600002', '2026-08-28 10:15:35', '2026-08-28 10:15:35'),
 (21, 10, 1, 190, 'Penerimaan Q BCA 1588', 10000000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-28 10:16:48', '2026-08-28 10:16:48'),
@@ -2558,10 +2578,6 @@ INSERT INTO `tbkeu_jurnal_detail` (`id_jurnal_detail`, `id_jurnal`, `nomor_baris
 (31, 14, 3, 272, 'Jurnal Umum', 0.00000, 75000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-28082600003', '2026-08-28 10:34:16', '2026-08-28 10:34:16'),
 (35, 16, 1, 279, 'Penerimaan Q Hutang Non Dagang (Retur Penjualan yg blm dipot)', 50000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-28 10:40:30', '2026-08-28 13:23:09'),
 (36, 16, 2, 461, 'Piutang Usaha Faktur DINV2808260002', 0.00000, 50000.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-28 10:40:30', '2026-08-28 10:40:30'),
-(37, 17, 1, 461, 'Penjualan, Agoes - Piutang', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-08-28 10:57:30', '2026-08-28 10:57:30'),
-(38, 17, 2, 308, 'Penjualan, Agoes - Pendapatan', 0.00000, 95000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-08-28 10:57:30', '2026-08-28 10:57:30'),
-(39, 18, 1, 321, 'Penyesuaian persediaan, untuk SJ-280826-0002 - HPP', 950000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-08-28 10:57:30', '2026-08-28 10:57:30'),
-(40, 18, 2, 224, 'Penyesuaian persediaan, untuk SJ-280826-0002 - Persediaan', 0.00000, 950000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-08-28 10:57:30', '2026-08-28 10:57:30'),
 (41, 19, 1, 190, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.00000, 100000000.00000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202608-00001', '2026-08-28 10:59:36', '2026-08-28 10:59:36'),
 (42, 19, 2, 462, 'Pembayaran supplier Pupuk Karya Polowijo, PT - 2600001', 100000000.00000, 0.00000, NULL, 276, NULL, NULL, NULL, NULL, '2600001', '2026-08-28 10:59:36', '2026-08-28 10:59:36'),
 (43, 20, 1, 1093, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.00000, 20000000.00000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202608-00002', '2026-08-28 11:00:41', '2026-08-28 11:00:41'),
@@ -2580,7 +2596,27 @@ INSERT INTO `tbkeu_jurnal_detail` (`id_jurnal_detail`, `id_jurnal`, `nomor_baris
 (56, 23, 2, 307, 'Penjualan, Rizky Jaya, CV - Pendapatan', 0.00000, 13009009.00901, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV2808260002', '2026-08-28 14:01:30', '2026-08-28 14:01:30'),
 (57, 23, 3, 280, 'Penjualan, Rizky Jaya, CV - PPN Keluaran', 0.00000, 1430990.99099, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV2808260002', '2026-08-28 14:01:30', '2026-08-28 14:01:30'),
 (58, 24, 1, 160, 'Penyesuaian persediaan, untuk SJ-060826-0004 - HPP', 11574774.78000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV2808260002', '2026-08-28 14:01:30', '2026-08-28 14:01:30'),
-(59, 24, 2, 102, 'Penyesuaian persediaan, untuk SJ-060826-0004 - Persediaan', 0.00000, 11574774.78000, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV2808260002', '2026-08-28 14:01:30', '2026-08-28 14:01:30');
+(59, 24, 2, 102, 'Penyesuaian persediaan, untuk SJ-060826-0004 - Persediaan', 0.00000, 11574774.78000, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV2808260002', '2026-08-28 14:01:30', '2026-08-28 14:01:30'),
+(60, 25, 1, 102, 'Persediaan # 1', 450450.45000, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600002', '2026-08-29 11:08:59', '2026-08-29 11:08:59'),
+(61, 25, 2, 211, 'Q PPN M Ymh Diterima', 49549.54950, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600002', '2026-08-29 11:08:59', '2026-08-29 11:08:59'),
+(62, 25, 3, 462, 'Hutang Usaha', 0.00000, 499999.99950, NULL, 276, NULL, 2, NULL, NULL, '2600002', '2026-08-29 11:08:59', '2026-08-29 11:08:59'),
+(63, 26, 1, 102, 'Persediaan # 1', 495495.49500, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600003', '2026-08-29 11:29:20', '2026-08-29 11:29:20'),
+(64, 26, 2, 211, 'Q PPN M Ymh Diterima', 54504.50440, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600003', '2026-08-29 11:29:20', '2026-08-29 11:29:20'),
+(65, 26, 3, 462, 'Hutang Usaha', 0.00000, 549999.99940, NULL, 276, NULL, 2, NULL, NULL, '2600003', '2026-08-29 11:29:20', '2026-08-29 11:29:20'),
+(66, 27, 1, 102, 'Persediaan # 1', 477477.47700, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-08-29 11:36:52', '2026-08-29 11:36:52'),
+(67, 27, 2, 211, 'Q PPN M Ymh Diterima', 52522.52240, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-08-29 11:36:52', '2026-08-29 11:36:52'),
+(68, 27, 3, 462, 'Hutang Usaha', 0.00000, 529999.99940, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-08-29 11:36:52', '2026-08-29 11:36:52'),
+(73, 30, 1, 102, 'Reversal: Persediaan # 1', 0.00000, 477477.47700, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-09-02 10:13:30', '2026-09-02 10:13:30'),
+(74, 30, 2, 211, 'Reversal: Q PPN M Ymh Diterima', 0.00000, 52522.52240, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-09-02 10:13:30', '2026-09-02 10:13:30'),
+(75, 30, 3, 462, 'Reversal: Hutang Usaha', 529999.99940, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600004', '2026-09-02 10:13:30', '2026-09-02 10:13:30'),
+(76, 31, 1, 461, 'Penjualan, Agoes - Piutang', 55000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0109260001', '2026-09-02 13:05:31', '2026-09-02 13:05:31'),
+(77, 31, 2, 308, 'Penjualan, Agoes - Pendapatan', 0.00000, 55000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0109260001', '2026-09-02 13:05:31', '2026-09-02 13:05:31'),
+(78, 32, 1, 321, 'Penyesuaian persediaan, untuk SJ-010926-0006 - HPP', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0109260001', '2026-09-02 13:05:31', '2026-09-02 13:05:31'),
+(79, 32, 2, 224, 'Penyesuaian persediaan, untuk SJ-010926-0006 - Persediaan', 0.00000, 95000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0109260001', '2026-09-02 13:05:31', '2026-09-02 13:05:31'),
+(92, 39, 1, 461, 'Penjualan, Agoes - Piutang', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-09-02 14:33:13', '2026-09-02 14:33:13'),
+(93, 39, 2, 308, 'Penjualan, Agoes - Pendapatan', 0.00000, 95000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-09-02 14:33:13', '2026-09-02 14:33:13'),
+(94, 40, 1, 321, 'Penyesuaian persediaan, untuk SJ-280826-0010 - HPP', 950000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-09-02 14:33:13', '2026-09-02 14:33:13'),
+(95, 40, 2, 224, 'Penyesuaian persediaan, untuk SJ-280826-0010 - Persediaan', 0.00000, 950000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV2808260001', '2026-09-02 14:33:13', '2026-09-02 14:33:13');
 
 -- --------------------------------------------------------
 
@@ -2605,22 +2641,27 @@ INSERT INTO `tbkeu_jurnal_log` (`id_log`, `id_jurnal`, `action`, `message`, `cre
 (1, 1, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', 207, '2026-08-28 09:48:56'),
 (2, 2, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 207, '2026-08-28 09:51:08'),
 (3, 3, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 207, '2026-08-28 09:53:48'),
-(4, 4, 'POSTED', 'Penjualan, Manunggal Agro Sentosa,PT', 213, '2026-08-28 10:06:12'),
-(5, 5, 'POSTED', 'Penyesuaian persediaan, untuk SJ-010826-0004', 213, '2026-08-28 10:06:12'),
 (10, 9, 'DRAFT_CREATED', 'pembelian tulangan anjing', 205, '2026-08-28 10:15:35'),
 (11, 9, 'POSTED', 'Posting manual jurnal', 205, '2026-08-28 10:15:35'),
 (12, 12, 'POSTED', 'Retur pembelian RBELI-20260828-0001', 0, '2026-08-28 10:23:54'),
 (13, 14, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-28 10:34:16'),
 (14, 14, 'POSTED', 'Posting manual jurnal', 205, '2026-08-28 10:34:16'),
-(15, 17, 'POSTED', 'Penjualan, Agoes', 68, '2026-08-28 10:57:30'),
-(16, 18, 'POSTED', 'Penyesuaian persediaan, untuk SJ-280826-0002', 68, '2026-08-28 10:57:30'),
 (17, 19, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-28 10:59:36'),
 (18, 20, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-28 11:00:41'),
 (19, 21, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-28 11:02:01'),
 (20, 21, 'POSTED', 'Posting manual jurnal', 205, '2026-08-28 11:02:01'),
 (21, 22, 'POSTED', 'Pembayaran supplier  PT.Syngenta Seed', 205, '2026-08-28 13:44:23'),
 (22, 23, 'POSTED', 'Penjualan, Rizky Jaya, CV', 205, '2026-08-28 14:01:30'),
-(23, 24, 'POSTED', 'Penyesuaian persediaan, untuk SJ-060826-0004', 205, '2026-08-28 14:01:30');
+(23, 24, 'POSTED', 'Penyesuaian persediaan, untuk SJ-060826-0004', 205, '2026-08-28 14:01:30'),
+(24, 25, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', NULL, '2026-08-29 11:08:59'),
+(25, 26, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', 207, '2026-08-29 11:29:20'),
+(26, 27, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', 207, '2026-08-29 11:36:52'),
+(29, 30, 'POSTED', 'UNPOST LPB: ok', 205, '2026-09-02 10:13:30'),
+(30, 27, 'REVERSED', 'UNPOST LPB: ok', 205, '2026-09-02 10:13:30'),
+(31, 31, 'POSTED', 'Penjualan, Agoes', 205, '2026-09-02 13:05:31'),
+(32, 32, 'POSTED', 'Penyesuaian persediaan, untuk SJ-010926-0006', 205, '2026-09-02 13:05:31'),
+(39, 39, 'POSTED', 'Penjualan, Agoes', 205, '2026-09-02 14:33:13'),
+(40, 40, 'POSTED', 'Penyesuaian persediaan, untuk SJ-280826-0010', 205, '2026-09-02 14:33:13');
 
 -- --------------------------------------------------------
 
@@ -2914,9 +2955,9 @@ INSERT INTO `tbkeu_klasifikasi_akun` (`id_klasifikasi`, `kode_klasifikasi`, `nam
 (1, '1', 'Harta', 'Asset', 'NERACA', 'DEBIT', 10, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
 (2, '2', 'Kewajiban', 'Liabilities', 'NERACA', 'KREDIT', 20, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
 (3, '3', 'Modal', 'Equity', 'NERACA', 'KREDIT', 30, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
-(4, '4', 'Pendapatan', 'Revenues', 'LABA_RUGI', 'KREDIT', 40, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
-(5, '5', 'Beban Atas Pendapatan', 'Cost of Revenues', 'LABA_RUGI', 'DEBIT', 50, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
-(6, '6', 'Beban Operasional', 'Operating Expenses', 'LABA_RUGI', 'DEBIT', 60, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
+(4, '4', 'Penjualan', 'Penjualan', 'LABA_RUGI', 'KREDIT', 40, 1, '2026-07-13 12:15:37', '2026-08-31 13:42:09'),
+(5, '5', 'Harga Pokok Penjualan', 'Harga Pokok Penjualan', 'LABA_RUGI', 'DEBIT', 50, 1, '2026-07-13 12:15:37', '2026-08-31 13:42:09'),
+(6, '6', 'Pendapatan & Biaya Non Operasi', 'Pendapatan & Biaya Non Operasi', 'LABA_RUGI', 'DEBIT', 60, 1, '2026-07-13 12:15:37', '2026-08-31 13:42:09'),
 (7, '7', 'Beban Non Operasional', 'Non Operating Expenses', 'LABA_RUGI', 'DEBIT', 70, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
 (8, '8', 'Pendapatan Lain', 'Other Revenues', 'LABA_RUGI', 'KREDIT', 80, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37'),
 (9, '9', 'Beban Lain', 'Other Expenses', 'LABA_RUGI', 'DEBIT', 90, 1, '2026-07-13 12:15:37', '2026-07-13 12:15:37');
@@ -3001,13 +3042,15 @@ CREATE TABLE `tbkeu_nomor_dokumen` (
 --
 
 INSERT INTO `tbkeu_nomor_dokumen` (`id_nomor`, `kode_jenis_jurnal`, `periode_yyyymm`, `last_number`, `updated_at`) VALUES
-(1, 'PJ', '202608', 8, '2026-08-28 10:23:54'),
+(1, 'PJ', '202608', 11, '2026-08-29 11:36:52'),
 (4, 'SJ', '260801', 4, '2026-08-28 10:06:12'),
-(6, 'SJ', '260901', 2, '2026-08-24 09:44:13'),
+(6, 'SJ', '260901', 12, '2026-09-03 09:23:21'),
 (8, 'SJ', '260812', 2, '2026-08-24 09:44:43'),
 (11, 'AUTO', 'ALL', 5, '2026-08-28 13:44:23'),
 (18, 'SJ', '260806', 4, '2026-08-28 14:01:30'),
-(21, 'SJ', '260828', 2, '2026-08-28 10:57:30');
+(21, 'SJ', '260828', 10, '2026-09-02 14:33:13'),
+(33, 'REV', '202609', 1, '2026-09-02 10:13:30'),
+(50, 'SJ', '260903', 2, '2026-09-03 09:53:00');
 
 -- --------------------------------------------------------
 
@@ -3097,6 +3140,10 @@ CREATE TABLE `tbkeu_pembayaran_faktur` (
   `status_kasir` varchar(20) NOT NULL DEFAULT 'valid',
   `kasir_approved_by` varchar(100) DEFAULT NULL,
   `kasir_approved_at` datetime DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'POSTED',
+  `unpost_by` varchar(100) DEFAULT NULL,
+  `unpost_at` datetime DEFAULT NULL,
+  `unpost_reason` varchar(255) DEFAULT NULL,
   `bg_cair_by` varchar(100) DEFAULT NULL,
   `bg_cair_at` datetime DEFAULT NULL,
   `keterangan` text,
@@ -3108,11 +3155,11 @@ CREATE TABLE `tbkeu_pembayaran_faktur` (
 -- Dumping data untuk tabel `tbkeu_pembayaran_faktur`
 --
 
-INSERT INTO `tbkeu_pembayaran_faktur` (`id_pembayaran`, `id_faktur`, `no_faktur`, `tanggal_pembayaran`, `jumlah_pembayaran`, `jumlah_diskon`, `metode_pembayaran`, `cara_pembayaran`, `tanggal_bg_cair`, `no_bg`, `nama_bank`, `status_bg`, `status_kasir`, `kasir_approved_by`, `kasir_approved_at`, `bg_cair_by`, `bg_cair_at`, `keterangan`, `create_by`, `create_at`) VALUES
-(1, 2, 'DINV2808260002', '2026-08-25', 10000000.00, 0.00, 'Q BCA 1588', 'tempo', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, NULL, NULL, NULL, 'admin', '2026-08-28 10:16:48'),
-(2, 2, 'DINV2808260002', '2026-08-28', 1690000.00, 0.00, 'Q BCA 1588', 'bg', '2026-09-25', '710873', 'BCA', 'cair', 'valid', NULL, NULL, 'admin', '2026-08-28 10:19:05', NULL, 'admin', '2026-08-28 10:18:16'),
-(3, 2, 'DINV2808260002', '2026-08-28', 425000.00, 0.00, 'Q Kas Ayat Silang', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, NULL, NULL, NULL, 'deva', '2026-08-28 10:30:55'),
-(4, 2, 'DINV2808260002', '2026-08-30', 50000.00, 0.00, 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, NULL, NULL, NULL, 'admin', '2026-08-28 10:40:30');
+INSERT INTO `tbkeu_pembayaran_faktur` (`id_pembayaran`, `id_faktur`, `no_faktur`, `tanggal_pembayaran`, `jumlah_pembayaran`, `jumlah_diskon`, `metode_pembayaran`, `cara_pembayaran`, `tanggal_bg_cair`, `no_bg`, `nama_bank`, `status_bg`, `status_kasir`, `kasir_approved_by`, `kasir_approved_at`, `status`, `unpost_by`, `unpost_at`, `unpost_reason`, `bg_cair_by`, `bg_cair_at`, `keterangan`, `create_by`, `create_at`) VALUES
+(1, 2, 'DINV2808260002', '2026-08-25', 10000000.00, 0.00, 'Q BCA 1588', 'tempo', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'admin', '2026-08-28 10:16:48'),
+(2, 2, 'DINV2808260002', '2026-08-28', 1690000.00, 0.00, 'Q BCA 1588', 'bg', '2026-09-25', '710873', 'BCA', 'cair', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, 'admin', '2026-08-28 10:19:05', NULL, 'admin', '2026-08-28 10:18:16'),
+(3, 2, 'DINV2808260002', '2026-08-28', 425000.00, 0.00, 'Q Kas Ayat Silang', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'deva', '2026-08-28 10:30:55'),
+(4, 2, 'DINV2808260002', '2026-08-30', 50000.00, 0.00, 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'admin', '2026-08-28 10:40:30');
 
 -- --------------------------------------------------------
 
@@ -21480,7 +21527,11 @@ INSERT INTO `tbpo_detail_po` (`id_det_po`, `kd_po`, `no_po`, `tgl_transaksi`, `k
 (3, 'SKPO280826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 'Btl', 1000, 10.00, 1000.00, 1000.0000, 83700, 75405.4054, 83700.0000, 75405.4054, 75405.4054, 83700000, 75405405.4, NULL, NULL, 0.00, 0.00, 75405.41, 75405405.40, 0, '', 'include', 'KEU01', '2026-08-28 02:44:54'),
 (4, 'SKPO280826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 'Btl', 6000, 12.00, 1000.00, 6000.0000, 71000, 63963.9640, 71000.0000, 63963.9640, 63963.964, 426000000, 383783784, NULL, NULL, 0.00, 0.00, 63963.96, 383783784.00, 0, '', 'include', 'KEU01', '2026-08-28 02:44:54'),
 (5, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 'Pack', 70, 450.00, 5.00, 70.0000, 35000, 35000.0000, 35000.0000, 35000.0000, 35000, 2450000, 2450000, NULL, NULL, 0.00, 0.00, 35000.00, 2450000.00, 0, '', 'exclude', 'KEU01', '2026-08-28 02:43:38'),
-(6, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 'Pack', 2500, 1.00, 1.00, 2500.0000, 95000, 95000.0000, 95000.0000, 95000.0000, 95000, 237500000, 237500000, NULL, NULL, 0.00, 0.00, 95000.00, 237500000.00, 0, '', 'exclude', 'KEU01', '2026-08-28 02:43:38');
+(6, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 'Pack', 2500, 1.00, 1.00, 2500.0000, 95000, 95000.0000, 95000.0000, 95000.0000, 95000, 237500000, 237500000, NULL, NULL, 0.00, 0.00, 95000.00, 237500000.00, 0, '', 'exclude', 'KEU01', '2026-08-28 02:43:38'),
+(9, 'SKPO290826PUPUK030001', 'Q002/KIU/VIII/2026', '2026-08-29', 'PUPUK03', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Pack', 10, 1.00, 1.00, 10.0000, 50000, 45045.0450, 50000.0000, 45045.0450, 45045.045, 500000, 450450.45, NULL, NULL, 0.00, 0.00, 45045.05, 450450.45, 0, '', 'include', 'KEU01', '2026-08-29 04:05:28'),
+(10, 'SKPO290826PUPUK030002', 'Q003/KIU/VIII/2026', '2026-08-31', 'PUPUK03', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Pack', 10, 1.00, 1.00, 10.0000, 55000, 49549.5495, 55000.0000, 49549.5495, 49549.5495, 550000, 495495.495, NULL, NULL, 0.00, 0.00, 49549.55, 495495.50, 0, '', 'include', 'KEU01', '2026-08-29 04:20:26'),
+(11, 'SKPO290826PUPUK030002', 'Q003/KIU/VIII/2026', '2026-08-31', 'PUPUK03', 'QCHAM04', 'Champion 77 WP 14 X 1 kg', 'Pack', 10, 1.00, 1.00, 10.0000, 53000, 47747.7477, 53000.0000, 47747.7477, 47747.7477, 530000, 477477.477, NULL, NULL, 0.00, 0.00, 47747.75, 477477.48, 0, '', 'include', 'KEU01', '2026-08-29 04:20:26'),
+(12, 'SKPO290826PUPUK030003', 'Q004/KIU/VIII/2026', '2026-08-31', 'PUPUK03', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Pack', 10, 1.00, 1.00, 10.0000, 53000, 47747.7477, 53000.0000, 47747.7477, 47747.7477, 530000, 477477.477, NULL, NULL, 0.00, 0.00, 47747.75, 477477.48, 0, '', 'include', 'KEU01', '2026-08-29 04:34:47');
 
 -- --------------------------------------------------------
 
@@ -21815,7 +21866,20 @@ INSERT INTO `tbpo_note_direktur` (`id_note`, `kd_po`, `isi_note`, `kd_user`, `na
 (3, 'SKPO280826SYNGE020002', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-28 02:44:41'),
 (4, 'SKPO280826PUPUK030001', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-28 02:44:56'),
 (5, 'SKPO280826SYNGE020002', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-28 02:45:23'),
-(6, 'SKPO280826PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-28 02:46:20');
+(6, 'SKPO280826PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-28 02:46:20'),
+(7, 'SKPO290826PUPUK030001', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-29 10:24:30', '2026-08-29 03:24:30'),
+(8, 'SKPO290826PUPUK030001', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-29 03:24:54'),
+(9, 'SKPO290826PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-29 03:25:38'),
+(10, 'SKPO290826PUPUK030002', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-29 10:39:11', '2026-08-29 03:39:11'),
+(11, 'SKPO290826PUPUK030001', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-29 11:05:13', '2026-08-29 04:05:13'),
+(12, 'SKPO290826PUPUK030001', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-29 04:05:30'),
+(13, 'SKPO290826PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-29 04:06:32'),
+(14, 'SKPO290826PUPUK030002', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-29 11:19:45', '2026-08-29 04:19:45'),
+(15, 'SKPO290826PUPUK030002', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-29 04:20:33'),
+(16, 'SKPO290826PUPUK030002', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-29 04:21:17'),
+(17, 'SKPO290826PUPUK030003', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-29 11:33:31', '2026-08-29 04:33:31'),
+(18, 'SKPO290826PUPUK030003', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-29 04:34:49'),
+(19, 'SKPO290826PUPUK030003', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-29 04:35:15');
 
 -- --------------------------------------------------------
 
@@ -21882,7 +21946,10 @@ CREATE TABLE `tbpo_po` (
 
 INSERT INTO `tbpo_po` (`id_po`, `kd_po`, `no_po`, `tgl_transaksi`, `kd_suplier`, `jml_item`, `total_harga`, `total_harga_diskon`, `keterangan_harga_ppn`, `total_harga_include`, `total_harga_exlude`, `total_harga_diskon_include`, `total_harga_diskon_exlude`, `status`, `tax`, `hrg_pajak`, `tmpo_pembayaran`, `gdg_pengiriman`, `acc_with`, `kd_printout_note`, `create_at`, `tgl_perubahan_po`, `top`) VALUES
 (1, 'SKPO280826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 4, 486486486.698, 486486486.698, 'include', 540000000, 486486486.698, 540000000.23478, 486486486.698, 'DONE', 0, 0, 30, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-28 02:46:20', NULL, 0),
-(2, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 2, 239950000, 239950000, 'exclude', 266344500, 239950000, 266344500, 239950000, 'DONE', 11, 26394500, 60, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-28 02:45:23', NULL, 0);
+(2, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 2, 239950000, 239950000, 'exclude', 266344500, 239950000, 266344500, 239950000, 'DONE', 11, 26394500, 60, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-28 02:45:23', NULL, 0),
+(5, 'SKPO290826PUPUK030001', 'Q002/KIU/VIII/2026', '2026-08-29', 'PUPUK03', 1, 450450.45, 450450.45, 'include', 500000, 450450.45, 499999.9995, 450450.45, 'DONE', 0, 0, 30, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-29 04:06:32', NULL, 0),
+(6, 'SKPO290826PUPUK030002', 'Q003/KIU/VIII/2026', '2026-08-31', 'PUPUK03', 2, 972972.972, 972972.972, 'include', 1080000, 972972.972, 1079999.99892, 972972.972, 'DONE', 0, 0, 60, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-29 04:21:17', NULL, 0),
+(7, 'SKPO290826PUPUK030003', 'Q004/KIU/VIII/2026', '2026-08-31', 'PUPUK03', 1, 477477.477, 477477.477, 'include', 530000, 477477.477, 529999.99947, 477477.477, 'DONE', 0, 0, 60, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-29 04:35:15', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -22553,6 +22620,13 @@ CREATE TABLE `tbpo_tracking_po` (
   `createat` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `tbpo_tracking_po`
+--
+
+INSERT INTO `tbpo_tracking_po` (`id_po_tracking`, `kd_po`, `status`, `createat`) VALUES
+(1, 'SKPO290826PUPUK030002', 'Hapus detail PO: Pupuk MagneWish Powder 10 kg | User: KEU01 - Supriyanto | Data Lama: {\"id_det_po\":\"8\",\"kd_po\":\"SKPO290826PUPUK030002\",\"no_po\":\"Q003/KIU/VIII/2026\",\"tgl_transaksi\":\"2026-08-30\",\"kd_suplier\":\"PUPUK03\",\"kd_barang\":\"QPUPU16\",\"nama_barang\":\"Pupuk MagneWish Powder 10 kg\",\"satuan\":\"Pack\",\"qty\":\"10\",\"isi\":\"1.00\",\"kemasan\":\"1.00\",\"qty_kecil\":\"10.0000\",\"hrg_satuan\":\"60000\",\"harga_satuan_exclude\":\"60000.0000\",\"harga_satuan_kecil\":\"60000.0000\",\"harga_satuan_kecil_exclude\":\"60000.0000\",\"hrg_diskon\":\"60000\",\"hrg_total\":\"600000\",\"hrg_total_diskon\":\"600000\",\"id_diskon_merk\":null,\"satuan_diskon\":null,\"nominal_diskon\":\"0.00\",\"diskon_satuan_kecil\":\"0.00\",\"harga_satuan_kecil_setelah_diskon\":\"60000.00\",\"total_harga_setelah_diskon\":\"600000.00\",\"is_bonus\":\"0\",\"keterangan_bonus\":\"\",\"keterangan_harga_ppn\":\"exclude\",\"kd_user\":\"KEU01\",\"create_at\":\"2026-08-29 10:39:11\",\"merk_barang\":\"Pupuk MagneWish Powder\"}', '2026-08-29 03:40:40');
+
 -- --------------------------------------------------------
 
 --
@@ -22991,7 +23065,8 @@ INSERT INTO `tbsim_bobotkpi` (`idbobotkpi`, `id_user`, `bobotwhat`, `bobothow`) 
 (10, 41, 60, 40),
 (11, 64, 60, 40),
 (13, 148, 60, 40),
-(14, 8, 60, 40);
+(14, 8, 60, 40),
+(18, 226, 60, 40);
 
 -- --------------------------------------------------------
 
@@ -23192,7 +23267,27 @@ INSERT INTO `tbsim_hows` (`id_how`, `id_user`, `id_kpi`, `tipe_how`, `p_how`, `b
 (173, 8, 48, 'A', 'Tim Security melakukan Patroli untuk mendapatkan issue dan ditindaklanjuti untuk diselesaikan', 20, 0.00, '>7 issues/bulan + next step (Dilaporkan ke GA untuk di FU) dan harus tuntas maksimal <1 minggu', 115, 23),
 (174, 8, 49, 'A', 'Hadir tepat waktu (30 menit sebelum waktu shift jaga)', 30, 0.00, '100% Tepat Waktu', 115, 34.5),
 (175, 8, 49, 'A', 'Melakukan serah terima kepada shift selanjutnya dengan baik', 30, 0.00, 'Menyampaikan seluruh informasi kepada security shift selanjutnya tanpa ada yang terlewat', 115, 34.5),
-(176, 8, 49, 'A', 'Tukar shift antar anggota security (3x dalam 1 bulan)', 40, 0.00, 'Tidak pernah tukar shift selama 1 bulan', 115, 46);
+(176, 8, 49, 'A', 'Tukar shift antar anggota security (3x dalam 1 bulan)', 40, 0.00, 'Tidak pernah tukar shift selama 1 bulan', 115, 46),
+(237, 226, 68, 'A', 'Menjalankan pembuatan KARISMA HRIS sesuai urutan pekerjaan, target waktu dan kebutuhan yang telah disepakati.', 40, 0.00, 'Tidak terdapat perkembangan pekerjaan yang terukur', 0, 0),
+(238, 226, 68, 'A', 'Melakukan pengecekan setiap bagian aplikasi sebelum digunakan dan segera memperbaiki apabila ditemukan masalah.', 30, 0.00, 'Tidak dilakukan pengecekan', 0, 0),
+(239, 226, 68, 'A', 'Memastikan setiap bagian KARISMA HRIS saling mendukung dan data yang digunakan sesuai kebutuhan perusahaan.', 20, 0.00, 'Tidak ada integrasi atau kesesuaian data yang dapat digunakan', 0, 0),
+(240, 226, 68, 'A', 'Membuat catatan pekerjaan, panduan penggunaan dan laporan perkembangan KARISMA HRIS.', 10, 0.00, 'Tidak membuat catatan atau dokumentasi', 0, 0),
+(241, 226, 69, 'A', 'Memahami kebutuhan pengguna sebelum melakukan perubahan atau penambahan KarismaERP.', 30, 0.00, 'Analisis kebutuhan kurang lengkap', 60, 18),
+(242, 226, 69, 'A', 'Membuat, memeriksa dan memastikan hasil penyempurnaan KarismaERP dapat digunakan dengan baik.', 40, 0.00, 'Pekerjaan kurang stabil atau sering perlu perbaikan ulang', 60, 24),
+(243, 226, 69, 'A', 'Menangani laporan masalah KarismaERP sampai dapat digunakan kembali.', 20, 0.00, 'Penanganan masalah sering terlambat atau kurang tepat', 40, 8),
+(244, 226, 69, 'A', 'Mencatat perubahan dan hasil pekerjaan KarismaERP.', 10, 0.00, 'Dokumentasi sangat kurang dan sulit digunakan', 40, 4),
+(245, 226, 70, 'A', 'Melakukan pengecekan aplikasi secara rutin dan segera melakukan perbaikan apabila ditemukan masalah.', 50, 0.00, 'Pengecekan dilakukan tetapi beberapa bagian terlewat', 80, 40),
+(246, 226, 70, 'A', 'Melakukan perbaikan terhadap bagian aplikasi yang lambat atau mengganggu pekerjaan pengguna.', 30, 0.00, 'Perbaikan kurang efektif dan masalah cukup sering berulang', 60, 18),
+(247, 226, 70, 'A', 'Mencatat masalah, penyebab dan tindakan perbaikan agar masalah yang sama tidak sering terjadi kembali.', 20, 0.00, 'Dokumentasi sangat kurang dan sulit digunakan', 40, 8),
+(248, 226, 71, 'A', 'Melakukan pengecekan aplikasi dan data sesuai jadwal.', 50, 0.00, 'Pengecekan tidak konsisten', 60, 30),
+(249, 226, 71, 'A', 'Memastikan data penting memiliki salinan cadangan dan dapat digunakan apabila dibutuhkan.', 30, 0.00, 'Backup lengkap dan verifikasi selesai lebih cepat dari jadwal', 110, 33),
+(250, 226, 71, 'A', 'Mencatat pekerjaan pemeliharaan, masalah yang ditemukan dan hasil perbaikannya.', 20, 0.00, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80, 16),
+(251, 226, 72, 'A', 'Menjalankan SOP Ijin tidak masuk', 25, 0.00, 'Kehadiran dan ketepatan waktu sangat baik tanpa pelanggaran', 115, 57.5),
+(252, 226, 72, 'A', 'Mengikuti briefing', 20, 0.00, 'Selalu mengikuti briefing dengan disiplin dan aktif mendukung kelancaran informasi', 115, 23),
+(253, 226, 72, 'A', 'Menjalankan prosedur izin/cuti', 20, 0.00, 'Seluruh izin/cuti mengikuti prosedur dengan lengkap, cepat, dan terdokumentasi', 115, 23),
+(254, 226, 72, 'A', 'Mengikuti kegiatan perusahaan yang diwajibkan', 10, 0.00, 'Seluruh kegiatan wajib diikuti sangat baik dan aktif mendukung pelaksanaan kegiatan', 115, 11.5),
+(255, 226, 73, 'A', 'Menangani laporan masalah perangkat secara cepat dan tepat.', 60, 0.00, 'Hampir seluruh laporan perangkat selesai lebih cepat dari target', 110, 66),
+(256, 226, 73, 'A', 'Memastikan perangkat dapat digunakan kembali dan mencatat pekerjaan perbaikan yang telah dilakukan.', 40, 0.00, 'Perangkat kembali digunakan lebih cepat dan dokumentasi lengkap', 110, 44);
 
 -- --------------------------------------------------------
 
@@ -24081,7 +24176,167 @@ INSERT INTO `tbsim_indikator_hows` (`id_indikator`, `id_how`, `keterangan`, `nil
 (864, 176, '2x tukar shift dalam 1 bulan', 105.00, 3, '2026-02-26 07:41:55'),
 (865, 176, '3x tukar shift dalam 1 bulan', 100.00, 4, '2026-02-26 07:41:55'),
 (866, 176, '4x tukar shift dalam 1 bulan', 50.00, 5, '2026-02-26 07:41:55'),
-(867, 176, '>4x tukar shift dalam 1 bulan', 0.00, 6, '2026-02-26 07:41:55');
+(867, 176, '>4x tukar shift dalam 1 bulan', 0.00, 6, '2026-02-26 07:41:55'),
+(1348, 237, 'Seluruh pekerjaan selesai lebih cepat dan terdapat tambahan hasil yang bermanfaat', 115.00, 1, '2026-08-26 18:05:17'),
+(1349, 237, 'Seluruh pekerjaan selesai tepat waktu tanpa pekerjaan tertunda', 110.00, 2, '2026-08-26 18:05:17'),
+(1350, 237, 'Minimal 95% pekerjaan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1351, 237, '85-94% pekerjaan selesai sesuai jadwal', 90.00, 4, '2026-08-26 18:05:17'),
+(1352, 237, '75-84% pekerjaan selesai sesuai jadwal', 80.00, 5, '2026-08-26 18:05:17'),
+(1353, 237, '60-74% pekerjaan selesai sesuai jadwal', 60.00, 6, '2026-08-26 18:05:17'),
+(1354, 237, 'Kurang dari 60% pekerjaan selesai', 40.00, 7, '2026-08-26 18:05:17'),
+(1355, 237, 'Tidak terdapat perkembangan pekerjaan yang terukur', 0.00, 8, '2026-08-26 18:05:17'),
+(1356, 238, 'Pengecekan lengkap, tidak terdapat masalah utama dan terdapat peningkatan tambahan', 115.00, 1, '2026-08-26 18:05:17'),
+(1357, 238, 'Pengecekan lengkap dan hanya ditemukan masalah kecil', 110.00, 2, '2026-08-26 18:05:17'),
+(1358, 238, 'Seluruh bagian utama sudah diperiksa dan dapat digunakan', 100.00, 3, '2026-08-26 18:05:17'),
+(1359, 238, 'Terdapat masalah tetapi seluruhnya dapat diselesaikan tepat waktu', 90.00, 4, '2026-08-26 18:05:17'),
+(1360, 238, 'Masih terdapat beberapa perbaikan kecil', 80.00, 5, '2026-08-26 18:05:17'),
+(1361, 238, 'Pengecekan dilakukan tetapi masih terdapat masalah berulang', 60.00, 6, '2026-08-26 18:05:17'),
+(1362, 238, 'Pengecekan belum lengkap', 40.00, 7, '2026-08-26 18:05:17'),
+(1363, 238, 'Tidak dilakukan pengecekan', 0.00, 8, '2026-08-26 18:05:17'),
+(1364, 239, 'Seluruh bagian HRIS saling mendukung sangat baik dan data sesuai kebutuhan perusahaan', 115.00, 1, '2026-08-26 18:05:17'),
+(1365, 239, 'Integrasi data berjalan baik dan melebihi kebutuhan awal', 110.00, 2, '2026-08-26 18:05:17'),
+(1366, 239, 'Seluruh bagian utama HRIS saling mendukung dan data sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17'),
+(1367, 239, 'Sebagian kecil data atau alur perlu penyesuaian tetapi tidak menghambat pekerjaan', 90.00, 4, '2026-08-26 18:05:17'),
+(1368, 239, 'Beberapa bagian HRIS masih perlu disesuaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1369, 239, 'Integrasi dilakukan tetapi masih sering terdapat masalah data atau alur', 60.00, 6, '2026-08-26 18:05:17'),
+(1370, 239, 'Integrasi belum lengkap dan banyak bagian belum saling mendukung', 40.00, 7, '2026-08-26 18:05:17'),
+(1371, 239, 'Tidak ada integrasi atau kesesuaian data yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17'),
+(1372, 240, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17'),
+(1373, 240, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(1374, 240, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1375, 240, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1376, 240, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1377, 240, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(1378, 240, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17'),
+(1379, 240, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17'),
+(1380, 241, 'Kebutuhan pengguna dipahami sangat baik dan menghasilkan solusi yang lebih bermanfaat', 115.00, 1, '2026-08-26 18:05:17'),
+(1381, 241, 'Kebutuhan pengguna dipahami lengkap lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17'),
+(1382, 241, 'Kebutuhan pengguna dipahami sesuai kebutuhan pekerjaan', 100.00, 3, '2026-08-26 18:05:17'),
+(1383, 241, 'Kebutuhan pengguna hampir lengkap dipahami', 90.00, 4, '2026-08-26 18:05:17'),
+(1384, 241, 'Sebagian kebutuhan pengguna masih perlu diperjelas', 80.00, 5, '2026-08-26 18:05:17'),
+(1385, 241, 'Analisis kebutuhan kurang lengkap', 60.00, 6, '2026-08-26 18:05:17'),
+(1386, 241, 'Analisis kebutuhan sering tidak sesuai dengan masalah pengguna', 40.00, 7, '2026-08-26 18:05:17'),
+(1387, 241, 'Tidak melakukan analisis kebutuhan pengguna', 0.00, 8, '2026-08-26 18:05:17'),
+(1388, 242, 'Pekerjaan dibuat dan diperiksa sangat baik serta memberikan manfaat tambahan', 115.00, 1, '2026-08-26 18:05:17'),
+(1389, 242, 'Pekerjaan selesai lebih cepat dan hasil melebihi kebutuhan awal', 110.00, 2, '2026-08-26 18:05:17'),
+(1390, 242, 'Pekerjaan dibuat, diperiksa, dan dapat digunakan sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17'),
+(1391, 242, 'Pekerjaan hampir sesuai dan hanya perlu perbaikan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1392, 242, 'Pekerjaan dapat digunakan tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1393, 242, 'Pekerjaan kurang stabil atau sering perlu perbaikan ulang', 60.00, 6, '2026-08-26 18:05:17'),
+(1394, 242, 'Pekerjaan belum dapat digunakan dengan baik', 40.00, 7, '2026-08-26 18:05:17'),
+(1395, 242, 'Tidak ada hasil pekerjaan yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17'),
+(1396, 243, 'Seluruh laporan masalah tertangani sangat cepat dan masalah tidak berulang', 115.00, 1, '2026-08-26 18:05:17'),
+(1397, 243, 'Hampir seluruh masalah selesai lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17'),
+(1398, 243, 'Seluruh masalah selesai sesuai target dan aplikasi dapat digunakan kembali', 100.00, 3, '2026-08-26 18:05:17'),
+(1399, 243, 'Sebagian kecil penyelesaian terlambat tetapi dampak dapat dikendalikan', 90.00, 4, '2026-08-26 18:05:17'),
+(1400, 243, 'Beberapa masalah terlambat diselesaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1401, 243, 'Banyak masalah melewati waktu penyelesaian', 60.00, 6, '2026-08-26 18:05:17'),
+(1402, 243, 'Penanganan masalah sering terlambat atau kurang tepat', 40.00, 7, '2026-08-26 18:05:17'),
+(1403, 243, 'Masalah tidak ditangani', 0.00, 8, '2026-08-26 18:05:17'),
+(1404, 244, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17'),
+(1405, 244, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(1406, 244, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1407, 244, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1408, 244, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1409, 244, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(1410, 244, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17'),
+(1411, 244, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17'),
+(1412, 245, 'Pengecekan rutin sangat lengkap dan terdapat tindakan pencegahan tambahan', 115.00, 1, '2026-08-26 18:05:17'),
+(1413, 245, 'Pengecekan rutin lengkap dan masalah diselesaikan lebih cepat', 110.00, 2, '2026-08-26 18:05:17'),
+(1414, 245, 'Pengecekan rutin dilakukan dan masalah diselesaikan sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17'),
+(1415, 245, 'Pengecekan hampir lengkap dan masalah kecil dapat diselesaikan', 90.00, 4, '2026-08-26 18:05:17'),
+(1416, 245, 'Pengecekan dilakukan tetapi beberapa bagian terlewat', 80.00, 5, '2026-08-26 18:05:17'),
+(1417, 245, 'Pengecekan tidak konsisten dan masalah sering terlambat diketahui', 60.00, 6, '2026-08-26 18:05:17'),
+(1418, 245, 'Pengecekan sangat kurang', 40.00, 7, '2026-08-26 18:05:17'),
+(1419, 245, 'Tidak melakukan pengecekan aplikasi', 0.00, 8, '2026-08-26 18:05:17'),
+(1420, 246, 'Perbaikan performa sangat baik dan memberi peningkatan nyata bagi pengguna', 115.00, 1, '2026-08-26 18:05:17'),
+(1421, 246, 'Perbaikan selesai lebih cepat dan hasil melebihi kebutuhan', 110.00, 2, '2026-08-26 18:05:17'),
+(1422, 246, 'Bagian aplikasi yang lambat atau mengganggu berhasil diperbaiki sesuai target', 100.00, 3, '2026-08-26 18:05:17'),
+(1423, 246, 'Sebagian kecil perbaikan masih perlu penyempurnaan', 90.00, 4, '2026-08-26 18:05:17'),
+(1424, 246, 'Perbaikan dilakukan tetapi beberapa gangguan masih muncul', 80.00, 5, '2026-08-26 18:05:17'),
+(1425, 246, 'Perbaikan kurang efektif dan masalah cukup sering berulang', 60.00, 6, '2026-08-26 18:05:17'),
+(1426, 246, 'Perbaikan tidak menyelesaikan masalah utama', 40.00, 7, '2026-08-26 18:05:17'),
+(1427, 246, 'Tidak melakukan perbaikan performa', 0.00, 8, '2026-08-26 18:05:17'),
+(1428, 247, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17'),
+(1429, 247, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(1430, 247, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1431, 247, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1432, 247, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1433, 247, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(1434, 247, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17'),
+(1435, 247, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17'),
+(1436, 248, 'Pengecekan aplikasi dan data sesuai jadwal, lengkap, dan disertai tindakan pencegahan tambahan', 115.00, 1, '2026-08-26 18:05:17'),
+(1437, 248, 'Pengecekan selesai lebih cepat dan lengkap', 110.00, 2, '2026-08-26 18:05:17'),
+(1438, 248, 'Pengecekan aplikasi dan data selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1439, 248, 'Pengecekan hampir sesuai jadwal dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1440, 248, 'Pengecekan cukup berjalan tetapi beberapa jadwal terlewat', 80.00, 5, '2026-08-26 18:05:17'),
+(1441, 248, 'Pengecekan tidak konsisten', 60.00, 6, '2026-08-26 18:05:17'),
+(1442, 248, 'Pengecekan sangat kurang', 40.00, 7, '2026-08-26 18:05:17'),
+(1443, 248, 'Tidak melakukan pengecekan sesuai jadwal', 0.00, 8, '2026-08-26 18:05:17'),
+(1444, 249, 'Seluruh data penting memiliki salinan cadangan yang terverifikasi dan siap digunakan', 115.00, 1, '2026-08-26 18:05:17'),
+(1445, 249, 'Backup lengkap dan verifikasi selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(1446, 249, 'Data penting memiliki backup dan dapat digunakan bila dibutuhkan', 100.00, 3, '2026-08-26 18:05:17'),
+(1447, 249, 'Backup tersedia dengan kekurangan kecil yang tidak menghambat pemulihan', 90.00, 4, '2026-08-26 18:05:17'),
+(1448, 249, 'Backup tersedia tetapi belum sepenuhnya lengkap', 80.00, 5, '2026-08-26 18:05:17'),
+(1449, 249, 'Backup kurang konsisten atau jarang diverifikasi', 60.00, 6, '2026-08-26 18:05:17'),
+(1450, 249, 'Backup sangat kurang dan berisiko tidak dapat digunakan', 40.00, 7, '2026-08-26 18:05:17'),
+(1451, 249, 'Tidak memastikan salinan cadangan data penting', 0.00, 8, '2026-08-26 18:05:17'),
+(1452, 250, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17'),
+(1453, 250, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(1454, 250, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(1455, 250, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(1456, 250, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(1457, 250, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(1458, 250, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17'),
+(1459, 250, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17'),
+(1460, 251, 'Kehadiran dan ketepatan waktu sangat baik tanpa pelanggaran', 115.00, 1, '2026-08-26 18:05:17'),
+(1461, 251, 'Kehadiran dan ketepatan waktu melebihi standar yang ditetapkan', 110.00, 2, '2026-08-26 18:05:17'),
+(1462, 251, 'Kehadiran dan ketepatan waktu sesuai aturan', 100.00, 3, '2026-08-26 18:05:17'),
+(1463, 251, 'Terdapat kekurangan kecil pada ketepatan waktu', 90.00, 4, '2026-08-26 18:05:17'),
+(1464, 251, 'Ketepatan waktu belum konsisten', 80.00, 5, '2026-08-26 18:05:17'),
+(1465, 251, 'Kehadiran atau ketepatan waktu sering perlu diperbaiki', 60.00, 6, '2026-08-26 18:05:17'),
+(1466, 251, 'Kehadiran atau ketepatan waktu sering tidak sesuai aturan', 40.00, 7, '2026-08-26 18:05:17'),
+(1467, 251, 'Tidak menjalankan aturan kehadiran dan ketepatan waktu', 0.00, 8, '2026-08-26 18:05:17'),
+(1468, 252, 'Selalu mengikuti briefing dengan disiplin dan aktif mendukung kelancaran informasi', 115.00, 1, '2026-08-26 18:05:17'),
+(1469, 252, 'Mengikuti briefing sangat baik dan melebihi standar kehadiran', 110.00, 2, '2026-08-26 18:05:17'),
+(1470, 252, 'Mengikuti briefing sesuai jadwal yang berlaku', 100.00, 3, '2026-08-26 18:05:17'),
+(1471, 252, 'Hampir seluruh briefing diikuti dengan baik', 90.00, 4, '2026-08-26 18:05:17'),
+(1472, 252, 'Beberapa briefing tidak diikuti atau terlambat', 80.00, 5, '2026-08-26 18:05:17'),
+(1473, 252, 'Briefing sering tidak diikuti dengan konsisten', 60.00, 6, '2026-08-26 18:05:17'),
+(1474, 252, 'Briefing sangat sering terlewat', 40.00, 7, '2026-08-26 18:05:17'),
+(1475, 252, 'Tidak mengikuti briefing', 0.00, 8, '2026-08-26 18:05:17'),
+(1476, 253, 'Seluruh izin/cuti mengikuti prosedur dengan lengkap, cepat, dan terdokumentasi', 115.00, 1, '2026-08-26 18:05:17'),
+(1477, 253, 'Prosedur izin/cuti dijalankan sangat baik dan lebih rapi dari standar', 110.00, 2, '2026-08-26 18:05:17'),
+(1478, 253, 'Prosedur izin/cuti dijalankan sesuai aturan', 100.00, 3, '2026-08-26 18:05:17'),
+(1479, 253, 'Ada kekurangan kecil tetapi prosedur tetap terpenuhi', 90.00, 4, '2026-08-26 18:05:17'),
+(1480, 253, 'Beberapa prosedur perlu diperbaiki', 80.00, 5, '2026-08-26 18:05:17'),
+(1481, 253, 'Prosedur izin/cuti kurang konsisten dijalankan', 60.00, 6, '2026-08-26 18:05:17'),
+(1482, 253, 'Prosedur izin/cuti sering tidak sesuai aturan', 40.00, 7, '2026-08-26 18:05:17'),
+(1483, 253, 'Tidak menjalankan prosedur izin/cuti', 0.00, 8, '2026-08-26 18:05:17'),
+(1484, 254, 'Seluruh kegiatan wajib diikuti sangat baik dan aktif mendukung pelaksanaan kegiatan', 115.00, 1, '2026-08-26 18:05:17'),
+(1485, 254, 'Kegiatan wajib diikuti sangat baik dan melebihi standar', 110.00, 2, '2026-08-26 18:05:17'),
+(1486, 254, 'Kegiatan wajib perusahaan diikuti sesuai aturan', 100.00, 3, '2026-08-26 18:05:17'),
+(1487, 254, 'Hampir seluruh kegiatan wajib diikuti dengan baik', 90.00, 4, '2026-08-26 18:05:17'),
+(1488, 254, 'Beberapa kegiatan wajib belum konsisten diikuti', 80.00, 5, '2026-08-26 18:05:17'),
+(1489, 254, 'Kegiatan wajib sering tidak diikuti', 60.00, 6, '2026-08-26 18:05:17'),
+(1490, 254, 'Kegiatan wajib sangat sering terlewat', 40.00, 7, '2026-08-26 18:05:17'),
+(1491, 254, 'Tidak mengikuti kegiatan wajib perusahaan', 0.00, 8, '2026-08-26 18:05:17'),
+(1492, 255, 'Seluruh laporan perangkat ditangani sangat cepat, tepat, dan masalah tidak berulang', 115.00, 1, '2026-08-26 18:05:17'),
+(1493, 255, 'Hampir seluruh laporan perangkat selesai lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17'),
+(1494, 255, 'Laporan perangkat ditangani cepat dan tepat sesuai target', 100.00, 3, '2026-08-26 18:05:17'),
+(1495, 255, 'Sebagian kecil penanganan terlambat tetapi perangkat tetap dapat digunakan', 90.00, 4, '2026-08-26 18:05:17'),
+(1496, 255, 'Beberapa penanganan perangkat terlambat', 80.00, 5, '2026-08-26 18:05:17'),
+(1497, 255, 'Banyak penanganan perangkat melewati target', 60.00, 6, '2026-08-26 18:05:17'),
+(1498, 255, 'Penanganan perangkat sering terlambat atau kurang tepat', 40.00, 7, '2026-08-26 18:05:17'),
+(1499, 255, 'Tidak menangani laporan masalah perangkat', 0.00, 8, '2026-08-26 18:05:17'),
+(1500, 256, 'Perangkat kembali digunakan dengan baik dan catatan perbaikan lengkap serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17'),
+(1501, 256, 'Perangkat kembali digunakan lebih cepat dan dokumentasi lengkap', 110.00, 2, '2026-08-26 18:05:17'),
+(1502, 256, 'Perangkat dapat digunakan kembali dan pekerjaan perbaikan tercatat sesuai target', 100.00, 3, '2026-08-26 18:05:17'),
+(1503, 256, 'Perangkat dapat digunakan dengan catatan perbaikan yang hampir lengkap', 90.00, 4, '2026-08-26 18:05:17'),
+(1504, 256, 'Perangkat dapat digunakan tetapi catatan perbaikan perlu dilengkapi', 80.00, 5, '2026-08-26 18:05:17'),
+(1505, 256, 'Perangkat dapat digunakan sebagian atau dokumentasi kurang lengkap', 60.00, 6, '2026-08-26 18:05:17'),
+(1506, 256, 'Hasil perbaikan kurang jelas dan catatan sangat minim', 40.00, 7, '2026-08-26 18:05:17'),
+(1507, 256, 'Tidak memastikan perangkat dapat digunakan atau tidak mencatat perbaikan', 0.00, 8, '2026-08-26 18:05:17');
 
 -- --------------------------------------------------------
 
@@ -24594,7 +24849,103 @@ INSERT INTO `tbsim_indikator_whats` (`id_indikator`, `id_what`, `keterangan`, `n
 (489, 84, '2x tukar shift dalam 1 bulan', 105.00, 3, '2026-02-26 07:41:55'),
 (490, 84, '3x tukar shift dalam 1 bulan', 100.00, 4, '2026-02-26 07:41:55'),
 (491, 84, '4x tukar shift dalam 1 bulan', 50.00, 5, '2026-02-26 07:41:55'),
-(492, 84, '>4x tukar shift dalam 1 bulan', 0.00, 6, '2026-02-26 07:41:55');
+(492, 84, '>4x tukar shift dalam 1 bulan', 0.00, 6, '2026-02-26 07:41:55'),
+(781, 121, 'Seluruh target selesai dan terdapat tambahan pengembangan yang bermanfaat', 115.00, 1, '2026-08-26 18:05:17'),
+(782, 121, 'Seluruh target selesai lebih cepat atau hasil melebihi target', 110.00, 2, '2026-08-26 18:05:17'),
+(783, 121, 'Seluruh target yang ditetapkan selesai sesuai waktu', 100.00, 3, '2026-08-26 18:05:17'),
+(784, 121, 'Penyelesaian mencapai 90-99%', 90.00, 4, '2026-08-26 18:05:17'),
+(785, 121, 'Penyelesaian mencapai 80-89%', 80.00, 5, '2026-08-26 18:05:17'),
+(786, 121, 'Penyelesaian mencapai 60-79%', 60.00, 6, '2026-08-26 18:05:17'),
+(787, 121, 'Penyelesaian mencapai 40-59%', 40.00, 7, '2026-08-26 18:05:17'),
+(788, 121, 'Belum menghasilkan hasil yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17'),
+(789, 122, 'Aplikasi berjalan sangat baik, tidak ada masalah utama dan terdapat peningkatan tambahan', 115.00, 1, '2026-08-26 18:05:17'),
+(790, 122, 'Aplikasi berjalan baik dan hanya terdapat masalah kecil', 110.00, 2, '2026-08-26 18:05:17'),
+(791, 122, 'Aplikasi dapat digunakan sesuai kebutuhan tanpa masalah yang menghambat pekerjaan', 100.00, 3, '2026-08-26 18:05:17'),
+(792, 122, 'Terdapat masalah namun dapat segera diselesaikan', 90.00, 4, '2026-08-26 18:05:17'),
+(793, 122, 'Masih terdapat beberapa bagian yang perlu diperbaiki', 80.00, 5, '2026-08-26 18:05:17'),
+(794, 122, 'Aplikasi dapat digunakan tetapi masih sering mengalami masalah', 60.00, 6, '2026-08-26 18:05:17'),
+(795, 122, 'Aplikasi belum siap digunakan secara penuh', 40.00, 7, '2026-08-26 18:05:17'),
+(796, 122, 'Aplikasi tidak dapat digunakan', 0.00, 8, '2026-08-26 18:05:17'),
+(797, 123, 'Dokumentasi lengkap, panduan tersedia dan sudah dilakukan penjelasan kepada pengguna', 115.00, 1, '2026-08-26 18:05:17'),
+(798, 123, 'Dokumentasi dan panduan 100% lengkap', 110.00, 2, '2026-08-26 18:05:17'),
+(799, 123, 'Seluruh fungsi utama sudah memiliki dokumentasi', 100.00, 3, '2026-08-26 18:05:17'),
+(800, 123, 'Dokumentasi mencapai 90%', 90.00, 4, '2026-08-26 18:05:17'),
+(801, 123, 'Dokumentasi mencapai 80%', 80.00, 5, '2026-08-26 18:05:17'),
+(802, 123, 'Dokumentasi mencapai 60%', 60.00, 6, '2026-08-26 18:05:17'),
+(803, 123, 'Dokumentasi kurang dari 60%', 40.00, 7, '2026-08-26 18:05:17'),
+(804, 123, 'Tidak ada dokumentasi', 0.00, 8, '2026-08-26 18:05:17'),
+(805, 124, 'Seluruh target selesai dan terdapat tambahan perbaikan yang memberikan manfaat nyata', 115.00, 1, '2026-08-26 18:05:17'),
+(806, 124, 'Seluruh target selesai dengan hasil melebihi kebutuhan awal', 110.00, 2, '2026-08-26 18:05:17'),
+(807, 124, 'Seluruh target pekerjaan selesai sesuai rencana', 100.00, 3, '2026-08-26 18:05:17'),
+(808, 124, '90-99% selesai', 90.00, 4, '2026-08-26 18:05:17'),
+(809, 124, '80-89% selesai', 80.00, 5, '2026-08-26 18:05:17'),
+(810, 124, '60-79% selesai', 60.00, 6, '2026-08-26 18:05:17'),
+(811, 124, '40-59% selesai', 40.00, 7, '2026-08-26 18:05:17'),
+(812, 124, 'Tidak terdapat hasil pekerjaan', 0.00, 8, '2026-08-26 18:05:17'),
+(813, 125, 'Seluruh masalah tertangani sangat cepat dan masalah yang sama tidak terjadi kembali', 115.00, 1, '2026-08-26 18:05:17'),
+(814, 125, 'Hampir seluruh masalah selesai lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17'),
+(815, 125, 'Seluruh masalah selesai sesuai waktu yang ditentukan', 100.00, 3, '2026-08-26 18:05:17'),
+(816, 125, 'Sebagian kecil penyelesaian terlambat', 90.00, 4, '2026-08-26 18:05:17'),
+(817, 125, 'Beberapa pekerjaan terlambat', 80.00, 5, '2026-08-26 18:05:17'),
+(818, 125, 'Banyak pekerjaan melewati waktu penyelesaian', 60.00, 6, '2026-08-26 18:05:17'),
+(819, 125, 'Penanganan masalah sering terlambat', 40.00, 7, '2026-08-26 18:05:17'),
+(820, 125, 'Masalah tidak ditangani', 0.00, 8, '2026-08-26 18:05:17'),
+(821, 126, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17'),
+(822, 126, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(823, 126, 'Laporan lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(824, 126, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(825, 126, 'Laporan cukup lengkap tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(826, 126, 'Laporan kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(827, 126, 'Laporan sangat kurang dan sulit digunakan sebagai acuan', 40.00, 7, '2026-08-26 18:05:17'),
+(828, 126, 'Tidak membuat laporan', 0.00, 8, '2026-08-26 18:05:17'),
+(829, 127, 'Tidak ada gangguan utama dan terdapat peningkatan kualitas aplikasi', 115.00, 1, '2026-08-26 18:05:17'),
+(830, 127, 'Tidak ada gangguan utama selama periode penilaian', 110.00, 2, '2026-08-26 18:05:17'),
+(831, 127, 'Maksimal terdapat 1 gangguan dan dapat segera diselesaikan', 100.00, 3, '2026-08-26 18:05:17'),
+(832, 127, 'Terdapat gangguan kecil tetapi tidak menghambat pekerjaan', 90.00, 4, '2026-08-26 18:05:17'),
+(833, 127, 'Terdapat beberapa gangguan', 80.00, 5, '2026-08-26 18:05:17'),
+(834, 127, 'Gangguan cukup sering terjadi', 60.00, 6, '2026-08-26 18:05:17'),
+(835, 127, 'Gangguan sering menghambat pekerjaan', 40.00, 7, '2026-08-26 18:05:17'),
+(836, 127, 'Aplikasi tidak dapat digunakan dengan baik', 0.00, 8, '2026-08-26 18:05:17'),
+(837, 128, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17'),
+(838, 128, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(839, 128, 'Laporan lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(840, 128, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(841, 128, 'Laporan cukup lengkap tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(842, 128, 'Laporan kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(843, 128, 'Laporan sangat kurang dan sulit digunakan sebagai acuan', 40.00, 7, '2026-08-26 18:05:17'),
+(844, 128, 'Tidak membuat laporan', 0.00, 8, '2026-08-26 18:05:17'),
+(845, 129, 'Seluruh pemeliharaan terlaksana dan terdapat tambahan tindakan pencegahan', 115.00, 1, '2026-08-26 18:05:17'),
+(846, 129, 'Seluruh pemeliharaan selesai sesuai jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(847, 129, 'Minimal 95% pekerjaan pemeliharaan selesai', 100.00, 3, '2026-08-26 18:05:17'),
+(848, 129, '90-94% selesai', 90.00, 4, '2026-08-26 18:05:17'),
+(849, 129, '80-89% selesai', 80.00, 5, '2026-08-26 18:05:17'),
+(850, 129, '60-79% selesai', 60.00, 6, '2026-08-26 18:05:17'),
+(851, 129, 'Kurang dari 60% selesai', 40.00, 7, '2026-08-26 18:05:17'),
+(852, 129, 'Tidak dilakukan', 0.00, 8, '2026-08-26 18:05:17'),
+(853, 130, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17'),
+(854, 130, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17'),
+(855, 130, 'Laporan lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17'),
+(856, 130, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17'),
+(857, 130, 'Laporan cukup lengkap tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17'),
+(858, 130, 'Laporan kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17'),
+(859, 130, 'Laporan sangat kurang dan sulit digunakan sebagai acuan', 40.00, 7, '2026-08-26 18:05:17'),
+(860, 130, 'Tidak membuat laporan', 0.00, 8, '2026-08-26 18:05:17'),
+(861, 131, 'Kehadiran, ketepatan waktu, briefing, izin/cuti, dan kegiatan wajib terlaksana sangat baik tanpa pelanggaran', 115.00, 1, '2026-08-26 18:05:17'),
+(862, 131, 'Kedisiplinan kerja sangat baik dan melebihi standar yang ditetapkan', 110.00, 2, '2026-08-26 18:05:17'),
+(863, 131, 'Kehadiran dan kedisiplinan kerja sesuai aturan perusahaan', 100.00, 3, '2026-08-26 18:05:17'),
+(864, 131, 'Terdapat kekurangan kecil tetapi tidak mengganggu pekerjaan', 90.00, 4, '2026-08-26 18:05:17'),
+(865, 131, 'Beberapa aturan kedisiplinan belum konsisten dijalankan', 80.00, 5, '2026-08-26 18:05:17'),
+(866, 131, 'Kedisiplinan kurang dan perlu banyak perbaikan', 60.00, 6, '2026-08-26 18:05:17'),
+(867, 131, 'Kedisiplinan sering tidak sesuai aturan', 40.00, 7, '2026-08-26 18:05:17'),
+(868, 131, 'Tidak menjalankan aturan kehadiran dan kedisiplinan kerja', 0.00, 8, '2026-08-26 18:05:17'),
+(869, 132, 'Seluruh pekerjaan selesai sangat baik dan masalah yang sama tidak berulang', 115.00, 1, '2026-08-26 18:05:17'),
+(870, 132, 'Hampir seluruh pekerjaan selesai lebih cepat', 110.00, 2, '2026-08-26 18:05:17'),
+(871, 132, 'Seluruh pekerjaan selesai sesuai target', 100.00, 3, '2026-08-26 18:05:17'),
+(872, 132, '90% pekerjaan sesuai target', 90.00, 4, '2026-08-26 18:05:17'),
+(873, 132, '80% pekerjaan sesuai target', 80.00, 5, '2026-08-26 18:05:17'),
+(874, 132, '60% pekerjaan sesuai target', 60.00, 6, '2026-08-26 18:05:17'),
+(875, 132, 'Kurang dari 60% pekerjaan sesuai target', 40.00, 7, '2026-08-26 18:05:17'),
+(876, 132, 'Tidak menjalankan pekerjaan', 0.00, 8, '2026-08-26 18:05:17');
 
 -- --------------------------------------------------------
 
@@ -24664,7 +25015,13 @@ INSERT INTO `tbsim_kpi` (`id`, `id_user`, `poin`, `bobot`, `poin2`, `bobot2`) VA
 (46, 148, 'Absensi', 100, 'Absensi', 100),
 (47, 8, 'MENJAMIN KEAMANAN dan KESELAMATAN DIREKSI, PERUSAHAAN, KARYAWAN dan TAMU PERUSAHAAN', 40, 'MENJAMIN KEAMANAN dan KESELAMATAN DIREKSI, PERUSAHAAN, KARYAWAN dan TAMU PERUSAHAAN', 40),
 (48, 8, 'SECURITY MELAKUKAN PELAYANAN PRIMA 100%', 50, 'SECURITY MELAKUKAN PELAYANAN PRIMA 100%', 50),
-(49, 8, 'ABSENSI12', 10, 'ABSENSI11', 10);
+(49, 8, 'ABSENSI12', 10, 'ABSENSI11', 10),
+(68, 226, 'Pembuatan dan Pengembangan KARISMA HRIS', 40, 'Pembuatan dan Pengembangan KARISMA HRIS', 40),
+(69, 226, 'Pengembangan & Support KarismaERP', 20, 'Pengembangan & Support KarismaERP', 20),
+(70, 226, 'Stabilitas & Performa Aplikasi', 15, 'Stabilitas & Performa Aplikasi', 15),
+(71, 226, 'Pemeliharaan Sistem', 10, 'Pemeliharaan Sistem', 10),
+(72, 226, 'Kehadiran & Kedisiplinan Kerja', 10, 'Penilaian absensi oleh HRD', 10),
+(73, 226, 'Bantuan Perbaikan Perangkat Kerja', 5, 'Bantuan Perbaikan Perangkat Kerja', 5);
 
 -- --------------------------------------------------------
 
@@ -24773,7 +25130,19 @@ INSERT INTO `tbsim_whats` (`id_what`, `id_user`, `id_kpi`, `tipe_what`, `p_what`
 (81, 8, 48, 'A', 'Nol komplain dari manajemen dan karyawan terhadap pelayanan security', 35, 0.00, '0 keluhan atau tidak ditemukan kesalahan security nilai dari manajemen dan karyawan Baik', 100, 35),
 (82, 8, 48, 'A', '100% Fasilitas dan area Perusahaan Aman dan siap dipergunakan (FKA, Gedung Utama, All area gudang, Kantin, Tempat Parkir, smooking area)', 35, 0.00, 'All Area dan asset perusahaan tidak ada kerusakan, bersih dan selalu siap digunakan', 100, 35),
 (83, 8, 49, 'A', 'Absensi', 50, 0.00, 'Cuti 0 hr, Absen 0 hr ', 115, 57.5),
-(84, 8, 49, 'A', 'Tukar shift antar anggota security (3x dalam 1 bulan)', 50, 0.00, 'Tidak pernah tukar shift selama 1 bulan', 115, 57.5);
+(84, 8, 49, 'A', 'Tukar shift antar anggota security (3x dalam 1 bulan)', 50, 0.00, 'Tidak pernah tukar shift selama 1 bulan', 115, 57.5),
+(121, 226, 68, 'A', 'Penyelesaian KARISMA HRIS', 55, 0.00, 'Belum menghasilkan hasil yang dapat digunakan', 0, 0),
+(122, 226, 68, 'A', 'Kesiapan KARISMA HRIS digunakan', 30, 0.00, 'Aplikasi tidak dapat digunakan', 0, 0),
+(123, 226, 68, 'A', 'Dokumentasi dan Panduan KARISMA HRIS', 15, 0.00, 'Tidak ada dokumentasi', 0, 0),
+(124, 226, 69, 'A', 'Pengembangan dan Penyempurnaan KarismaERP', 65, 0.00, '60-79% selesai', 60, 39),
+(125, 226, 69, 'A', 'Penanganan Masalah KarismaERP', 25, 0.00, 'Beberapa pekerjaan terlambat', 80, 20),
+(126, 226, 69, 'A', 'Catatan Perubahan KarismaERP', 10, 0.00, 'Laporan kurang lengkap atau sering terlambat', 60, 6),
+(127, 226, 70, 'A', 'Menjaga Aplikasi Tetap Berjalan Dengan Baik', 70, 0.00, 'Terdapat gangguan kecil tetapi tidak menghambat pekerjaan', 90, 63),
+(128, 226, 70, 'A', 'Laporan Kondisi Aplikasi', 30, 0.00, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110, 33),
+(129, 226, 71, 'A', 'Pemeliharaan Berkala', 70, 0.00, '90-94% selesai', 90, 63),
+(130, 226, 71, 'A', 'Laporan Pemeliharaan Sistem', 30, 0.00, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90, 27),
+(131, 226, 72, 'A', 'Kehadiran & Kedisiplinan Kerja', 100, 0.00, 'Kehadiran, ketepatan waktu, briefing, izin/cuti, dan kegiatan wajib terlaksana sangat baik tanpa pelanggaran', 115, 115),
+(132, 226, 73, 'A', 'Bantuan Perbaikan Perangkat Kerja', 100, 0.00, 'Seluruh pekerjaan selesai sangat baik dan masalah yang sama tidak berulang', 115, 115);
 
 -- --------------------------------------------------------
 
@@ -24807,7 +25176,8 @@ INSERT INTO `tbso_activity_log` (`id`, `no_so`, `no_faktur`, `aksi`, `keterangan
 (7, 'SO/280826/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari JLS ke JLS melalui bulk update.', NULL, 'Ariyani', '10.10.10.21', '2026-08-28 09:59:18'),
 (8, 'SO/280826/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute JLS. Catatan: oke', NULL, 'Ariyani', '10.10.10.21', '2026-08-28 09:59:25'),
 (9, 'SO/280826/0002', 'DINV2808260001', 'BUAT_FAKTUR', 'Faktur Penjualan DINV2808260001 dibuat dari SO SO/280826/0002. Item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '10.10.10.21', '2026-08-28 10:06:12'),
-(10, 'SO/280826/0001', 'DINV2808260002', 'BUAT_FAKTUR', 'Faktur Penjualan DINV2808260002 dibuat dari SO SO/280826/0001. Item: 2', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '10.10.10.21', '2026-08-28 10:07:07');
+(10, 'SO/280826/0001', 'DINV2808260002', 'BUAT_FAKTUR', 'Faktur Penjualan DINV2808260002 dibuat dari SO SO/280826/0001. Item: 2', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '10.10.10.21', '2026-08-28 10:07:07'),
+(11, 'SO/280826/0002', 'DINV0309260001', 'BUAT_FAKTUR', 'Faktur Penjualan DINV0309260001 dibuat dari SO SO/280826/0002. Item: 2', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs', 'Admin SC', '127.0.0.1', '2026-09-03 09:53:00');
 
 -- --------------------------------------------------------
 
@@ -24888,10 +25258,10 @@ CREATE TABLE `tbso_faktur_detail` (
 INSERT INTO `tbso_faktur_detail` (`id`, `id_faktur`, `no_faktur`, `id_so`, `id_so_detail`, `kd_barang`, `nama_barang`, `no_lot`, `expired_date`, `qty`, `qty_box`, `qty_satuan`, `isi_per_box`, `satuan`, `hrg_satuan`, `hrg_pokok`, `disc`, `pajak`, `subtotal_before_disc`, `subtotal_after_disc`, `total_harga`, `berat_gram`, `kubikasi_m3`, `gudang_id`, `create_by`, `create_at`) VALUES
 (1, 1, 'DINV2808260001', 2, 3, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '445451', '2027-01-01', 5.000, 0.000, 5.000, 450, 'Pack', 45000.00000, 35000.00000, 0.00, 0.00, 225000.00, 225000.00, 225000.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-08-28 10:06:12'),
 (2, 1, 'DINV2808260001', 2, 4, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '445451', '2027-01-01', 5.000, 0.000, 5.000, 450, 'Pack', 45000.00000, 35000.00000, 100.00, 0.00, 225000.00, 0.00, 0.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-08-28 10:06:12'),
-(3, 1, 'DINV2808260001', 2, 5, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '335551PPP', '2027-02-16', 500.000, 500.000, 0.000, 1, 'Pack', 105000.00000, 95000.00000, 0.00, 0.00, 52500000.00, 52500000.00, 52500000.00, 1025.0000, 0.002734, '2', 'Admin SC', '2026-08-28 10:06:12'),
 (4, 2, 'DINV2808260002', 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', '333221', '2027-02-03', 20.000, 25.000, 0.000, 1, 'Zak', 50000.00000, 41441.44140, 0.00, 11.00, 1000000.00, 1000000.00, 1000000.00, 10200.0000, 0.002678, '2', 'Admin SC', '2026-08-28 10:07:07'),
 (5, 2, 'DINV2808260002', 1, 2, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '22788', '2027-04-22', 168.000, 14.000, 0.000, 12, '', 80000.00000, 63963.96400, 0.00, 11.00, 13440000.00, 13440000.00, 13440000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-08-28 10:07:07'),
-(6, 3, 'LBYINV2808260001', 3, 6, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '335551PPP', '2027-02-16', 10.000, 0.000, 10.000, 1, 'Pack', 95000.00000, 95000.00000, 0.00, 0.00, 95000.00, 95000.00, 950000.00, 1025.0000, 0.002734, '2', 'Reni', '2026-08-28 10:57:30');
+(6, 3, 'LBYINV2808260001', 3, 6, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '335551PPP', '2027-02-16', 10.000, 0.000, 10.000, 1, 'Pack', 95000.00000, 95000.00000, 0.00, 0.00, 95000.00, 95000.00, 95000.00, 1025.0000, 0.002734, '2', 'Reni', '2026-08-28 10:57:30'),
+(7, 4, 'LBYINV0109260001', 4, 7, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '335551PPP', '2027-02-16', 1.000, 0.000, 1.000, 1, 'Pack', 55000.00000, 95000.00000, 0.00, 0.00, 55000.00, 55000.00, 55000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-01 13:44:56');
 
 -- --------------------------------------------------------
 
@@ -24914,9 +25284,9 @@ CREATE TABLE `tbso_faktur_jurnal` (
 --
 
 INSERT INTO `tbso_faktur_jurnal` (`id`, `id_faktur`, `no_faktur`, `piutang_dagang`, `penjualan`, `ppn_keluar`, `created_at`) VALUES
-(1, 1, 'DINV2808260001', 52725000.00, 52725000.00, 0.00, '2026-08-28 10:06:12'),
 (2, 2, 'DINV2808260002', 14440000.00, 13009009.01, 1430990.99, '2026-08-28 10:07:07'),
-(3, 3, 'LBYINV2808260001', 95000.00, 95000.00, 0.00, '2026-08-28 10:57:30');
+(5, 4, 'LBYINV0109260001', 55000.00, 55000.00, 0.00, '2026-09-02 13:05:31'),
+(6, 3, 'LBYINV2808260001', 95000.00, 95000.00, 0.00, '2026-09-02 14:23:59');
 
 -- --------------------------------------------------------
 
@@ -24944,7 +25314,24 @@ CREATE TABLE `tbso_faktur_log` (
 INSERT INTO `tbso_faktur_log` (`id`, `no_so`, `no_faktur`, `id_faktur`, `aksi`, `keterangan`, `detail_produk`, `dilakukan_oleh`, `ip_address`, `created_at`) VALUES
 (1, 'SO/280826/0002', 'DINV2808260001', 1, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV2808260001 dari SO SO/280826/0002 (3 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '10.10.10.21', '2026-08-28 10:06:12'),
 (2, 'SO/280826/0001', 'DINV2808260002', 2, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV2808260002 dari SO SO/280826/0001 (2 item).', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '10.10.10.21', '2026-08-28 10:07:07'),
-(3, 'SO/280826/0001', 'DINV2808260002', 2, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2808260002', '[{\"id_faktur_detail\":\"4\",\"qty\":\"20\",\"harga_satuan\":\"50000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"1000000\"},{\"id_faktur_detail\":\"5\",\"qty\":\"168\",\"harga_satuan\":\"80000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"13440000\"}]', 'admin (admin)', '10.10.10.68', '2026-08-28 14:01:30');
+(3, 'SO/280826/0001', 'DINV2808260002', 2, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2808260002', '[{\"id_faktur_detail\":\"4\",\"qty\":\"20\",\"harga_satuan\":\"50000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"1000000\"},{\"id_faktur_detail\":\"5\",\"qty\":\"168\",\"harga_satuan\":\"80000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"13440000\"}]', 'admin (admin)', '10.10.10.68', '2026-08-28 14:01:30'),
+(4, 'SO-LBY/010926/0001', 'LBYINV0109260001', 4, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-02 13:04:28'),
+(5, 'SO-LBY/010926/0001', 'LBYINV0109260001', 4, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Penjualan Langsung Loby (CASH)', '[{\"id_faktur_detail\":\"7\",\"qty\":\"1\",\"harga_satuan\":\"55000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"55000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-02 13:05:31'),
+(6, 'SO-LBY/280826/0001', 'LBYINV2808260001', 3, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-02 14:23:30'),
+(7, 'SO-LBY/280826/0001', 'LBYINV2808260001', 3, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Penjualan Langsung Loby (CASH)', '[{\"id_faktur_detail\":\"6\",\"qty\":\"10\",\"harga_satuan\":\"95000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"95000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-02 14:23:59'),
+(8, 'SO-LBY/280826/0001', 'LBYINV2808260001', 3, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Penjualan Langsung Loby (CASH)', '[{\"id_faktur_detail\":\"6\",\"qty\":\"10\",\"harga_satuan\":\"95000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"95000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-02 14:25:04'),
+(9, 'SO-LBY/280826/0001', 'LBYINV2808260001', 3, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Penjualan Langsung Loby (CASH)', '[{\"id_faktur_detail\":\"6\",\"qty\":\"10\",\"harga_satuan\":\"95000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"95000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-02 14:26:11'),
+(10, 'SO-LBY/280826/0001', 'LBYINV2808260001', 3, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Penjualan Langsung Loby (CASH)', '[{\"id_faktur_detail\":\"6\",\"qty\":\"10\",\"harga_satuan\":\"95000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"95000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-02 14:33:13'),
+(11, 'SO/280826/0002', 'DINV2808260001', 1, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-03 08:27:31'),
+(12, 'SO/280826/0002', 'DINV2808260001', 1, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2808260001', '[{\"id_faktur_detail\":\"1\",\"qty\":\"5\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"225000\"},{\"id_faktur_detail\":\"2\",\"qty\":\"5\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"100\",\"diskon_rp\":\"225000\",\"total_harga\":\"0\"},{\"id_faktur_detail\":\"3\",\"qty\":\"500\",\"harga_satuan\":\"105000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"52500000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-03 09:09:53'),
+(13, 'SO/280826/0002', 'DINV2808260001', 1, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-03 09:10:22'),
+(14, 'SO/280826/0002', 'DINV2808260001', 1, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2808260001', '[{\"id_faktur_detail\":\"3\",\"qty\":\"500\",\"harga_satuan\":\"105000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"52500000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-03 09:23:21'),
+(15, 'SO/280826/0002', 'DINV2808260001', 1, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-03 09:52:37'),
+(16, 'SO/280826/0002', 'DINV0309260001', 5, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV0309260001 dari SO SO/280826/0002 (2 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs', 'Admin SC', '127.0.0.1', '2026-09-03 09:53:00'),
+(17, 'SO/280826/0002', 'DINV2808260001', 1, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-03 09:55:34'),
+(18, 'SO/280826/0002', 'DINV0309260001', 5, 'REPOST_ITEM', 'Admin SC merepost 2 item faktur kembali ke SO.', NULL, 'admsc', '127.0.0.1', '2026-09-03 09:56:16'),
+(19, 'SO/280826/0002', 'DINV0309260001', 5, 'DELETE_FAKTUR', 'Hapus Faktur Penjualan & Pembersihan Jurnal via Modul Transaksi. Alasan: tidak valid', NULL, 'admin (admin)', '127.0.0.1', '2026-09-03 10:13:52'),
+(20, 'SO/280826/0002', NULL, NULL, 'REPOST_ITEM', 'Reset item QPADI45 (Padi NK 2133 20 X 1 kg) kembali ke SO belum terfaktur', 'Padi NK 2133 20 X 1 kg | Qty: 500 pcs', 'System (Admin)', '127.0.0.1', '2026-09-03 15:50:58');
 
 -- --------------------------------------------------------
 
@@ -24965,7 +25352,7 @@ CREATE TABLE `tbso_faktur_penjualan` (
   `total_tonase` decimal(15,3) NOT NULL DEFAULT '0.000',
   `total_kubikasi` decimal(15,5) NOT NULL DEFAULT '0.00000',
   `catatan` text,
-  `status` enum('confirmed','selesai_do','cancelled') NOT NULL DEFAULT 'confirmed' COMMENT 'confirmed | selesai_do | cancelled',
+  `status` enum('draft','confirmed','proses_do','selesai','selesai_do','cancelled') NOT NULL DEFAULT 'confirmed' COMMENT 'draft | confirmed | proses_do | selesai | cancelled',
   `so_source` varchar(20) NOT NULL DEFAULT 'SALES',
   `create_by` varchar(50) DEFAULT NULL,
   `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24985,9 +25372,10 @@ CREATE TABLE `tbso_faktur_penjualan` (
 --
 
 INSERT INTO `tbso_faktur_penjualan` (`id_faktur`, `no_faktur`, `id_so`, `no_so`, `kd_customer`, `customer_name`, `gudang_id`, `tanggal_faktur`, `tanggal_selesai_do`, `total_tonase`, `total_kubikasi`, `catatan`, `status`, `so_source`, `create_by`, `create_at`, `update_by`, `update_at`, `tanggal_jatuh_tempo`, `salesman`, `cara_pembayaran`, `jtempo`, `tempo`, `parent_id_faktur`, `is_split_parent`) VALUES
-(1, 'DINV2808260001', 2, 'SO/280826/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-09-01', NULL, 0.518, 1.37920, '', 'selesai_do', 'SALES', 'Admin SC', '2026-08-28 10:06:12', 'Admin SC', '2026-08-28 10:09:47', '2026-08-31', 'Ariyani', 'tempo', 30, 30, NULL, 0),
-(2, 'DINV2808260002', 1, 'SO/280826/0001', 'RIZK05', 'Rizky Jaya, CV', '2', '2026-08-06', NULL, 0.204, 0.05356, 'Faktur Penjualan: DINV2808260002', 'selesai_do', 'SALES', 'Admin SC', '2026-08-28 10:07:07', '205', '2026-08-28 14:01:30', '2026-10-05', 'Reni', 'bg', 60, 60, NULL, 0),
-(3, 'LBYINV2808260001', 3, 'SO-LBY/280826/0001', 'KARI07', 'Agoes', '2', '2026-08-28', '2026-08-28', 0.010, 0.02734, 'Penjualan Langsung Loby (CASH)', 'selesai_do', 'LOBY', 'Reni', '2026-08-28 10:57:30', NULL, NULL, NULL, NULL, 'cash', 0, 0, NULL, 0);
+(1, 'DINV2808260001', 2, 'SO/280826/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-09-01', NULL, 0.001, 0.00244, '', 'selesai_do', 'SALES', 'Admin SC', '2026-08-28 10:06:12', 'Admin SC', '2026-08-28 10:09:47', '2026-08-31', 'Ariyani', 'tempo', 30, 30, NULL, 0),
+(2, 'DINV2808260002', 1, 'SO/280826/0001', 'RIZK05', 'Rizky Jaya, CV', '2', '2026-08-06', NULL, 0.204, 0.05356, 'Faktur Penjualan: DINV2808260002', 'selesai', 'SALES', 'Admin SC', '2026-08-28 10:07:07', '205', '2026-09-03 09:29:02', '2026-10-05', 'Reni', 'bg', 60, 60, NULL, 0),
+(3, 'LBYINV2808260001', 3, 'SO-LBY/280826/0001', 'KARI07', 'Agoes', '2', '2026-08-28', '2026-08-28', 0.010, 0.02734, 'Penjualan Langsung Loby (CASH)', 'selesai', 'LOBY', 'Reni', '2026-08-28 10:57:30', '205', '2026-09-02 14:33:13', NULL, NULL, 'cash', 0, 0, NULL, 0),
+(4, 'LBYINV0109260001', 4, 'SO-LBY/010926/0001', 'KARI07', 'Agoes', '2', '2026-09-01', '2026-09-01', 0.001, 0.00273, 'Penjualan Langsung Loby (CASH)', 'selesai', 'LOBY', 'admin', '2026-09-01 13:44:56', '205', '2026-09-02 13:09:34', NULL, NULL, 'cash', 0, 0, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -25032,8 +25420,9 @@ CREATE TABLE `tbso_sales_order` (
 
 INSERT INTO `tbso_sales_order` (`id_so`, `no_so`, `tanggal_transaksi`, `kd_customer`, `kd_rute`, `loading_tgl_pengiriman`, `loading_jenis_pengiriman`, `loading_driver`, `loading_nolambung`, `loading_urutan`, `customer_name`, `gudang_id`, `jumlah_item`, `total_tonase`, `total_kubikasi`, `batas_tonase`, `batas_kubikasi`, `status`, `so_source`, `catatan`, `cara_pembayaran`, `is_faktur_z`, `create_by`, `create_at`, `update_by`, `update_at`, `approve_by`, `no_faktur`) VALUES
 (1, 'SO/280826/0001', '2026-08-28', 'RIZK05', 'MD-1', '2026-08-06', 'expedisi_kantor', 'QIU1409086', '7', 0, 'Rizky Jaya, CV', '2', 2, 0.255, 0.06695, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Reni', '2026-08-28 09:56:26', 'admlog', '2026-08-28 10:07:07', NULL, NULL),
-(2, 'SO/280826/0002', '2026-08-28', 'TANI59', 'JLS', '2026-08-01', 'expedisi_kantor', 'QIU1605130', '16', 0, 'Manunggal Agro Sentosa,PT', '2', 3, 0.518, 1.37920, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Ariyani', '2026-08-28 09:58:56', 'admlog', '2026-08-28 10:06:12', NULL, NULL),
-(3, 'SO-LBY/280826/0001', '2026-08-28', 'KARI07', NULL, NULL, 'expedisi_kantor', NULL, NULL, 0, 'Agoes', '2', 1, 0.010, 0.02734, 7.000, 9.00000, 'completed', 'LOBY', 'c260001', 'cash', 0, 'Reni', '2026-08-28 10:55:07', 'Reni', '2026-08-28 10:57:30', NULL, NULL);
+(2, 'SO/280826/0002', '2026-08-28', 'TANI59', 'JLS', '2026-08-01', 'expedisi_kantor', 'QIU1605130', '16', 0, 'Manunggal Agro Sentosa,PT', '2', 3, 0.518, 1.37920, 7.000, 9.00000, 'siap_faktur', 'SALES', '', 'tempo', 0, 'Ariyani', '2026-08-28 09:58:56', 'admlog', '2026-09-03 09:56:16', NULL, NULL),
+(3, 'SO-LBY/280826/0001', '2026-08-28', 'KARI07', NULL, NULL, 'expedisi_kantor', NULL, NULL, 0, 'Agoes', '2', 1, 0.010, 0.02734, 7.000, 9.00000, 'completed', 'LOBY', 'c260001', 'cash', 0, 'Reni', '2026-08-28 10:55:07', 'Reni', '2026-08-28 10:57:30', NULL, NULL),
+(4, 'SO-LBY/010926/0001', '2026-09-01', 'KARI07', NULL, NULL, 'expedisi_kantor', NULL, NULL, 0, 'Agoes', '2', 1, 0.001, 0.00273, 7.000, 9.00000, 'completed', 'LOBY', 'berkebun', 'cash', 0, 'admin', '2026-09-01 13:43:36', 'admin', '2026-09-01 13:44:56', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -25090,10 +25479,11 @@ CREATE TABLE `tbso_sales_order_detail` (
 INSERT INTO `tbso_sales_order_detail` (`id`, `id_so`, `no_so`, `produk_id`, `kd_barang`, `nama_barang`, `qty`, `qty_box`, `qty_satuan`, `isi_per_box`, `satuan`, `expired_date`, `no_lot`, `pajak`, `disc`, `subtotal_before_disc`, `subtotal_after_disc`, `hrg_satuan`, `hrg_pokok`, `total_harga`, `berat_gram`, `kubikasi_m3`, `kode_akun`, `create_at`, `create_by`, `qty_faktur`, `qty_siap_faktur`, `qty_tidak_terkirim`, `verifikasi_loading_status`, `verifikasi_loading_note`, `verifikasi_loading_by`, `verifikasi_loading_at`, `checker_loaded`, `qty_outstanding`, `approve_by`, `is_nego`, `no_faktur`, `qty_delivered`, `ref_no`) VALUES
 (1, 1, 'SO/280826/0001', '', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25.000, 0.000, 25.000, 1, 'Zak', '2027-02-03', '333221', 11.00, 0.00, 1250000.00, 1250000.00, 50000.00000, 41441.44140, 1250000.00, 10200.0000, 0.002678, NULL, '2026-08-28 09:56:26', 'Reni', 25, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 10:00:24', 1, 0, NULL, 0, NULL, 0.000, NULL),
 (2, 1, 'SO/280826/0001', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168.000, 0.000, 168.000, 12, '', '2027-04-22', '22788', 11.00, 0.00, 13440000.00, 13440000.00, 80000.00000, 63963.96400, 13440000.00, 0.0000, 0.000000, NULL, '2026-08-28 09:56:26', 'Reni', 168, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 10:00:24', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(3, 2, 'SO/280826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-01-01', '445451', 0.00, 0.00, 225000.00, 225000.00, 45000.00000, 35000.00000, 225000.00, 575.0000, 0.001220, NULL, '2026-08-28 09:58:56', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(4, 2, 'SO/280826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-01-01', '445451', 0.00, 100.00, 225000.00, 0.00, 45000.00000, 35000.00000, 0.00, 575.0000, 0.001220, NULL, '2026-08-28 09:58:56', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(5, 2, 'SO/280826/0002', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500.000, 0.000, 500.000, 1, 'Pack', '2027-02-16', '335551PPP', 0.00, 0.00, 52500000.00, 52500000.00, 105000.00000, 95000.00000, 52500000.00, 1025.0000, 0.002734, NULL, '2026-08-28 09:58:56', 'Ariyani', 500, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(6, 3, 'SO-LBY/280826/0001', 'QPADI45', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 10.000, 0.000, 10.000, 1, 'Pack', '2027-02-16', '335551PPP', 0.00, 0.00, 95000.00, 95000.00, 95000.00000, 95000.00000, 950000.00, 1025.0000, 0.002734, NULL, '2026-08-28 10:55:07', 'Reni', 10, 10.000, 0.000, 'pending', NULL, NULL, NULL, 0, 0, NULL, 0, NULL, 0.000, NULL);
+(3, 2, 'SO/280826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-01-01', '445451', 0.00, 0.00, 225000.00, 225000.00, 45000.00000, 35000.00000, 225000.00, 575.0000, 0.001220, NULL, '2026-08-28 09:58:56', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 0, 0, NULL, 0, NULL, 0.000, NULL),
+(4, 2, 'SO/280826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-01-01', '445451', 0.00, 100.00, 225000.00, 0.00, 45000.00000, 35000.00000, 0.00, 575.0000, 0.001220, NULL, '2026-08-28 09:58:56', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 0, 0, NULL, 0, NULL, 0.000, NULL),
+(5, 2, 'SO/280826/0002', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500.000, 0.000, 500.000, 1, 'Pack', '2027-02-16', '335551PPP', 0.00, 0.00, 52500000.00, 52500000.00, 105000.00000, 95000.00000, 52500000.00, 1025.0000, 0.002734, NULL, '2026-08-28 09:58:56', 'Ariyani', 0, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-28 09:59:57', 0, 0, NULL, 0, NULL, 0.000, NULL),
+(6, 3, 'SO-LBY/280826/0001', 'QPADI45', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 10.000, 0.000, 10.000, 1, 'Pack', '2027-02-16', '335551PPP', 0.00, 0.00, 95000.00, 95000.00, 95000.00000, 95000.00000, 950000.00, 1025.0000, 0.002734, NULL, '2026-08-28 10:55:07', 'Reni', 10, 10.000, 0.000, 'pending', NULL, NULL, NULL, 0, 0, NULL, 0, NULL, 0.000, NULL),
+(7, 4, 'SO-LBY/010926/0001', 'QPADI45', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 1.000, 0.000, 1.000, 1, 'Pack', '2027-02-16', '335551PPP', 0.00, 0.00, 55000.00, 55000.00, 55000.00000, 95000.00000, 55000.00, 1025.0000, 0.002734, NULL, '2026-09-01 13:43:36', 'admin', 1, 1.000, 0.000, 'pending', NULL, NULL, NULL, 0, 0, NULL, 0, NULL, 0.000, NULL);
 
 -- --------------------------------------------------------
 
@@ -31456,7 +31846,8 @@ INSERT INTO `tb_bobotkpi` (`idbobotkpi`, `id_user`, `bobotwhat`, `bobothow`) VAL
 (140, 140, 60, 40),
 (143, 143, 0, 0),
 (144, 147, 0, 0),
-(145, 148, 60, 40);
+(145, 148, 60, 40),
+(149, 226, 60, 40);
 
 -- --------------------------------------------------------
 
@@ -72868,7 +73259,9 @@ INSERT INTO `tb_detail_do` (`id`, `id_pre_do`, `kd_do`, `kd_faktur`, `tgl_transa
 (2, 2, 'KIUDO2808260001', 'DINV2808260001', '2026-08-01', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '445451', '2027-01-01', 1, 45000, 30, '', 1, 1, '28/08/2026', '2026-08-28 10:06:12'),
 (3, 3, 'KIUDO2808260001', 'DINV2808260001', '2026-08-01', 'JLS', 'TANI59', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500, 'Pack', '335551PPP', '2027-02-16', 1, 105000, 30, '', 1, 1, '28/08/2026', '2026-08-28 10:06:12'),
 (4, 4, 'KIUDO2808260002', 'DINV2808260002', '2026-08-06', 'MD-1', 'RIZK05', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25, 'Zak', '333221', '2027-02-03', 1, 50000, 60, '', 1, 1, '28/08/2026', '2026-08-28 10:07:07'),
-(5, 5, 'KIUDO2808260002', 'DINV2808260002', '2026-08-06', 'MD-1', 'RIZK05', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168, '', '22788', '2027-04-22', 1, 80000, 60, '', 1, 1, '28/08/2026', '2026-08-28 10:07:07');
+(5, 5, 'KIUDO2808260002', 'DINV2808260002', '2026-08-06', 'MD-1', 'RIZK05', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168, '', '22788', '2027-04-22', 1, 80000, 60, '', 1, 1, '28/08/2026', '2026-08-28 10:07:07'),
+(6, 8, 'KIUDO0309260001', 'DINV0309260001', '2026-09-03', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '445451', '2027-01-01', 1, 45000, 30, '', 1, 1, '03/09/2026', '2026-09-03 09:53:00'),
+(7, 9, 'KIUDO0309260001', 'DINV0309260001', '2026-09-03', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '445451', '2027-01-01', 1, 45000, 30, '', 1, 1, '03/09/2026', '2026-09-03 09:53:00');
 
 -- --------------------------------------------------------
 
@@ -72963,7 +73356,8 @@ CREATE TABLE `tb_do` (
 
 INSERT INTO `tb_do` (`id`, `kd_do`, `nolambung`, `regional`, `driver`, `tgl_pengiriman`, `tgl_create`, `status`, `sales_confirm_at`, `sales_confirm_by`, `sales_confirm_note`, `sales_confirm_status`) VALUES
 (1, 'KIUDO2808260001', '', 'JLS', '', '2026-08-28', '2026-08-28 10:06:12', 5, NULL, NULL, NULL, NULL),
-(2, 'KIUDO2808260002', '', 'MD-1', '', '2026-08-28', '2026-08-28 10:07:07', 5, NULL, NULL, NULL, NULL);
+(2, 'KIUDO2808260002', '', 'MD-1', '', '2026-08-28', '2026-08-28 10:07:07', 5, NULL, NULL, NULL, NULL),
+(3, 'KIUDO0309260001', '', 'JLS', '', '2026-09-03', '2026-09-03 09:53:00', 5, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -77362,7 +77756,26 @@ INSERT INTO `tb_hows` (`id_how`, `id_user`, `id_kpi`, `tipe_how`, `p_how`, `bobo
 (1770, 26, 16, 'A', 'Respon awal maksimal 20 menit setelah laporan trouble masuk ', 40, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (1771, 148, 594, 'A', 'Hadir briefing tepat waktu', 50, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (1772, 148, 594, 'A', 'Selalu hadir senam sabtu tepat waktu', 50, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(1773, 26, 16, 'A', 'Waktu penyelesaian maksimal (1x24 jam (kendala ringan),  2x24 jam (kendala sedang), 3x24 jam (kendala berat)) beserta dokumentasi', 20, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(1773, 26, 16, 'A', 'Waktu penyelesaian maksimal (1x24 jam (kendala ringan),  2x24 jam (kendala sedang), 3x24 jam (kendala berat)) beserta dokumentasi', 20, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1831, 226, 613, 'A', 'Menjalankan pembuatan KARISMA HRIS sesuai urutan pekerjaan, target waktu dan kebutuhan yang telah disepakati.', 40, 0.00, 'Tidak terdapat perkembangan pekerjaan yang terukur', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1832, 226, 613, 'A', 'Melakukan pengecekan setiap bagian aplikasi sebelum digunakan dan segera memperbaiki apabila ditemukan masalah.', 30, 0.00, 'Tidak dilakukan pengecekan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1833, 226, 613, 'A', 'Memastikan setiap bagian KARISMA HRIS saling mendukung dan data yang digunakan sesuai kebutuhan perusahaan.', 20, 0.00, 'Tidak ada integrasi atau kesesuaian data yang dapat digunakan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1834, 226, 613, 'A', 'Membuat catatan pekerjaan, panduan penggunaan dan laporan perkembangan KARISMA HRIS.', 10, 0.00, 'Tidak membuat catatan atau dokumentasi', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1835, 226, 614, 'A', 'Memahami kebutuhan pengguna sebelum melakukan perubahan atau penambahan KarismaERP.', 30, 0.00, 'Tidak melakukan analisis kebutuhan pengguna', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1836, 226, 614, 'A', 'Membuat, memeriksa dan memastikan hasil penyempurnaan KarismaERP dapat digunakan dengan baik.', 40, 0.00, 'Tidak ada hasil pekerjaan yang dapat digunakan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1837, 226, 614, 'A', 'Menangani laporan masalah KarismaERP sampai dapat digunakan kembali.', 20, 0.00, 'Masalah tidak ditangani', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1838, 226, 614, 'A', 'Mencatat perubahan dan hasil pekerjaan KarismaERP.', 10, 0.00, 'Tidak membuat catatan atau dokumentasi', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1839, 226, 615, 'A', 'Melakukan pengecekan aplikasi secara rutin dan segera melakukan perbaikan apabila ditemukan masalah.', 50, 0.00, 'Tidak melakukan pengecekan aplikasi', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1840, 226, 615, 'A', 'Melakukan backup data aplikasi secara rutin 1 bulan sekali dan dilaporkan kepada atasan dan kader', 30, 0.00, 'Belum dinilai', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1841, 226, 615, 'A', 'Melaporkan performa aplikasi yang berjalan dan penanganan aplikasi yang sudah dilakukan perbaikan/perawatan kepada atasan', 20, 0.00, 'Belum dinilai', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1842, 226, 616, 'A', 'Menyelesaikan pekerjaan troubleshooting cepat dan tepat waktu Max H+1', 70, 0.00, 'Belum dinilai', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1843, 226, 616, 'A', 'Membuat laporan troubleshooting kepada atasan Max H+1', 30, 0.00, 'Belum dinilai', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1844, 226, 617, 'A', 'Menjalankan SOP Ijin tidak masuk', 25, 0.00, '100% taat ', 115, 28.75, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1845, 226, 617, 'A', 'Tidak pernah absen briefing', 25, 0.00, '100% hadir', 115, 28.75, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1846, 226, 617, 'A', 'Tidak pernah absen senam Sabtu', 25, 0.00, '100% hadir', 115, 28.75, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1847, 226, 617, 'A', 'Hadir briefing Tepat waktu', 25, 0.00, '100% Tepat Waktu', 115, 28.75, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1848, 226, 618, 'A', 'Perbaikan maintenance tanpa kesalahan', 50, 0.00, 'Nilai skill 3,5', 100, 50, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(1849, 226, 618, 'A', 'Penilaian pekerjaan hardware', 50, 0.00, 'Nilai skill 3,5', 100, 50, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -85351,7 +85764,130 @@ INSERT INTO `tb_indikator_hows` (`id_indikator`, `id_how`, `keterangan`, `nilai`
 (8140, 1773, 'Dapat menyelesaikan trouble H+0', 100.00, 2, '2026-02-26 07:25:51', 0, NULL, NULL, NULL, NULL),
 (8141, 1773, 'Penyelesaikan trouble H+1 dari kendala beserta dokumentasi', 80.00, 3, '2026-02-26 07:25:51', 0, NULL, NULL, NULL, NULL),
 (8142, 1773, 'Penyelesaikan trouble H+1 dari kendala', 50.00, 4, '2026-02-26 07:25:51', 0, NULL, NULL, NULL, NULL),
-(8143, 1773, 'Tidak dapat menyelesaikan', 0.00, 5, '2026-02-26 07:25:51', 0, NULL, NULL, NULL, NULL);
+(8143, 1773, 'Tidak dapat menyelesaikan', 0.00, 5, '2026-02-26 07:25:51', 0, NULL, NULL, NULL, NULL),
+(8510, 1831, 'Seluruh pekerjaan selesai lebih cepat dan terdapat tambahan hasil yang bermanfaat', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8511, 1831, 'Seluruh pekerjaan selesai tepat waktu tanpa pekerjaan tertunda', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8512, 1831, 'Minimal 95% pekerjaan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8513, 1831, '85-94% pekerjaan selesai sesuai jadwal', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8514, 1831, '75-84% pekerjaan selesai sesuai jadwal', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8515, 1831, '60-74% pekerjaan selesai sesuai jadwal', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL);
+INSERT INTO `tb_indikator_hows` (`id_indikator`, `id_how`, `keterangan`, `nilai`, `urutan`, `created_at`, `is_edited`, `edited_by`, `edited_at`, `original_keterangan`, `original_nilai`) VALUES
+(8516, 1831, 'Kurang dari 60% pekerjaan selesai', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8517, 1831, 'Tidak terdapat perkembangan pekerjaan yang terukur', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8518, 1832, 'Pengecekan lengkap, tidak terdapat masalah utama dan terdapat peningkatan tambahan', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8519, 1832, 'Pengecekan lengkap dan hanya ditemukan masalah kecil', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8520, 1832, 'Seluruh bagian utama sudah diperiksa dan dapat digunakan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8521, 1832, 'Terdapat masalah tetapi seluruhnya dapat diselesaikan tepat waktu', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8522, 1832, 'Masih terdapat beberapa perbaikan kecil', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8523, 1832, 'Pengecekan dilakukan tetapi masih terdapat masalah berulang', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8524, 1832, 'Pengecekan belum lengkap', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8525, 1832, 'Tidak dilakukan pengecekan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8526, 1833, 'Seluruh bagian HRIS saling mendukung sangat baik dan data sesuai kebutuhan perusahaan', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8527, 1833, 'Integrasi data berjalan baik dan melebihi kebutuhan awal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8528, 1833, 'Seluruh bagian utama HRIS saling mendukung dan data sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8529, 1833, 'Sebagian kecil data atau alur perlu penyesuaian tetapi tidak menghambat pekerjaan', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8530, 1833, 'Beberapa bagian HRIS masih perlu disesuaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8531, 1833, 'Integrasi dilakukan tetapi masih sering terdapat masalah data atau alur', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8532, 1833, 'Integrasi belum lengkap dan banyak bagian belum saling mendukung', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8533, 1833, 'Tidak ada integrasi atau kesesuaian data yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8534, 1834, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8535, 1834, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8536, 1834, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8537, 1834, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8538, 1834, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8539, 1834, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8540, 1834, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8541, 1834, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8542, 1835, 'Kebutuhan pengguna dipahami sangat baik dan menghasilkan solusi yang lebih bermanfaat', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8543, 1835, 'Kebutuhan pengguna dipahami lengkap lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8544, 1835, 'Kebutuhan pengguna dipahami sesuai kebutuhan pekerjaan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8545, 1835, 'Kebutuhan pengguna hampir lengkap dipahami', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8546, 1835, 'Sebagian kebutuhan pengguna masih perlu diperjelas', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8547, 1835, 'Analisis kebutuhan kurang lengkap', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8548, 1835, 'Analisis kebutuhan sering tidak sesuai dengan masalah pengguna', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8549, 1835, 'Tidak melakukan analisis kebutuhan pengguna', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8550, 1836, 'Pekerjaan dibuat dan diperiksa sangat baik serta memberikan manfaat tambahan', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8551, 1836, 'Pekerjaan selesai lebih cepat dan hasil melebihi kebutuhan awal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8552, 1836, 'Pekerjaan dibuat, diperiksa, dan dapat digunakan sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8553, 1836, 'Pekerjaan hampir sesuai dan hanya perlu perbaikan kecil', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8554, 1836, 'Pekerjaan dapat digunakan tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8555, 1836, 'Pekerjaan kurang stabil atau sering perlu perbaikan ulang', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8556, 1836, 'Pekerjaan belum dapat digunakan dengan baik', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8557, 1836, 'Tidak ada hasil pekerjaan yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8558, 1837, 'Seluruh laporan masalah tertangani sangat cepat dan masalah tidak berulang', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8559, 1837, 'Hampir seluruh masalah selesai lebih cepat dari target', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8560, 1837, 'Seluruh masalah selesai sesuai target dan aplikasi dapat digunakan kembali', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8561, 1837, 'Sebagian kecil penyelesaian terlambat tetapi dampak dapat dikendalikan', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8562, 1837, 'Beberapa masalah terlambat diselesaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8563, 1837, 'Banyak masalah melewati waktu penyelesaian', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8564, 1837, 'Penanganan masalah sering terlambat atau kurang tepat', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8565, 1837, 'Masalah tidak ditangani', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8566, 1838, 'Catatan pekerjaan, dokumentasi, dan laporan lengkap, tepat waktu, serta mudah ditindaklanjuti', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8567, 1838, 'Dokumentasi lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8568, 1838, 'Dokumentasi lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8569, 1838, 'Dokumentasi hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8570, 1838, 'Dokumentasi cukup lengkap tetapi perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8571, 1838, 'Dokumentasi kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8572, 1838, 'Dokumentasi sangat kurang dan sulit digunakan', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8573, 1838, 'Tidak membuat catatan atau dokumentasi', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8574, 1839, 'Pengecekan rutin sangat lengkap dan terdapat tindakan pencegahan tambahan', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8575, 1839, 'Pengecekan rutin lengkap dan masalah diselesaikan lebih cepat', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8576, 1839, 'Pengecekan rutin dilakukan dan masalah diselesaikan sesuai kebutuhan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8577, 1839, 'Pengecekan hampir lengkap dan masalah kecil dapat diselesaikan', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8578, 1839, 'Pengecekan dilakukan tetapi beberapa bagian terlewat', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8579, 1839, 'Pengecekan tidak konsisten dan masalah sering terlambat diketahui', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8580, 1839, 'Pengecekan sangat kurang', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8581, 1839, 'Tidak melakukan pengecekan aplikasi', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8582, 1840, '<H+2', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8583, 1840, 'H+3', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8584, 1840, 'H+4', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8585, 1840, 'H+5', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8586, 1840, 'H+6', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8587, 1840, 'H+7', 70.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8588, 1840, '>H+7', 50.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8589, 1841, '<H+2', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8590, 1841, 'H+3', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8591, 1841, 'H+4', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8592, 1841, 'H+5', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8593, 1841, 'H+6', 70.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8594, 1841, 'H+7', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8595, 1841, '>H+7', 50.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8596, 1842, '<H+2', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8597, 1842, 'H+2', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8598, 1842, 'H+3', 85.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8599, 1842, 'H+4', 50.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8600, 1842, '>H+4', 40.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8601, 1843, '<H+2', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8602, 1843, 'H+2', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8603, 1843, 'H+3', 85.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8604, 1843, 'H+4', 50.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8605, 1843, '>H+4', 20.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8606, 1844, '100% taat ', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8607, 1844, 'Ada pelanggaran', 0.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8608, 1845, '100% hadir', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8609, 1845, '<2X tdk hadir dgn Izin', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8610, 1845, '1-2 tdk hadir', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8611, 1845, '3-4 tdk hadir', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8612, 1845, '>4 tdk hadir', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8613, 1846, '100% hadir', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8614, 1846, '<2 tdk hadir dgn izin', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8615, 1846, '1-2 tdk hadir', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8616, 1846, '3-4 tdk hadir', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8617, 1846, '>4 tdk hadir', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8618, 1847, '100% Tepat Waktu', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8619, 1847, '1-2 X Terlambat', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8620, 1847, '3-4 X Terlambat', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8621, 1847, '>4 X Terlambat', 50.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8622, 1848, 'Nilai skill4', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8623, 1848, 'Nilai skill 3,5', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8624, 1848, 'Nilai skill 3', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8625, 1848, 'Nilai skill <3', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8626, 1848, 'Nilai skill <1', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8627, 1849, 'Nilai skill 4', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8628, 1849, 'Nilai skill 3,5', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8629, 1849, 'Nilai skill 3', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8630, 1849, 'Nilai skill <3', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(8631, 1849, 'Nilai skill <1', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -89634,7 +90170,85 @@ INSERT INTO `tb_indikator_whats` (`id_indikator`, `id_what`, `keterangan`, `nila
 (4407, 784, 'Tidak hadir 7 hari (Cuti/ljin/Sakit)', 105.00, 8, '2026-02-26 03:45:25', 0, NULL, NULL, NULL, NULL),
 (4408, 784, 'Tidak hadir 8 hari (Cuti/ljin/Sakit)', 104.00, 9, '2026-02-26 03:45:25', 0, NULL, NULL, NULL, NULL),
 (4409, 784, 'Tidak hadir 9 hari (Cuti/ljin/Sakit)', 103.00, 10, '2026-02-26 03:45:25', 0, NULL, NULL, NULL, NULL),
-(4410, 785, '100% hadir', 115.00, 1, '2026-02-26 06:46:06', 0, NULL, NULL, NULL, NULL);
+(4410, 785, '100% hadir', 115.00, 1, '2026-02-26 06:46:06', 0, NULL, NULL, NULL, NULL),
+(4645, 820, 'Seluruh target selesai dan terdapat tambahan pengembangan yang bermanfaat', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4646, 820, 'Seluruh target selesai lebih cepat atau hasil melebihi target', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4647, 820, 'Seluruh target yang ditetapkan selesai sesuai waktu', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4648, 820, 'Penyelesaian mencapai 90-99%', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4649, 820, 'Penyelesaian mencapai 80-89%', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4650, 820, 'Penyelesaian mencapai 60-79%', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4651, 820, 'Penyelesaian mencapai 40-59%', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4652, 820, 'Belum menghasilkan hasil yang dapat digunakan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4653, 821, 'Aplikasi berjalan sangat baik, tidak ada masalah utama dan terdapat peningkatan tambahan', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4654, 821, 'Aplikasi berjalan baik dan hanya terdapat masalah kecil', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4655, 821, 'Aplikasi dapat digunakan sesuai kebutuhan tanpa masalah yang menghambat pekerjaan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4656, 821, 'Masih terdapat beberapa bagian yang perlu diperbaiki', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4657, 821, 'Aplikasi dapat digunakan tetapi masih sering mengalami masalah', 60.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4658, 821, 'Aplikasi belum siap digunakan secara penuh', 40.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4659, 821, 'Aplikasi tidak dapat digunakan', 0.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4660, 822, 'Dokumentasi lengkap, panduan tersedia dan sudah dilakukan penjelasan kepada pengguna', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4661, 822, 'Dokumentasi dan panduan 100% lengkap', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4662, 822, 'Seluruh fungsi utama sudah memiliki dokumentasi', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4663, 822, 'Dokumentasi mencapai 90%', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4664, 822, 'Dokumentasi mencapai 80%', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4665, 822, 'Dokumentasi mencapai 60%', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4666, 822, 'Dokumentasi kurang dari 60%', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4667, 822, 'Tidak ada dokumentasi', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4668, 823, '>3 Modul', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4669, 823, '3 Modul', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4670, 823, '2 Modul', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4671, 823, '1 Modul', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4672, 823, 'Tidak terdapat hasil pekerjaan', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4673, 824, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4674, 824, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4675, 824, 'Laporan lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4676, 824, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4677, 824, 'Laporan cukup lengkap tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4678, 824, 'Laporan kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4679, 824, 'Laporan sangat kurang dan sulit digunakan sebagai acuan', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4680, 824, 'Tidak membuat laporan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4681, 825, 'Tidak ada gangguan utama dan terdapat peningkatan kualitas aplikasi', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4682, 825, 'Tidak ada gangguan utama selama periode penilaian', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4683, 825, 'Maksimal terdapat 1 gangguan dan dapat segera diselesaikan', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4684, 825, 'Terdapat gangguan kecil tetapi tidak menghambat pekerjaan', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4685, 825, 'Terdapat beberapa gangguan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4686, 825, 'Gangguan cukup sering terjadi', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4687, 825, 'Gangguan sering menghambat pekerjaan', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4688, 825, 'Aplikasi tidak dapat digunakan dengan baik', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4689, 826, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4690, 826, 'Laporan lengkap dan selesai lebih cepat dari jadwal', 110.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4691, 826, 'Laporan lengkap dan selesai sesuai jadwal', 100.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4692, 826, 'Laporan hampir lengkap dan hanya ada kekurangan kecil', 90.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4693, 826, 'Laporan cukup lengkap tetapi masih perlu beberapa perbaikan', 80.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4694, 826, 'Laporan kurang lengkap atau sering terlambat', 60.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4695, 826, 'Laporan sangat kurang dan sulit digunakan sebagai acuan', 40.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4696, 826, 'Tidak membuat laporan', 0.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4697, 827, 'Terjadwal & terdokumenasi & terbackup', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4698, 827, 'Terjadwal & terdokumenasi', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4699, 827, 'Terjadwal tapi tidak lengkap', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4700, 827, 'Tidak konsisten', 60.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4701, 827, 'Tidak ada pemeliharaan', 0.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4702, 828, 'Laporan sangat lengkap, tepat waktu, dan berisi tindak lanjut yang jelas', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4703, 828, 'Laporan tepat waktu & lengkap', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4704, 828, 'Laporan tepat waktu tapi kurang lengkap', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4705, 828, 'Laporan  terlambat lengkap', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4706, 828, 'Laporan  terlambat tidak lengkap', 60.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4707, 828, 'Tidak membuat laporan', 0.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4708, 829, 'Cuti 0 hr, Absen 0 hr', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4709, 829, 'Absen 1 hari (Cuti/Izin/Sakit)', 111.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4710, 829, 'Absen 2 hari (Cuti/Izin/Sakit)', 110.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4711, 829, 'Absen 3 hari (Cuti/Izin/Sakit)', 109.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4712, 829, 'Absen 4 hari (Cuti/Izin/Sakit)', 108.00, 5, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4713, 829, 'Absen 5 hari (Cuti/Izin/Sakit)', 107.00, 6, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4714, 829, 'Absen 6 hari (Cuti/Izin/Sakit)', 106.00, 7, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4715, 829, 'Absen 7 hari (Cuti/Izin/Sakit)', 105.00, 8, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4716, 829, 'Absen 8 hari (Cuti/Izin/Sakit)', 104.00, 9, '2026-08-27 05:45:14', 0, NULL, NULL, NULL, NULL),
+(4717, 829, 'Absen 9 hari (Cuti/Izin/Sakit)', 103.00, 10, '2026-08-27 05:45:14', 0, NULL, NULL, NULL, NULL),
+(4718, 830, 'Nilai skill 4', 115.00, 1, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4719, 830, 'Nilai skill 3,5', 100.00, 2, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4720, 830, 'Nilai skill 3', 90.00, 3, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4721, 830, 'Nilai skill <3', 80.00, 4, '2026-08-26 18:05:17', 0, NULL, NULL, NULL, NULL),
+(4722, 830, 'Nilai skill <1', 0.00, 5, '2026-08-27 05:35:40', 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -92825,7 +93439,13 @@ INSERT INTO `tb_kpi` (`id`, `id_user`, `poin`, `bobot`, `poin2`, `bobot2`) VALUE
 (591, 100, 'Target Omset 15 Ton Cling & 30 Ton Bisi 959', 50, 'Target Omset 15 Ton Cling & 30 Ton Bisi 959', 50),
 (592, 4, '-', 0, 'NOL KOMPLAIN KEBERSIHAN RUANG KERJA KARYAWAN LANTAI 2', 40),
 (593, 4, 'RUANG MEETING, TOILET DAN PANTRY BERSIH DAN TERAWAT', 50, 'RUANG MEETING, TOILET DAN PANTRY BERSIH DAN TERAWAT', 50),
-(594, 148, 'Absensi', 100, 'Absensi', 100);
+(594, 148, 'Absensi', 100, 'Absensi', 100),
+(613, 226, 'Pembuatan dan Pengembangan KARISMA HRIS', 40, 'Pembuatan dan Pengembangan KARISMA HRIS', 40),
+(614, 226, 'Pengembangan & Support KarismaERP', 20, 'Pengembangan & Support KarismaERP', 20),
+(615, 226, 'Stabilitas & Performa Aplikasi', 15, 'Stabilitas & Performa Aplikasi', 15),
+(616, 226, 'Pemeliharaan Sistem', 10, 'Pemeliharaan Sistem', 10),
+(617, 226, 'Kehadiran & Kedisiplinan Kerja', 10, 'Penilaian absensi oleh HRD', 10),
+(618, 226, 'Maintenance Hardware', 5, 'Membantu Maintenance Hardware', 5);
 
 -- --------------------------------------------------------
 
@@ -95937,7 +96557,37 @@ INSERT INTO `tb_login_log` (`id`, `id_karyawan`, `username`, `ip_address`, `brow
 (1089, 68, 'kiuscc', '10.10.10.21', NULL, NULL, NULL, '2026-08-28 10:48:31'),
 (1090, 205, 'admin', '10.10.10.21', NULL, NULL, NULL, '2026-08-28 10:58:02'),
 (1091, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-28 13:21:28'),
-(1092, 213, 'admsc', '10.10.10.68', NULL, NULL, NULL, '2026-08-28 14:01:52');
+(1092, 213, 'admsc', '10.10.10.68', NULL, NULL, NULL, '2026-08-28 14:01:52'),
+(1093, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 10:03:06'),
+(1094, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 10:36:23'),
+(1095, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 11:12:22'),
+(1096, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 11:22:30'),
+(1097, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-29 14:06:24'),
+(1098, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 14:47:55'),
+(1099, NULL, '', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 14:47:56'),
+(1100, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-29 14:48:00'),
+(1101, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-31 08:22:43'),
+(1102, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-31 13:16:15'),
+(1103, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-31 13:30:46'),
+(1104, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-01 12:29:11'),
+(1105, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-01 12:29:18'),
+(1106, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 08:27:03'),
+(1107, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 10:31:06'),
+(1108, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 10:36:03'),
+(1109, 225, 'purchasing', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 10:40:50'),
+(1110, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 10:41:16'),
+(1111, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 10:41:22'),
+(1112, 223, 'admpnj', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 14:56:38'),
+(1113, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-02 14:58:20'),
+(1114, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 08:22:50'),
+(1115, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 08:22:55'),
+(1116, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 08:24:09'),
+(1117, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 08:24:14'),
+(1118, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 09:51:57'),
+(1119, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 10:07:20'),
+(1120, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 15:28:05'),
+(1121, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 15:44:18'),
+(1122, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-03 15:49:15');
 
 -- --------------------------------------------------------
 
@@ -95962,7 +96612,8 @@ INSERT INTO `tb_log_confirm_sales` (`id`, `kd_do`, `action`, `note`, `confirm_by
 (1, 'MD-1', 'siap', 'loading', 'Reni', '2026-08-28 09:57:19'),
 (2, 'JLS', 'siap', 'oke', 'Ariyani', '2026-08-28 09:59:25'),
 (3, 'KIUDO2808260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'Admin SC', '2026-08-28 10:06:12'),
-(4, 'KIUDO2808260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-1 selesai difakturkan dan termuat semua.', 'Admin SC', '2026-08-28 10:07:07');
+(4, 'KIUDO2808260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-1 selesai difakturkan dan termuat semua.', 'Admin SC', '2026-08-28 10:07:07'),
+(5, 'KIUDO0309260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-03 09:53:00');
 
 -- --------------------------------------------------------
 
@@ -95985,7 +96636,8 @@ CREATE TABLE `tb_log_do` (
 
 INSERT INTO `tb_log_do` (`id_log`, `kd_do`, `tgl_input`, `keterangan`, `inputer`, `create_at`) VALUES
 (1, 'KIUDO2808260001', '28/08/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-08-28 03:06:12'),
-(2, 'KIUDO2808260002', '28/08/2026', 'AUTO DO RUTE MD-1 dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-08-28 03:07:07');
+(2, 'KIUDO2808260002', '28/08/2026', 'AUTO DO RUTE MD-1 dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-08-28 03:07:07'),
+(3, 'KIUDO0309260001', '03/09/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-03 02:53:00');
 
 -- --------------------------------------------------------
 
@@ -96061,7 +96713,10 @@ CREATE TABLE `tb_lpb` (
 INSERT INTO `tb_lpb` (`id_lpb`, `kd_po`, `nosj`, `tgl_sj`, `no_po`, `no_invoice`, `gudang_id`, `keterangan`, `input_at`, `checker_at`, `checker_by`, `checker_name`, `jenis_lpb`, `kode_faktur_pajak`, `nomor_lpb`, `status_lpb`, `tanggal_faktur_pajak`, `tanggal_invoice`, `tgl_perubahan_invoice`, `tgl_riil_invoice`, `source_type`, `manual_ref_no`) VALUES
 (1, 'SKPO280826PUPUK030001', '444541', '2026-08-03', 'Q001/KIU/VIII/2026', '-', 2, 'trial', '2026-08-28 09:48:56', '2026-08-28 09:48:56', 'nando', 'nando', 'LPB CP', NULL, '2600001', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
 (2, 'SKPO280826SYNGE020002', '98778', '2026-08-13', 'Q001/KIU/VIII/2026A', '-', 2, 'trial', '2026-08-28 09:51:08', '2026-08-28 09:51:08', 'sholeh', 'sholeh', 'LPB Benih', NULL, '2600001B', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
-(3, 'SKPO280826SYNGE020002', '444778', '2026-08-15', 'Q001/KIU/VIII/2026A', '-', 2, 'trial', '2026-08-28 09:53:48', '2026-08-28 09:53:48', 'nando', 'nando', 'LPB Benih', NULL, '2600002B', 1, NULL, NULL, NULL, NULL, 'PO', NULL);
+(3, 'SKPO280826SYNGE020002', '444778', '2026-08-15', 'Q001/KIU/VIII/2026A', '-', 2, 'trial', '2026-08-28 09:53:48', '2026-08-28 09:53:48', 'nando', 'nando', 'LPB Benih', NULL, '2600002B', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(4, 'SKPO290826PUPUK030001', '22133', '2026-08-29', 'Q002/KIU/VIII/2026', '-', 2, '1123', '2026-08-29 11:08:59', '2026-08-29 11:08:59', NULL, 'SYSTEM', 'LPB CP', NULL, '2600002', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(5, 'SKPO290826PUPUK030002', '00760', '2026-08-31', 'Q003/KIU/VIII/2026', '-', 2, 'oke', '2026-08-29 11:29:20', '2026-08-29 11:29:20', 'nandi', 'nandi', 'LPB CP', NULL, '2600003', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(6, 'SKPO290826PUPUK030003', '9908', '2026-08-29', 'Q004/KIU/VIII/2026', '-', 2, 'oke', '2026-08-29 11:36:52', '2026-08-29 11:36:52', 'damar', 'damar', 'LPB CP', NULL, '2600004', 1, NULL, NULL, NULL, NULL, 'PO', NULL);
 
 -- --------------------------------------------------------
 
@@ -96087,7 +96742,10 @@ INSERT INTO `tb_lpb_batch` (`id_batch`, `id_detail_lpb`, `no_lot`, `expired_date
 (3, 3, '77878', '2027-01-09', 1000.00),
 (4, 4, '22788', '2027-04-22', 6000.00),
 (5, 5, '445451', '2027-01-01', 70.00),
-(6, 6, '335551PPP', '2027-02-16', 2500.00);
+(6, 6, '335551PPP', '2027-02-16', 2500.00),
+(7, 7, '12413', '2027-01-01', 10.00),
+(8, 8, '00099', '2027-01-01', 10.00),
+(9, 9, '22123', '2026-08-29', 10.00);
 
 -- --------------------------------------------------------
 
@@ -96131,7 +96789,10 @@ INSERT INTO `tb_lpb_detail` (`id_detail_lpb`, `id_lpb`, `kd_barang`, `qty_diteri
 (3, 1, 'QSPON081', 1000.00, '77878', '2027-01-09', '2026-08-28 09:48:56', 75405.40540, 0.00000, NULL, NULL, NULL, NULL, 75405405.40000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
 (4, 1, 'QROUN011', 6000.00, '22788', '2027-04-22', '2026-08-28 09:48:56', 63963.96400, 0.00000, NULL, NULL, NULL, NULL, 383783784.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
 (5, 2, 'QTOMA06', 70.00, '445451', '2027-01-01', '2026-08-28 09:51:08', 35000.00000, 0.00000, NULL, NULL, NULL, NULL, 2450000.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(6, 3, 'QPADI45', 2500.00, '335551PPP', '2027-02-16', '2026-08-28 09:53:48', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, 237500000.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00);
+(6, 3, 'QPADI45', 2500.00, '335551PPP', '2027-02-16', '2026-08-28 09:53:48', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, 237500000.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(7, 4, 'QPUPU16', 10.00, '12413', '2027-01-01', '2026-08-29 11:08:59', 45045.04500, 0.00000, NULL, NULL, NULL, NULL, 450450.45000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(8, 5, 'QPUPU16', 10.00, '00099', '2027-01-01', '2026-08-29 11:29:20', 49549.54950, 0.00000, NULL, NULL, NULL, NULL, 495495.49500, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(9, 6, 'QPUPU16', 10.00, '22123', '2026-08-29', '2026-08-29 11:36:52', 47747.74770, 0.00000, NULL, NULL, NULL, NULL, 477477.47700, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -96163,7 +96824,12 @@ CREATE TABLE `tb_lpb_log` (
 INSERT INTO `tb_lpb_log` (`id_log`, `kd_po`, `no_invoice`, `action_type`, `keterangan`, `dilakukan_oleh`, `dilakukan_pada`, `checker_by`, `checker_name`, `data_after`, `data_before`, `id_lpb`, `status_after`, `status_before`) VALUES
 (1, 'SKPO280826PUPUK030001', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-28 09:48:56', 'nando', 'nando', '{\"id_lpb\":1,\"nomor_lpb\":\"2600001\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"444541\",\"tgl_sj\":\"2026-08-03\",\"status_lpb\":1,\"checker_name\":\"nando\"}', NULL, 1, 'POST', NULL),
 (2, 'SKPO280826SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-28 09:51:08', 'sholeh', 'sholeh', '{\"id_lpb\":2,\"nomor_lpb\":\"2600001B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"98778\",\"tgl_sj\":\"2026-08-13\",\"status_lpb\":1,\"checker_name\":\"sholeh\"}', NULL, 2, 'POST', NULL),
-(3, 'SKPO280826SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-28 09:53:48', 'nando', 'nando', '{\"id_lpb\":3,\"nomor_lpb\":\"2600002B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"444778\",\"tgl_sj\":\"2026-08-15\",\"status_lpb\":1,\"checker_name\":\"nando\"}', NULL, 3, 'POST', NULL);
+(3, 'SKPO280826SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-28 09:53:48', 'nando', 'nando', '{\"id_lpb\":3,\"nomor_lpb\":\"2600002B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"444778\",\"tgl_sj\":\"2026-08-15\",\"status_lpb\":1,\"checker_name\":\"nando\"}', NULL, 3, 'POST', NULL),
+(4, 'SKPO290826PUPUK030001', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'SYSTEM', '2026-08-29 11:08:59', '', 'SYSTEM', '{\"id_lpb\":4,\"nomor_lpb\":\"2600002\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"22133\",\"tgl_sj\":\"2026-08-29\",\"status_lpb\":1,\"checker_name\":\"SYSTEM\"}', NULL, 4, 'POST', NULL),
+(5, 'SKPO290826PUPUK030002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-29 11:29:20', 'nandi', 'nandi', '{\"id_lpb\":5,\"nomor_lpb\":\"2600003\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"00760\",\"tgl_sj\":\"2026-08-31\",\"status_lpb\":1,\"checker_name\":\"nandi\"}', NULL, 5, 'POST', NULL),
+(6, 'SKPO290826PUPUK030003', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-29 11:36:52', 'damar', 'damar', '{\"id_lpb\":6,\"nomor_lpb\":\"2600004\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"9908\",\"tgl_sj\":\"2026-08-29\",\"status_lpb\":1,\"checker_name\":\"damar\"}', NULL, 6, 'POST', NULL),
+(7, 'SKPO290826PUPUK030003', '-', 'UNPOST_LPB', 'UNPOST LPB: Status LPB dari \"POST\" menjadi \"UNPOST\". Keterangan: ok', 'admin', '2026-09-02 10:13:30', 'damar', 'damar', '{\"status_lpb\":0}', '{\"status_lpb\":\"1\"}', 6, 'UNPOST', 'POST'),
+(8, 'SKPO290826PUPUK030003', '-', 'POST_LPB', 'Rekam LPB: Status LPB dari \"UNPOST\" menjadi \"POST\". Keterangan: LPB direkam ulang menjadi POST.', 'admin', '2026-09-02 10:14:30', 'damar', 'damar', '{\"status_lpb\":1}', '{\"status_lpb\":\"0\"}', 6, 'POST', 'UNPOST');
 
 -- --------------------------------------------------------
 
@@ -96248,6 +96914,88 @@ CREATE TABLE `tb_lpb_price_adjustment_detail` (
   `kelompok_dagang` varchar(10) DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tb_lpb_revision_request`
+--
+
+CREATE TABLE `tb_lpb_revision_request` (
+  `id_request` int NOT NULL,
+  `no_request` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `id_lpb` int NOT NULL,
+  `nomor_lpb` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `kd_po` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `no_po` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `kd_supplier` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `nama_supplier` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `gudang_id` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'REQUESTED',
+  `alasan_revisi` text COLLATE utf8mb4_general_ci,
+  `total_faktur` int NOT NULL DEFAULT '0',
+  `total_item` int NOT NULL DEFAULT '0',
+  `total_qty_terjual` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `requested_by` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `requested_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `accounting_by` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `accounting_at` datetime DEFAULT NULL,
+  `purchasing_by` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `purchasing_at` datetime DEFAULT NULL,
+  `completed_by` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tb_lpb_revision_request_detail`
+--
+
+CREATE TABLE `tb_lpb_revision_request_detail` (
+  `id_detail` int NOT NULL,
+  `id_request` int NOT NULL,
+  `id_lpb` int NOT NULL,
+  `id_detail_lpb` int DEFAULT NULL,
+  `source_table` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `source_pk` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `id_faktur` int DEFAULT NULL,
+  `id_faktur_detail` int DEFAULT NULL,
+  `no_faktur` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `tanggal_faktur` date DEFAULT NULL,
+  `status_faktur_before` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `kd_barang` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_barang` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `no_lot` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `expired_date` date DEFAULT NULL,
+  `qty_lpb` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `qty_terjual` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `status` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'REQUESTED',
+  `unpost_by` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `unpost_at` datetime DEFAULT NULL,
+  `catatan_accounting` text COLLATE utf8mb4_general_ci,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tb_lpb_revision_request_log`
+--
+
+CREATE TABLE `tb_lpb_revision_request_log` (
+  `id_log` int NOT NULL,
+  `id_request` int NOT NULL,
+  `action_type` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `status_before` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `status_after` varchar(30) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `keterangan` text COLLATE utf8mb4_general_ci,
+  `data_before` longtext COLLATE utf8mb4_general_ci,
+  `data_after` longtext COLLATE utf8mb4_general_ci,
+  `dilakukan_oleh` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `dilakukan_pada` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -111399,10 +112147,12 @@ CREATE TABLE `tb_retur_pembelian` (
   `tanggal_retur` date NOT NULL,
   `gudang_id` varchar(30) DEFAULT NULL,
   `status` varchar(30) NOT NULL DEFAULT 'DRAFT',
+  `status_persiapan` varchar(30) NOT NULL DEFAULT 'BELUM_DISIAPKAN',
   `jenis_penyelesaian` varchar(40) NOT NULL DEFAULT 'POTONG_HUTANG',
   `alasan_retur` text,
   `catatan_purchasing` text,
   `catatan_accounting` text,
+  `catatan_persiapan` text,
   `total_dpp` decimal(18,4) NOT NULL DEFAULT '0.0000',
   `total_ppn` decimal(18,4) NOT NULL DEFAULT '0.0000',
   `grand_total` decimal(18,4) NOT NULL DEFAULT '0.0000',
@@ -111421,15 +112171,17 @@ CREATE TABLE `tb_retur_pembelian` (
   `posted_by` varchar(100) DEFAULT NULL,
   `posted_at` datetime DEFAULT NULL,
   `reversed_by` varchar(100) DEFAULT NULL,
-  `reversed_at` datetime DEFAULT NULL
+  `reversed_at` datetime DEFAULT NULL,
+  `disiapkan_oleh` varchar(100) DEFAULT NULL,
+  `disiapkan_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data untuk tabel `tb_retur_pembelian`
 --
 
-INSERT INTO `tb_retur_pembelian` (`id_retur_pembelian`, `no_retur_pembelian`, `id_lpb`, `kd_po`, `no_po`, `kd_supplier`, `tanggal_retur`, `gudang_id`, `status`, `jenis_penyelesaian`, `alasan_retur`, `catatan_purchasing`, `catatan_accounting`, `total_dpp`, `total_ppn`, `grand_total`, `id_jurnal`, `id_jurnal_reversal`, `created_by`, `created_at`, `updated_by`, `updated_at`, `submitted_by`, `submitted_at`, `purchasing_verified_by`, `purchasing_verified_at`, `accounting_verified_by`, `accounting_verified_at`, `posted_by`, `posted_at`, `reversed_by`, `reversed_at`) VALUES
-(1, 'RBELI-20260828-0001', 2, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', 'SYNGE02', '2026-08-26', '2', 'POSTED', 'POTONG_HUTANG', 'barang tidak tumbuh', '', '', 1225000.0000, 0.0000, 1225000.0000, 12, NULL, 'admin', '2026-08-28 10:23:28', 'admin', '2026-08-28 10:23:54', 'admin', '2026-08-28 10:23:35', 'admin', '2026-08-28 10:23:42', 'admin', '2026-08-28 10:23:49', 'admin', '2026-08-28 10:23:54', NULL, NULL);
+INSERT INTO `tb_retur_pembelian` (`id_retur_pembelian`, `no_retur_pembelian`, `id_lpb`, `kd_po`, `no_po`, `kd_supplier`, `tanggal_retur`, `gudang_id`, `status`, `status_persiapan`, `jenis_penyelesaian`, `alasan_retur`, `catatan_purchasing`, `catatan_accounting`, `catatan_persiapan`, `total_dpp`, `total_ppn`, `grand_total`, `id_jurnal`, `id_jurnal_reversal`, `created_by`, `created_at`, `updated_by`, `updated_at`, `submitted_by`, `submitted_at`, `purchasing_verified_by`, `purchasing_verified_at`, `accounting_verified_by`, `accounting_verified_at`, `posted_by`, `posted_at`, `reversed_by`, `reversed_at`, `disiapkan_oleh`, `disiapkan_at`) VALUES
+(1, 'RBELI-20260828-0001', 2, 'SKPO280826SYNGE020002', 'Q001/KIU/VIII/2026A', 'SYNGE02', '2026-08-26', '2', 'POSTED', 'SUDAH_DISIAPKAN', 'POTONG_HUTANG', 'barang tidak tumbuh', '', '', 'barang selesai', 1225000.0000, 0.0000, 1225000.0000, 12, NULL, 'admin', '2026-08-28 10:23:28', 'admin', '2026-09-02 14:56:10', 'admin', '2026-08-28 10:23:35', 'admin', '2026-08-28 10:23:42', 'admin', '2026-08-28 10:23:49', 'admin', '2026-08-28 10:23:54', NULL, NULL, 'admin', '2026-09-02 14:56:10');
 
 -- --------------------------------------------------------
 
@@ -111491,7 +112243,20 @@ INSERT INTO `tb_retur_pembelian_log` (`id_log`, `id_retur_pembelian`, `no_retur_
 (3, 1, 'RBELI-20260828-0001', 'VERIFY_PURCHASING', 'SUBMITTED', 'PURCHASING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"SUBMITTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:35\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"PURCHASING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:42\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Purchasing memverifikasi harga, supplier, alasan retur, dan penyelesaian.', 'admin', '2026-08-28 10:23:42'),
 (4, 1, 'RBELI-20260828-0001', 'VERIFY_ACCOUNTING', 'PURCHASING_VERIFIED', 'ACCOUNTING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"PURCHASING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:42\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:49\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Accounting memverifikasi dampak hutang dan PPN.', 'admin', '2026-08-28 10:23:49'),
 (5, 1, 'RBELI-20260828-0001', 'APPROVE', 'ACCOUNTING_VERIFIED', 'ACCOUNTING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:49\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:49\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Retur pembelian disetujui untuk posting.', 'admin', '2026-08-28 10:23:49'),
-(6, 1, 'RBELI-20260828-0001', 'POST', 'ACCOUNTING_VERIFIED', 'POSTED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:49\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:54\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null}', 'Retur pembelian diposting ke stock ledger RBELI dan jurnal PURCHASE_RETURN.', 'admin', '2026-08-28 10:23:54');
+(6, 1, 'RBELI-20260828-0001', 'POST', 'ACCOUNTING_VERIFIED', 'POSTED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:49\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:54\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null}', 'Retur pembelian diposting ke stock ledger RBELI dan jurnal PURCHASE_RETURN.', 'admin', '2026-08-28 10:23:54'),
+(7, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'BELUM_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-28 10:23:54\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":null,\"disiapkan_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:31:25\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:31:25\"}', 'Update status persiapan barang oleh admlpb: SEDANG_DISIAPKAN', 'admlpb', '2026-09-02 10:31:25'),
+(8, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:31:25\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:31:25\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:31:33\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:31:33\"}', 'Update status persiapan barang oleh admlpb: SEDANG_DISIAPKAN', 'admlpb', '2026-09-02 10:31:33'),
+(9, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:31:33\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:31:33\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:35:52\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:35:52\"}', 'Update status persiapan barang oleh admlpb: SEDANG_DISIAPKAN', 'admlpb', '2026-09-02 10:35:52'),
+(10, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'BELUM_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admlpb\",\"updated_at\":\"2026-09-02 10:35:52\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admlpb\",\"disiapkan_at\":\"2026-09-02 10:35:52\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:36:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:36:20\"}', 'Update status persiapan barang oleh Admin LPB2: BELUM_DISIAPKAN', 'Admin LPB2', '2026-09-02 10:36:20'),
+(11, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'BELUM_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:36:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:36:20\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:36:38\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:36:38\"}', 'Update status persiapan barang oleh Admin LPB2: SEDANG_DISIAPKAN', 'Admin LPB2', '2026-09-02 10:36:38'),
+(12, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'SUDAH_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:36:38\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:36:38\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:38:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:38:20\"}', 'Update status persiapan barang oleh Admin LPB2: SUDAH_DISIAPKAN', 'Admin LPB2', '2026-09-02 10:38:20'),
+(13, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SUDAH_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:38:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:38:20\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:40:03\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:40:03\"}', 'Update status persiapan barang oleh Admin LPB2: SEDANG_DISIAPKAN', 'Admin LPB2', '2026-09-02 10:40:03'),
+(14, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'BELUM_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:40:03\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:40:03\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:40:15\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:40:15\"}', 'Update status persiapan barang oleh Admin LPB2: BELUM_DISIAPKAN', 'Admin LPB2', '2026-09-02 10:40:15'),
+(15, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'BELUM_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"Admin LPB2\",\"updated_at\":\"2026-09-02 10:40:15\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"Admin LPB2\",\"disiapkan_at\":\"2026-09-02 10:40:15\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:34:37\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:34:37\"}', 'Update status persiapan barang oleh admin: SEDANG_DISIAPKAN', 'admin', '2026-09-02 14:34:37'),
+(16, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'SUDAH_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:34:37\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:34:37\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:51:23\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:51:23\"}', 'Update status persiapan barang oleh admin: SUDAH_DISIAPKAN', 'admin', '2026-09-02 14:51:23'),
+(17, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SUDAH_DISIAPKAN', 'SEDANG_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:51:23\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:51:23\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"barang sudah terjual\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:52:25\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:52:25\"}', 'Update status persiapan barang oleh admin: SEDANG_DISIAPKAN (barang sudah terjual)', 'admin', '2026-09-02 14:52:25'),
+(18, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SEDANG_DISIAPKAN', 'SUDAH_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SEDANG_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"barang sudah terjual\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:52:25\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:52:25\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"barang sudah terjual\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:55:54\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:55:54\"}', 'Update status persiapan barang oleh admin: SUDAH_DISIAPKAN (barang sudah terjual)', 'admin', '2026-09-02 14:55:54'),
+(19, 1, 'RBELI-20260828-0001', 'UPDATE_PERSIAPAN', 'SUDAH_DISIAPKAN', 'SUDAH_DISIAPKAN', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"barang sudah terjual\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:55:54\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:55:54\"}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260828-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO280826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"status_persiapan\":\"SUDAH_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"barang tidak tumbuh\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"catatan_persiapan\":\"barang selesai\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"12\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-28 10:23:28\",\"updated_by\":\"admin\",\"updated_at\":\"2026-09-02 14:56:10\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-28 10:23:35\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-28 10:23:42\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-28 10:23:49\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-28 10:23:54\",\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":\"admin\",\"disiapkan_at\":\"2026-09-02 14:56:10\"}', 'Update status persiapan barang oleh admin: SUDAH_DISIAPKAN (barang selesai)', 'admin', '2026-09-02 14:56:10');
 
 -- --------------------------------------------------------
 
@@ -117767,27 +118532,46 @@ INSERT INTO `tb_users` (`id`, `username`, `password`, `level`, `jobdesk_hrd`, `n
 (202, 'stockopname', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Gudang Opname', 'QIUK12300001', 'ADMIN_STOCKOPNAME', 'DEP02', '', 0, 0, NULL, NULL, NULL, 'ADMIN_STOCKOPNAME', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (203, 'admics5', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 5', 'QIUK00001207', 'ADMINICS', 'DEP01', '', 5, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (204, 'admics6', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 6', 'QIUK00001208', 'ADMINICS', 'DEP01', '', 6, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 13:21:28', '2026-08-18 14:57:30', '2026-08-28 13:21:28'),
+(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-09-03 08:24:14', '2026-08-18 14:57:30', '2026-09-03 08:24:14'),
 (206, 'admdistribusi', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Distribusi', 'QIUK00001211', 'DISTRIBUSI', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'DISTRIBUSI', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(207, 'admlpb', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admlpb', 'QIUK1122', 'ADMINLOGLPB', 'DEP01', '', 0, 0, '', NULL, NULL, 'ADMINLOGLPB', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 09:49:34', '2026-08-18 14:57:30', '2026-08-28 09:49:34'),
+(207, 'admlpb', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admlpb', 'QIUK1122', 'ADMINLOGLPB', 'DEP01', '', 0, 0, '', NULL, NULL, 'ADMINLOGLPB', '-', '-', 1, 'AKTIF', NULL, '2026-09-02 10:31:06', '2026-08-18 14:57:30', '2026-09-02 10:31:06'),
 (208, 'ck1', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'nando', 'QIUK1123', 'CHECKER', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'CHECKER', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (209, 'ck2', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'sholeh', 'QIUK1124', 'CHECKER', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'CHECKER', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (210, 'kiusl', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'kiusl', 'QIUK1127', 'SALESCK', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'SALESCK', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(211, 'kiukeu', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'deva', 'KIUKEU', 'KIUKEU', 'KEUANGAN', '', 0, 0, NULL, NULL, NULL, 'KIUKEU', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 10:35:40', '2026-08-18 14:57:30', '2026-08-28 10:35:40'),
+(211, 'kiukeu', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'deva', 'KIUKEU', 'KIUKEU', 'KEUANGAN', '', 0, 0, NULL, NULL, NULL, 'KIUKEU', '-', '-', 1, 'AKTIF', NULL, '2026-09-03 15:44:18', '2026-08-18 14:57:30', '2026-09-03 15:44:18'),
 (212, 'kiuscc2', '$2y$10$9xITg/WSI65pObLYE8UdoOYTl.METFf1Ws/GaxRH2syeVX7LJaRc6', 1, NULL, 'kiusc2', 'QIUK111112', 'SC', 'DEP012', 'C', 0, 3, NULL, NULL, NULL, 'SC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(213, 'admsc', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'Admin SC', 'ADMINSC', 'ADMINSC', 'SALES', 'D', 0, 0, NULL, NULL, NULL, 'ADMINSC', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 14:01:52', '2026-08-18 14:57:30', '2026-08-28 14:01:52'),
+(213, 'admsc', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'Admin SC', 'ADMINSC', 'ADMINSC', 'SALES', 'D', 0, 0, NULL, NULL, NULL, 'ADMINSC', '-', '-', 1, 'AKTIF', NULL, '2026-09-03 15:49:15', '2026-08-18 14:57:30', '2026-09-03 15:49:15'),
 (214, 'mngsc', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'evi', 'Q1234124', 'MANAGERSC', 'SALES', 'D', 0, 0, '', NULL, NULL, 'MANAGERSC', '-', '-', 1, 'AKTIF', NULL, '2026-08-24 13:30:55', '2026-08-18 14:57:30', '2026-08-24 13:30:55'),
 (215, 'admretur', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'dewi', 'Q12341241', 'ADMRETUR', 'KEUANGAN', 'D', 0, 0, NULL, NULL, NULL, 'ADMRETUR', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 13:11:03', '2026-08-18 14:57:30', '2026-08-20 13:11:03'),
-(216, 'admlpb2', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin LPB2', 'ADM001', 'ADMLPB2', 'Sales', '', 0, 0, NULL, NULL, NULL, 'ADMLPB2', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 10:37:23', '2026-08-18 14:57:30', '2026-08-28 10:37:23'),
+(216, 'admlpb2', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin LPB2', 'ADM001', 'ADMLPB2', 'Sales', '', 0, 0, NULL, NULL, NULL, 'ADMLPB2', '-', '-', 1, 'AKTIF', NULL, '2026-09-02 10:36:03', '2026-08-18 14:57:30', '2026-09-02 10:36:03'),
 (217, 'collection1', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Team Collection', 'COL001', 'COLLECTION', 'Sales', '', 0, 0, NULL, NULL, NULL, 'COLLECTION', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 13:56:55', '2026-08-18 14:57:30', '2026-08-20 13:56:55'),
 (218, 'kasir1', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Kasir', 'KSR001', 'KASIR', 'Kasir', '', 0, 0, NULL, NULL, NULL, 'KASIR', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (219, 'mngacc', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager ACC', 'QIUK_MNGACC', 'MANAGERACC', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERACC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (220, 'mngse', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager SE', 'QIUK_MNGSE', 'MANAGERSE', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERSE', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (221, 'dirop', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Operasional', 'QIUK_DIROP', 'DIREKTUROP', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTUROP', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (222, 'dirut', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Utama', 'QIUK_DIRUT', 'DIREKTURUTAMA', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTURUTAMA', '-', '-', 1, 'AKTIF', NULL, '2026-08-28 10:38:58', '2026-08-18 14:57:30', '2026-08-28 10:38:58'),
-(223, 'admpnj', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Penjualan', 'QIUK_ADMPNJ', 'ADMPNJ', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMPNJ', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 11:28:25', '2026-08-18 14:57:30', '2026-08-20 11:28:25'),
+(223, 'admpnj', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Penjualan', 'QIUK_ADMPNJ', 'ADMPNJ', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMPNJ', '-', '-', 1, 'AKTIF', NULL, '2026-09-02 14:56:38', '2026-08-18 14:57:30', '2026-09-02 14:56:38'),
 (224, 'kadepub', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Kadep Unit Bisnis', 'QIUK_KADEPUB', 'KADEPUB', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'KADEPUB', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(225, 'purchasing', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'purchasing', 'QIUK_PUR', 'admin_purchasing', 'DEP01', '', 0, 0, '', NULL, NULL, 'admin_purchasing', '-', '-', 1, 'AKTIF', NULL, '2026-08-19 12:42:54', '2026-08-18 14:57:30', '2026-08-19 12:42:54');
+(225, 'purchasing', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'purchasing', 'QIUK_PUR', 'admin_purchasing', 'DEP01', '', 0, 0, '', NULL, NULL, 'admin_purchasing', '-', '-', 1, 'AKTIF', NULL, '2026-09-02 10:40:50', '2026-08-18 14:57:30', '2026-09-02 10:40:50'),
+(226, 'Al', '$2y$10$NuxMAyodj67o6dzD3u.JcO7rNshegxm2fcqWqZvkVahgMQvavzf7y', 1, 'inputer_laporan', 'Ahmad Lutfi Farizi', 'QIU251131109', 'MT IT SOFTWARE', 'IT', NULL, 0, 0, NULL, NULL, NULL, 'Karyawan', 'Wahyu Arif Prasetyo', 'Diana Wulandari', 1, 'AKTIF', 'penilaian_lingkungan', NULL, '2026-07-28 09:00:28', '2026-08-27 00:53:39');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tb_user_facility`
+--
+
+CREATE TABLE `tb_user_facility` (
+  `id_user_facility` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED NOT NULL,
+  `facility_key` varchar(120) NOT NULL,
+  `facility_label` varchar(180) NOT NULL,
+  `module_key` varchar(80) NOT NULL DEFAULT 'general',
+  `facility_group` varchar(80) NOT NULL DEFAULT 'Umum',
+  `is_allowed` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -118600,7 +119384,19 @@ INSERT INTO `tb_whats` (`id_what`, `id_user`, `id_kpi`, `tipe_what`, `p_what`, `
 (783, 100, 591, 'A', 'Target Q1  1 ton Cling', 50, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (784, 29, 28, 'A', 'Absensi', 100, 0.00, 'Tidak hadir 1 hari (Cuti/ljin/Sakit)', 111, 111, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (785, 148, 594, 'A', 'Nol Absensi', 100, 0.00, '', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(786, 29, 25, 'B', 'omset 1 hari', 100, 1000.00, ' Hasil Tercapai: 900', 90, 90, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(786, 29, 25, 'B', 'omset 1 hari', 100, 1000.00, ' Hasil Tercapai: 900', 90, 90, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(820, 226, 613, 'A', 'Penyelesaian KARISMA HRIS', 60, 0.00, 'Belum menghasilkan hasil yang dapat digunakan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(821, 226, 613, 'A', 'Kesiapan KARISMA HRIS digunakan', 30, 0.00, 'Aplikasi tidak dapat digunakan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `tb_whats` (`id_what`, `id_user`, `id_kpi`, `tipe_what`, `p_what`, `bobot`, `target_omset`, `hasil`, `nilai`, `total`, `is_edited`, `edited_by`, `edited_at`, `original_p_what`, `original_bobot`, `original_hasil`, `original_nilai`, `original_total`, `original_target_omset`) VALUES
+(822, 226, 613, 'A', 'Dokumentasi dan Panduan KARISMA HRIS', 10, 0.00, 'Tidak ada dokumentasi', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(823, 226, 614, 'A', 'Pengembangan dan Penyempurnaan KarismaERP', 65, 0.00, 'Tidak terdapat hasil pekerjaan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(824, 226, 614, 'A', 'Catatan Perubahan KarismaERP', 10, 0.00, 'Tidak membuat laporan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(825, 226, 615, 'A', 'Menjaga Aplikasi Tetap Berjalan Dengan Baik', 80, 0.00, 'Aplikasi tidak dapat digunakan dengan baik', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(826, 226, 615, 'A', 'Laporan Kondisi Aplikasi', 20, 0.00, 'Tidak membuat laporan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(827, 226, 616, 'A', 'Pemeliharaan Berkala', 80, 0.00, 'Tidak ada pemeliharaan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(828, 226, 616, 'A', 'Laporan Pemeliharaan Sistem', 20, 0.00, 'Tidak membuat laporan', 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(829, 226, 617, 'A', 'Absensi', 100, 0.00, 'Cuti 0 hr, Absen 0 hr', 115, 115, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(830, 226, 618, 'A', 'Bantuan Perbaikan Perangkat Kerja', 100, 0.00, 'Nilai skill 3', 90, 90, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -118689,6 +119485,28 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`, `u
 (86, 'Others', 'others@kiu.com', '$2y$12$O0e6IA5ucHY.0pIEU2ZT/.wKxer4coPeh4hyZ9O2kabvq10Tkr7GS', 'sales', '2026-02-05 06:03:43', '2026-02-05 06:08:16'),
 (87, 'general', 'general@kiu.com', '$2y$12$W/waE1W892TfpbiTRVctpe2fSOOQw32Cf.dFs/xv2.V7KHnxm6OBm', 'sales', '2026-02-05 06:03:43', '2026-02-05 06:08:16'),
 (88, 'SE', 'se@kiu.com', '$2y$12$YJosUUB3J8QkwDqDOjXreOSwGK09R.eg49qQRZg4ONpogrn71yWe2', 'sales_executive', '2026-02-05 06:08:14', '2026-02-05 06:08:14');
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stockbarangnk`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stockbarangnk` (
+`kode_barangs` varchar(25)
+,`kode_barang` varchar(25)
+,`nama_barang` text
+,`deskripsi` text
+,`gbr_barang` text
+,`nama_lokasi` text
+,`qty_in` double
+,`qty_out` double
+,`qty_ready` double
+,`id_satuan` int
+,`satuan` text
+,`id_brg_nk` int
+,`kat_barang` varchar(25)
+);
 
 --
 -- Indeks untuk tabel yang dibuang
@@ -120254,6 +121072,34 @@ ALTER TABLE `tb_lpb_price_adjustment_detail`
   ADD KEY `idx_barang_batch` (`kd_barang`,`no_lot_adjustment`,`expired_date_adjustment`);
 
 --
+-- Indeks untuk tabel `tb_lpb_revision_request`
+--
+ALTER TABLE `tb_lpb_revision_request`
+  ADD PRIMARY KEY (`id_request`),
+  ADD UNIQUE KEY `uk_no_request` (`no_request`),
+  ADD KEY `idx_lpb_revision_lpb` (`id_lpb`),
+  ADD KEY `idx_lpb_revision_status` (`status`),
+  ADD KEY `idx_lpb_revision_requested_at` (`requested_at`);
+
+--
+-- Indeks untuk tabel `tb_lpb_revision_request_detail`
+--
+ALTER TABLE `tb_lpb_revision_request_detail`
+  ADD PRIMARY KEY (`id_detail`),
+  ADD KEY `idx_lpb_revision_detail_request` (`id_request`),
+  ADD KEY `idx_lpb_revision_detail_faktur` (`no_faktur`),
+  ADD KEY `idx_lpb_revision_detail_source` (`source_table`,`source_pk`),
+  ADD KEY `idx_lpb_revision_detail_status` (`status`);
+
+--
+-- Indeks untuk tabel `tb_lpb_revision_request_log`
+--
+ALTER TABLE `tb_lpb_revision_request_log`
+  ADD PRIMARY KEY (`id_log`),
+  ADD KEY `idx_lpb_revision_log_request` (`id_request`),
+  ADD KEY `idx_lpb_revision_log_action` (`action_type`);
+
+--
 -- Indeks untuk tabel `tb_master_barang`
 --
 ALTER TABLE `tb_master_barang`
@@ -120464,7 +121310,8 @@ ALTER TABLE `tb_retur_pembelian`
   ADD UNIQUE KEY `uk_no_retur_pembelian` (`no_retur_pembelian`),
   ADD KEY `idx_lpb` (`id_lpb`),
   ADD KEY `idx_status` (`status`),
-  ADD KEY `idx_jurnal` (`id_jurnal`);
+  ADD KEY `idx_jurnal` (`id_jurnal`),
+  ADD KEY `idx_status_persiapan` (`status_persiapan`);
 
 --
 -- Indeks untuk tabel `tb_retur_pembelian_detail`
@@ -120673,6 +121520,15 @@ ALTER TABLE `tb_users`
   ADD KEY `idx_tb_users_status` (`status`);
 
 --
+-- Indeks untuk tabel `tb_user_facility`
+--
+ALTER TABLE `tb_user_facility`
+  ADD PRIMARY KEY (`id_user_facility`),
+  ADD UNIQUE KEY `uniq_user_facility` (`user_id`,`facility_key`),
+  ADD KEY `idx_facility_key` (`facility_key`),
+  ADD KEY `idx_module_key` (`module_key`);
+
+--
 -- Indeks untuk tabel `tb_user_level_mapping`
 --
 ALTER TABLE `tb_user_level_mapping`
@@ -120823,13 +121679,13 @@ ALTER TABLE `tbar_whats`
 -- AUTO_INCREMENT untuk tabel `tberp_stock_batch`
 --
 ALTER TABLE `tberp_stock_batch`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT untuk tabel `tberp_stock_ledger`
 --
 ALTER TABLE `tberp_stock_ledger`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbhrd_environment_issues`
@@ -120901,19 +121757,19 @@ ALTER TABLE `tbkeu_jenis_jurnal`
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal`
 --
 ALTER TABLE `tbkeu_jurnal`
-  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_detail`
 --
 ALTER TABLE `tbkeu_jurnal_detail`
-  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_log`
 --
 ALTER TABLE `tbkeu_jurnal_log`
-  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_karismaerp_import_batch`
@@ -120973,7 +121829,7 @@ ALTER TABLE `tbkeu_mapping_akun`
 -- AUTO_INCREMENT untuk tabel `tbkeu_nomor_dokumen`
 --
 ALTER TABLE `tbkeu_nomor_dokumen`
-  MODIFY `id_nomor` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id_nomor` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_pembayaran`
@@ -121159,7 +122015,7 @@ ALTER TABLE `tbpo_barang_packaging`
 -- AUTO_INCREMENT untuk tabel `tbpo_detail_po`
 --
 ALTER TABLE `tbpo_detail_po`
-  MODIFY `id_det_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_det_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_detail_po_nk`
@@ -121255,7 +122111,7 @@ ALTER TABLE `tbpo_note_barang`
 -- AUTO_INCREMENT untuk tabel `tbpo_note_direktur`
 --
 ALTER TABLE `tbpo_note_direktur`
-  MODIFY `id_note` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_note` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_note_pembelian`
@@ -121273,7 +122129,7 @@ ALTER TABLE `tbpo_nt_tmp_pembelian`
 -- AUTO_INCREMENT untuk tabel `tbpo_po`
 --
 ALTER TABLE `tbpo_po`
-  MODIFY `id_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_po_nk`
@@ -121357,7 +122213,7 @@ ALTER TABLE `tbpo_tmp_diskon`
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_item`
 --
 ALTER TABLE `tbpo_tmp_item`
-  MODIFY `id_tmp` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_tmp` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_item_nk`
@@ -121375,13 +122231,13 @@ ALTER TABLE `tbpo_tmp_note_barang`
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_tax`
 --
 ALTER TABLE `tbpo_tmp_tax`
-  MODIFY `id_tmp_tax` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_tmp_tax` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_tracking_po`
 --
 ALTER TABLE `tbpo_tracking_po`
-  MODIFY `id_po_tracking` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_po_tracking` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_transaksi`
@@ -121465,43 +122321,43 @@ ALTER TABLE `tbrp_spr_header`
 -- AUTO_INCREMENT untuk tabel `tbsim_bobotkpi`
 --
 ALTER TABLE `tbsim_bobotkpi`
-  MODIFY `idbobotkpi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `idbobotkpi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_hows`
 --
 ALTER TABLE `tbsim_hows`
-  MODIFY `id_how` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=177;
+  MODIFY `id_how` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=257;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_indikator_hows`
 --
 ALTER TABLE `tbsim_indikator_hows`
-  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=868;
+  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1508;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_indikator_whats`
 --
 ALTER TABLE `tbsim_indikator_whats`
-  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=493;
+  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=877;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_kpi`
 --
 ALTER TABLE `tbsim_kpi`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_whats`
 --
 ALTER TABLE `tbsim_whats`
-  MODIFY `id_what` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
+  MODIFY `id_what` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_activity_log`
 --
 ALTER TABLE `tbso_activity_log`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_approval_harga`
@@ -121519,37 +122375,37 @@ ALTER TABLE `tbso_cancel_partial_request`
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_detail`
 --
 ALTER TABLE `tbso_faktur_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_jurnal`
 --
 ALTER TABLE `tbso_faktur_jurnal`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_log`
 --
 ALTER TABLE `tbso_faktur_log`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_penjualan`
 --
 ALTER TABLE `tbso_faktur_penjualan`
-  MODIFY `id_faktur` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_faktur` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_sales_order`
 --
 ALTER TABLE `tbso_sales_order`
-  MODIFY `id_so` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_so` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_sales_order_detail`
 --
 ALTER TABLE `tbso_sales_order_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_akses_level`
@@ -121579,7 +122435,7 @@ ALTER TABLE `tb_barangv2`
 -- AUTO_INCREMENT untuk tabel `tb_bobotkpi`
 --
 ALTER TABLE `tb_bobotkpi`
-  MODIFY `idbobotkpi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=146;
+  MODIFY `idbobotkpi` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_bongkaran`
@@ -121663,7 +122519,7 @@ ALTER TABLE `tb_departemen`
 -- AUTO_INCREMENT untuk tabel `tb_detail_do`
 --
 ALTER TABLE `tb_detail_do`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_detail_mutasi`
@@ -121687,7 +122543,7 @@ ALTER TABLE `tb_det_tracking_driver`
 -- AUTO_INCREMENT untuk tabel `tb_do`
 --
 ALTER TABLE `tb_do`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_editlog_faktur`
@@ -121741,7 +122597,7 @@ ALTER TABLE `tb_gudang_wilayah`
 -- AUTO_INCREMENT untuk tabel `tb_hows`
 --
 ALTER TABLE `tb_hows`
-  MODIFY `id_how` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1774;
+  MODIFY `id_how` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1850;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_ics`
@@ -121777,13 +122633,13 @@ ALTER TABLE `tb_ics_supp`
 -- AUTO_INCREMENT untuk tabel `tb_indikator_hows`
 --
 ALTER TABLE `tb_indikator_hows`
-  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8144;
+  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8632;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_indikator_whats`
 --
 ALTER TABLE `tb_indikator_whats`
-  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4411;
+  MODIFY `id_indikator` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4723;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_issue`
@@ -121825,7 +122681,7 @@ ALTER TABLE `tb_kd_system_stock`
 -- AUTO_INCREMENT untuk tabel `tb_kpi`
 --
 ALTER TABLE `tb_kpi`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=595;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=619;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_kpi_history`
@@ -121891,19 +122747,19 @@ ALTER TABLE `tb_loading_lk_bck`
 -- AUTO_INCREMENT untuk tabel `tb_login_log`
 --
 ALTER TABLE `tb_login_log`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1093;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1123;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_confirm_sales`
 --
 ALTER TABLE `tb_log_confirm_sales`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_do`
 --
 ALTER TABLE `tb_log_do`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_ics`
@@ -121921,25 +122777,25 @@ ALTER TABLE `tb_log_mutasi`
 -- AUTO_INCREMENT untuk tabel `tb_lpb`
 --
 ALTER TABLE `tb_lpb`
-  MODIFY `id_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_batch`
 --
 ALTER TABLE `tb_lpb_batch`
-  MODIFY `id_batch` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_batch` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_detail`
 --
 ALTER TABLE `tb_lpb_detail`
-  MODIFY `id_detail_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_detail_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_log`
 --
 ALTER TABLE `tb_lpb_log`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_manual_log`
@@ -121958,6 +122814,24 @@ ALTER TABLE `tb_lpb_price_adjustment`
 --
 ALTER TABLE `tb_lpb_price_adjustment_detail`
   MODIFY `id_adjustment_detail` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tb_lpb_revision_request`
+--
+ALTER TABLE `tb_lpb_revision_request`
+  MODIFY `id_request` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT untuk tabel `tb_lpb_revision_request_detail`
+--
+ALTER TABLE `tb_lpb_revision_request_detail`
+  MODIFY `id_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT untuk tabel `tb_lpb_revision_request_log`
+--
+ALTER TABLE `tb_lpb_revision_request_log`
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_master_barang`
@@ -122131,7 +123005,7 @@ ALTER TABLE `tb_retur_pembelian_detail`
 -- AUTO_INCREMENT untuk tabel `tb_retur_pembelian_log`
 --
 ALTER TABLE `tb_retur_pembelian_log`
-  MODIFY `id_log` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_log` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_rutecs`
@@ -122299,7 +123173,13 @@ ALTER TABLE `tb_user`
 -- AUTO_INCREMENT untuk tabel `tb_users`
 --
 ALTER TABLE `tb_users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=226;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=227;
+
+--
+-- AUTO_INCREMENT untuk tabel `tb_user_facility`
+--
+ALTER TABLE `tb_user_facility`
+  MODIFY `id_user_facility` int UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_user_level_mapping`
@@ -122311,7 +123191,7 @@ ALTER TABLE `tb_user_level_mapping`
 -- AUTO_INCREMENT untuk tabel `tb_whats`
 --
 ALTER TABLE `tb_whats`
-  MODIFY `id_what` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=787;
+  MODIFY `id_what` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=831;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_wilayah`
@@ -122330,6 +123210,15 @@ ALTER TABLE `trashbin_do`
 --
 ALTER TABLE `users`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stockbarangnk`
+--
+DROP TABLE IF EXISTS `v_stockbarangnk`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stockbarangnk`  AS SELECT `x`.`kode_barangs` AS `kode_barangs`, `x`.`kode_barang` AS `kode_barang`, `x`.`nama_barang` AS `nama_barang`, `x`.`deskripsi` AS `deskripsi`, `x`.`gbr_barang` AS `gbr_barang`, `x`.`nama_lokasi` AS `nama_lokasi`, (coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) AS `qty_in`, (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0)) AS `qty_out`, ((coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) - (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0))) AS `qty_ready`, `x`.`id_s` AS `id_satuan`, `x`.`satuan` AS `satuan`, `x`.`id_brg_nk` AS `id_brg_nk`, `x`.`kat_barang` AS `kat_barang` FROM (select `a`.`kd_barang` AS `kode_barangs`,`a`.`kd_br_adm` AS `kode_barang`,`a`.`nama_barang` AS `nama_barang`,`a`.`descnk` AS `deskripsi`,`l`.`nama_lokasi` AS `nama_lokasi`,`b`.`id_satuan` AS `id_s`,`b`.`nm_satuan` AS `satuan`,`a`.`gbr_barang` AS `gbr_barang`,`a`.`id_brg_nk` AS `id_brg_nk`,`a`.`kat_barang` AS `kat_barang`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11512'))) AS `qty_out`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11514'))) AS `adjqty_out`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11511'))) AS `qty_in`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11513'))) AS `adjqty_in` from (((`tbpo_barang_nk` `a` join `tbpo_satuan` `b` on((`b`.`id_satuan` = `a`.`satuan`))) join `tbpo_kat_br` `c` on((`c`.`kd_kat` = `a`.`kat_barang`))) left join `tbpo_barang_nk_lokasi` `l` on((`l`.`id_lokasi` = `a`.`kd_lokasi`))) group by `a`.`kd_barang`) AS `x` ;
 
 --
 -- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
