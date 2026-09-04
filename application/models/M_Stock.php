@@ -137,7 +137,7 @@ class M_Stock extends CI_Model
                     COUNT(*) AS total_batch,
                     COALESCE(SUM(s.ledger_qty_on_hand), 0) AS qty,
                     COALESCE(SUM(s.ledger_qty_reserved), 0) AS qty_reserved,
-                    MIN(CASE WHEN s.ledger_qty_on_hand > 0 THEN NULLIF(s.expired_date, '0000-00-00') ELSE NULL END) AS nearest_expired_date,
+                    MIN(CASE WHEN s.ledger_qty_on_hand > 0 THEN NULLIF(DATE_FORMAT(s.expired_date, '%Y-%m-%d'), '0000-00-00') ELSE NULL END) AS nearest_expired_date,
                     MAX(s.last_ledger_at) AS last_ledger_at
                 FROM ({$snapshotSql}) s
                 LEFT JOIN tbpo_barang b ON b.kode_barang = s.kd_barang

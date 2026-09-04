@@ -9,10 +9,10 @@ class M_Distribusi extends CI_Model
     {
         return $this->db->query("SELECT
             r.kd_rute AS rute,
-            COALESCE(ROUND(SUM(CASE WHEN p.data_sts = '3' AND p.delivery_at <> '0000-00-00' THEN (b.berat * p.qty) ELSE 0 END ) / 1000000, 3), 0) AS tonase_terkirim,
+            COALESCE(ROUND(SUM(CASE WHEN p.data_sts = '3' AND CAST(p.delivery_at AS CHAR) <> '0000-00-00' THEN (b.berat * p.qty) ELSE 0 END ) / 1000000, 3), 0) AS tonase_terkirim,
             COALESCE(ROUND(SUM(CASE WHEN p.data_sts <> '3'THEN (b.berat * p.qty)ELSE 0 END) / 1000000, 3),0) AS tonase_belum_terkirim,
             COALESCE(ROUND(SUM(b.berat * p.qty) / 1000000, 3),0) AS total_tonase,
-            COUNT(DISTINCT CASE WHEN p.data_sts = '3' AND p.delivery_at <> '0000-00-00' THEN p.kd_faktur END) AS total_faktur_terkirim,
+            COUNT(DISTINCT CASE WHEN p.data_sts = '3' AND CAST(p.delivery_at AS CHAR) <> '0000-00-00' THEN p.kd_faktur END) AS total_faktur_terkirim,
             COUNT(DISTINCT CASE WHEN p.data_sts != '3' THEN p.kd_faktur END) AS total_faktur_pending,
             COUNT(DISTINCT p.kd_faktur) AS total_faktur
         FROM tb_rutecs r
@@ -43,7 +43,7 @@ class M_Distribusi extends CI_Model
             'tb_pre_do p',
             "p.kd_rute = r.kd_rute 
             AND p.delivery_at IS NOT NULL 
-            AND p.delivery_at <> '0000-00-00'",
+            AND CAST(p.delivery_at AS CHAR) <> '0000-00-00'",
             'left'
         );
 
@@ -196,7 +196,7 @@ class M_Distribusi extends CI_Model
                 COUNT(DISTINCT CASE 
                     WHEN data_sts = '3'
                         AND delivery_at IS NOT NULL
-                        AND delivery_at <> '0000-00-00'
+                        AND CAST(delivery_at AS CHAR) <> '0000-00-00'
                         AND delivery_at BETWEEN {$start_dt} AND {$end_dt}
                         {$rute_clause}
                     THEN kd_faktur
@@ -205,10 +205,10 @@ class M_Distribusi extends CI_Model
                     WHEN data_sts = '1'
                         AND (
                             (delivery_at IS NOT NULL
-                                AND delivery_at <> '0000-00-00'
+                                AND CAST(delivery_at AS CHAR) <> '0000-00-00'
                                 AND delivery_at BETWEEN {$start_dt} AND {$end_dt})
                             OR (
-                                (delivery_at IS NULL OR delivery_at = '0000-00-00')
+                                (delivery_at IS NULL OR CAST(delivery_at AS CHAR) = '0000-00-00')
                                 AND STR_TO_DATE(tgl_inputer, '%e/%c/%Y') BETWEEN {$start_date} AND {$end_date}
                             )
                         )
@@ -230,7 +230,7 @@ class M_Distribusi extends CI_Model
         $this->db->from('tb_pre_do');
         $this->db->where('data_sts', '3');
         $this->db->where('delivery_at IS NOT NULL', null, false);
-        $this->db->where('delivery_at <>', '0000-00-00');
+        $this->db->where("CAST(delivery_at AS CHAR) <> '0000-00-00'", null, false);
         $this->db->where('delivery_at >=', $start . ' 00:00:00');
         $this->db->where('delivery_at <=', $end . ' 23:59:59');
         if (!empty($rute)) {
@@ -292,7 +292,7 @@ class M_Distribusi extends CI_Model
             "p.kd_rute = r.kd_rute 
             AND p.data_sts = '3' 
             AND p.delivery_at IS NOT NULL 
-            AND p.delivery_at <> '0000-00-00'
+            AND CAST(p.delivery_at AS CHAR) <> '0000-00-00'
             AND p.delivery_at >= " . $this->db->escape($start . ' 00:00:00') . "
             AND p.delivery_at <= " . $this->db->escape($end . ' 23:59:59'),
             'left'

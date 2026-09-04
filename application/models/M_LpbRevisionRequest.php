@@ -113,8 +113,8 @@ class M_LpbRevisionRequest extends CI_Model
                 l.gudang_id,
                 l.status_lpb,
                 l.input_at,
-                COALESCE(NULLIF(TRIM(p.kd_suplier), ''), '') AS kd_supplier,
-                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-') AS nama_supplier,
+                COALESCE(NULLIF(TRIM(MAX(p.kd_suplier)), ''), '') AS kd_supplier,
+                COALESCE(NULLIF(TRIM(MAX(s.nama_suplier)), ''), MAX(p.kd_suplier), '-') AS nama_supplier,
                 COUNT(d.id_detail_lpb) AS total_detail,
                 SUM(COALESCE(d.qty_diterima, 0)) AS total_qty_lpb
             FROM tb_lpb l

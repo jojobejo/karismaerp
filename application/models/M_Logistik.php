@@ -4425,8 +4425,12 @@ FROM (
             ? "COALESCE(NULLIF(TRIM(b.no_lot), ''), NULLIF(TRIM(d.no_lot), ''), '')"
             : "COALESCE(NULLIF(TRIM(d.no_lot), ''), '')";
         $expiredExpr = $hasBatch
-            ? "COALESCE(NULLIF(b.expired_date, '0000-00-00'), NULLIF(d.expired_date, '0000-00-00'), '0000-00-00')"
-            : "COALESCE(NULLIF(d.expired_date, '0000-00-00'), '0000-00-00')";
+            ? "COALESCE(NULLIF(DATE_FORMAT(b.expired_date, '%Y-%m-%d'), '0000-00-00'), NULLIF(DATE_FORMAT(d.expired_date, '%Y-%m-%d'), '0000-00-00'), '')"
+            : "COALESCE(NULLIF(DATE_FORMAT(d.expired_date, '%Y-%m-%d'), '0000-00-00'), '')";
+        $hasFakturHeader = $this->db->table_exists('tbso_faktur_penjualan');
+        $fakturHeaderJoin = $hasFakturHeader
+            ? "INNER JOIN tbso_faktur_penjualan f ON f.id_faktur = fd.id_faktur AND COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')"
+            : "";
 
         $sql = "SELECT
                     d.id_lpb,
@@ -4439,7 +4443,8 @@ FROM (
                 INNER JOIN tbso_faktur_detail fd
                     ON fd.kd_barang = d.kd_barang
                     AND COALESCE(NULLIF(TRIM(fd.no_lot), ''), '') = {$lotExpr}
-                    AND COALESCE(NULLIF(fd.expired_date, '0000-00-00'), '0000-00-00') = {$expiredExpr}
+                    AND COALESCE(NULLIF(DATE_FORMAT(fd.expired_date, '%Y-%m-%d'), '0000-00-00'), '') = {$expiredExpr}
+                {$fakturHeaderJoin}
                 WHERE d.id_lpb IN ({$idSql})
                 GROUP BY d.id_lpb";
 
@@ -5843,8 +5848,7 @@ FROM (
                 COALESCE(NULLIF(pp.nama_barang, ''), mb.nama_barang, '-') AS nama_barang,
                 COALESCE(NULLIF(d.no_lot, ''), '-') AS no_lot,
                 CASE
-                    WHEN d.expired_date IS NULL THEN '-'
-                    WHEN d.expired_date = '0000-00-00' THEN '-'
+                    WHEN d.expired_date IS NULL OR CAST(d.expired_date AS CHAR) = '0000-00-00' THEN '-'
                     ELSE DATE_FORMAT(d.expired_date, '%d/%m/%Y')
                 END AS expired_date,
                 {$qtyLpbExpr} AS qty_in,
@@ -7574,7 +7578,7 @@ FROM (
                     )
                 INNER JOIN tbso_faktur_penjualan f
                     ON f.id_faktur = fd.id_faktur
-                    AND COALESCE(f.status, 'confirmed') <> 'cancelled'
+                    AND COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')
                 WHERE ld.id_lpb = ?
                 ORDER BY f.tanggal_faktur DESC, f.no_faktur ASC, fd.kd_barang ASC
                 LIMIT 200
@@ -7614,7 +7618,7 @@ FROM (
                     ON f.no_faktur = dd.kd_faktur
                 WHERE ld.id_lpb = ?
                     AND COALESCE(dd.status, 0) = 4
-                    AND (f.no_faktur IS NULL OR COALESCE(f.status, 'confirmed') <> 'cancelled')
+                    AND (f.no_faktur IS NULL OR COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft'))
                 ORDER BY dd.tgl_transaksi DESC, dd.kd_faktur ASC, dd.kd_barang ASC
                 LIMIT 200
             ", [$idLpb])->result_array();

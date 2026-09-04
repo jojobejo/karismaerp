@@ -248,8 +248,27 @@
                         Faktur Penjualan Loby: <strong><?= html_escape($faktur['no_faktur']) ?></strong>
                     </h2>
                     <div>
-                        <span class="badge badge-success px-3 py-2" style="font-size: 13px; letter-spacing: 0.5px; background:#047857;">
-                            <i class="fas fa-check-circle mr-1"></i> SELESAI DO
+                        <?php
+                        $fakturStatus = strtolower((string)($faktur['status'] ?? 'selesai'));
+                        $badgeClass = 'badge-success';
+                        $badgeBg = '#047857';
+                        $badgeIcon = 'fa-check-circle';
+                        $statusLabel = 'SELESAI';
+
+                        if ($fakturStatus === 'cancelled') {
+                            $badgeClass = 'badge-danger';
+                            $badgeBg = '#dc2626';
+                            $badgeIcon = 'fa-times-circle';
+                            $statusLabel = 'BATAL';
+                        } elseif ($fakturStatus === 'draft') {
+                            $badgeClass = 'badge-secondary';
+                            $badgeBg = '#64748b';
+                            $badgeIcon = 'fa-pencil-alt';
+                            $statusLabel = 'DRAFT';
+                        }
+                        ?>
+                        <span class="badge <?= $badgeClass ?> px-3 py-2" style="font-size: 13px; letter-spacing: 0.5px; background:<?= $badgeBg ?>;">
+                            <i class="fas <?= $badgeIcon ?> mr-1"></i> <?= $statusLabel ?>
                         </span>
                     </div>
                 </div>

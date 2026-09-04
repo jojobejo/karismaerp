@@ -252,9 +252,27 @@
                         Detail Sales Order Loby: <strong><?= html_escape($so['no_so']) ?></strong>
                     </h2>
                     <div>
-                        <?php if ($so['status'] === 'completed' || !empty($fakturs)): ?>
+                        <?php 
+                        $hasActiveFaktur = false;
+                        $hasDraftFaktur = false;
+                        if (!empty($fakturs)) {
+                            foreach ($fakturs as $fk) {
+                                if (in_array(($fk['status'] ?? ''), ['selesai', 'selesai_do', 'confirmed'])) {
+                                    $hasActiveFaktur = true;
+                                    break;
+                                } elseif (($fk['status'] ?? '') === 'draft') {
+                                    $hasDraftFaktur = true;
+                                }
+                            }
+                        }
+                        ?>
+                        <?php if ($hasActiveFaktur || ($so['status'] === 'completed' && !$hasDraftFaktur)): ?>
                             <span class="badge badge-success px-3 py-2" style="font-size: 13px; letter-spacing: 0.5px;">
                                 <i class="fas fa-check-double mr-1"></i> INVOICED / SELESAI
+                            </span>
+                        <?php elseif ($hasDraftFaktur): ?>
+                            <span class="badge badge-warning text-dark px-3 py-2 font-weight-bold" style="font-size: 13px; letter-spacing: 0.5px; background:#fef08a;">
+                                <i class="fas fa-pencil-alt mr-1 text-warning"></i> FAKTUR DRAFT (UNPOSTED)
                             </span>
                         <?php elseif ($so['status'] === 'cancelled'): ?>
                             <span class="badge badge-danger px-3 py-2" style="font-size: 13px; letter-spacing: 0.5px;">
@@ -438,11 +456,35 @@
                                         <tr class="text-center align-middle">
                                             <td class="font-weight-bold" style="color: var(--zahir-blue);"><?= html_escape($f['no_faktur']) ?></td>
                                             <td><?= date('d/m/Y', strtotime($f['tanggal_faktur'])) ?></td>
-                                            <td><span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> Selesai DO</span></td>
                                             <td>
-                                                <span class="badge badge-info px-2 py-1">
-                                                    <i class="fas fa-file-invoice mr-1"></i> Siap Bayar
-                                                </span>
+                                                <?php 
+                                                $fStatus = strtolower((string)($f['status'] ?? ''));
+                                                if ($fStatus === 'draft'): ?>
+                                                    <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold"><i class="fas fa-pencil-alt mr-1"></i> Draft</span>
+                                                <?php elseif ($fStatus === 'cancelled'): ?>
+                                                    <span class="badge badge-danger px-2 py-1"><i class="fas fa-times mr-1"></i> Batal</span>
+                                                <?php elseif (in_array($fStatus, ['selesai', 'selesai_do'])): ?>
+                                                    <span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> Selesai</span>
+                                                <?php elseif ($fStatus === 'proses_do'): ?>
+                                                    <span class="badge badge-info px-2 py-1"><i class="fas fa-truck mr-1"></i> Proses DO</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary px-2 py-1"><?= html_escape(ucfirst($f['status'])) ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if ($fStatus === 'draft'): ?>
+                                                    <span class="badge badge-secondary px-2 py-1">
+                                                        <i class="fas fa-clock mr-1"></i> Belum Posting
+                                                    </span>
+                                                <?php elseif ($fStatus === 'cancelled'): ?>
+                                                    <span class="badge badge-danger px-2 py-1">
+                                                        <i class="fas fa-ban mr-1"></i> Dibatalkan
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-info px-2 py-1">
+                                                        <i class="fas fa-file-invoice mr-1"></i> Siap Bayar
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
                                             <td><?= html_escape($f['create_by']) ?></td>
                                             <td>
