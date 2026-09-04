@@ -613,7 +613,7 @@ class C_SalesOrder extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_faktur_penjualan LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "enum") !== false) {
+        if (strpos($type, "'selesai'") !== false && strpos($type, "'draft'") !== false && strpos($type, "'proses_do'") !== false) {
             return;
         }
 
@@ -873,6 +873,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $this->_ensureFakturStatusEnum();
         $this->_ensureFakturPaymentInfoColumns();
         $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 

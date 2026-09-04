@@ -54,7 +54,7 @@ class C_Logistik extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_faktur_penjualan LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "enum") !== false) {
+        if (strpos($type, "'selesai'") !== false && strpos($type, "'draft'") !== false && strpos($type, "'proses_do'") !== false) {
             return;
         }
 
