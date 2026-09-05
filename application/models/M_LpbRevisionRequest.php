@@ -161,6 +161,7 @@ class M_LpbRevisionRequest extends CI_Model
     public function rows($limit = 100)
     {
         $this->ensure_schema();
+        $this->sync_active_requests_status();
         return $this->db->query("
             SELECT
                 r.*,
@@ -178,6 +179,8 @@ class M_LpbRevisionRequest extends CI_Model
     public function detail($idRequest)
     {
         $this->ensure_schema();
+        $this->sync_invoices_status((int) $idRequest);
+
         $request = $this->db
             ->where('id_request', (int) $idRequest)
             ->limit(1)
@@ -207,6 +210,139 @@ class M_LpbRevisionRequest extends CI_Model
             'details' => $details,
             'logs' => $logs,
         ];
+    }
+
+    /**
+     * Memeriksa seluruh request revisi aktif dan menyinkronkan faktur yang telah di-unpost oleh ADMPNJ
+     */
+    public function sync_active_requests_status()
+    {
+        $activeRequests = $this->db
+            ->select('id_request')
+            ->where_in('status', [self::STATUS_REQUESTED, self::STATUS_PROCESS])
+            ->get('tb_lpb_revision_request')
+            ->result_array();
+
+        foreach ($activeRequests as $req) {
+            $this->sync_invoices_status((int) $req['id_request']);
+        }
+    }
+
+    /**
+     * Sinkronisasi faktur spesifik ketika Admin Penjualan meng-unpost dari Admin Transaksi
+     */
+    public function sync_by_no_faktur($noFaktur, $user = 'ADMPNJ')
+    {
+        $noFaktur = trim((string) $noFaktur);
+        if ($noFaktur === '' || !$this->db->table_exists('tb_lpb_revision_request_detail')) {
+            return;
+        }
+
+        $requests = $this->db
+            ->select('id_request')
+            ->where('no_faktur', $noFaktur)
+            ->where('status', self::STATUS_REQUESTED)
+            ->group_by('id_request')
+            ->get('tb_lpb_revision_request_detail')
+            ->result_array();
+
+        foreach ($requests as $row) {
+            $this->sync_invoices_status((int) $row['id_request'], $user);
+        }
+    }
+
+    /**
+     * Sinkronisasi status riil faktur penjualan pada tabel tbso_faktur_penjualan
+     */
+    public function sync_invoices_status($idRequest, $triggerUser = null)
+    {
+        $idRequest = (int) $idRequest;
+        if ($idRequest <= 0) {
+            return;
+        }
+
+        $pendingDetails = $this->db
+            ->where('id_request', $idRequest)
+            ->where('status', self::STATUS_REQUESTED)
+            ->get('tb_lpb_revision_request_detail')
+            ->result_array();
+
+        if (empty($pendingDetails)) {
+            return;
+        }
+
+        $updatedFakturs = [];
+        $unpostUser = $triggerUser ?: 'ADMPNJ';
+
+        foreach ($pendingDetails as $detail) {
+            $noFaktur = trim((string) ($detail['no_faktur'] ?? ''));
+            if ($noFaktur === '') {
+                continue;
+            }
+
+            $isUnposted = false;
+            if ($detail['source_table'] === 'tbso_faktur_detail' || (int) ($detail['id_faktur'] ?? 0) > 0) {
+                $faktur = $this->db
+                    ->select('id_faktur, status, update_by')
+                    ->where('no_faktur', $noFaktur)
+                    ->get('tbso_faktur_penjualan')
+                    ->row_array();
+
+                if ($faktur && in_array(strtolower((string) $faktur['status']), ['draft', 'cancelled'], true)) {
+                    $isUnposted = true;
+                    if (!empty($faktur['update_by'])) {
+                        $unpostUser = $faktur['update_by'];
+                    }
+                }
+            } elseif ($detail['source_table'] === 'tb_detail_do' && (int) ($detail['source_pk'] ?? 0) > 0) {
+                $dd = $this->db
+                    ->select('id, status')
+                    ->where('id', (int) $detail['source_pk'])
+                    ->get('tb_detail_do')
+                    ->row_array();
+
+                if ($dd && (int) $dd['status'] === 2) {
+                    $isUnposted = true;
+                }
+            }
+
+            if ($isUnposted) {
+                $this->db
+                    ->where('id_detail', (int) $detail['id_detail'])
+                    ->update('tb_lpb_revision_request_detail', [
+                        'status'             => 'UNPOSTED',
+                        'unpost_by'          => $unpostUser,
+                        'unpost_at'          => date('Y-m-d H:i:s'),
+                        'catatan_accounting' => 'Faktur telah di-unpost oleh Admin Penjualan melalui Admin Transaksi.',
+                    ]);
+                $updatedFakturs[$noFaktur] = true;
+            }
+        }
+
+        if (!empty($updatedFakturs)) {
+            $remaining = $this->remaining_requested_detail($idRequest);
+            $req = $this->request_row($idRequest);
+            $beforeStatus = $req['status'] ?? self::STATUS_REQUESTED;
+            $newStatus = $remaining > 0 ? self::STATUS_PROCESS : self::STATUS_READY;
+
+            if ($newStatus !== $beforeStatus) {
+                $this->update_request_status($idRequest, $newStatus, [
+                    'accounting_by' => $unpostUser,
+                    'accounting_at' => date('Y-m-d H:i:s'),
+                ]);
+                $fakturList = implode(', ', array_keys($updatedFakturs));
+                $this->insert_log(
+                    $idRequest,
+                    'SYNC_UNPOST_FAKTUR',
+                    $beforeStatus,
+                    $newStatus,
+                    'Faktur (' . $fakturList . ') telah di-unpost oleh Admin Penjualan via Admin Transaksi Hub.',
+                    ['faktur' => array_keys($updatedFakturs)],
+                    null,
+                    $unpostUser
+                );
+            }
+        }
     }
 
     public function create_request($idLpb, $alasan, $user)

@@ -850,6 +850,12 @@ class M_Transaksi extends CI_Model
                             'created_at'     => $now,
                         ]);
                     }
+
+                    // Sinkronisasi status jika faktur terdaftar pada request revisi harga LPB
+                    if ($this->db->table_exists('tb_lpb_revision_request_detail')) {
+                        $this->load->model('M_LpbRevisionRequest');
+                        $this->M_LpbRevisionRequest->sync_by_no_faktur($faktur['no_faktur'], $user_nama);
+                    }
                     break;
 
                 case 'pembelian':

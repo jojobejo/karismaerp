@@ -784,18 +784,10 @@ class C_Ics extends CI_Controller
         if (!$this->input->is_ajax_request()) {
             show_404();
         }
-        if (!$this->can_lpb_revision_accounting()) {
-            $this->json_response(['status' => false, 'message' => 'Akses unpost faktur hanya untuk Accounting/Keuangan/Admin.']);
-            return;
-        }
-
-        $result = $this->M_LpbRevisionRequest->unpost_sales_invoice(
-            (int) $this->input->post('id_request', true),
-            $this->input->post('no_faktur', true),
-            $this->active_user_name()
-        );
-
-        $this->json_response(['status' => !empty($result['success']), 'message' => $result['message'] ?? '', 'data' => $result]);
+        $this->json_response([
+            'status'  => false,
+            'message' => 'Eksekusi unpost faktur penjualan dipusatkan dan dilakukan oleh Admin Penjualan (ADMPNJ) melalui menu Admin Transaksi (admin/transaksi).'
+        ]);
     }
 
     public function ajax_lpb_revision_unpost_lpb()

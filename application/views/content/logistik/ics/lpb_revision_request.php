@@ -499,17 +499,23 @@ $statusBadge = function ($status) {
                     groups[noFaktur].push(row);
                 });
 
-                var html = '';
+                var html = '<div class="alert alert-info py-2 px-3 mb-3">' +
+                    '<i class="fas fa-info-circle mr-1"></i> <strong>Alur Revisi Harga:</strong> ' +
+                    'Eksekusi unpost dan repost faktur penjualan dilakukan oleh <strong>Admin Penjualan (ADMPNJ)</strong> ' +
+                    'melalui menu <a href="<?= base_url('admin/transaksi') ?>" target="_blank" class="alert-link font-weight-bold">' +
+                    '<i class="fas fa-external-link-alt ml-1"></i> Admin Transaksi Hub</a>. ' +
+                    'Setelah faktur di-unpost oleh ADMPNJ, status di halaman ini akan otomatis berubah menjadi <strong>Siap Unpost LPB</strong>.' +
+                    '</div>';
+
                 Object.keys(groups).forEach(function(noFaktur) {
                     var rows = groups[noFaktur];
                     var pending = rows.some(function(row) { return row.status === 'REQUESTED'; });
                     html += '<div class="detail-group-title">';
                     html += '<div><strong>Faktur: ' + escapeHtml(noFaktur) + '</strong> <span class="text-muted">(' + rows.length + ' item)</span></div>';
-                    if (canAccounting && pending && (request.status === 'REQUESTED' || request.status === 'ACCOUNTING_PROCESS')) {
-                        html += '<button type="button" class="btn btn-danger btn-sm btn-unpost-faktur" data-id-request="' + escapeHtml(request.id_request) + '" data-no-faktur="' + escapeHtml(noFaktur) + '">' +
-                            '<i class="fas fa-undo mr-1"></i> Unpost Faktur</button>';
+                    if (pending) {
+                        html += '<div><span class="badge badge-warning px-2 py-1"><i class="fas fa-clock mr-1"></i> Menunggu Unpost ADMPNJ</span></div>';
                     } else {
-                        html += statusBadge(pending ? 'REQUESTED' : 'UNPOSTED');
+                        html += '<div><span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Faktur Sudah Di-unpost</span></div>';
                     }
                     html += '</div>';
                     html += '<div class="table-responsive"><table class="table table-sm table-bordered mb-0">';
@@ -523,7 +529,7 @@ $statusBadge = function ($status) {
                             '<td class="text-right">' + formatNumber(row.qty_lpb) + '</td>' +
                             '<td class="text-right">' + formatNumber(row.qty_terjual) + '</td>' +
                             '<td>' + escapeHtml(row.source_table) + '</td>' +
-                            '<td>' + statusBadge(row.status) + '</td>' +
+                            '<td>' + (row.status === 'UNPOSTED' ? '<span class="badge badge-success">UNPOSTED</span>' : '<span class="badge badge-warning">MENUNGGU ADMPNJ</span>') + '</td>' +
                         '</tr>';
                     });
                     html += '</tbody></table></div>';
@@ -545,26 +551,6 @@ $statusBadge = function ($status) {
                 });
                 $('#detailRevisionLogs').html(html || '<tr><td colspan="5" class="text-center text-muted">Belum ada log.</td></tr>');
             }
-
-            $(document).on('click', '.btn-unpost-faktur', function() {
-                var idRequest = $(this).data('id-request');
-                var noFaktur = $(this).data('no-faktur');
-                if (!confirm('Unpost faktur ' + noFaktur + ' sesuai request revisi LPB?')) {
-                    return;
-                }
-
-                $.post('<?= base_url('ics/lpb_revision/unpost_faktur') ?>', {
-                    id_request: idRequest,
-                    no_faktur: noFaktur
-                }, function(res) {
-                    alert(res.message || 'Unpost faktur diproses.');
-                    if (res.status) {
-                        loadDetail(idRequest);
-                    }
-                }, 'json').fail(function() {
-                    alert('Unpost faktur gagal diproses.');
-                });
-            });
 
             $(document).on('click', '.btn-unpost-lpb', function() {
                 var idRequest = $(this).data('id-request');
