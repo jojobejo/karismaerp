@@ -265,8 +265,59 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
     .dashboard-tone-purple { --tile-a: #9d1bbb; --tile-b: #cf25c9; }
     .dashboard-tone-teal { --tile-a: #2d929b; --tile-b: #50b8c0; }
     .dashboard-tone-dark { --tile-a: #343a40; --tile-b: #59626e; }
-    .dashboard-tone-brown { --tile-a: #8b5737; --tile-b: #ad7552; }
     .dashboard-tone-cyan { --tile-a: #1287a8; --tile-b: #26bad1; }
+
+    @keyframes bellShake {
+        0% { transform: rotate(0deg) scale(1); }
+        10% { transform: rotate(-16deg) scale(1.08); }
+        20% { transform: rotate(16deg) scale(1.08); }
+        30% { transform: rotate(-12deg) scale(1.05); }
+        40% { transform: rotate(12deg) scale(1.05); }
+        50% { transform: rotate(-6deg) scale(1.02); }
+        60% { transform: rotate(6deg) scale(1.02); }
+        70% { transform: rotate(0deg) scale(1); }
+        100% { transform: rotate(0deg) scale(1); }
+    }
+
+    .btn-notif-shake {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        color: #fff !important;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 16px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 6px 18px rgba(220, 38, 38, 0.4);
+        transition: transform .2s ease, box-shadow .2s ease;
+        position: relative;
+    }
+
+    .btn-notif-shake:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(220, 38, 38, 0.55);
+        text-decoration: none;
+    }
+
+    .btn-notif-shake i.fa-bell {
+        animation: bellShake 1.4s infinite ease-in-out;
+        transform-origin: top center;
+        display: inline-block;
+        font-size: 17px;
+    }
+
+    .btn-notif-shake .notif-badge {
+        background: #fff;
+        color: #dc2626;
+        font-size: 12px;
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 2px 7px;
+        line-height: 1.2;
+    }
 
     @media (max-width: 1399.98px) {
         .dashboard-menu-grid {
@@ -341,8 +392,17 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                         <div>
                             <h1>KARISMAERP</h1>
                         </div>
-                        <div class="dashboard-badge">
-                            <i class="fas fa-user-shield mr-2"></i> <?= html_escape($jobdesk ?: 'USER') ?> · LV <?= html_escape((string)$lv) ?>
+                        <div class="d-flex align-items-center" style="gap: 12px; flex-wrap: wrap;">
+                            <?php if (!empty($is_admpnj) && !empty($lpb_notification_count)): ?>
+                                <button type="button" class="btn-notif-shake" data-toggle="modal" data-target="#modalNotifikasiRevisiLpb" title="Klik untuk melihat notifikasi permintaan revisi harga LPB">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Revisi Harga LPB</span>
+                                    <span class="notif-badge"><?= (int)$lpb_notification_count ?></span>
+                                </button>
+                            <?php endif; ?>
+                            <div class="dashboard-badge">
+                                <i class="fas fa-user-shield mr-2"></i> <?= html_escape($jobdesk ?: 'USER') ?> · LV <?= html_escape((string)$lv) ?>
+                            </div>
                         </div>
                     </div>
 
@@ -413,3 +473,100 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                 });
         });
     </script>
+
+<?php if (!empty($is_admpnj)): ?>
+<!-- MODAL NOTIFIKASI REVISI HARGA LPB UNTUK ADMPNJ -->
+<div class="modal fade" id="modalNotifikasiRevisiLpb" tabindex="-1" role="dialog" aria-labelledby="modalNotifLpbTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-gradient-danger text-white py-3">
+                <h5 class="modal-title font-weight-bold" id="modalNotifLpbTitle">
+                    <i class="fas fa-bell mr-2"></i> Notifikasi Permintaan Revisi Harga LPB
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 1;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4" style="background-color: #f8fafc; max-height: 70vh; overflow-y: auto;">
+                <?php if (empty($lpb_notifications)): ?>
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5>Tidak Ada Permintaan Revisi LPB Aktif</h5>
+                        <p class="small mb-0">Semua faktur penjualan berjalan normal dan tidak ada request revisi harga LPB yang tertunda.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-warning border-0 shadow-sm mb-3">
+                        <div class="d-flex">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning mr-3 mt-1"></i>
+                            <div>
+                                <strong class="text-dark font-weight-bold">Perhatian Admin Penjualan (ADMPNJ):</strong>
+                                <p class="mb-0 text-muted small mt-1">
+                                    Terdapat permintaan revisi harga LPB dari Purchasing/Logistik. Anda perlu melakukan <strong>Posting Ulang (Repost)</strong> pada Faktur Penjualan yang terdampak melalui menu <strong>Faktur Penjualan (Modul Transaksi)</strong> agar penyesuaian HPP barang dapat sinkron dengan benar.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php foreach ($lpb_notifications as $notif): ?>
+                        <div class="card card-outline card-danger shadow-sm mb-3">
+                            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center flex-wrap">
+                                <div>
+                                    <span class="badge badge-danger mr-2 px-2 py-1 font-weight-bold"><?= htmlspecialchars($notif['no_request']) ?></span>
+                                    <strong class="text-dark">LPB: <?= htmlspecialchars($notif['nomor_lpb'] ?: ('ID #' . $notif['id_lpb'])) ?></strong>
+                                </div>
+                                <span class="badge badge-warning text-dark font-weight-bold px-2 py-1">
+                                    <i class="fas fa-clock mr-1"></i><?= htmlspecialchars($notif['status']) ?>
+                                </span>
+                            </div>
+                            <div class="card-body py-3">
+                                <div class="row mb-2 small">
+                                    <div class="col-sm-6 mb-1">
+                                        <span class="text-muted">Supplier:</span> <strong><?= htmlspecialchars($notif['nama_supplier'] ?: '-') ?></strong>
+                                    </div>
+                                    <div class="col-sm-6 mb-1 text-sm-right">
+                                        <span class="text-muted">Diminta oleh:</span> <strong><?= htmlspecialchars($notif['requested_by'] ?: 'Purchasing') ?></strong> (<?= !empty($notif['requested_at']) ? date('d/m/Y H:i', strtotime($notif['requested_at'])) : '-' ?>)
+                                    </div>
+                                </div>
+                                <?php if (!empty($notif['alasan_revisi'])): ?>
+                                    <div class="bg-light p-2 rounded mb-2 small text-muted">
+                                        <i class="fas fa-info-circle mr-1 text-info"></i>Alasan: "<?= htmlspecialchars($notif['alasan_revisi']) ?>"
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="mt-2">
+                                    <span class="small font-weight-bold text-danger d-block mb-1">
+                                        <i class="fas fa-file-invoice mr-1"></i>Faktur Penjualan yang Terdampak (Butuh Repost):
+                                    </span>
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        <?php if (!empty($notif['fakturs'])): ?>
+                                            <?php foreach ($notif['fakturs'] as $fak): ?>
+                                                <span class="badge <?= $fak['is_unposted'] ? 'badge-success' : 'badge-danger' ?> px-2 py-1 mr-1 mb-1 font-weight-bold" style="font-size: 12px;">
+                                                    <i class="fas <?= $fak['is_unposted'] ? 'fa-check' : 'fa-exclamation-circle' ?> mr-1"></i>
+                                                    <?= htmlspecialchars($fak['no_faktur']) ?>
+                                                    <?= $fak['is_unposted'] ? '(Sudah Diproses)' : '(Perlu Repost)' ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted small">- Tidak ada faktur terdampak -</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light py-2 text-right">
+                                <a href="<?= base_url('admin/transaksi?ref=lpb_revision&no_request=' . urlencode($notif['no_request']) . '&faktur=' . urlencode($notif['faktur_list_str'])) ?>" class="btn btn-danger btn-sm font-weight-bold shadow-sm">
+                                    <i class="fas fa-external-link-alt mr-1"></i> Buka Faktur Penjualan (Admin Transaksi)
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>

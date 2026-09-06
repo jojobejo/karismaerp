@@ -708,4 +708,128 @@ class M_LpbRevisionRequest extends CI_Model
     {
         return ['success' => false, 'message' => $message];
     }
+
+    /**
+     * Mengambil daftar notifikasi request revisi harga LPB aktif untuk Admin Penjualan (ADMPNJ)
+     * Request yang masih aktif dan memerlukan penanganan faktur penjualan (unpost / repost)
+     */
+    public function get_active_notifications_for_admpnj()
+    {
+        $this->ensure_schema();
+        $requests = $this->db
+            ->where_in('status', [self::STATUS_REQUESTED, self::STATUS_PROCESS, self::STATUS_READY])
+            ->order_by('requested_at', 'DESC')
+            ->get('tb_lpb_revision_request')
+            ->result_array();
+
+        if (empty($requests)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($requests as $req) {
+            $details = $this->db
+                ->where('id_request', (int)$req['id_request'])
+                ->get('tb_lpb_revision_request_detail')
+                ->result_array();
+
+            $fakturs = [];
+            $pendingRepostCount = 0;
+            foreach ($details as $d) {
+                $noFak = trim((string)$d['no_faktur']);
+                if ($noFak !== '' && !isset($fakturs[$noFak])) {
+                    $fakturs[$noFak] = [
+                        'no_faktur'      => $noFak,
+                        'id_faktur'      => (int)($d['id_faktur'] ?? 0),
+                        'tanggal_faktur' => $d['tanggal_faktur'] ?? null,
+                        'status'         => $d['status'],
+                        'is_unposted'    => ($d['status'] === 'UNPOSTED'),
+                    ];
+                    if ($d['status'] !== 'UNPOSTED') {
+                        $pendingRepostCount++;
+                    }
+                }
+            }
+
+            $req['fakturs'] = array_values($fakturs);
+            $req['faktur_list_str'] = implode(', ', array_keys($fakturs));
+            $req['pending_repost_count'] = $pendingRepostCount;
+            $result[] = $req;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Mengambil daftar nomor faktur unik yang terdampak request revisi harga LPB aktif
+     * yang membutuhkan proses unpost / repost oleh Admin Penjualan
+     */
+    public function get_pending_repost_invoices()
+    {
+        $this->ensure_schema();
+        $rows = $this->db->query("
+            SELECT DISTINCT d.no_faktur, d.id_faktur, d.status AS detail_status, r.id_request, r.no_request, r.nomor_lpb, r.status AS request_status
+            FROM tb_lpb_revision_request_detail d
+            INNER JOIN tb_lpb_revision_request r ON r.id_request = d.id_request
+            WHERE r.status IN ('REQUESTED', 'ACCOUNTING_PROCESS', 'READY_LPB_UNPOST')
+            ORDER BY d.no_faktur ASC
+        ")->result_array();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $noFaktur = trim((string)$r['no_faktur']);
+            if ($noFaktur !== '') {
+                $map[$noFaktur] = $r;
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * Sinkronisasi status detail request revisi saat faktur di-repost oleh Admin Penjualan di modul Transaksi
+     */
+    public function sync_faktur_reposted($noFaktur, $user = null)
+    {
+        $this->ensure_schema();
+        $noFaktur = trim((string)$noFaktur);
+        if ($noFaktur === '') return false;
+
+        $pendingDetails = $this->db
+            ->select('d.*, r.status as request_status')
+            ->from('tb_lpb_revision_request_detail d')
+            ->join('tb_lpb_revision_request r', 'r.id_request = d.id_request')
+            ->where('d.no_faktur', $noFaktur)
+            ->where_in('r.status', [self::STATUS_REQUESTED, self::STATUS_PROCESS])
+            ->where('d.status', self::STATUS_REQUESTED)
+            ->get()
+            ->result_array();
+
+        if (empty($pendingDetails)) {
+            return false;
+        }
+
+        foreach ($pendingDetails as $pd) {
+            $idRequest = (int)$pd['id_request'];
+            $this->db
+                ->where('id_request', $idRequest)
+                ->where('no_faktur', $noFaktur)
+                ->where('status', self::STATUS_REQUESTED)
+                ->update('tb_lpb_revision_request_detail', [
+                    'status' => 'UNPOSTED',
+                    'unpost_by' => $user ?: 'ADMPNJ',
+                    'unpost_at' => date('Y-m-d H:i:s'),
+                    'catatan_accounting' => 'Faktur penjualan di-repost oleh Admin Penjualan dari Modul Transaksi untuk sinkronisasi revisi harga LPB.',
+                ]);
+
+            $newStatus = $this->remaining_requested_detail($idRequest) > 0 ? self::STATUS_PROCESS : self::STATUS_READY;
+            $this->update_request_status($idRequest, $newStatus, [
+                'accounting_by' => $user ?: 'ADMPNJ',
+                'accounting_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->insert_log($idRequest, 'REPOST_SALES_INVOICE_ADMPNJ', $pd['request_status'], $newStatus, 'Admin Penjualan me-repost faktur penjualan ' . $noFaktur . ' dari modul transaksi.', ['no_faktur' => $noFaktur], null, $user);
+        }
+
+        return true;
+    }
 }

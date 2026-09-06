@@ -57,6 +57,11 @@ class C_Transaksi extends CI_Controller
         $data['today'] = date('Y-m-d');
         $data['first_day_of_month'] = date('Y-m-01');
 
+        // Ambil data faktur yang butuh repost terkait request revisi harga LPB
+        $this->load->model('M_LpbRevisionRequest');
+        $data['lpb_pending_repost_invoices'] = $this->M_LpbRevisionRequest->get_pending_repost_invoices();
+        $data['lpb_active_requests'] = $this->M_LpbRevisionRequest->get_active_notifications_for_admpnj();
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/transaksi/index.php', $data);
         $this->load->view('partial/main/footer.php');

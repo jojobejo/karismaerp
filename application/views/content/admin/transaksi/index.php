@@ -85,6 +85,26 @@
                     </div>
                 </div>
 
+                <!-- ALERT BANNER: REVISI HARGA LPB MEMBUTUHKAN REPOST FAKTUR PENJUALAN -->
+                <?php if (!empty($lpb_pending_repost_invoices)): ?>
+                <div class="alert alert-danger shadow-sm border-0 py-2 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap" id="bannerRevisiLpbAlert" style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); color: #fff;">
+                    <div class="d-flex align-items-center flex-wrap">
+                        <i class="fas fa-exclamation-circle mr-2 text-warning" style="font-size: 1.15rem;"></i>
+                        <strong class="mr-2 text-white" style="font-size: 0.95rem;">Faktur Butuh Repost (Revisi LPB):</strong>
+                        <div class="d-inline-flex flex-wrap align-items-center" id="boxListFakturRevisiLpb" style="gap: 6px;">
+                            <?php foreach ($lpb_pending_repost_invoices as $noFak => $info): ?>
+                                <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 shadow-sm" style="font-size: 12.5px;">
+                                    <i class="fas fa-file-invoice mr-1"></i><?= htmlspecialchars($noFak) ?><?php if (!empty($info['nomor_lpb'])): ?> <span class="text-dark-50">(LPB: <?= htmlspecialchars($info['nomor_lpb']) ?>)</span><?php endif; ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <small class="text-white-50 font-italic mt-1 mt-md-0">
+                        *Lakukan repost pada baris faktur di bawah untuk sinkronisasi HPP revisi LPB
+                    </small>
+                </div>
+                <?php endif; ?>
+
                 <!-- MAIN CARD -->
                 <div class="card card-outline card-teal shadow-sm">
                     <!-- CATEGORY TABS & ACTION BUTTONS -->
@@ -495,12 +515,33 @@
 </style>
 
 <script>
+window.LPB_REPOST_INVOICES = <?= json_encode(!empty($lpb_pending_repost_invoices) ? $lpb_pending_repost_invoices : (object)[]) ?>;
+window.LPB_ACTIVE_REQUESTS = <?= json_encode(!empty($lpb_active_requests) ? $lpb_active_requests : []) ?>;
+
 $(document).ready(function() {
     let currentCategory = '<?= !empty($is_admpnj_only) ? "penjualan" : "all" ?>';
     let currentPageLimit = 50;
     let currentPageOffset = 0;
     let totalRecords = 0;
     let currentAjax = null;
+
+    // Cek apakah halaman dibuka via redirect notifikasi revisi LPB dashboard
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('ref') === 'lpb_revision') {
+        currentCategory = 'penjualan';
+        $('#trans-category-tabs .nav-link').removeClass('active');
+        $('#trans-category-tabs .nav-link[data-category="penjualan"]').addClass('active');
+
+        // Buka rentang filter tanggal agar faktur lama/baru langsung terjaring
+        $('#filter-date-from').val('');
+        $('#filter-date-to').val('');
+
+        const fakturParam = urlParams.get('faktur');
+        if (fakturParam) {
+            const firstFaktur = fakturParam.split(',')[0].trim();
+            $('#filter-search').val(firstFaktur);
+        }
+    }
 
     // Load initial data
     loadTransactions();
@@ -616,12 +657,18 @@ $(document).ready(function() {
             const statusBadge = getStatusBadge(row.status_transaksi);
             const journalBadge = getJournalBadge(row);
 
+            const docNoClean = String(row.no_dokumen || '').trim();
+            const lpbInfo = (window.LPB_REPOST_INVOICES && window.LPB_REPOST_INVOICES[docNoClean]) ? window.LPB_REPOST_INVOICES[docNoClean] : null;
+
             html += `
-                <tr>
+                <tr class="${lpbInfo ? 'table-warning' : ''}" style="${lpbInfo ? 'border-left: 4px solid #dc2626;' : ''}">
                     <td class="text-center font-weight-bold">${no}</td>
                     <td class="text-center">${row.tanggal_transaksi || '-'}</td>
                     <td>
-                        <div class="font-weight-bold text-dark">${escapeHtml(row.no_dokumen)}</div>
+                        <div class="font-weight-bold text-dark d-flex align-items-center flex-wrap">
+                            <span>${escapeHtml(row.no_dokumen)}</span>
+                            ${lpbInfo ? `<span class="badge badge-danger px-2 py-1 ml-2 font-weight-bold" style="font-size: 11px;" title="Faktur ini perlu di-repost untuk penyesuaian Permintaan Revisi Harga LPB (${escapeHtml(lpbInfo.nomor_lpb || lpbInfo.no_request)})"><i class="fas fa-exclamation-circle mr-1"></i>Butuh Repost (Revisi LPB)</span>` : ''}
+                        </div>
                         ${row.no_referensi ? `<small class="text-muted"><i class="fas fa-link mr-1"></i>${escapeHtml(row.no_referensi)}</small>` : ''}
                     </td>
                     <td>${categoryBadge}</td>
@@ -640,8 +687,8 @@ $(document).ready(function() {
                             <button type="button" class="btn btn-teal text-white btn-xs btn-edit" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Edit & Sinkronkan Jurnal">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn btn-warning btn-xs btn-repost" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Unpost Transaksi & Jurnal">
-                                <i class="fas fa-undo"></i>
+                            <button type="button" class="btn ${lpbInfo ? 'btn-danger font-weight-bold' : 'btn-warning'} btn-xs btn-repost" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="${lpbInfo ? 'Klik untuk Repost Faktur ini & Sinkronkan Revisi LPB' : 'Unpost Transaksi & Jurnal'}">
+                                <i class="fas fa-undo mr-1"></i>${lpbInfo ? 'Repost LPB' : ''}
                             </button>
                             <button type="button" class="btn btn-danger btn-xs btn-delete" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Hapus Transaksi & Bersihkan Jurnal">
                                 <i class="fas fa-trash"></i>
