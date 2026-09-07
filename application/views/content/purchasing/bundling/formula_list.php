@@ -1,3 +1,10 @@
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+    <!-- Navbar -->
+    <?php $this->load->view('partial/main/navbar') ?>
+    <!-- Main Sidebar Container -->
+    <?php $this->load->view('partial/main/sidebar') ?>
+
 <div class="content-wrapper" style="min-height: 850px; background: #f8fafc;">
     <div class="content-header">
         <div class="container-fluid">
@@ -70,6 +77,9 @@
         </div>
     </section>
 </div>
+<!-- /.content-wrapper -->
+</div>
+<!-- /.wrapper -->
 
 <!-- Modal Form Formula -->
 <div class="modal fade" id="modalFormula" tabindex="-1" role="dialog" aria-hidden="true">
@@ -140,9 +150,56 @@
     </div>
 </div>
 
+<!-- Modal Pencarian Barang Stok Batch -->
+<div class="modal fade" id="modalSearchBarangFormula" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title font-weight-bold">
+                    <i class="fas fa-boxes mr-2"></i> Pilih Komponen dari Stok Batch (tberp_stock_batch)
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="input-group mb-3">
+                    <input type="text" id="searchBarangFormulaInput" class="form-control" placeholder="Cari nama barang atau kode barang...">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="button" id="btnDoSearchFormula">
+                            <i class="fas fa-search mr-1"></i> Cari
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="max-height: 380px;">
+                    <table class="table table-hover table-sm" id="tableSearchResultFormula">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 20%;">Kode Barang</th>
+                                <th style="width: 40%;">Nama Barang</th>
+                                <th style="width: 15%;" class="text-right">Stok Batch</th>
+                                <th style="width: 10%;" class="text-center">Satuan</th>
+                                <th style="width: 15%;" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" class="text-center text-muted py-4">Memuat data barang dari stok batch...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-1 bg-light d-flex justify-content-between">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle mr-1 text-primary"></i> Data terintegrasi langsung dari <code>tberp_stock_batch</code>.
+                </small>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 let fItemIndex = 0;
+let activeFormulaRow = null;
 
 $(document).ready(function() {
     $('#btnTambahFormula').click(function() {
@@ -163,6 +220,48 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-del-frow', function() {
         $(this).closest('tr').remove();
+    });
+
+    // Buka modal pencarian barang saat klik tombol Cari atau klik input Kode
+    $(document).on('click', '.btn-search-formula-item, .row-kd', function() {
+        activeFormulaRow = $(this).closest('tr');
+        $('#searchBarangFormulaInput').val('');
+        loadBarangSearchFormula('');
+        $('#modalSearchBarangFormula').modal('show');
+    });
+
+    $('#btnDoSearchFormula').click(function() {
+        loadBarangSearchFormula($('#searchBarangFormulaInput').val());
+    });
+
+    $('#searchBarangFormulaInput').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            loadBarangSearchFormula($(this).val());
+        }
+    });
+
+    // Ketika modal pencarian barang ditutup, pastikan modal formula tetap aktif & scrollable
+    $('#modalSearchBarangFormula').on('hidden.bs.modal', function() {
+        if ($('#modalFormula').hasClass('show')) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    // Aksi tombol Pilih Barang dari hasil search
+    $(document).on('click', '.btn-pilih-barang-formula', function() {
+        let kd = $(this).data('kd');
+        let nama = $(this).data('nama');
+        let sat = $(this).data('sat') || 'Pcs';
+
+        if (activeFormulaRow) {
+            activeFormulaRow.find('.row-kd').val(kd);
+            activeFormulaRow.find('.row-nama').val(nama);
+            activeFormulaRow.find('.row-satuan').val(sat);
+            activeFormulaRow.find('.row-qty').focus().select();
+        }
+
+        $('#modalSearchBarangFormula').modal('hide');
     });
 
     // Edit Formula
@@ -199,6 +298,21 @@ $(document).ready(function() {
 
     $('#formFormulaModal').submit(function(e) {
         e.preventDefault();
+
+        let validRows = 0;
+        $('#formulaItemsBody tr').each(function() {
+            let kd = $(this).find('.row-kd').val();
+            let qty = parseFloat($(this).find('.row-qty').val()) || 0;
+            if (kd && kd.trim() !== '' && qty > 0) {
+                validRows++;
+            }
+        });
+
+        if (validRows === 0) {
+            Swal.fire('Peringatan', 'Minimal 1 barang komponen isi paket harus dipilih dengan jumlah > 0', 'warning');
+            return;
+        }
+
         $.ajax({
             url: '<?= site_url("purchasing/bundling/formula/save") ?>',
             type: 'POST',
@@ -208,11 +322,23 @@ $(document).ready(function() {
                 if (res.status) {
                     Swal.fire('Berhasil', res.msg, 'success').then(() => location.reload());
                 } else {
-                    Swal.fire('Gagal', res.msg, 'error');
+                    Swal.fire('Gagal', res.msg || 'Gagal menyimpan formula', 'error');
                 }
             },
-            error: function() {
-                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", status, error, xhr.responseText);
+                let errMsg = 'Terjadi kesalahan sistem saat menyimpan formula.';
+                if (xhr.status === 401 || (xhr.responseJSON && xhr.responseJSON.auth_timeout)) {
+                    Swal.fire('Sesi Berakhir', 'Sesi login Anda telah berakhir. Silakan login kembali.', 'warning')
+                        .then(() => location.href = '<?= site_url("auth") ?>');
+                    return;
+                }
+                if (xhr.responseJSON && xhr.responseJSON.msg) {
+                    errMsg = xhr.responseJSON.msg;
+                } else if (xhr.responseText && xhr.responseText.length < 200 && !xhr.responseText.includes('<html')) {
+                    errMsg = xhr.responseText;
+                }
+                Swal.fire('Gagal Menyimpan', errMsg, 'error');
             }
         });
     });
@@ -222,21 +348,89 @@ function addFormulaRow(kd, nama, qty, sat) {
     let html = `
         <tr>
             <td>
-                <input type="text" name="komponen[${fItemIndex}][kode_barang_komponen]" class="form-control form-control-sm mb-1 font-weight-bold" value="${kd}" placeholder="Kode Barang..." required>
-                <input type="text" name="komponen[${fItemIndex}][nama_barang_komponen]" class="form-control form-control-sm" value="${nama}" placeholder="Nama Barang...">
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" name="komponen[${fItemIndex}][kode_barang_komponen]" 
+                           class="form-control font-weight-bold row-kd" 
+                           value="${kd}" 
+                           placeholder="Klik untuk Cari Barang..." 
+                           required readonly style="background-color: #f8fafc; cursor: pointer;" title="Klik untuk mencari barang dari stok batch">
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-primary btn-search-formula-item" title="Cari dari Stok Batch">
+                            <i class="fas fa-search mr-1"></i> Cari
+                        </button>
+                    </div>
+                </div>
+                <input type="text" name="komponen[${fItemIndex}][nama_barang_komponen]" 
+                       class="form-control form-control-sm row-nama" 
+                       value="${nama}" 
+                       placeholder="Nama Barang Komponen" 
+                       readonly style="background-color: #f1f5f9; color: #1e293b; font-weight: 500;">
             </td>
-            <td>
-                <input type="number" step="any" min="0.001" name="komponen[${fItemIndex}][qty_komponen]" class="form-control form-control-sm text-center font-weight-bold" value="${qty}" required>
+            <td class="align-middle">
+                <input type="number" step="any" min="0.001" 
+                       name="komponen[${fItemIndex}][qty_komponen]" 
+                       class="form-control form-control-sm text-center font-weight-bold row-qty" 
+                       value="${qty}" required>
             </td>
-            <td>
-                <input type="text" name="komponen[${fItemIndex}][satuan]" class="form-control form-control-sm text-center" value="${sat || 'Pcs'}">
+            <td class="align-middle">
+                <input type="text" name="komponen[${fItemIndex}][satuan]" 
+                       class="form-control form-control-sm text-center row-satuan" 
+                       value="${sat || 'Pcs'}">
             </td>
             <td class="text-center align-middle">
-                <button type="button" class="btn btn-sm btn-link text-danger btn-del-frow"><i class="fas fa-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-link text-danger btn-del-frow" title="Hapus Item">
+                    <i class="fas fa-trash"></i>
+                </button>
             </td>
         </tr>
     `;
     $('#formulaItemsBody').append(html);
     fItemIndex++;
+}
+
+function loadBarangSearchFormula(query) {
+    $('#tableSearchResultFormula tbody').html('<tr><td colspan="5" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Mencari barang di tberp_stock_batch...</td></tr>');
+    $.ajax({
+        url: '<?= site_url("purchasing/bundling/ajax_search_barang") ?>',
+        data: { q: query },
+        dataType: 'json',
+        success: function(items) {
+            let html = '';
+            if (!items || items.length === 0) {
+                html = '<tr><td colspan="5" class="text-center text-muted py-3">Barang tidak ditemukan di tberp_stock_batch</td></tr>';
+            } else {
+                items.forEach(function(b) {
+                    let totalStok = parseFloat(b.total_stok) || 0;
+                    let badgeStok = totalStok > 0 
+                        ? `<span class="badge badge-success font-weight-bold px-2 py-1">${totalStok.toLocaleString('id-ID')}</span>`
+                        : `<span class="badge badge-secondary px-2 py-1">0</span>`;
+
+                    html += `
+                        <tr>
+                            <td class="font-weight-bold text-primary align-middle">${b.kode_barang}</td>
+                            <td class="align-middle">
+                                <div class="font-weight-bold text-dark">${b.nama_barang}</div>
+                                <small class="text-muted">${b.jml_lot ? b.jml_lot + ' Lot terdaftar' : '-'}</small>
+                            </td>
+                            <td class="text-right align-middle">${badgeStok}</td>
+                            <td class="text-center align-middle">${b.satuan || 'Pcs'}</td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-sm btn-success px-3 font-weight-bold btn-pilih-barang-formula"
+                                        data-kd="${b.kode_barang}"
+                                        data-nama="${b.nama_barang}"
+                                        data-sat="${b.satuan || 'Pcs'}">
+                                    <i class="fas fa-check mr-1"></i> Pilih
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            $('#tableSearchResultFormula tbody').html(html);
+        },
+        error: function() {
+            $('#tableSearchResultFormula tbody').html('<tr><td colspan="5" class="text-center text-danger py-3">Gagal mengambil data stok batch</td></tr>');
+        }
+    });
 }
 </script>

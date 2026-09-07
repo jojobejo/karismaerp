@@ -1,3 +1,10 @@
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+    <!-- Navbar -->
+    <?php $this->load->view('partial/main/navbar') ?>
+    <!-- Main Sidebar Container -->
+    <?php $this->load->view('partial/main/sidebar') ?>
+
 <div class="content-wrapper" style="min-height: 850px; background: #f8fafc;">
     <div class="content-header">
         <div class="container-fluid">
@@ -147,6 +154,9 @@
         </div>
     </section>
 </div>
+<!-- /.content-wrapper -->
+</div>
+<!-- /.wrapper -->
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>

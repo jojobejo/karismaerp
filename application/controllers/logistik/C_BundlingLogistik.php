@@ -16,7 +16,18 @@ class C_BundlingLogistik extends CI_Controller
     public function __construct()
     {
         parent::__construct();
-        if (!$this->session->userdata('is_login')) {
+        if (!$this->session->userdata('logged_in') && !$this->session->userdata('username') && !$this->session->userdata('is_login')) {
+            if ($this->input->is_ajax_request()) {
+                $this->output
+                    ->set_status_header(401)
+                    ->set_content_type('application/json')
+                    ->set_output(json_encode([
+                        'status'       => false,
+                        'auth_timeout' => true,
+                        'msg'          => 'Sesi login Anda telah berakhir. Silakan login kembali.'
+                    ]));
+                return;
+            }
             redirect('auth');
         }
         $this->load->model(['M_Bundling', 'M_Ics', 'M_Stock', 'M_PenyesuaianBarang']);
@@ -42,7 +53,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/monitoring_list.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     /**
@@ -61,7 +72,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/monitoring_detail.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     /**
@@ -82,13 +93,16 @@ class C_BundlingLogistik extends CI_Controller
         }
         unset($stk);
 
+        $sisaRequest = max(0, (float)$req['qty_request'] - (float)$req['qty_realisasi']);
+
         $data['page_title']   = 'Mutasi Bahan ke Gudang Bundling - Ref #' . $req['no_request'];
         $data['request']      = $req;
+        $data['sisa_request'] = $sisaRequest;
         $data['stock_status'] = $stockStatus;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/mutasi_bahan.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     /**
@@ -165,7 +179,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/assembly_create.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     /**
@@ -240,7 +254,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/disassembly_create.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     /**
@@ -323,7 +337,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/history_list.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     public function detail_assembly($id)
@@ -336,7 +350,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/assembly_detail.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     public function detail_disassembly($id)
@@ -349,7 +363,7 @@ class C_BundlingLogistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/disassembly_detail.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('partial/main/footer.php');
     }
 
     // =========================================================================

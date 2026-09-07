@@ -1,3 +1,10 @@
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+    <!-- Navbar -->
+    <?php $this->load->view('partial/main/navbar') ?>
+    <!-- Main Sidebar Container -->
+    <?php $this->load->view('partial/main/sidebar') ?>
+
 <div class="content-wrapper" style="min-height: 850px; background: #f8fafc;">
     <div class="content-header">
         <div class="container-fluid">
@@ -219,6 +226,9 @@
         </div>
     </section>
 </div>
+<!-- /.content-wrapper -->
+</div>
+<!-- /.wrapper -->
 
 <!-- Modal Pencarian Barang -->
 <div class="modal fade" id="modalSearchBarang" tabindex="-1" role="dialog" aria-hidden="true">
@@ -239,10 +249,11 @@
                     <table class="table table-hover table-sm" id="tableSearchResult">
                         <thead class="bg-light">
                             <tr>
-                                <th>Kode Barang</th>
-                                <th>Nama Barang</th>
-                                <th>Satuan</th>
-                                <th class="text-center">Aksi</th>
+                                <th style="width: 20%;">Kode Barang</th>
+                                <th style="width: 40%;">Nama Barang</th>
+                                <th style="width: 15%;" class="text-right">Stok Batch</th>
+                                <th style="width: 10%;" class="text-center">Satuan</th>
+                                <th style="width: 15%;" class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -407,6 +418,21 @@ $(document).ready(function() {
             return;
         }
 
+        let validRows = 0;
+        $('#komponenList .item-row').each(function() {
+            let kd = $(this).find('.row-kd').val();
+            let qty = parseFloat($(this).find('.row-qty').val()) || 0;
+            if (kd && kd.trim() !== '' && qty > 0) {
+                validRows++;
+            }
+        });
+
+        if (validRows === 0) {
+            Swal.fire('Peringatan', 'Minimal 1 barang komponen isi paket harus dipilih dengan jumlah > 0', 'warning');
+            return;
+        }
+
+        let formElem = this;
         Swal.fire({
             title: 'Kirim Request Bundling?',
             text: 'Request ' + qtyReq + ' Box ' + $('#nama_paket').val() + ' akan dikirimkan ke Logistik untuk diproses.',
@@ -420,9 +446,9 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 Swal.showLoading();
                 $.ajax({
-                    url: $(this).attr('action'),
+                    url: $(formElem).attr('action'),
                     type: 'POST',
-                    data: $(this).serialize(),
+                    data: $(formElem).serialize(),
                     dataType: 'json',
                     success: function(res) {
                         if (res.status) {
@@ -430,11 +456,38 @@ $(document).ready(function() {
                                 window.location.href = '<?= site_url("purchasing/bundling/request/detail/") ?>' + res.id_request;
                             });
                         } else {
-                            Swal.fire('Gagal!', res.msg, 'error');
+                            Swal.fire('Gagal!', res.msg || 'Gagal menyimpan request.', 'error');
                         }
                     },
-                    error: function() {
-                        Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                    error: function(xhr, status, error) {
+                        console.error("AJAX Error:", status, error, xhr.responseText);
+                        let errMsg = 'Terjadi kesalahan sistem saat menyimpan request.';
+                        if (xhr.status === 401 || (xhr.responseJSON && xhr.responseJSON.auth_timeout)) {
+                            Swal.fire({
+                                title: 'Sesi Berakhir',
+                                text: 'Sesi login Anda telah berakhir. Silakan login kembali.',
+                                icon: 'warning',
+                                confirmButtonText: 'Login Kembali'
+                            }).then(() => {
+                                window.location.href = '<?= site_url("auth") ?>';
+                            });
+                            return;
+                        }
+
+                        if (xhr.responseJSON && xhr.responseJSON.msg) {
+                            errMsg = xhr.responseJSON.msg;
+                        } else if (xhr.responseText) {
+                            try {
+                                let parsed = JSON.parse(xhr.responseText);
+                                if (parsed.msg) errMsg = parsed.msg;
+                            } catch(e) {
+                                // Jika ada error string singkat
+                                if (xhr.responseText.length < 200 && !xhr.responseText.includes('<html')) {
+                                    errMsg = xhr.responseText;
+                                }
+                            }
+                        }
+                        Swal.fire('Gagal Menyimpan', errMsg, 'error');
                     }
                 });
             }
@@ -452,24 +505,37 @@ function recalculateTotals() {
 }
 
 function loadBarangSearch(query) {
+    $('#tableSearchResult tbody').html('<tr><td colspan="5" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Mencari barang di tberp_stock_batch...</td></tr>');
     $.ajax({
         url: '<?= site_url("purchasing/bundling/ajax_search_barang") ?>',
         data: { q: query },
         dataType: 'json',
         success: function(items) {
             let html = '';
-            if (items.length === 0) {
-                html = '<tr><td colspan="4" class="text-center text-muted py-3">Barang tidak ditemukan</td></tr>';
+            if (!items || items.length === 0) {
+                html = '<tr><td colspan="5" class="text-center text-muted py-3">Barang tidak ditemukan di tberp_stock_batch</td></tr>';
             } else {
                 items.forEach(function(b) {
+                    let totalStok = parseFloat(b.total_stok) || 0;
+                    let badgeStok = totalStok > 0 
+                        ? `<span class="badge badge-success font-weight-bold px-2 py-1">${totalStok.toLocaleString('id-ID')}</span>`
+                        : `<span class="badge badge-secondary px-2 py-1">0</span>`;
+
                     html += `
                         <tr>
-                            <td class="font-weight-bold">${b.kode_barang}</td>
-                            <td>${b.nama_barang}</td>
-                            <td>${b.satuan || 'Pcs'}</td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-primary btn-select-barang" data-kd="${b.kode_barang}" data-nama="${b.nama_barang}" data-satuan="${b.satuan || 'Pcs'}">
-                                    <i class="fas fa-check"></i> Pilih
+                            <td class="font-weight-bold text-primary align-middle">${b.kode_barang}</td>
+                            <td class="align-middle">
+                                <div class="font-weight-bold text-dark">${b.nama_barang}</div>
+                                <small class="text-muted">${b.jml_lot ? b.jml_lot + ' Lot terdaftar' : '-'}</small>
+                            </td>
+                            <td class="text-right align-middle">${badgeStok}</td>
+                            <td class="text-center align-middle">${b.satuan || 'Pcs'}</td>
+                            <td class="text-center align-middle">
+                                <button type="button" class="btn btn-sm btn-primary btn-select-barang px-3 font-weight-bold" 
+                                        data-kd="${b.kode_barang}" 
+                                        data-nama="${b.nama_barang}" 
+                                        data-satuan="${b.satuan || 'Pcs'}">
+                                    <i class="fas fa-check mr-1"></i> Pilih
                                 </button>
                             </td>
                         </tr>
@@ -477,6 +543,9 @@ function loadBarangSearch(query) {
                 });
             }
             $('#tableSearchResult tbody').html(html);
+        },
+        error: function() {
+            $('#tableSearchResult tbody').html('<tr><td colspan="5" class="text-center text-danger py-3">Gagal mengambil data stok batch</td></tr>');
         }
     });
 }

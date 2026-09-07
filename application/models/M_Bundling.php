@@ -236,9 +236,14 @@ class M_Bundling extends CI_Model
         $this->ensure_bundling_schema();
         $this->db->trans_begin();
 
+        $kodePaket = !empty($data['kode_paket']) ? trim($data['kode_paket']) : '';
+        if ($kodePaket === '') {
+            $kodePaket = 'FML-' . date('ymd') . '-' . substr(str_shuffle('0123456789ABCDEF'), 0, 4);
+        }
+
         $id = !empty($data['id_formula']) ? (int)$data['id_formula'] : 0;
         if ($id <= 0) {
-            $existing = $this->db->where('kode_paket', $data['kode_paket'])->limit(1)->get('tberp_bundling_formula')->row();
+            $existing = $this->db->where('kode_paket', $kodePaket)->limit(1)->get('tberp_bundling_formula')->row();
             if ($existing) {
                 $id = (int)$existing->id_formula;
             }
@@ -246,7 +251,7 @@ class M_Bundling extends CI_Model
 
         if ($id > 0) {
             $this->db->where('id_formula', $id)->update('tberp_bundling_formula', [
-                'kode_paket'   => $data['kode_paket'],
+                'kode_paket'   => $kodePaket,
                 'nama_paket'   => $data['nama_paket'],
                 'satuan_paket' => $data['satuan_paket'] ?? 'Box',
                 'keterangan'   => $data['keterangan'] ?? null,
@@ -255,7 +260,7 @@ class M_Bundling extends CI_Model
             $this->db->where('id_formula', $id)->delete('tberp_bundling_formula_detail');
         } else {
             $this->db->insert('tberp_bundling_formula', [
-                'kode_paket'   => $data['kode_paket'],
+                'kode_paket'   => $kodePaket,
                 'nama_paket'   => $data['nama_paket'],
                 'satuan_paket' => $data['satuan_paket'] ?? 'Box',
                 'keterangan'   => $data['keterangan'] ?? null,
@@ -315,7 +320,15 @@ class M_Bundling extends CI_Model
                 $num = (int)$parts[2] + 1;
             }
         }
-        return $prefix . sprintf('%04d', $num);
+        
+        $newNo = $prefix . sprintf('%04d', $num);
+        // Pastikan nomor benar-benar belum terpakai di database
+        while ($this->db->where('no_request', $newNo)->count_all_results('tberp_bundling_request') > 0) {
+            $num++;
+            $newNo = $prefix . sprintf('%04d', $num);
+        }
+
+        return $newNo;
     }
 
     public function get_requests($filters = [], $limit = 200)
@@ -375,7 +388,17 @@ class M_Bundling extends CI_Model
         $this->ensure_bundling_schema();
         $this->db->trans_begin();
 
-        $noRequest = !empty($data['no_request']) ? $data['no_request'] : $this->generate_request_number();
+        $noRequest = !empty($data['no_request']) ? trim($data['no_request']) : '';
+        // Jika no_request kosong atau sudah pernah ada di database, buat nomor baru yang dijamin unik
+        if ($noRequest === '' || $this->db->where('no_request', $noRequest)->count_all_results('tberp_bundling_request') > 0) {
+            $noRequest = $this->generate_request_number();
+        }
+
+        $kodePaket = !empty($data['kode_paket']) ? trim($data['kode_paket']) : '';
+        if ($kodePaket === '') {
+            $kodePaket = 'PKT-' . date('ymd') . '-' . substr(str_shuffle('0123456789ABCDEF'), 0, 4);
+        }
+
         $qtyRequest = (float)$data['qty_request'];
 
         if ($qtyRequest <= 0) {
@@ -387,14 +410,14 @@ class M_Bundling extends CI_Model
 
         $header = [
             'no_request'       => $noRequest,
-            'tanggal_request'  => $data['tanggal_request'] ?: date('Y-m-d'),
-            'kode_paket'       => trim($data['kode_paket']),
+            'tanggal_request'  => !empty($data['tanggal_request']) ? $data['tanggal_request'] : date('Y-m-d'),
+            'kode_paket'       => $kodePaket,
             'nama_paket'       => trim($data['nama_paket']),
             'id_gudang_tujuan' => !empty($data['id_gudang_tujuan']) ? (int)$data['id_gudang_tujuan'] : 12, // Gudang Bundling default
             'id_gudang_asal'   => !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : 2,       // Gudang Induk default
             'qty_request'      => $qtyRequest,
             'qty_realisasi'    => 0,
-            'satuan'           => $data['satuan'] ?: 'Box',
+            'satuan'           => !empty($data['satuan']) ? $data['satuan'] : 'Box',
             'status'           => 'MENUNGGU_PROSES',
             'user_request'     => $user,
             'keterangan'       => $data['keterangan'] ?? null,
@@ -798,8 +821,8 @@ class M_Bundling extends CI_Model
         $assemblyId = $this->db->insert_id();
 
         // 3. Catat Detail Assembly
-        foreach ($assemblyDetailRecords as &$dRec) {
-            $dRec['id_assembly'] = $assemblyId;
+        foreach ($assemblyDetailRecords as $idxRec => $dRec) {
+            $assemblyDetailRecords[$idxRec]['id_assembly'] = $assemblyId;
         }
         $this->db->insert_batch('tberp_bundling_assembly_detail', $assemblyDetailRecords);
 
