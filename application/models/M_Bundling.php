@@ -1,0 +1,1254 @@
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+
+/**
+ * Model M_Bundling
+ * Mengelola alur Paket Bundling KarismaERP:
+ * 1. Master Formula Komposisi
+ * 2. Request Bundling Purchasing (kalkulasi otomatis kebutuhan)
+ * 3. Monitoring Logistik & Mutasi Bahan (Gudang Induk -> Gudang Bundling)
+ * 4. Realisasi Pembuatan Paket / Assembly (Partial & Full Fulfillment)
+ * 5. Pembongkaran Paket / Disassembly (Unbundling untuk Penjualan Eceran)
+ * 6. Integrasi Single Source of Truth: tberp_stock_batch & tberp_stock_ledger
+ */
+class M_Bundling extends CI_Model
+{
+    public function __construct()
+    {
+        parent::__construct();
+        $this->load->database();
+    }
+
+    /**
+     * Pastikan tabel-tabel bundling dan gudang bundling tersedia
+     */
+    public function ensure_bundling_schema()
+    {
+        if (!$this->db->table_exists('tberp_bundling_formula')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_formula` (
+              `id_formula` INT(11) NOT NULL AUTO_INCREMENT,
+              `kode_paket` VARCHAR(25) NOT NULL,
+              `nama_paket` VARCHAR(255) NOT NULL,
+              `satuan_paket` VARCHAR(50) DEFAULT 'Box',
+              `keterangan` TEXT DEFAULT NULL,
+              `is_active` TINYINT(1) DEFAULT 1,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_formula`),
+              UNIQUE KEY `idx_kode_paket` (`kode_paket`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_formula_detail')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_formula_detail` (
+              `id_detail` INT(11) NOT NULL AUTO_INCREMENT,
+              `id_formula` INT(11) NOT NULL,
+              `kode_barang_komponen` VARCHAR(25) NOT NULL,
+              `nama_barang_komponen` VARCHAR(255) DEFAULT NULL,
+              `qty_komponen` DECIMAL(15,3) NOT NULL DEFAULT 1.000,
+              `satuan` VARCHAR(50) DEFAULT 'Pcs',
+              PRIMARY KEY (`id_detail`),
+              KEY `idx_formula_id` (`id_formula`),
+              KEY `idx_komponen` (`kode_barang_komponen`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_request')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_request` (
+              `id_request` INT(11) NOT NULL AUTO_INCREMENT,
+              `no_request` VARCHAR(50) NOT NULL,
+              `tanggal_request` DATE NOT NULL,
+              `kode_paket` VARCHAR(25) NOT NULL,
+              `nama_paket` VARCHAR(255) NOT NULL,
+              `id_gudang_tujuan` INT(11) NOT NULL,
+              `id_gudang_asal` INT(11) NOT NULL DEFAULT 2,
+              `qty_request` DECIMAL(15,3) NOT NULL,
+              `qty_realisasi` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+              `satuan` VARCHAR(50) DEFAULT 'Box',
+              `status` ENUM('MENUNGGU_PROSES','PROSES_SEBAGIAN','SELESAI','BATAL') NOT NULL DEFAULT 'MENUNGGU_PROSES',
+              `user_request` VARCHAR(50) NOT NULL,
+              `keterangan` TEXT DEFAULT NULL,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_request`),
+              UNIQUE KEY `idx_no_request` (`no_request`),
+              KEY `idx_kode_paket_req` (`kode_paket`),
+              KEY `idx_status_req` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_request_detail')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_request_detail` (
+              `id_req_detail` INT(11) NOT NULL AUTO_INCREMENT,
+              `id_request` INT(11) NOT NULL,
+              `kode_barang_komponen` VARCHAR(25) NOT NULL,
+              `nama_barang_komponen` VARCHAR(255) DEFAULT NULL,
+              `qty_per_paket` DECIMAL(15,3) NOT NULL DEFAULT 1.000,
+              `qty_total_kebutuhan` DECIMAL(15,3) NOT NULL,
+              `qty_terpenuhi` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+              `satuan` VARCHAR(50) DEFAULT 'Pcs',
+              PRIMARY KEY (`id_req_detail`),
+              KEY `idx_request_id` (`id_request`),
+              KEY `idx_req_komponen` (`kode_barang_komponen`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_assembly')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_assembly` (
+              `id_assembly` INT(11) NOT NULL AUTO_INCREMENT,
+              `no_assembly` VARCHAR(50) NOT NULL,
+              `id_request` INT(11) DEFAULT NULL,
+              `no_request` VARCHAR(50) DEFAULT NULL,
+              `tanggal` DATE NOT NULL,
+              `kode_paket` VARCHAR(25) NOT NULL,
+              `nama_paket` VARCHAR(255) NOT NULL,
+              `id_gudang` INT(11) NOT NULL,
+              `qty_assembly` DECIMAL(15,3) NOT NULL,
+              `satuan` VARCHAR(50) DEFAULT 'Box',
+              `no_lot_paket` VARCHAR(100) DEFAULT '-',
+              `expired_date_paket` DATE DEFAULT NULL,
+              `total_nilai_hpp` DECIMAL(18,2) DEFAULT 0.00,
+              `hpp_per_paket` DECIMAL(18,2) DEFAULT 0.00,
+              `user_input` VARCHAR(50) NOT NULL,
+              `keterangan` TEXT DEFAULT NULL,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_assembly`),
+              UNIQUE KEY `idx_no_assembly` (`no_assembly`),
+              KEY `idx_assembly_request` (`id_request`),
+              KEY `idx_assembly_paket` (`kode_paket`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_assembly_detail')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_assembly_detail` (
+              `id_asm_detail` INT(11) NOT NULL AUTO_INCREMENT,
+              `id_assembly` INT(11) NOT NULL,
+              `kode_barang_komponen` VARCHAR(25) NOT NULL,
+              `nama_barang_komponen` VARCHAR(255) DEFAULT NULL,
+              `no_lot` VARCHAR(100) DEFAULT '-',
+              `expired_date` DATE DEFAULT NULL,
+              `qty_digunakan` DECIMAL(15,3) NOT NULL,
+              `satuan` VARCHAR(50) DEFAULT 'Pcs',
+              `hpp_satuan` DECIMAL(18,2) DEFAULT 0.00,
+              `total_hpp` DECIMAL(18,2) DEFAULT 0.00,
+              PRIMARY KEY (`id_asm_detail`),
+              KEY `idx_asm_parent` (`id_assembly`),
+              KEY `idx_asm_komponen` (`kode_barang_komponen`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_disassembly')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_disassembly` (
+              `id_disassembly` INT(11) NOT NULL AUTO_INCREMENT,
+              `no_disassembly` VARCHAR(50) NOT NULL,
+              `tanggal` DATE NOT NULL,
+              `kode_paket` VARCHAR(25) NOT NULL,
+              `nama_paket` VARCHAR(255) NOT NULL,
+              `id_gudang` INT(11) NOT NULL,
+              `qty_disassembly` DECIMAL(15,3) NOT NULL,
+              `satuan` VARCHAR(50) DEFAULT 'Box',
+              `no_lot_paket` VARCHAR(100) DEFAULT '-',
+              `expired_date_paket` DATE DEFAULT NULL,
+              `total_nilai_hpp` DECIMAL(18,2) DEFAULT 0.00,
+              `alasan` TEXT NOT NULL,
+              `user_input` VARCHAR(50) NOT NULL,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_disassembly`),
+              UNIQUE KEY `idx_no_disassembly` (`no_disassembly`),
+              KEY `idx_dsb_paket` (`kode_paket`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        if (!$this->db->table_exists('tberp_bundling_disassembly_detail')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tberp_bundling_disassembly_detail` (
+              `id_dsb_detail` INT(11) NOT NULL AUTO_INCREMENT,
+              `id_disassembly` INT(11) NOT NULL,
+              `kode_barang_komponen` VARCHAR(25) NOT NULL,
+              `nama_barang_komponen` VARCHAR(255) DEFAULT NULL,
+              `no_lot` VARCHAR(100) DEFAULT '-',
+              `expired_date` DATE DEFAULT NULL,
+              `qty_kembali` DECIMAL(15,3) NOT NULL,
+              `satuan` VARCHAR(50) DEFAULT 'Pcs',
+              `hpp_satuan` DECIMAL(18,2) DEFAULT 0.00,
+              `total_hpp` DECIMAL(18,2) DEFAULT 0.00,
+              PRIMARY KEY (`id_dsb_detail`),
+              KEY `idx_dsb_parent` (`id_disassembly`),
+              KEY `idx_dsb_komponen` (`kode_barang_komponen`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;");
+        }
+
+        // Pastikan Gudang Bundling ada di tb_gudang
+        $cekGudang = $this->db->where('id_gudang', 12)->or_like('nama_gudang', 'Bundling')->get('tb_gudang')->row();
+        if (!$cekGudang) {
+            $this->db->insert('tb_gudang', [
+                'id_gudang'   => 12,
+                'nama_gudang' => 'Gdg. Bundling',
+                'tipe'        => 'INDUK',
+                'is_active'   => 1,
+                'created_at'  => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    // =========================================================================
+    // 1. MASTER FORMULA KOMPOSISI BUNDLING
+    // =========================================================================
+
+    public function get_all_formulas($search = '')
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('f.*, COUNT(d.id_detail) as total_komponen');
+        $this->db->from('tberp_bundling_formula f');
+        $this->db->join('tberp_bundling_formula_detail d', 'd.id_formula = f.id_formula', 'left');
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('f.kode_paket', $search);
+            $this->db->or_like('f.nama_paket', $search);
+            $this->db->group_end();
+        }
+        $this->db->group_by('f.id_formula');
+        $this->db->order_by('f.nama_paket', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
+    public function get_formula_by_id($id_formula)
+    {
+        $this->ensure_bundling_schema();
+        $formula = $this->db->where('id_formula', $id_formula)->get('tberp_bundling_formula')->row_array();
+        if ($formula) {
+            $formula['details'] = $this->db->where('id_formula', $id_formula)->get('tberp_bundling_formula_detail')->result_array();
+        }
+        return $formula;
+    }
+
+    public function get_formula_by_kode_paket($kode_paket)
+    {
+        $this->ensure_bundling_schema();
+        $formula = $this->db->where('kode_paket', $kode_paket)->get('tberp_bundling_formula')->row_array();
+        if ($formula) {
+            $formula['details'] = $this->db->where('id_formula', $formula['id_formula'])->get('tberp_bundling_formula_detail')->result_array();
+        }
+        return $formula;
+    }
+
+    public function save_formula($data, $details)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->trans_begin();
+
+        $id = !empty($data['id_formula']) ? (int)$data['id_formula'] : 0;
+        if ($id <= 0) {
+            $existing = $this->db->where('kode_paket', $data['kode_paket'])->limit(1)->get('tberp_bundling_formula')->row();
+            if ($existing) {
+                $id = (int)$existing->id_formula;
+            }
+        }
+
+        if ($id > 0) {
+            $this->db->where('id_formula', $id)->update('tberp_bundling_formula', [
+                'kode_paket'   => $data['kode_paket'],
+                'nama_paket'   => $data['nama_paket'],
+                'satuan_paket' => $data['satuan_paket'] ?? 'Box',
+                'keterangan'   => $data['keterangan'] ?? null,
+                'is_active'    => isset($data['is_active']) ? (int)$data['is_active'] : 1
+            ]);
+            $this->db->where('id_formula', $id)->delete('tberp_bundling_formula_detail');
+        } else {
+            $this->db->insert('tberp_bundling_formula', [
+                'kode_paket'   => $data['kode_paket'],
+                'nama_paket'   => $data['nama_paket'],
+                'satuan_paket' => $data['satuan_paket'] ?? 'Box',
+                'keterangan'   => $data['keterangan'] ?? null,
+                'is_active'    => 1,
+                'created_at'   => date('Y-m-d H:i:s')
+            ]);
+            $id = $this->db->insert_id();
+        }
+
+        if (!empty($details)) {
+            $insertDetails = [];
+            foreach ($details as $d) {
+                if (empty($d['kode_barang_komponen'])) continue;
+                $insertDetails[] = [
+                    'id_formula'           => $id,
+                    'kode_barang_komponen' => $d['kode_barang_komponen'],
+                    'nama_barang_komponen' => $d['nama_barang_komponen'] ?? '',
+                    'qty_komponen'         => (float)($d['qty_komponen'] ?? 1),
+                    'satuan'               => $d['satuan'] ?? 'Pcs'
+                ];
+            }
+            if (!empty($insertDetails)) {
+                $this->db->insert_batch('tberp_bundling_formula_detail', $insertDetails);
+            }
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Gagal menyimpan formula bundling'];
+        }
+
+        $this->db->trans_commit();
+        return ['status' => true, 'id_formula' => $id, 'msg' => 'Formula bundling berhasil disimpan'];
+    }
+
+    // =========================================================================
+    // 2. REQUEST PAKET BUNDLING (PURCHASING)
+    // =========================================================================
+
+    public function generate_request_number()
+    {
+        $this->ensure_bundling_schema();
+        $dateStr = date('Ymd');
+        $prefix = 'RPB-' . $dateStr . '-';
+
+        $last = $this->db->select('no_request')
+            ->like('no_request', $prefix, 'after')
+            ->order_by('id_request', 'DESC')
+            ->limit(1)
+            ->get('tberp_bundling_request')
+            ->row();
+
+        $num = 1;
+        if ($last) {
+            $parts = explode('-', $last->no_request);
+            if (isset($parts[2]) && is_numeric($parts[2])) {
+                $num = (int)$parts[2] + 1;
+            }
+        }
+        return $prefix . sprintf('%04d', $num);
+    }
+
+    public function get_requests($filters = [], $limit = 200)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('r.*, gt.nama_gudang as nama_gudang_tujuan, ga.nama_gudang as nama_gudang_asal');
+        $this->db->from('tberp_bundling_request r');
+        $this->db->join('tb_gudang gt', 'gt.id_gudang = r.id_gudang_tujuan', 'left');
+        $this->db->join('tb_gudang ga', 'ga.id_gudang = r.id_gudang_asal', 'left');
+
+        if (!empty($filters['status']) && $filters['status'] !== 'SEMUA') {
+            $this->db->where('r.status', $filters['status']);
+        }
+        if (!empty($filters['search'])) {
+            $this->db->group_start();
+            $this->db->like('r.no_request', $filters['search']);
+            $this->db->or_like('r.nama_paket', $filters['search']);
+            $this->db->or_like('r.kode_paket', $filters['search']);
+            $this->db->group_end();
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('r.tanggal_request >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('r.tanggal_request <=', $filters['date_to']);
+        }
+
+        $this->db->order_by('r.id_request', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
+    }
+
+    public function get_request_by_id($id_request)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('r.*, gt.nama_gudang as nama_gudang_tujuan, ga.nama_gudang as nama_gudang_asal');
+        $this->db->from('tberp_bundling_request r');
+        $this->db->join('tb_gudang gt', 'gt.id_gudang = r.id_gudang_tujuan', 'left');
+        $this->db->join('tb_gudang ga', 'ga.id_gudang = r.id_gudang_asal', 'left');
+        $this->db->where('r.id_request', $id_request);
+        $header = $this->db->get()->row_array();
+
+        if ($header) {
+            $header['details'] = $this->db->where('id_request', $id_request)->get('tberp_bundling_request_detail')->result_array();
+            // Ambil juga histori assembly yang telah dibuat berdasarkan request ini
+            $header['assemblies'] = $this->db->where('id_request', $id_request)->order_by('id_assembly', 'DESC')->get('tberp_bundling_assembly')->result_array();
+        }
+        return $header;
+    }
+
+    /**
+     * Membuat Request Paket Bundling baru oleh Purchasing
+     * Otomatis menghitung: Total Kebutuhan = Qty Request x Qty Komponen
+     */
+    public function create_request($data, $details, $user)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->trans_begin();
+
+        $noRequest = !empty($data['no_request']) ? $data['no_request'] : $this->generate_request_number();
+        $qtyRequest = (float)$data['qty_request'];
+
+        if ($qtyRequest <= 0) {
+            return ['status' => false, 'msg' => 'Jumlah request paket harus lebih dari 0'];
+        }
+        if (empty($details)) {
+            return ['status' => false, 'msg' => 'Komposisi isi paket belum ditentukan'];
+        }
+
+        $header = [
+            'no_request'       => $noRequest,
+            'tanggal_request'  => $data['tanggal_request'] ?: date('Y-m-d'),
+            'kode_paket'       => trim($data['kode_paket']),
+            'nama_paket'       => trim($data['nama_paket']),
+            'id_gudang_tujuan' => !empty($data['id_gudang_tujuan']) ? (int)$data['id_gudang_tujuan'] : 12, // Gudang Bundling default
+            'id_gudang_asal'   => !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : 2,       // Gudang Induk default
+            'qty_request'      => $qtyRequest,
+            'qty_realisasi'    => 0,
+            'satuan'           => $data['satuan'] ?: 'Box',
+            'status'           => 'MENUNGGU_PROSES',
+            'user_request'     => $user,
+            'keterangan'       => $data['keterangan'] ?? null,
+            'created_at'       => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('tberp_bundling_request', $header);
+        $requestId = $this->db->insert_id();
+
+        $detailRows = [];
+        foreach ($details as $d) {
+            $kdBrg = trim($d['kode_barang_komponen'] ?? '');
+            if ($kdBrg === '') continue;
+
+            $qtyPerPaket = (float)($d['qty_per_paket'] ?? 1);
+            $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis
+
+            $detailRows[] = [
+                'id_request'           => $requestId,
+                'kode_barang_komponen' => $kdBrg,
+                'nama_barang_komponen' => $d['nama_barang_komponen'] ?? '',
+                'qty_per_paket'        => $qtyPerPaket,
+                'qty_total_kebutuhan'  => $totalKebutuhan,
+                'qty_terpenuhi'        => 0,
+                'satuan'               => $d['satuan'] ?? 'Pcs'
+            ];
+        }
+
+        if (empty($detailRows)) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Detail komponen tidak valid'];
+        }
+
+        $this->db->insert_batch('tberp_bundling_request_detail', $detailRows);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Gagal menyimpan request bundling'];
+        }
+
+        $this->db->trans_commit();
+        return [
+            'status'     => true,
+            'id_request' => $requestId,
+            'no_request' => $noRequest,
+            'msg'        => 'Request Paket Bundling ' . $noRequest . ' berhasil dibuat'
+        ];
+    }
+
+    public function cancel_request($id_request, $user)
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->get_request_by_id($id_request);
+        if (!$req) {
+            return ['status' => false, 'msg' => 'Data request tidak ditemukan'];
+        }
+        if ($req['qty_realisasi'] > 0) {
+            return ['status' => false, 'msg' => 'Request sudah diproses sebagian atau selesai, tidak dapat dibatalkan'];
+        }
+
+        $this->db->where('id_request', $id_request)->update('tberp_bundling_request', [
+            'status'     => 'BATAL',
+            'keterangan' => trim($req['keterangan'] . ' [Dibatalkan oleh ' . $user . ' pada ' . date('Y-m-d H:i') . ']')
+        ]);
+        return ['status' => true, 'msg' => 'Request bundling berhasil dibatalkan'];
+    }
+
+    // =========================================================================
+    // 3. LOGISTIK: CEK KETERSEDIAAN STOK & MUTASI BAHAN GUDANG INDUK -> BUNDLING
+    // =========================================================================
+
+    /**
+     * Memeriksa stok tersedia komponen di Gudang Induk vs Gudang Bundling
+     */
+    public function get_component_stock_status($id_request)
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->get_request_by_id($id_request);
+        if (!$req) return [];
+
+        $gudangAsalId = (int)$req['id_gudang_asal'];     // misal Gudang Induk (2)
+        $gudangTujuanId = (int)$req['id_gudang_tujuan']; // misal Gudang Bundling (12)
+
+        $result = [];
+        foreach ($req['details'] as $item) {
+            $kd = $item['kode_barang_komponen'];
+
+            // Stok di Gudang Induk (Tersedia untuk dimutasi)
+            $stokInduk = $this->get_stock_available_by_gudang($kd, $gudangAsalId);
+
+            // Stok di Gudang Bundling (Siap dirakit)
+            $stokBundling = $this->get_stock_available_by_gudang($kd, $gudangTujuanId);
+
+            $sisaKebutuhan = max(0, (float)$item['qty_total_kebutuhan'] - (float)$item['qty_terpenuhi']);
+            $kekuranganDiBundling = max(0, $sisaKebutuhan - $stokBundling);
+
+            $result[] = [
+                'kode_barang'            => $kd,
+                'nama_barang'            => $item['nama_barang_komponen'],
+                'qty_per_paket'          => (float)$item['qty_per_paket'],
+                'qty_total_kebutuhan'    => (float)$item['qty_total_kebutuhan'],
+                'qty_terpenuhi'          => (float)$item['qty_terpenuhi'],
+                'sisa_kebutuhan'         => $sisaKebutuhan,
+                'stok_gudang_induk'      => $stokInduk,
+                'stok_gudang_bundling'   => $stokBundling,
+                'kekurangan_di_bundling' => $kekuranganDiBundling,
+                'satuan'                 => $item['satuan']
+            ];
+        }
+        return $result;
+    }
+
+    /**
+     * Eksekusi Mutasi Cepat dari Gudang Induk ke Gudang Bundling untuk bahan paket
+     */
+    public function execute_mutasi_bahan_bundling($id_request, $items, $user)
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->get_request_by_id($id_request);
+        if (!$req) {
+            return ['status' => false, 'msg' => 'Request tidak ditemukan'];
+        }
+
+        $gudangAsal = (int)$req['id_gudang_asal'];
+        $gudangTujuan = (int)$req['id_gudang_tujuan'];
+
+        if ($gudangAsal === $gudangTujuan) {
+            return ['status' => false, 'msg' => 'Gudang asal dan tujuan tidak boleh sama'];
+        }
+
+        // Generate nomor mutasi
+        $this->load->model('M_Ics');
+        $noRefMutasi = $this->M_Ics->generate_noreff();
+
+        $this->db->trans_begin();
+
+        $mutasiHeader = [
+            'noreff'        => $noRefMutasi,
+            'tgl_transaksi' => date('Y-m-d'),
+            'gudang_asal'   => $gudangAsal,
+            'gudang_mutasi' => $gudangTujuan,
+            'keterangan'    => 'Mutasi Bahan Paket Bundling ' . $req['nama_paket'] . ' (Ref: ' . $req['no_request'] . ')',
+            'inputer'       => $user,
+            'status'        => 'POSTED',
+            'input_at'      => date('Y-m-d H:i:s'),
+            'last_action'   => 'CREATE'
+        ];
+        $this->db->insert('tb_mutasi', $mutasiHeader);
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($items as $item) {
+            $kd = $item['kode_barang'];
+            $qtyMutasi = (float)($item['qty_mutasi'] ?? 0);
+            if ($qtyMutasi <= 0) continue;
+
+            $noLot = !empty($item['no_lot']) ? trim($item['no_lot']) : '-';
+            $expDate = !empty($item['expired_date']) && $item['expired_date'] !== '0000-00-00' ? $item['expired_date'] : null;
+
+            // Validasi stok di gudang asal
+            $batchAsal = $this->get_stock_batch_row($kd, $gudangAsal, $noLot, $expDate);
+            $available = $batchAsal ? ((float)$batchAsal['qty_on_hand'] - (float)$batchAsal['qty_reserved']) : 0;
+
+            if ($available + 0.0001 < $qtyMutasi) {
+                $this->db->trans_rollback();
+                return ['status' => false, 'msg' => 'Stok ' . $kd . ' (Lot: ' . $noLot . ') di gudang asal tidak mencukupi. Tersedia: ' . $available];
+            }
+
+            // 1. Catat detail mutasi
+            $this->db->insert('tb_detail_mutasi', [
+                'noreff'            => $noRefMutasi,
+                'tgl_transaksi'     => date('Y-m-d'),
+                'gdg_asal'          => $gudangAsal,
+                'gdg_mutasi'        => $gudangTujuan,
+                'kode_barang'       => $kd,
+                'kode_barang_zahir' => $kd,
+                'nama_barang'       => $item['nama_barang'] ?? $kd,
+                'no_lot'            => $noLot,
+                'exp_date'          => $expDate ?: '',
+                'qty'               => $qtyMutasi,
+                'satuan'            => 1,
+                'input_by'          => $user,
+                'create_at'         => $now,
+                'last_action'       => 'CREATE'
+            ]);
+
+            // 2. Potong stok Gudang Asal
+            $this->apply_batch_delta($kd, $gudangAsal, $noLot, $expDate, -$qtyMutasi);
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd,
+                'gudang_id'    => $gudangAsal,
+                'no_lot'       => $noLot,
+                'expired_date' => $expDate,
+                'qty'          => $qtyMutasi,
+                'tipe'         => 'OUT',
+                'ref_no'       => $noRefMutasi,
+                'ref_type'     => 'MUTASI_BUNDLING',
+                'created_at'   => $now
+            ]);
+
+            // 3. Tambah stok Gudang Tujuan
+            $this->apply_batch_delta($kd, $gudangTujuan, $noLot, $expDate, $qtyMutasi);
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd,
+                'gudang_id'    => $gudangTujuan,
+                'no_lot'       => $noLot,
+                'expired_date' => $expDate,
+                'qty'          => $qtyMutasi,
+                'tipe'         => 'IN',
+                'ref_no'       => $noRefMutasi,
+                'ref_type'     => 'MUTASI_BUNDLING',
+                'created_at'   => $now
+            ]);
+        }
+
+        $this->db->insert('tb_log_mutasi', [
+            'noreff'     => $noRefMutasi,
+            'aksi'       => 'POSTED',
+            'keterangan' => 'MUTASI BAHAN BUNDLING DARI GUDANG ' . $gudangAsal . ' KE ' . $gudangTujuan,
+            'user'       => $user,
+            'created_at' => $now
+        ]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Gagal merekam mutasi bahan bundling'];
+        }
+
+        $this->db->trans_commit();
+        return [
+            'status' => true,
+            'noreff' => $noRefMutasi,
+            'msg'    => 'Mutasi bahan berhasil direkam dengan nomor ' . $noRefMutasi
+        ];
+    }
+
+    // =========================================================================
+    // 4. REALISASI PEMBUATAN PAKET / ASSEMBLY (LOGISTIK)
+    // =========================================================================
+
+    public function generate_assembly_number()
+    {
+        $this->ensure_bundling_schema();
+        $dateStr = date('Ymd');
+        $prefix = 'ASM-' . $dateStr . '-';
+
+        $last = $this->db->select('no_assembly')
+            ->like('no_assembly', $prefix, 'after')
+            ->order_by('id_assembly', 'DESC')
+            ->limit(1)
+            ->get('tberp_bundling_assembly')
+            ->row();
+
+        $num = 1;
+        if ($last) {
+            $parts = explode('-', $last->no_assembly);
+            if (isset($parts[2]) && is_numeric($parts[2])) {
+                $num = (int)$parts[2] + 1;
+            }
+        }
+        return $prefix . sprintf('%04d', $num);
+    }
+
+    /**
+     * Proses Pembuatan Paket Bundling (Assembly):
+     * - Mengurangi komponen di Gudang Bundling (OUT)
+     * - Menambah produk paket di Gudang Bundling (IN)
+     * - Menghitung HPP Paket dari akumulasi HPP komponen
+     * - Mendukung Partial Fulfillment (memperbarui status request & sisa kuantitas)
+     */
+    public function process_assembly($data, $componentLots, $user)
+    {
+        $this->ensure_bundling_schema();
+        $this->load->model('M_PenyesuaianBarang');
+
+        $qtyAssembly = (float)$data['qty_assembly'];
+        if ($qtyAssembly <= 0) {
+            return ['status' => false, 'msg' => 'Qty paket yang dibuat harus lebih dari 0'];
+        }
+
+        $idRequest = !empty($data['id_request']) ? (int)$data['id_request'] : null;
+        $req = $idRequest ? $this->get_request_by_id($idRequest) : null;
+
+        $kodePaket = trim($data['kode_paket']);
+        $namaPaket = trim($data['nama_paket']);
+        $gudangId = !empty($data['id_gudang']) ? (int)$data['id_gudang'] : 12; // Gudang Bundling
+        $noAssembly = $this->generate_assembly_number();
+        $tanggal = !empty($data['tanggal']) ? $data['tanggal'] : date('Y-m-d');
+        $noLotPaket = !empty($data['no_lot_paket']) ? trim($data['no_lot_paket']) : 'LOT-' . date('ymd') . '-' . substr(uniqid(), -4);
+        $expDatePaket = !empty($data['expired_date_paket']) && $data['expired_date_paket'] !== '0000-00-00' ? $data['expired_date_paket'] : null;
+
+        // Jika ada request, validasi agar realisasi tidak melebihi sisa request
+        if ($req) {
+            $sisaRequest = (float)$req['qty_request'] - (float)$req['qty_realisasi'];
+            if ($qtyAssembly > ($sisaRequest + 0.0001)) {
+                return ['status' => false, 'msg' => 'Qty realisasi (' . $qtyAssembly . ') melebihi sisa request (' . $sisaRequest . ')'];
+            }
+        }
+
+        // Cek apakah produk paket sudah ada di master barang tbpo_barang
+        $this->ensure_product_in_master_barang($kodePaket, $namaPaket, $data['satuan'] ?? 'Box');
+
+        $this->db->trans_begin();
+        $now = date('Y-m-d H:i:s');
+
+        $totalHppAssembly = 0.0;
+        $assemblyDetailRecords = [];
+        $earliestExpDate = null;
+
+        // 1. Proses Pengurangan Stok Komponen di Gudang Bundling
+        foreach ($componentLots as $comp) {
+            $kdBrg = trim($comp['kode_barang']);
+            $qtyPakai = (float)$comp['qty_digunakan'];
+            if ($qtyPakai <= 0) continue;
+
+            $noLotComp = !empty($comp['no_lot']) ? trim($comp['no_lot']) : '-';
+            $expDateComp = !empty($comp['expired_date']) && $comp['expired_date'] !== '0000-00-00' ? $comp['expired_date'] : null;
+
+            if ($expDateComp) {
+                if ($earliestExpDate === null || strtotime($expDateComp) < strtotime($earliestExpDate)) {
+                    $earliestExpDate = $expDateComp;
+                }
+            }
+
+            // Validasi stok fisik komponen di Gudang Bundling
+            $batchComp = $this->get_stock_batch_row($kdBrg, $gudangId, $noLotComp, $expDateComp);
+            $availableComp = $batchComp ? ((float)$batchComp['qty_on_hand'] - (float)$batchComp['qty_reserved']) : 0;
+
+            if ($availableComp + 0.0001 < $qtyPakai) {
+                $this->db->trans_rollback();
+                return [
+                    'status' => false,
+                    'msg'    => 'Stok komponen ' . ($comp['nama_barang'] ?? $kdBrg) . ' (Lot: ' . $noLotComp . ') di Gudang Bundling tidak mencukupi. Tersedia: ' . $availableComp . ', Dibutuhkan: ' . $qtyPakai
+                ];
+            }
+
+            // Ambil Average HPP Komponen
+            $hppSatuanComp = (float)$this->get_item_average_hpp($kdBrg, $gudangId);
+            $subtotalHpp = $qtyPakai * $hppSatuanComp;
+            $totalHppAssembly += $subtotalHpp;
+
+            // Potong batch komponen di Gudang Bundling
+            $this->apply_batch_delta($kdBrg, $gudangId, $noLotComp, $expDateComp, -$qtyPakai);
+
+            // Catat Kartu Stok Ledger OUT Komponen
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kdBrg,
+                'gudang_id'    => $gudangId,
+                'no_lot'       => $noLotComp,
+                'expired_date' => $expDateComp,
+                'qty'          => $qtyPakai,
+                'tipe'         => 'OUT',
+                'ref_no'       => $noAssembly,
+                'ref_type'     => 'ASSEMBLY_KOMPONEN',
+                'created_at'   => $now
+            ]);
+
+            $assemblyDetailRecords[] = [
+                'kode_barang_komponen' => $kdBrg,
+                'nama_barang_komponen' => $comp['nama_barang'] ?? '',
+                'no_lot'               => $noLotComp,
+                'expired_date'         => $expDateComp,
+                'qty_digunakan'        => $qtyPakai,
+                'satuan'               => $comp['satuan'] ?? 'Pcs',
+                'hpp_satuan'           => $hppSatuanComp,
+                'total_hpp'            => $subtotalHpp
+            ];
+        }
+
+        if (empty($assemblyDetailRecords)) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Tidak ada komponen yang diproses'];
+        }
+
+        // Expired date paket: gunakan input atau ikuti expired date komponen terdekat
+        if (!$expDatePaket && $earliestExpDate) {
+            $expDatePaket = $earliestExpDate;
+        }
+
+        $hppPerPaket = $qtyAssembly > 0 ? ($totalHppAssembly / $qtyAssembly) : 0;
+
+        // 2. Catat Header Assembly
+        $assemblyHeader = [
+            'no_assembly'        => $noAssembly,
+            'id_request'         => $idRequest,
+            'no_request'         => $req ? $req['no_request'] : null,
+            'tanggal'            => $tanggal,
+            'kode_paket'         => $kodePaket,
+            'nama_paket'         => $namaPaket,
+            'id_gudang'          => $gudangId,
+            'qty_assembly'       => $qtyAssembly,
+            'satuan'             => $data['satuan'] ?? 'Box',
+            'no_lot_paket'       => $noLotPaket,
+            'expired_date_paket' => $expDatePaket,
+            'total_nilai_hpp'    => $totalHppAssembly,
+            'hpp_per_paket'      => $hppPerPaket,
+            'user_input'         => $user,
+            'keterangan'         => $data['keterangan'] ?? ('Pembuatan ' . $qtyAssembly . ' Box ' . $namaPaket),
+            'created_at'         => $now
+        ];
+        $this->db->insert('tberp_bundling_assembly', $assemblyHeader);
+        $assemblyId = $this->db->insert_id();
+
+        // 3. Catat Detail Assembly
+        foreach ($assemblyDetailRecords as &$dRec) {
+            $dRec['id_assembly'] = $assemblyId;
+        }
+        $this->db->insert_batch('tberp_bundling_assembly_detail', $assemblyDetailRecords);
+
+        // 4. Tambah Stok Produk Paket di Gudang Bundling (IN)
+        $this->apply_batch_delta($kodePaket, $gudangId, $noLotPaket, $expDatePaket, $qtyAssembly);
+
+        // Catat Kartu Stok Ledger IN Paket
+        $this->db->insert('tberp_stock_ledger', [
+            'kd_barang'    => $kodePaket,
+            'gudang_id'    => $gudangId,
+            'no_lot'       => $noLotPaket,
+            'expired_date' => $expDatePaket,
+            'qty'          => $qtyAssembly,
+            'tipe'         => 'IN',
+            'ref_no'       => $noAssembly,
+            'ref_type'     => 'ASSEMBLY_PAKET',
+            'created_at'   => $now
+        ]);
+
+        // 5. Update Request Purchasing jika ada (Partial / Full Fulfillment)
+        if ($req) {
+            $newRealisasi = (float)$req['qty_realisasi'] + $qtyAssembly;
+            $newStatus = ($newRealisasi >= (float)$req['qty_request'] - 0.0001) ? 'SELESAI' : 'PROSES_SEBAGIAN';
+
+            $this->db->where('id_request', $idRequest)->update('tberp_bundling_request', [
+                'qty_realisasi' => $newRealisasi,
+                'status'        => $newStatus,
+                'updated_at'    => $now
+            ]);
+
+            // Update qty_terpenuhi pada detail request
+            foreach ($assemblyDetailRecords as $dRec) {
+                $this->db->set('qty_terpenuhi', 'qty_terpenuhi + ' . (float)$dRec['qty_digunakan'], false)
+                    ->where('id_request', $idRequest)
+                    ->where('kode_barang_komponen', $dRec['kode_barang_komponen'])
+                    ->update('tberp_bundling_request_detail');
+            }
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Gagal merekam proses pembuatan paket bundling'];
+        }
+
+        $this->db->trans_commit();
+        return [
+            'status'        => true,
+            'no_assembly'   => $noAssembly,
+            'qty_assembly'  => $qtyAssembly,
+            'total_hpp'     => $totalHppAssembly,
+            'hpp_per_paket' => $hppPerPaket,
+            'msg'           => 'Pembuatan ' . $qtyAssembly . ' Box ' . $namaPaket . ' berhasil direkam (' . $noAssembly . ')'
+        ];
+    }
+
+    // =========================================================================
+    // 5. PEMBONGKARAN PAKET / DISASSEMBLY (UNBUNDLING UNTUK PENJUALAN ECER)
+    // =========================================================================
+
+    public function generate_disassembly_number()
+    {
+        $this->ensure_bundling_schema();
+        $dateStr = date('Ymd');
+        $prefix = 'DSB-' . $dateStr . '-';
+
+        $last = $this->db->select('no_disassembly')
+            ->like('no_disassembly', $prefix, 'after')
+            ->order_by('id_disassembly', 'DESC')
+            ->limit(1)
+            ->get('tberp_bundling_disassembly')
+            ->row();
+
+        $num = 1;
+        if ($last) {
+            $parts = explode('-', $last->no_disassembly);
+            if (isset($parts[2]) && is_numeric($parts[2])) {
+                $num = (int)$parts[2] + 1;
+            }
+        }
+        return $prefix . sprintf('%04d', $num);
+    }
+
+    /**
+     * Proses Pembongkaran Paket Bundling (Disassembly):
+     * - Mengurangi stok Paket Bundling di Gudang Bundling (OUT)
+     * - Mengembalikan stok Komponen menjadi stok eceran bebas (IN)
+     * - Mendistribusikan kembali nilai HPP paket ke komponen
+     * - Menghilangkan double counting: fisik paket berkurang, fisik ecer bertambah
+     */
+    public function process_disassembly($data, $componentReturns, $user)
+    {
+        $this->ensure_bundling_schema();
+        $this->load->model('M_PenyesuaianBarang');
+
+        $qtyDisassembly = (float)$data['qty_disassembly'];
+        if ($qtyDisassembly <= 0) {
+            return ['status' => false, 'msg' => 'Qty paket yang dibongkar harus lebih dari 0'];
+        }
+
+        $kodePaket = trim($data['kode_paket']);
+        $namaPaket = trim($data['nama_paket']);
+        $gudangId = !empty($data['id_gudang']) ? (int)$data['id_gudang'] : 12; // Gudang Bundling
+        $noLotPaket = !empty($data['no_lot_paket']) ? trim($data['no_lot_paket']) : '-';
+        $expDatePaket = !empty($data['expired_date_paket']) && $data['expired_date_paket'] !== '0000-00-00' ? $data['expired_date_paket'] : null;
+        $noDisassembly = $this->generate_disassembly_number();
+        $tanggal = !empty($data['tanggal']) ? $data['tanggal'] : date('Y-m-d');
+        $alasan = !empty($data['alasan']) ? trim($data['alasan']) : 'Kebutuhan penjualan eceran pelanggan';
+
+        // 1. Validasi Stok Paket Bundling di Gudang Bundling
+        $batchPaket = $this->get_stock_batch_row($kodePaket, $gudangId, $noLotPaket, $expDatePaket);
+        $availablePaket = $batchPaket ? ((float)$batchPaket['qty_on_hand'] - (float)$batchPaket['qty_reserved']) : 0;
+
+        if ($availablePaket + 0.0001 < $qtyDisassembly) {
+            return [
+                'status' => false,
+                'msg'    => 'Stok paket ' . $namaPaket . ' tidak mencukupi untuk dibongkar. Tersedia: ' . $availablePaket . ', Diminta: ' . $qtyDisassembly
+            ];
+        }
+
+        $this->db->trans_begin();
+        $now = date('Y-m-d H:i:s');
+
+        // Ambil HPP Paket saat ini
+        $hppPaket = (float)$this->get_item_average_hpp($kodePaket, $gudangId);
+        $totalNilaiPaket = $qtyDisassembly * $hppPaket;
+
+        // 2. Potong Stok Paket Bundling (OUT)
+        $this->apply_batch_delta($kodePaket, $gudangId, $noLotPaket, $expDatePaket, -$qtyDisassembly);
+        $this->db->insert('tberp_stock_ledger', [
+            'kd_barang'    => $kodePaket,
+            'gudang_id'    => $gudangId,
+            'no_lot'       => $noLotPaket,
+            'expired_date' => $expDatePaket,
+            'qty'          => $qtyDisassembly,
+            'tipe'         => 'OUT',
+            'ref_no'       => $noDisassembly,
+            'ref_type'     => 'DISASSEMBLY_PAKET',
+            'created_at'   => $now
+        ]);
+
+        // 3. Kembalikan Stok Komponen ke Stok Bebas (IN)
+        $detailRecords = [];
+        $totalHppKomponen = 0.0;
+
+        foreach ($componentReturns as $comp) {
+            $kdComp = trim($comp['kode_barang']);
+            $qtyKembali = (float)$comp['qty_kembali'];
+            if ($qtyKembali <= 0) continue;
+
+            $noLotComp = !empty($comp['no_lot']) ? trim($comp['no_lot']) : '-';
+            $expDateComp = !empty($comp['expired_date']) && $comp['expired_date'] !== '0000-00-00' ? $comp['expired_date'] : null;
+
+            // HPP satuan komponen
+            $hppSatuanComp = (float)$this->get_item_average_hpp($kdComp, $gudangId);
+            $subtotalHppComp = $qtyKembali * $hppSatuanComp;
+            $totalHppKomponen += $subtotalHppComp;
+
+            // Tambah batch stok komponen di Gudang Bundling (atau gudang eceran)
+            $this->apply_batch_delta($kdComp, $gudangId, $noLotComp, $expDateComp, $qtyKembali);
+
+            // Catat Kartu Stok Ledger IN Komponen
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kdComp,
+                'gudang_id'    => $gudangId,
+                'no_lot'       => $noLotComp,
+                'expired_date' => $expDateComp,
+                'qty'          => $qtyKembali,
+                'tipe'         => 'IN',
+                'ref_no'       => $noDisassembly,
+                'ref_type'     => 'DISASSEMBLY_KOMPONEN',
+                'created_at'   => $now
+            ]);
+
+            $detailRecords[] = [
+                'kode_barang_komponen' => $kdComp,
+                'nama_barang_komponen' => $comp['nama_barang'] ?? '',
+                'no_lot'               => $noLotComp,
+                'expired_date'         => $expDateComp,
+                'qty_kembali'          => $qtyKembali,
+                'satuan'               => $comp['satuan'] ?? 'Pcs',
+                'hpp_satuan'           => $hppSatuanComp,
+                'total_hpp'            => $subtotalHppComp
+            ];
+        }
+
+        if (empty($detailRecords)) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Tidak ada komponen yang dikembalikan'];
+        }
+
+        // 4. Catat Header Disassembly
+        $dsbHeader = [
+            'no_disassembly'     => $noDisassembly,
+            'tanggal'            => $tanggal,
+            'kode_paket'         => $kodePaket,
+            'nama_paket'         => $namaPaket,
+            'id_gudang'          => $gudangId,
+            'qty_disassembly'    => $qtyDisassembly,
+            'satuan'             => $data['satuan'] ?? 'Box',
+            'no_lot_paket'       => $noLotPaket,
+            'expired_date_paket' => $expDatePaket,
+            'total_nilai_hpp'    => $totalNilaiPaket,
+            'alasan'             => $alasan,
+            'user_input'         => $user,
+            'created_at'         => $now
+        ];
+        $this->db->insert('tberp_bundling_disassembly', $dsbHeader);
+        $dsbId = $this->db->insert_id();
+
+        // 5. Catat Detail Disassembly
+        foreach ($detailRecords as &$dRec) {
+            $dRec['id_disassembly'] = $dsbId;
+        }
+        $this->db->insert_batch('tberp_bundling_disassembly_detail', $detailRecords);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'msg' => 'Gagal merekam pembongkaran paket bundling'];
+        }
+
+        $this->db->trans_commit();
+        return [
+            'status'          => true,
+            'no_disassembly'  => $noDisassembly,
+            'qty_disassembly' => $qtyDisassembly,
+            'msg'             => 'Pembongkaran ' . $qtyDisassembly . ' Box ' . $namaPaket . ' berhasil direkam (' . $noDisassembly . '). Komponen telah kembali menjadi stok eceran bebas.'
+        ];
+    }
+
+    public function get_assembly_history($filters = [], $limit = 100)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('a.*, g.nama_gudang');
+        $this->db->from('tberp_bundling_assembly a');
+        $this->db->join('tb_gudang g', 'g.id_gudang = a.id_gudang', 'left');
+
+        if (!empty($filters['search'])) {
+            $this->db->group_start();
+            $this->db->like('a.no_assembly', $filters['search']);
+            $this->db->or_like('a.nama_paket', $filters['search']);
+            $this->db->or_like('a.no_request', $filters['search']);
+            $this->db->group_end();
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('a.tanggal >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('a.tanggal <=', $filters['date_to']);
+        }
+
+        $this->db->order_by('a.id_assembly', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
+    }
+
+    public function get_assembly_by_id($id_assembly)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('a.*, g.nama_gudang');
+        $this->db->from('tberp_bundling_assembly a');
+        $this->db->join('tb_gudang g', 'g.id_gudang = a.id_gudang', 'left');
+        $this->db->where('a.id_assembly', $id_assembly);
+        $header = $this->db->get()->row_array();
+
+        if ($header) {
+            $header['details'] = $this->db->where('id_assembly', $id_assembly)->get('tberp_bundling_assembly_detail')->result_array();
+        }
+        return $header;
+    }
+
+    public function get_disassembly_history($filters = [], $limit = 100)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('d.*, g.nama_gudang');
+        $this->db->from('tberp_bundling_disassembly d');
+        $this->db->join('tb_gudang g', 'g.id_gudang = d.id_gudang', 'left');
+
+        if (!empty($filters['search'])) {
+            $this->db->group_start();
+            $this->db->like('d.no_disassembly', $filters['search']);
+            $this->db->or_like('d.nama_paket', $filters['search']);
+            $this->db->group_end();
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('d.tanggal >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('d.tanggal <=', $filters['date_to']);
+        }
+
+        $this->db->order_by('d.id_disassembly', 'DESC');
+        $this->db->limit($limit);
+        return $this->db->get()->result_array();
+    }
+
+    public function get_disassembly_by_id($id_disassembly)
+    {
+        $this->ensure_bundling_schema();
+        $this->db->select('d.*, g.nama_gudang');
+        $this->db->from('tberp_bundling_disassembly d');
+        $this->db->join('tb_gudang g', 'g.id_gudang = d.id_gudang', 'left');
+        $this->db->where('d.id_disassembly', $id_disassembly);
+        $header = $this->db->get()->row_array();
+
+        if ($header) {
+            $header['details'] = $this->db->where('id_disassembly', $id_disassembly)->get('tberp_bundling_disassembly_detail')->result_array();
+        }
+        return $header;
+    }
+
+    // =========================================================================
+    // 6. HELPER STOK & MASTER BARANG INTEGRATION
+    // =========================================================================
+
+    public function get_stock_available_by_gudang($kdBarang, $gudangId)
+    {
+        if (!$this->db->table_exists('tberp_stock_batch')) return 0.0;
+        $row = $this->db->select('SUM(qty_on_hand - GREATEST(qty_reserved, 0)) as available')
+            ->where('kd_barang', $kdBarang)
+            ->where('gudang_id', $gudangId)
+            ->get('tberp_stock_batch')
+            ->row();
+        return $row ? max(0, (float)$row->available) : 0.0;
+    }
+
+    public function get_stock_batches_by_gudang($kdBarang, $gudangId)
+    {
+        if (!$this->db->table_exists('tberp_stock_batch')) return [];
+        return $this->db->select('*')
+            ->where('kd_barang', $kdBarang)
+            ->where('gudang_id', $gudangId)
+            ->where('(qty_on_hand - GREATEST(qty_reserved, 0)) > 0', null, false)
+            ->order_by('expired_date', 'ASC')
+            ->get('tberp_stock_batch')
+            ->result_array();
+    }
+
+    private function get_stock_batch_row($kdBarang, $gudangId, $noLot, $expiredDate)
+    {
+        $this->db->from('tberp_stock_batch')
+            ->where('kd_barang', $kdBarang)
+            ->where('gudang_id', $gudangId);
+
+        if ($noLot === '-' || empty($noLot)) {
+            $this->db->group_start()
+                ->where('no_lot', '-')
+                ->or_where('no_lot', '')
+                ->or_where('no_lot IS NULL', null, false)
+                ->group_end();
+        } else {
+            $this->db->where('no_lot', $noLot);
+        }
+
+        if ($expiredDate === null || $expiredDate === '') {
+            $this->db->group_start()
+                ->where('expired_date IS NULL', null, false)
+                ->or_where('expired_date', '0000-00-00')
+                ->group_end();
+        } else {
+            $this->db->where('expired_date', $expiredDate);
+        }
+
+        return $this->db->limit(1)->get()->row_array();
+    }
+
+    private function apply_batch_delta($kdBarang, $gudangId, $noLot, $expiredDate, $delta)
+    {
+        $batch = $this->get_stock_batch_row($kdBarang, $gudangId, $noLot, $expiredDate);
+        $now = date('Y-m-d H:i:s');
+
+        if ($batch) {
+            $this->db->where('id', $batch['id']);
+            if ((float)$delta < 0) {
+                $this->db->where('(qty_on_hand - qty_reserved) >= ' . abs((float)$delta), null, false);
+            }
+            $this->db->set('qty_on_hand', 'qty_on_hand + ' . (float)$delta, false)
+                ->set('update_at', $now)
+                ->update('tberp_stock_batch');
+            return $this->db->affected_rows() > 0;
+        }
+
+        if ((float)$delta < 0) {
+            return false;
+        }
+
+        return $this->db->insert('tberp_stock_batch', [
+            'kd_barang'    => $kdBarang,
+            'gudang_id'    => $gudangId,
+            'no_lot'       => $noLot ?: '-',
+            'expired_date' => $expiredDate ?: null,
+            'qty_on_hand'  => (float)$delta,
+            'qty_reserved' => 0,
+            'created_at'   => $now,
+            'update_at'    => $now
+        ]);
+    }
+
+    /**
+     * Memastikan Paket terdaftar di master barang tbpo_barang
+     */
+    private function ensure_product_in_master_barang($kodePaket, $namaPaket, $satuan = 'Box')
+    {
+        $exists = $this->db->where('kode_barang', $kodePaket)->limit(1)->get('tbpo_barang')->row();
+        if (!$exists) {
+            $this->db->insert('tbpo_barang', [
+                'kode_barang'             => $kodePaket,
+                'kd_suplier'              => 'BUNDLING',
+                'nama_barang'             => $namaPaket,
+                'satuan'                  => $satuan,
+                'isi'                     => 1,
+                'kemasan'                 => 1,
+                'is_active'               => 'T',
+                'is_lot'                  => 'T',
+                'is_inventori'            => 'T',
+                'is_beli'                 => 'F',
+                'is_jual'                 => 'T',
+                'hpp_average'             => 'T',
+                'kode_akun_harga_pokok'   => '51030',
+                'kode_akun_penjualan'     => '41032',
+                'kode_akun_persediaan'    => '14030',
+                'kode_akun_pengiriman_jual'=> '64030',
+                'kode_akun_retur_penjualan'=> '41034'
+            ]);
+        }
+    }
+
+    /**
+     * Helper mendapatkan HPP Average dari M_PenyesuaianBarang
+     */
+    public function get_item_average_hpp($kd_barang, $gudang_id = null)
+    {
+        if (method_exists($this->M_PenyesuaianBarang, 'get_item_hpp')) {
+            $hpp = (float)$this->M_PenyesuaianBarang->get_item_hpp($kd_barang, $gudang_id);
+            if ($hpp > 0) return $hpp;
+        }
+
+        // Fallback cek tb_lpb_detail
+        $lastLpb = $this->db->select('harga_satuan')
+            ->where('kd_barang', $kd_barang)
+            ->where('harga_satuan >', 0)
+            ->order_by('id_detail_lpb', 'DESC')
+            ->limit(1)
+            ->get('tb_lpb_detail')
+            ->row();
+        if ($lastLpb && (float)$lastLpb->harga_satuan > 0) {
+            return (float)$lastLpb->harga_satuan;
+        }
+
+        return 0.0;
+    }
+}
+

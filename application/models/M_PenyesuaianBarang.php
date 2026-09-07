@@ -394,7 +394,7 @@ class M_PenyesuaianBarang extends CI_Model
             ->from('tb_lpb_detail')
             ->where('kd_barang', $kd_barang)
             ->where('harga_satuan >', 0)
-            ->order_by('id_detail', 'DESC')
+            ->order_by('id_detail_lpb', 'DESC')
             ->limit(1)
             ->get()
             ->row_array();
