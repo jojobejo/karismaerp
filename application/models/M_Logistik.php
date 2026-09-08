@@ -4171,7 +4171,10 @@ FROM (
         $params = [];
 
         if ($requireDonePo) {
-            $sql .= " AND UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
+            $sourceTypeExpr = $this->db->field_exists('source_type', 'tb_lpb')
+                ? "UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR "
+                : "";
+            $sql .= " AND ({$sourceTypeExpr}h.kd_po LIKE 'LPBM-%' OR UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE')";
         }
 
         if (!empty($noPo)) {
@@ -8091,7 +8094,7 @@ FROM (
         return ['status' => TRUE, 'detail_rows' => $validatedRows];
     }
 
-    public function create_lpb_manual(array $header, array $detailRows)
+    public function create_lpb_manual(array $header, array $detailRows, $isDraft = false)
     {
         $this->ensure_lpb_manual_schema();
 
@@ -8119,7 +8122,7 @@ FROM (
             $headerInsert['nomor_lpb'] = $this->generate_lpb_number($jenisLpb);
         }
         if ($this->db->field_exists('status_lpb', 'tb_lpb')) {
-            $headerInsert['status_lpb'] = 1;
+            $headerInsert['status_lpb'] = $isDraft ? 0 : 1;
         }
         if ($this->db->field_exists('source_type', 'tb_lpb')) {
             $headerInsert['source_type'] = 'MANUAL';
@@ -8144,8 +8147,8 @@ FROM (
         }
 
         foreach ($detailRows as $row) {
-            $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
-            $totalHarga = (float) ($row['total_harga'] ?? 0);
+            $hargaSatuan = $isDraft ? 0.0 : (float) ($row['harga_satuan'] ?? 0);
+            $totalHarga = $isDraft ? 0.0 : (float) ($row['total_harga'] ?? 0);
             $detailInsert = [
                 'id_lpb' => $idLpb,
                 'kd_barang' => $row['kd_barang'],
@@ -8161,11 +8164,13 @@ FROM (
             if ($this->db->field_exists('total_harga', 'tb_lpb_detail')) {
                 $detailInsert['total_harga'] = $totalHarga;
             }
-            if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
-                $detailInsert['harga_verified_by'] = $header['dilakukan_oleh'] ?? 'SYSTEM';
-            }
-            if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
-                $detailInsert['harga_verified_at'] = date('Y-m-d H:i:s');
+            if (!$isDraft && $hargaSatuan > 0) {
+                if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
+                    $detailInsert['harga_verified_by'] = $header['dilakukan_oleh'] ?? 'SYSTEM';
+                }
+                if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
+                    $detailInsert['harga_verified_at'] = date('Y-m-d H:i:s');
+                }
             }
 
             $this->db->insert('tb_lpb_detail', $detailInsert);
@@ -8186,13 +8191,19 @@ FROM (
             $this->upsert_lpb_manual_stock($headerInsert['gudang_id'], $manualRef, $row);
         }
 
+        $logActionType = $isDraft ? 'CREATE_LPB_MANUAL_DRAFT' : 'CREATE_LPB_MANUAL';
+        $logStatusAfter = $isDraft ? 'UNPOST' : 'POST';
+        $logKeterangan = $isDraft
+            ? 'LPB Manual dibuat oleh Admin LPB (Logistik) sebagai DRAFT, menunggu pengisian harga dan posting final oleh Purchasing.'
+            : 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.';
+
         $this->insert_lpb_activity_log([
             'id_lpb' => $idLpb,
             'kd_po' => $manualRef,
             'no_invoice' => $headerInsert['no_invoice'] ?? '-',
-            'action_type' => 'CREATE_LPB_MANUAL',
+            'action_type' => $logActionType,
             'status_before' => null,
-            'status_after' => 'POST',
+            'status_after' => $logStatusAfter,
             'data_before' => null,
             'data_after' => [
                 'id_lpb' => $idLpb,
@@ -8200,9 +8211,10 @@ FROM (
                 'nomor_lpb' => $headerInsert['nomor_lpb'] ?? '',
                 'jenis_lpb' => $jenisLpb,
                 'source_type' => 'MANUAL',
+                'status_lpb' => $headerInsert['status_lpb'] ?? 0,
                 'total_detail' => count($detailRows)
             ],
-            'keterangan' => 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.',
+            'keterangan' => $logKeterangan,
             'dilakukan_oleh' => $header['dilakukan_oleh'] ?? 'SYSTEM',
             'checker_name' => $headerInsert['checker_name'] ?? null,
             'checker_by' => $headerInsert['checker_by'] ?? null
@@ -8211,9 +8223,11 @@ FROM (
         $this->insert_lpb_manual_system_log([
             'id_lpb' => $idLpb,
             'manual_ref_no' => $manualRef,
-            'action_type' => 'CREATE_MANUAL_LPB',
+            'action_type' => $logActionType,
             'status' => 'SUCCESS',
-            'message' => 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.',
+            'message' => $isDraft
+                ? 'LPB Manual berhasil disimpan sebagai DRAFT oleh Admin LPB (stok tercatat di gudang fisik, status UNPOST menunggu pengisian harga Purchasing).'
+                : 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.',
             'payload' => ['header' => $headerInsert, 'detail_rows' => $detailRows],
             'created_by' => $header['dilakukan_oleh'] ?? 'SYSTEM'
         ]);

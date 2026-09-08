@@ -257,7 +257,7 @@ $formatDate = function ($dateStr) {
                                             </a>
                                         </div>
                                     <?php endif; ?>
-                                    <?php if ($canLpbManual && (!$isDataLpbPage || !$isAdmlpbUser)) : ?>
+                                    <?php if ($canLpbManual) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('ics/lpb_manual') ?>">
                                                 <i class="fas fa-keyboard"></i> Input LPB Manual
@@ -523,7 +523,7 @@ $formatDate = function ($dateStr) {
                                                             if ($tglSjValue === '' || $tglSjValue === '0000-00-00') {
                                                                 $tglSjValue = '-';
                                                             }
-                                                            $detailUrl = base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? ''));
+                                                            $detailUrl = base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '') . (!empty($row['id_lpb']) ? '&id_lpb=' . urlencode($row['id_lpb']) : ''));
                                                             $salesTitle = $hasSalesTransaction
                                                                 ? 'Sudah ada ' . (int) ($row['sales_invoice_count'] ?? 0) . ' faktur penjualan: ' . (string) ($row['sales_invoice_sample'] ?? '-')
                                                                 : 'Belum ada transaksi penjualan dari LPB ini';

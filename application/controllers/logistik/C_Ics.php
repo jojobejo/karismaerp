@@ -926,6 +926,15 @@ class C_Ics extends CI_Controller
         $kd_po = urldecode((string) $this->input->get('kd_po'));
         $no_po = urldecode((string) $this->input->get('no_po'));
         $kd_suplier = urldecode((string) $this->input->get('kd_suplier'));
+        $initial_id_lpb = (int) $this->input->get('id_lpb', TRUE);
+
+        if ($kd_po === '' && $initial_id_lpb > 0) {
+            $lpbHeader = $this->M_Logistik->get_lpb_record_header($initial_id_lpb);
+            if (!empty($lpbHeader)) {
+                $kd_po = (string) ($lpbHeader['kd_po'] ?? '');
+                $no_po = (string) ($lpbHeader['no_po'] ?? '');
+            }
+        }
 
         if ($kd_po === '') {
             redirect('ics/icspo');
@@ -935,7 +944,7 @@ class C_Ics extends CI_Controller
         $data['kd_po']      = $kd_po;
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
-        $data['initial_id_lpb'] = (int) $this->input->get('id_lpb', TRUE);
+        $data['initial_id_lpb'] = $initial_id_lpb;
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
         $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
@@ -951,13 +960,14 @@ class C_Ics extends CI_Controller
     public function lpb_manual()
     {
         if (!$this->can_access_lpb_manual()) {
-            show_error('Akses input LPB Manual hanya untuk Purchasing, ADMIN PO, IT, atau Admin.', 403);
+            show_error('Akses input LPB Manual hanya untuk Purchasing, ADMIN PO, IT, Admin, atau Logistik.', 403);
             return;
         }
 
         $this->M_Logistik->ensure_lpb_manual_schema();
 
         $data['page_title'] = 'KARISMA - Input LPB Manual';
+        $data['is_admlpb_user'] = $this->is_admlpb_user();
         $data['list_gudang'] = $this->db
             ->select('id_gudang, nama_gudang')
             ->order_by('nama_gudang', 'ASC')
@@ -979,7 +989,11 @@ class C_Ics extends CI_Controller
         }
 
         $term = trim((string) $this->input->get('q', TRUE));
-        $rows = $this->M_Logistik->search_lpb_manual_barang($term, 30);
+        $limit = (int) $this->input->get('limit', TRUE);
+        if ($limit <= 0 || $limit > 100) {
+            $limit = 50;
+        }
+        $rows = $this->M_Logistik->search_lpb_manual_barang($term, $limit);
         $results = [];
 
         foreach ($rows as $row) {
@@ -1003,6 +1017,8 @@ class C_Ics extends CI_Controller
             $this->json_response(['status' => 'error', 'message' => 'Akses input LPB Manual ditolak.']);
             return;
         }
+
+        $isDraft = $this->is_admlpb_user();
 
         $payload = [
             'manual_ref_no' => trim((string) $this->input->post('manual_ref_no', TRUE)),
@@ -1037,13 +1053,16 @@ class C_Ics extends CI_Controller
                 continue;
             }
 
+            // Jika inputer adalah admlpb, harga satuan selalu 0 karena akan diisi oleh Purchasing
+            $hargaValue = $isDraft ? 0.0 : $this->_parse_harga_input($hargaSatuan[$index] ?? 0);
+
             $detailRows[] = [
                 'kd_barang' => $kode,
                 'qty_diterima' => $qtyValue,
                 'satuan' => trim((string) ($satuan[$index] ?? '')),
                 'no_lot' => trim((string) ($noLot[$index] ?? '')),
                 'expired_date' => trim((string) ($expiredDate[$index] ?? '')),
-                'harga_satuan' => $this->_parse_harga_input($hargaSatuan[$index] ?? 0)
+                'harga_satuan' => $hargaValue
             ];
         }
 
@@ -1066,7 +1085,7 @@ class C_Ics extends CI_Controller
         $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->M_Logistik->ensure_lpb_manual_schema();
         $this->db->trans_begin();
-        $idLpb = $this->M_Logistik->create_lpb_manual($payload, $validation['detail_rows']);
+        $idLpb = $this->M_Logistik->create_lpb_manual($payload, $validation['detail_rows'], $isDraft);
 
         if (!$idLpb || $this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
@@ -1086,9 +1105,14 @@ class C_Ics extends CI_Controller
 
         $this->db->trans_commit();
 
+        $successMessage = $isDraft
+            ? 'LPB Manual berhasil disimpan sebagai DRAFT. Menunggu pengisian harga dan posting final oleh Purchasing.'
+            : 'LPB Manual berhasil disimpan dan stok tercatat di batch serta ledger.';
+
         $this->json_response([
             'status' => 'success',
-            'message' => 'LPB Manual berhasil disimpan dan stok tercatat di batch serta ledger.',
+            'message' => $successMessage,
+            'is_draft' => $isDraft ? 1 : 0,
             'id_lpb' => (int) $idLpb,
             'manual_ref_no' => $payload['manual_ref_no'],
             'redirect_url' => base_url('ics/lpb_report?source=manual')
@@ -1661,6 +1685,10 @@ class C_Ics extends CI_Controller
 
     private function is_admin_po_jobdesk()
     {
+        if ($this->is_admlpb_user()) {
+            return FALSE;
+        }
+
         $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         $username = strtolower(trim((string) $this->session->userdata('username')));
@@ -1669,7 +1697,7 @@ class C_Ics extends CI_Controller
         return strpos($departemen, 'PURCHASING') !== FALSE
             || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO', 'ADMIN'], TRUE)
             || in_array($username, ['admpo', 'admin'], TRUE)
-            || $level === '1';
+            || ($level === '1' && ($username === 'admin' || strpos($departemen, 'PURCHASING') !== FALSE));
     }
 
     private function resolve_ics_po_panel_mode()
@@ -1695,9 +1723,9 @@ class C_Ics extends CI_Controller
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         $username = strtolower(trim((string) $this->session->userdata('username')));
 
-        return strpos($departemen, 'LOGISTIK') !== FALSE
+        return in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], TRUE)
             || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], TRUE)
-            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], TRUE);
+            || strpos($departemen, 'LOGISTIK') !== FALSE;
     }
 
     private function reject_non_admin_po_ajax()
@@ -1717,7 +1745,7 @@ class C_Ics extends CI_Controller
 
     private function can_access_lpb_manual()
     {
-        return $this->is_admin_po_jobdesk() || $this->can_access_lpb_manual_log();
+        return $this->is_admin_po_jobdesk() || $this->can_access_lpb_manual_log() || $this->is_admlpb_user();
     }
 
     private function can_access_lpb_report()

@@ -287,9 +287,9 @@ class M_LaporanPurchasing extends CI_Model
                     {$sourceTypeExpr} AS source_type,
                     {$statusLpbCodeExpr} AS status_lpb_code,
                     CASE 
-                        WHEN {$statusLpbCodeExpr} = 2 THEN 'POSTED'
-                        WHEN {$statusLpbCodeExpr} = 0 THEN 'VOID'
-                        ELSE 'UNPOST'
+                        WHEN {$statusLpbCodeExpr} = 1 OR {$statusLpbCodeExpr} = 2 THEN 'POSTED'
+                        WHEN {$statusLpbCodeExpr} = 0 THEN 'UNPOST'
+                        ELSE 'DRAFT'
                     END AS status_lpb_text,
                     {$gudangIdExpr} AS gudang_id,
                     h.nosj,
@@ -378,80 +378,41 @@ class M_LaporanPurchasing extends CI_Model
         $where = [" 1=1 "];
 
         if (!empty($filters['date1'])) {
-            $where[] = "DATE(h.tgl_sj) >= ?";
+            $where[] = "DATE(main_report.tgl_lpb) >= ?";
             $params[] = $filters['date1'];
         }
         if (!empty($filters['date2'])) {
-            $where[] = "DATE(h.tgl_sj) <= ?";
+            $where[] = "DATE(main_report.tgl_lpb) <= ?";
             $params[] = $filters['date2'];
         }
         if (!empty($filters['source']) && $filters['source'] !== 'all') {
-            $hasSourceType = $this->db->field_exists('source_type', 'tb_lpb');
             if ($filters['source'] === 'manual') {
-                if ($hasSourceType) {
-                    $where[] = "h.source_type = 'MANUAL'";
-                } else {
-                    $where[] = "1=0";
-                }
+                $where[] = "(UPPER(TRIM(main_report.source_type)) = 'MANUAL' OR main_report.kd_po LIKE 'LPBM-%' OR main_report.no_po LIKE 'LPBM-%')";
             } elseif ($filters['source'] === 'logistik') {
-                if ($hasSourceType) {
-                    $where[] = "(h.source_type IS NULL OR h.source_type <> 'MANUAL')";
-                }
+                $where[] = "((main_report.source_type IS NULL OR UPPER(TRIM(main_report.source_type)) <> 'MANUAL') AND main_report.kd_po NOT LIKE 'LPBM-%' AND main_report.no_po NOT LIKE 'LPBM-%')";
             }
         }
         if (!empty($filters['status_lpb']) && $filters['status_lpb'] !== 'all') {
-            $hasStatusLpb = $this->db->field_exists('status_lpb', 'tb_lpb');
-            if ($hasStatusLpb) {
-                $val = strtolower(trim($filters['status_lpb']));
-                if ($val === 'posted' || $val === '2') {
-                    $where[] = "h.status_lpb = 2";
-                } elseif ($val === 'void' || $val === '0') {
-                    $where[] = "h.status_lpb = 0";
-                } elseif ($val === 'unpost' || $val === '1') {
-                    $where[] = "(h.status_lpb = 1 OR h.status_lpb IS NULL)";
-                }
+            $val = strtolower(trim($filters['status_lpb']));
+            if ($val === 'posted' || $val === '1' || $val === '2') {
+                $where[] = "main_report.status_lpb_code IN (1, 2)";
+            } elseif ($val === 'unpost' || $val === '0' || $val === 'draft') {
+                $where[] = "(main_report.status_lpb_code = 0 OR main_report.status_lpb_code IS NULL)";
+            } elseif ($val === 'void') {
+                $where[] = "main_report.status_lpb_code = -1";
             }
         }
         if (!empty($filters['aging_fp']) && $filters['aging_fp'] !== 'all') {
-            $hasFpTable = $this->db->table_exists('tblpb_faktur_pajak');
-            if (!$hasFpTable || $filters['aging_fp'] === 'belum') {
-                $where[] = ($hasFpTable ? "fp.tgl_terima_fp IS NULL" : "1=1");
-            } else {
-                $where[] = "CASE 
-                    WHEN fp.tgl_terima_fp IS NULL THEN 'Belum Diterima'
-                    WHEN DATEDIFF(CURRENT_DATE, fp.tgl_terima_fp) BETWEEN 0 AND 15 THEN '0 - 15 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, fp.tgl_terima_fp) BETWEEN 16 AND 30 THEN '16 - 30 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, fp.tgl_terima_fp) BETWEEN 31 AND 45 THEN '31 - 45 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, fp.tgl_terima_fp) BETWEEN 46 AND 60 THEN '46 - 60 Hari'
-                    ELSE '> 60 Hari'
-                END = ?";
-                $params[] = $filters['aging_fp'];
-            }
+            $where[] = "main_report.aging_fp_category = ?";
+            $params[] = $filters['aging_fp'];
         }
         if (!empty($filters['jenis_lpb']) && $filters['jenis_lpb'] !== 'all') {
-            $hasJenisLpb = $this->db->field_exists('jenis_lpb', 'tb_lpb');
-            if ($hasJenisLpb) {
-                $where[] = "UPPER(TRIM(h.jenis_lpb)) = ?";
-                $params[] = strtoupper($filters['jenis_lpb']);
-            }
+            $where[] = "UPPER(TRIM(main_report.jenis_lpb)) = ?";
+            $params[] = strtoupper($filters['jenis_lpb']);
         }
         if (!empty($filters['aging_invoice']) && $filters['aging_invoice'] !== 'all') {
-            $hasTglRiil = $this->db->field_exists('tgl_riil_invoice', 'tb_lpb');
-            $tglInvExpr = $hasTglRiil ? "COALESCE(h.tgl_riil_invoice, h.tanggal_invoice)" : "h.tanggal_invoice";
-
-            if ($filters['aging_invoice'] === 'belum') {
-                $where[] = "{$tglInvExpr} IS NULL";
-            } else {
-                $where[] = "CASE 
-                    WHEN {$tglInvExpr} IS NULL THEN 'Belum Diterima'
-                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 0 AND 15 THEN '0 - 15 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 16 AND 30 THEN '16 - 30 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 31 AND 45 THEN '31 - 45 Hari'
-                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 46 AND 60 THEN '46 - 60 Hari'
-                    ELSE '> 60 Hari'
-                END = ?";
-                $params[] = $filters['aging_invoice'];
-            }
+            $where[] = "main_report.aging_invoice_category = ?";
+            $params[] = $filters['aging_invoice'];
         }
 
         $whereStr = implode(" AND ", $where);

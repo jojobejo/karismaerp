@@ -17,6 +17,7 @@ class M_Bundling extends CI_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->load->model('M_PenyesuaianBarang');
     }
 
     /**
@@ -187,6 +188,20 @@ class M_Bundling extends CI_Model
                 'is_active'   => 1,
                 'created_at'  => date('Y-m-d H:i:s')
             ]);
+        }
+
+        // Pastikan kolom estimasi HPP & modal ada di tberp_bundling_request
+        if ($this->db->table_exists('tberp_bundling_request')) {
+            if (!$this->db->field_exists('estimasi_hpp_per_paket', 'tberp_bundling_request')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request` ADD COLUMN `estimasi_hpp_per_paket` DECIMAL(18,2) DEFAULT 0.00 AFTER `satuan`, ADD COLUMN `estimasi_total_modal` DECIMAL(18,2) DEFAULT 0.00 AFTER `estimasi_hpp_per_paket`");
+            }
+        }
+
+        // Pastikan kolom HPP satuan ada di tberp_bundling_request_detail
+        if ($this->db->table_exists('tberp_bundling_request_detail')) {
+            if (!$this->db->field_exists('hpp_satuan', 'tberp_bundling_request_detail')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request_detail` ADD COLUMN `hpp_satuan` DECIMAL(18,2) DEFAULT 0.00 AFTER `qty_terpenuhi`, ADD COLUMN `subtotal_hpp` DECIMAL(18,2) DEFAULT 0.00 AFTER `hpp_satuan`");
+            }
         }
     }
 
@@ -375,13 +390,33 @@ class M_Bundling extends CI_Model
             $header['details'] = $this->db->where('id_request', $id_request)->get('tberp_bundling_request_detail')->result_array();
             // Ambil juga histori assembly yang telah dibuat berdasarkan request ini
             $header['assemblies'] = $this->db->where('id_request', $id_request)->order_by('id_assembly', 'DESC')->get('tberp_bundling_assembly')->result_array();
+
+            // Hitung estimasi HPP per paket dan total modal dari rincian komponen
+            $estHppPerPaket = 0.0;
+            foreach ($header['details'] as $idxDet => $det) {
+                $hpp = !empty($det['hpp_satuan']) && (float)$det['hpp_satuan'] > 0
+                    ? (float)$det['hpp_satuan']
+                    : (float)$this->get_item_average_hpp($det['kode_barang_komponen'], $header['id_gudang_asal'], $det['nama_barang_komponen']);
+                
+                $subtotalHpp = (float)$det['qty_per_paket'] * $hpp;
+                $header['details'][$idxDet]['hpp_satuan'] = $hpp;
+                $header['details'][$idxDet]['subtotal_hpp'] = $subtotalHpp;
+                $estHppPerPaket += $subtotalHpp;
+            }
+
+            if (empty($header['estimasi_hpp_per_paket']) || (float)$header['estimasi_hpp_per_paket'] <= 0) {
+                $header['estimasi_hpp_per_paket'] = $estHppPerPaket;
+            }
+            if (empty($header['estimasi_total_modal']) || (float)$header['estimasi_total_modal'] <= 0) {
+                $header['estimasi_total_modal'] = (float)$header['qty_request'] * (float)$header['estimasi_hpp_per_paket'];
+            }
         }
         return $header;
     }
 
     /**
      * Membuat Request Paket Bundling baru oleh Purchasing
-     * Otomatis menghitung: Total Kebutuhan = Qty Request x Qty Komponen
+     * Otomatis menghitung: Total Kebutuhan = Qty Request x Qty Komponen serta Estimasi Modal HPP
      */
     public function create_request($data, $details, $user)
     {
@@ -408,31 +443,40 @@ class M_Bundling extends CI_Model
             return ['status' => false, 'msg' => 'Komposisi isi paket belum ditentukan'];
         }
 
+        $idGudangAsal = !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : 2; // Gudang Induk default
+        $idGudangTujuan = !empty($data['id_gudang_tujuan']) ? (int)$data['id_gudang_tujuan'] : 12; // Gudang Bundling default
+
         $header = [
-            'no_request'       => $noRequest,
-            'tanggal_request'  => !empty($data['tanggal_request']) ? $data['tanggal_request'] : date('Y-m-d'),
-            'kode_paket'       => $kodePaket,
-            'nama_paket'       => trim($data['nama_paket']),
-            'id_gudang_tujuan' => !empty($data['id_gudang_tujuan']) ? (int)$data['id_gudang_tujuan'] : 12, // Gudang Bundling default
-            'id_gudang_asal'   => !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : 2,       // Gudang Induk default
-            'qty_request'      => $qtyRequest,
-            'qty_realisasi'    => 0,
-            'satuan'           => !empty($data['satuan']) ? $data['satuan'] : 'Box',
-            'status'           => 'MENUNGGU_PROSES',
-            'user_request'     => $user,
-            'keterangan'       => $data['keterangan'] ?? null,
-            'created_at'       => date('Y-m-d H:i:s')
+            'no_request'             => $noRequest,
+            'tanggal_request'        => !empty($data['tanggal_request']) ? $data['tanggal_request'] : date('Y-m-d'),
+            'kode_paket'             => $kodePaket,
+            'nama_paket'             => trim($data['nama_paket']),
+            'id_gudang_tujuan'       => $idGudangTujuan,
+            'id_gudang_asal'         => $idGudangAsal,
+            'qty_request'            => $qtyRequest,
+            'qty_realisasi'          => 0,
+            'satuan'                 => !empty($data['satuan']) ? $data['satuan'] : 'Box',
+            'estimasi_hpp_per_paket' => 0.00,
+            'estimasi_total_modal'   => 0.00,
+            'status'                 => 'MENUNGGU_PROSES',
+            'user_request'           => $user,
+            'keterangan'             => $data['keterangan'] ?? null,
+            'created_at'             => date('Y-m-d H:i:s')
         ];
         $this->db->insert('tberp_bundling_request', $header);
         $requestId = $this->db->insert_id();
 
         $detailRows = [];
+        $totalEstHppPaket = 0.0;
         foreach ($details as $d) {
             $kdBrg = trim($d['kode_barang_komponen'] ?? '');
             if ($kdBrg === '') continue;
 
             $qtyPerPaket = (float)($d['qty_per_paket'] ?? 1);
             $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis
+            $hppSatuan = (float)$this->get_item_average_hpp($kdBrg, $idGudangAsal, $d['nama_barang_komponen'] ?? '');
+            $subtotalHpp = $qtyPerPaket * $hppSatuan;
+            $totalEstHppPaket += $subtotalHpp;
 
             $detailRows[] = [
                 'id_request'           => $requestId,
@@ -441,7 +485,9 @@ class M_Bundling extends CI_Model
                 'qty_per_paket'        => $qtyPerPaket,
                 'qty_total_kebutuhan'  => $totalKebutuhan,
                 'qty_terpenuhi'        => 0,
-                'satuan'               => $d['satuan'] ?? 'Pcs'
+                'satuan'               => $d['satuan'] ?? 'Pcs',
+                'hpp_satuan'           => $hppSatuan,
+                'subtotal_hpp'         => $subtotalHpp
             ];
         }
 
@@ -451,6 +497,12 @@ class M_Bundling extends CI_Model
         }
 
         $this->db->insert_batch('tberp_bundling_request_detail', $detailRows);
+
+        // Perbarui estimasi HPP per paket dan total modal pada header request
+        $this->db->where('id_request', $requestId)->update('tberp_bundling_request', [
+            'estimasi_hpp_per_paket' => $totalEstHppPaket,
+            'estimasi_total_modal'   => $totalEstHppPaket * $qtyRequest
+        ]);
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
@@ -513,6 +565,13 @@ class M_Bundling extends CI_Model
             $sisaKebutuhan = max(0, (float)$item['qty_total_kebutuhan'] - (float)$item['qty_terpenuhi']);
             $kekuranganDiBundling = max(0, $sisaKebutuhan - $stokBundling);
 
+            $hppSatuan = !empty($item['hpp_satuan']) && (float)$item['hpp_satuan'] > 0
+                ? (float)$item['hpp_satuan']
+                : (float)$this->get_item_average_hpp($kd, $gudangAsalId, $item['nama_barang_komponen']);
+
+            $subtotalHppPerPaket = (float)$item['qty_per_paket'] * $hppSatuan;
+            $totalModalKebutuhan = (float)$item['qty_total_kebutuhan'] * $hppSatuan;
+
             $result[] = [
                 'kode_barang'            => $kd,
                 'nama_barang'            => $item['nama_barang_komponen'],
@@ -523,7 +582,10 @@ class M_Bundling extends CI_Model
                 'stok_gudang_induk'      => $stokInduk,
                 'stok_gudang_bundling'   => $stokBundling,
                 'kekurangan_di_bundling' => $kekuranganDiBundling,
-                'satuan'                 => $item['satuan']
+                'satuan'                 => $item['satuan'],
+                'hpp_satuan'             => $hppSatuan,
+                'subtotal_hpp_per_paket' => $subtotalHppPerPaket,
+                'total_modal_kebutuhan'  => $totalModalKebutuhan
             ];
         }
         return $result;
@@ -754,7 +816,15 @@ class M_Bundling extends CI_Model
             }
 
             // Ambil Average HPP Komponen
-            $hppSatuanComp = (float)$this->get_item_average_hpp($kdBrg, $gudangId);
+            $hppSatuanComp = (float)$this->get_item_average_hpp($kdBrg, $gudangId, $comp['nama_barang'] ?? '');
+            if ($hppSatuanComp <= 0 && $req && !empty($req['details'])) {
+                foreach ($req['details'] as $rDet) {
+                    if ($rDet['kode_barang_komponen'] === $kdBrg && !empty($rDet['hpp_satuan']) && (float)$rDet['hpp_satuan'] > 0) {
+                        $hppSatuanComp = (float)$rDet['hpp_satuan'];
+                        break;
+                    }
+                }
+            }
             $subtotalHpp = $qtyPakai * $hppSatuanComp;
             $totalHppAssembly += $subtotalHpp;
 
@@ -1250,25 +1320,91 @@ class M_Bundling extends CI_Model
     }
 
     /**
-     * Helper mendapatkan HPP Average dari M_PenyesuaianBarang
+     * Helper mendapatkan HPP Average dari M_PenyesuaianBarang, LPB, PO, atau referensi pasar
      */
-    public function get_item_average_hpp($kd_barang, $gudang_id = null)
+    public function get_item_average_hpp($kd_barang, $gudang_id = null, $nama_barang = '')
     {
-        if (method_exists($this->M_PenyesuaianBarang, 'get_item_hpp')) {
+        $kd_barang = trim((string)$kd_barang);
+        if ($kd_barang === '') return 0.0;
+
+        // 1. Cek melalui model M_PenyesuaianBarang (Moving Average pergerakan stok)
+        if (isset($this->M_PenyesuaianBarang) && method_exists($this->M_PenyesuaianBarang, 'get_item_hpp')) {
             $hpp = (float)$this->M_PenyesuaianBarang->get_item_hpp($kd_barang, $gudang_id);
             if ($hpp > 0) return $hpp;
         }
 
-        // Fallback cek tb_lpb_detail
-        $lastLpb = $this->db->select('harga_satuan')
-            ->where('kd_barang', $kd_barang)
-            ->where('harga_satuan >', 0)
-            ->order_by('id_detail_lpb', 'DESC')
-            ->limit(1)
-            ->get('tb_lpb_detail')
-            ->row();
-        if ($lastLpb && (float)$lastLpb->harga_satuan > 0) {
-            return (float)$lastLpb->harga_satuan;
+        // 2. Cek tb_lpb_detail (harga satuan pembelian LPB terbaru berdasarkan kode barang)
+        if ($this->db->table_exists('tb_lpb_detail')) {
+            $lastLpb = $this->db->select('harga_satuan')
+                ->where('kd_barang', $kd_barang)
+                ->where('harga_satuan >', 0)
+                ->order_by('id_detail_lpb', 'DESC')
+                ->limit(1)
+                ->get('tb_lpb_detail')
+                ->row();
+            if ($lastLpb && (float)$lastLpb->harga_satuan > 0) {
+                return (float)$lastLpb->harga_satuan;
+            }
+        }
+
+        // 3. Cek tbpo_detail_po (harga pembelian PO resmi berdasarkan kode barang)
+        if ($this->db->table_exists('tbpo_detail_po')) {
+            $lastPo = $this->db->select('COALESCE(NULLIF(harga_satuan_kecil_setelah_diskon, 0), NULLIF(harga_satuan_exclude, 0), hrg_satuan) AS hpp')
+                ->where('kd_barang', $kd_barang)
+                ->group_start()
+                    ->where('hrg_satuan >', 0)
+                    ->or_where('harga_satuan_kecil_setelah_diskon >', 0)
+                ->group_end()
+                ->order_by('id_det_po', 'DESC')
+                ->limit(1)
+                ->get('tbpo_detail_po')
+                ->row();
+            if ($lastPo && (float)$lastPo->hpp > 0) {
+                return (float)$lastPo->hpp;
+            }
+        }
+
+        // 4. Jika belum ketemu dengan kode barang (misal kode alias / dummy / barcode lama), cari via nama_barang
+        if (!empty($nama_barang)) {
+            $firstWord = explode(' ', trim($nama_barang))[0];
+            
+            // Cek di tb_lpb_detail join tbpo_barang by nama barang
+            if ($this->db->table_exists('tb_lpb_detail') && $this->db->table_exists('tbpo_barang')) {
+                $matchLpb = $this->db->select('ld.harga_satuan')
+                    ->from('tb_lpb_detail ld')
+                    ->join('tbpo_barang b', 'ld.kd_barang = b.kode_barang')
+                    ->like('b.nama_barang', $firstWord)
+                    ->where('ld.harga_satuan >', 0)
+                    ->order_by('ld.id_detail_lpb', 'DESC')
+                    ->limit(1)
+                    ->get()
+                    ->row();
+                if ($matchLpb && (float)$matchLpb->harga_satuan > 0) {
+                    return (float)$matchLpb->harga_satuan;
+                }
+            }
+
+            // Cek di tbpo_detail_po by nama barang
+            if ($this->db->table_exists('tbpo_detail_po')) {
+                $matchPo = $this->db->select('COALESCE(NULLIF(harga_satuan_kecil_setelah_diskon, 0), NULLIF(harga_satuan_exclude, 0), hrg_satuan) AS hpp')
+                    ->like('nama_barang', $firstWord)
+                    ->group_start()
+                        ->where('hrg_satuan >', 0)
+                        ->or_where('harga_satuan_kecil_setelah_diskon >', 0)
+                    ->group_end()
+                    ->order_by('id_det_po', 'DESC')
+                    ->limit(1)
+                    ->get('tbpo_detail_po')
+                    ->row();
+                if ($matchPo && (float)$matchPo->hpp > 0) {
+                    return (float)$matchPo->hpp;
+                }
+            }
+        }
+
+        // 5. Khusus barang merchandise / kaos / bonus promosi yang belum ada data transaksi beli
+        if (!empty($nama_barang) && stripos($nama_barang, 'kaos') !== false) {
+            return 25000.00; // Standar estimasi biaya produksi kaos merchandise Karisma
         }
 
         return 0.0;

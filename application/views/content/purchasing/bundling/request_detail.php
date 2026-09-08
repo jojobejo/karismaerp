@@ -111,25 +111,84 @@
                 </div>
             </div>
 
-            <!-- Tabel Komposisi & Total Kebutuhan Komponen -->
+            <!-- Kartu Estimasi Modal & HPP Paket Purchasing -->
+            <?php
+                $calcEstHpp1Paket = (float)($request['estimasi_hpp_per_paket'] ?? 0);
+                $calcEstModalTotal = (float)($request['estimasi_total_modal'] ?? 0);
+                $sumHpp1Paket = 0;
+                $sumTotalModal = 0;
+                foreach ($stock_status as $stk) {
+                    $sumHpp1Paket += (float)($stk['subtotal_hpp_per_paket'] ?? 0);
+                    $sumTotalModal += (float)($stk['total_modal_kebutuhan'] ?? 0);
+                }
+                if ($calcEstHpp1Paket <= 0) $calcEstHpp1Paket = $sumHpp1Paket;
+                if ($calcEstModalTotal <= 0) $calcEstModalTotal = $sumTotalModal;
+            ?>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px; border-left: 5px solid #059669 !important;">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small font-weight-bold text-uppercase d-block">
+                                    <i class="fas fa-tag text-success mr-1"></i> Estimasi Modal / HPP per 1 Paket
+                                </span>
+                                <h3 class="font-weight-bold text-dark mb-0 mt-1">
+                                    Rp <?= number_format($calcEstHpp1Paket, 2, ',', '.') ?>
+                                    <small class="text-muted font-weight-normal" style="font-size: 0.9rem;">/ <?= htmlspecialchars($request['satuan']) ?></small>
+                                </h3>
+                                <small class="text-muted">Total akumulasi biaya komponen untuk merakit 1 paket</small>
+                            </div>
+                            <div class="rounded-circle bg-light p-3 text-success">
+                                <i class="fas fa-calculator fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm" style="border-radius: 12px; border-left: 5px solid #2563eb !important;">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="text-muted small font-weight-bold text-uppercase d-block">
+                                    <i class="fas fa-coins text-primary mr-1"></i> Total Estimasi Modal Request
+                                </span>
+                                <h3 class="font-weight-bold text-primary mb-0 mt-1">
+                                    Rp <?= number_format($calcEstModalTotal, 2, ',', '.') ?>
+                                </h3>
+                                <small class="text-muted">Modal pengadaan untuk target <?= number_format((float)$request['qty_request'], 0, ',', '.') ?> <?= htmlspecialchars($request['satuan']) ?> paket</small>
+                            </div>
+                            <div class="rounded-circle bg-light p-3 text-primary">
+                                <i class="fas fa-wallet fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Komposisi & Total Kebutuhan Komponen beserta HPP Modal -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
+                <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
                     <h6 class="font-weight-bold text-dark m-0">
-                        <i class="fas fa-cubes text-primary mr-2"></i> Rincian Komposisi & Perhitungan Kebutuhan Bahan
+                        <i class="fas fa-cubes text-primary mr-2"></i> Rincian Komposisi, Kebutuhan Bahan & Estimasi Modal HPP
                     </h6>
+                    <span class="badge badge-light border text-muted px-2 py-1 small mt-2 mt-sm-0">
+                        <i class="fas fa-info-circle mr-1"></i> HPP dihitung dari riwayat pembelian LPB / PO terakhir
+                    </span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
                             <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
                                     <th class="py-3 px-3">Komponen Barang</th>
-                                    <th class="py-3 text-center">Isi per 1 Paket</th>
-                                    <th class="py-3 text-center bg-light text-primary font-weight-bold">Total Kebutuhan (<?= number_format((float)$request['qty_request'], 0, ',', '.') ?> Paket)</th>
-                                    <th class="py-3 text-center text-success font-weight-bold">Sudah Terpakai</th>
-                                    <th class="py-3 text-center text-danger font-weight-bold">Sisa Dibutuhkan</th>
-                                    <th class="py-3 text-center">Stok Gdg. Induk</th>
-                                    <th class="py-3 text-center">Stok Gdg. Bundling</th>
+                                    <th class="py-3 text-center">Isi / 1 Paket</th>
+                                    <th class="py-3 text-right">HPP Satuan</th>
+                                    <th class="py-3 text-right bg-light text-success font-weight-bold">Modal / 1 Paket</th>
+                                    <th class="py-3 text-center bg-light text-primary font-weight-bold">Total Qty Kebutuhan</th>
+                                    <th class="py-3 text-right bg-light text-primary font-weight-bold">Total Modal Kebutuhan</th>
+                                    <th class="py-3 text-center text-success font-weight-bold">Terpakai</th>
+                                    <th class="py-3 text-center text-danger font-weight-bold">Sisa Butuh</th>
+                                    <th class="py-3 text-center">Stok Induk</th>
+                                    <th class="py-3 text-center">Stok Bundling</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -142,28 +201,52 @@
                                         <td class="text-center font-weight-bold">
                                             <?= number_format($stk['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
                                         </td>
-                                        <td class="text-center font-weight-bold bg-light text-primary" style="font-size: 1.05rem;">
+                                        <td class="text-right text-muted">
+                                            Rp <?= number_format((float)($stk['hpp_satuan'] ?? 0), 2, ',', '.') ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold text-success bg-light">
+                                            Rp <?= number_format((float)($stk['subtotal_hpp_per_paket'] ?? 0), 2, ',', '.') ?>
+                                        </td>
+                                        <td class="text-center font-weight-bold bg-light text-primary">
                                             <?= number_format($stk['qty_total_kebutuhan'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
                                         </td>
+                                        <td class="text-right font-weight-bold bg-light text-primary">
+                                            Rp <?= number_format((float)($stk['total_modal_kebutuhan'] ?? 0), 2, ',', '.') ?>
+                                        </td>
                                         <td class="text-center font-weight-bold text-success">
-                                            <?= number_format($stk['qty_terpenuhi'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                            <?= number_format($stk['qty_terpenuhi'], 2, ',', '.') ?>
                                         </td>
                                         <td class="text-center font-weight-bold text-danger">
-                                            <?= number_format($stk['sisa_kebutuhan'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                            <?= number_format($stk['sisa_kebutuhan'], 2, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
                                             <span class="badge badge-light border text-dark font-weight-bold px-2 py-1">
-                                                <?= number_format($stk['stok_gudang_induk'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                                <?= number_format($stk['stok_gudang_induk'], 2, ',', '.') ?>
                                             </span>
                                         </td>
                                         <td class="text-center">
                                             <span class="badge badge-info font-weight-bold px-2 py-1">
-                                                <?= number_format($stk['stok_gudang_bundling'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                                <?= number_format($stk['stok_gudang_bundling'], 2, ',', '.') ?>
                                             </span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
+                            <tfoot style="background: #f8fafc; font-size: 0.92rem;">
+                                <tr>
+                                    <th class="py-3 px-3 font-weight-bold text-dark" colspan="3">Total Estimasi Modal Paket:</th>
+                                    <th class="py-3 text-right text-success font-weight-bold" style="font-size: 1rem;">
+                                        Rp <?= number_format($calcEstHpp1Paket, 2, ',', '.') ?>
+                                    </th>
+                                    <th class="py-3 text-center font-weight-bold text-primary">
+                                        <?= number_format((float)$request['qty_request'], 0, ',', '.') ?> <?= htmlspecialchars($request['satuan']) ?>
+                                    </th>
+                                    <th class="py-3 text-right text-primary font-weight-bold" style="font-size: 1.05rem;">
+                                        Rp <?= number_format($calcEstModalTotal, 2, ',', '.') ?>
+                                    </th>
+                                    <th colspan="4"></th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -187,7 +270,8 @@
                                         <th class="py-3 text-center">Qty Dibuat</th>
                                         <th class="py-3">No. Lot Paket</th>
                                         <th class="py-3">Expired Date</th>
-                                        <th class="py-3 text-right">Nilai HPP Paket</th>
+                                        <th class="py-3 text-right">Nilai HPP / Paket</th>
+                                        <th class="py-3 text-right">Total Nilai HPP</th>
                                         <th class="py-3">Petugas Logistik</th>
                                     </tr>
                                 </thead>
@@ -203,6 +287,9 @@
                                             <td><?= $asm['expired_date_paket'] ? date('d/m/Y', strtotime($asm['expired_date_paket'])) : '-' ?></td>
                                             <td class="text-right font-weight-bold text-dark">
                                                 Rp <?= number_format((float)$asm['hpp_per_paket'], 2, ',', '.') ?>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-primary">
+                                                Rp <?= number_format((float)$asm['total_nilai_hpp'], 2, ',', '.') ?>
                                             </td>
                                             <td><?= htmlspecialchars($asm['user_input']) ?></td>
                                         </tr>

@@ -111,7 +111,12 @@
                                             <td><?= date('d/m/Y', strtotime($r['tanggal_request'])) ?></td>
                                             <td>
                                                 <div class="font-weight-bold text-dark"><?= htmlspecialchars($r['nama_paket']) ?></div>
-                                                <span class="badge badge-light border text-muted"><?= htmlspecialchars($r['kode_paket']) ?></span>
+                                                <span class="badge badge-light border text-muted mr-1"><?= htmlspecialchars($r['kode_paket']) ?></span>
+                                                <?php if (!empty($r['estimasi_hpp_per_paket']) && (float)$r['estimasi_hpp_per_paket'] > 0): ?>
+                                                    <span class="badge badge-success px-2 py-1" style="font-size: 0.78rem;" title="Estimasi Modal HPP per 1 Paket">
+                                                        <i class="fas fa-tag mr-1"></i> Modal: Rp <?= number_format((float)$r['estimasi_hpp_per_paket'], 0, ',', '.') ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
                                             <td><?= htmlspecialchars($r['nama_gudang_tujuan'] ?: 'Gdg. Bundling') ?></td>
                                             <td class="text-center font-weight-bold text-dark">

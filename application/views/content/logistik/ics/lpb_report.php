@@ -165,8 +165,8 @@
                                 <div class="mt-2 pt-2 border-top d-flex align-items-center flex-wrap">
                                     <span class="small font-weight-bold text-muted mr-2 mb-1"><i class="fas fa-bolt text-warning mr-1"></i>Filter Cepat:</span>
                                     <div class="btn-group btn-group-toggle flex-wrap mb-1" id="quickFilterPills" data-toggle="buttons">
-                                        <label class="btn btn-outline-primary btn-xs active mr-1 rounded-pill mb-1">
-                                            <input type="radio" name="quickPill" value="all" checked> Semua Data
+                                        <label class="btn btn-outline-primary btn-xs <?= empty($filters['source']) || $filters['source'] === 'all' ? 'active' : '' ?> mr-1 rounded-pill mb-1">
+                                            <input type="radio" name="quickPill" value="all" <?= empty($filters['source']) || $filters['source'] === 'all' ? 'checked' : '' ?>> Semua Data
                                         </label>
                                         <label class="btn btn-outline-warning btn-xs mr-1 rounded-pill mb-1">
                                             <input type="radio" name="quickPill" value="fp_belum"> FP Belum Diterima
@@ -174,11 +174,11 @@
                                         <label class="btn btn-outline-danger btn-xs mr-1 rounded-pill mb-1">
                                             <input type="radio" name="quickPill" value="fp_critical"> Aging FP > 60 Hari
                                         </label>
-                                        <label class="btn btn-outline-info btn-xs mr-1 rounded-pill mb-1">
-                                            <input type="radio" name="quickPill" value="manual_only"> LPB Manual
+                                        <label class="btn btn-outline-info btn-xs <?= ($filters['source'] ?? '') === 'manual' ? 'active' : '' ?> mr-1 rounded-pill mb-1">
+                                            <input type="radio" name="quickPill" value="manual_only" <?= ($filters['source'] ?? '') === 'manual' ? 'checked' : '' ?>> LPB Manual
                                         </label>
-                                        <label class="btn btn-outline-success btn-xs mr-1 rounded-pill mb-1">
-                                            <input type="radio" name="quickPill" value="logistik_only"> LPB Logistik
+                                        <label class="btn btn-outline-success btn-xs <?= ($filters['source'] ?? '') === 'logistik' ? 'active' : '' ?> mr-1 rounded-pill mb-1">
+                                            <input type="radio" name="quickPill" value="logistik_only" <?= ($filters['source'] ?? '') === 'logistik' ? 'checked' : '' ?>> LPB Logistik
                                         </label>
                                     </div>
                                 </div>
@@ -399,7 +399,18 @@
                     },
                     // LPB Data
                     { data: 'tgl_lpb', defaultContent: '-' },
-                    { data: 'nomor_lpb', defaultContent: '-' },
+                    {
+                        data: 'nomor_lpb',
+                        defaultContent: '-',
+                        render: function(val, type, row) {
+                            if (!val || val === '-') return '-';
+                            var kdPo = row.kd_po || row.no_po || '';
+                            var noPo = row.no_po || '';
+                            var idLpb = row.id_lpb || '';
+                            var url = '<?= base_url("ics/detail_record_lpb") ?>?kd_po=' + encodeURIComponent(kdPo) + '&no_po=' + encodeURIComponent(noPo) + '&id_lpb=' + encodeURIComponent(idLpb);
+                            return '<a href="' + url + '" target="_blank" class="font-weight-bold text-primary" title="Buka Detail LPB">' + val + '</a>';
+                        }
+                    },
                     { data: 'jenis_lpb', defaultContent: '-' },
                     { 
                         data: 'source_type', 
