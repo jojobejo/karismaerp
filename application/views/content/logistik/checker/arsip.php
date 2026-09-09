@@ -161,16 +161,17 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <span style="font-size:12px;">s/d</span>
                             <input type="date" id="filterTglArsipBongkarEnd" placeholder="Sampai">
                             <label class="ml-2">Checker:</label>
-                            <select id="filterCheckerBongkar">
-                                <option value="">-- Semua --</option>
-                                <?php if (!empty($arsip_bongkar)) :
-                                    $checkers = array_unique(array_column($arsip_bongkar, 'nm_checker'));
-                                    sort($checkers);
-                                    foreach ($checkers as $c) : ?>
-                                        <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
-                                    <?php endforeach;
-                                endif; ?>
-                            </select>
+                                <select id="filterCheckerBongkar">
+                                    <option value="">-- Semua --</option>
+                                    <?php if (!empty($arsip_bongkar)) :
+                                        $checkers = array_filter(array_unique(array_column($arsip_bongkar, 'nm_checker')));
+                                        sort($checkers);
+                                        foreach ($checkers as $c) :
+                                            if (empty($c)) continue; ?>
+                                            <option value="<?= htmlspecialchars((string)$c) ?>"><?= htmlspecialchars((string)$c) ?></option>
+                                        <?php endforeach;
+                                    endif; ?>
+                                </select>
                             <button class="btn btn-sm btn-secondary" onclick="resetFilterBongkar()">
                                 <i class="fas fa-times mr-1"></i> Reset
                             </button>
@@ -261,10 +262,11 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <select id="filterCheckerLK">
                                 <option value="">-- Semua --</option>
                                 <?php if (!empty($arsip_lk)) :
-                                    $checkersLK = array_unique(array_column($arsip_lk, 'nm_checker'));
+                                    $checkersLK = array_filter(array_unique(array_column($arsip_lk, 'nm_checker')));
                                     sort($checkersLK);
-                                    foreach ($checkersLK as $c) : ?>
-                                        <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+                                    foreach ($checkersLK as $c) :
+                                        if (empty($c)) continue; ?>
+                                        <option value="<?= htmlspecialchars((string)$c) ?>"><?= htmlspecialchars((string)$c) ?></option>
                                     <?php endforeach;
                                 endif; ?>
                             </select>
@@ -272,10 +274,11 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <select id="filterStatusLK">
                                 <option value="">-- Semua --</option>
                                 <?php if (!empty($arsip_lk)) :
-                                    $statusesLK = array_unique(array_column($arsip_lk, 'status'));
+                                    $statusesLK = array_filter(array_unique(array_column($arsip_lk, 'status')));
                                     sort($statusesLK);
-                                    foreach ($statusesLK as $s) : ?>
-                                        <option value="<?= htmlspecialchars(str_replace('_',' ',$s)) ?>"><?= htmlspecialchars(str_replace('_',' ',$s)) ?></option>
+                                    foreach ($statusesLK as $s) :
+                                        if (empty($s)) continue; ?>
+                                        <option value="<?= htmlspecialchars(str_replace('_',' ',(string)$s)) ?>"><?= htmlspecialchars(str_replace('_',' ',(string)$s)) ?></option>
                                     <?php endforeach;
                                 endif; ?>
                             </select>
@@ -334,7 +337,7 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <tr class="<?= $row_class ?>">
                                 <td><?= $no++ ?></td>
                                 <td><small><?= htmlspecialchars($row['kode'] ?? '-') ?></small></td>
-                                <td><?= htmlspecialchars($row['keterangan']) ?></td>
+                                <td><?= htmlspecialchars($row['keterangan'] ?? '-') ?></td>
                                 <td><small><?= $row['tgl'] ?></small></td>
                                 <td><?= htmlspecialchars($row['nm_checker'] ?? '-') ?></td>
                                 <td><small><?= !empty($mulai_loading) ? date('d/m H:i', strtotime($mulai_loading)) : '-' ?></small></td>
@@ -387,10 +390,11 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <select id="filterCheckerKK">
                                 <option value="">-- Semua --</option>
                                 <?php if (!empty($arsip_kk)) :
-                                    $checkersKK = array_unique(array_column($arsip_kk, 'nm_checker'));
+                                    $checkersKK = array_filter(array_unique(array_column($arsip_kk, 'nm_checker')));
                                     sort($checkersKK);
-                                    foreach ($checkersKK as $c) : ?>
-                                        <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+                                    foreach ($checkersKK as $c) :
+                                        if (empty($c)) continue; ?>
+                                        <option value="<?= htmlspecialchars((string)$c) ?>"><?= htmlspecialchars((string)$c) ?></option>
                                     <?php endforeach;
                                 endif; ?>
                             </select>
@@ -398,10 +402,11 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <select id="filterStatusKK">
                                 <option value="">-- Semua --</option>
                                 <?php if (!empty($arsip_kk)) :
-                                    $statusesKK = array_unique(array_column($arsip_kk, 'status'));
+                                    $statusesKK = array_filter(array_unique(array_column($arsip_kk, 'status')));
                                     sort($statusesKK);
-                                    foreach ($statusesKK as $s) : ?>
-                                        <option value="<?= htmlspecialchars(str_replace('_',' ',$s)) ?>"><?= htmlspecialchars(str_replace('_',' ',$s)) ?></option>
+                                    foreach ($statusesKK as $s) :
+                                        if (empty($s)) continue; ?>
+                                        <option value="<?= htmlspecialchars(str_replace('_',' ',(string)$s)) ?>"><?= htmlspecialchars(str_replace('_',' ',(string)$s)) ?></option>
                                     <?php endforeach;
                                 endif; ?>
                             </select>
@@ -469,16 +474,27 @@ $(function () {
     // Index kolom tgl_arsip_raw: Bongkaran=10, LK/KK=11
 
     /* =====================================================================
-       Helper: Custom range filter untuk kolom tanggal (format Y-m-d)
+       Helper: Ekstraksi tanggal arsip format Y-m-d dari data baris
+       (Mencegah bug DataTables di mana searchable:false membawa data kolom sebelumnya)
     ===================================================================== */
-    function addDateRangeFilter(tableId, colIndex) {
-        $.fn.dataTable.ext.search.push(function (settings, data) {
-            if (settings.nTable.id !== tableId) return true;
-            var from = $('#filterTglArsip' + tableId.replace('tabelArsip','') + '').val();
-            // nama id sudah diset spesifik di bawah; fungsi ini hanya blueprint,
-            // implementasi spesifik di tiap inisialisasi
-            return true;
-        });
+    function getTglArsip(data, rawIndex, displayIndex, rowData) {
+        // 1. Coba dari rowData asli (DOM raw text)
+        var raw = (rowData && rowData[rawIndex]) ? String(rowData[rawIndex]).replace(/<[^>]+>/g, '').trim() : '';
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+            return raw.substring(0, 10);
+        }
+        // 2. Coba dari data[rawIndex]
+        var dRaw = (data && data[rawIndex]) ? String(data[rawIndex]).replace(/<[^>]+>/g, '').trim() : '';
+        if (/^\d{4}-\d{2}-\d{2}/.test(dRaw)) {
+            return dRaw.substring(0, 10);
+        }
+        // 3. Fallback: Parse dari kolom display dd/mm/yyyy
+        var disp = (data && data[displayIndex]) ? String(data[displayIndex]).replace(/<[^>]+>/g, '').trim() : '';
+        var m = disp.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (m) {
+            return m[3] + '-' + m[2] + '-' + m[1];
+        }
+        return '';
     }
 
     /* =====================================================================
@@ -490,28 +506,28 @@ $(function () {
         order       : [[0, 'asc']],
         language    : dtLang(),
         columnDefs  : [
-            { targets: [10], visible: false, searchable: false } // kolom raw date
+            { targets: [10], visible: false } // kolom raw date
         ],
         dom: "<'row'<'col-sm-4'l><'col-sm-8'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-5'i><'col-sm-7'p>>",
-        // Warna baris tetap dipertahankan dari PHP (table-success)
         createdRow: function(row, data, idx) {
             // biarkan class dari PHP
         }
     });
 
     // Filter tanggal + checker Bongkaran
-    $.fn.dataTable.ext.search.push(function (settings, data) {
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
         if (settings.nTable.id !== 'tabelArsip') return true;
         var from     = $('#filterTglArsipBongkar').val();
         var to       = $('#filterTglArsipBongkarEnd').val();
-        var checker  = $('#filterCheckerBongkar').val().toLowerCase();
-        var tglRaw   = data[10] || ''; // kolom tersembunyi Y-m-d
-        var nmChecker= data[4].toLowerCase();
+        var checker  = $('#filterCheckerBongkar').val().toLowerCase().trim();
+        var tglRaw   = getTglArsip(data, 10, 9, rowData);
+        var nmChecker= (data[4] || '').toLowerCase().trim();
 
-        if (from && tglRaw < from) return false;
-        if (to   && tglRaw > to)   return false;
+        if (from && tglRaw && tglRaw < from) return false;
+        if (to   && tglRaw && tglRaw > to)   return false;
+        if ((from || to) && !tglRaw) return false;
         if (checker && nmChecker.indexOf(checker) === -1) return false;
         return true;
     });
@@ -534,25 +550,26 @@ $(function () {
         order       : [[0, 'asc']],
         language    : dtLang(),
         columnDefs  : [
-            { targets: [11], visible: false, searchable: false }
+            { targets: [11], visible: false }
         ],
         dom: "<'row'<'col-sm-4'l><'col-sm-8'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-5'i><'col-sm-7'p>>"
     });
 
-    $.fn.dataTable.ext.search.push(function (settings, data) {
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
         if (settings.nTable.id !== 'tabelArsipLK') return true;
         var from    = $('#filterTglArsipLK').val();
         var to      = $('#filterTglArsipLKEnd').val();
-        var checker = $('#filterCheckerLK').val().toLowerCase();
-        var status  = $('#filterStatusLK').val().toLowerCase();
-        var tglRaw  = data[11] || '';
-        var nmChecker = data[4].toLowerCase();
-        var sts       = data[8].toLowerCase();
+        var checker = $('#filterCheckerLK').val().toLowerCase().trim();
+        var status  = $('#filterStatusLK').val().toLowerCase().trim();
+        var tglRaw  = getTglArsip(data, 11, 10, rowData);
+        var nmChecker = (data[4] || '').toLowerCase().trim();
+        var sts       = (data[8] || '').toLowerCase().trim();
 
-        if (from && tglRaw < from) return false;
-        if (to   && tglRaw > to)   return false;
+        if (from && tglRaw && tglRaw < from) return false;
+        if (to   && tglRaw && tglRaw > to)   return false;
+        if ((from || to) && !tglRaw) return false;
         if (checker && nmChecker.indexOf(checker) === -1) return false;
         if (status  && sts.indexOf(status) === -1)        return false;
         return true;
@@ -576,25 +593,26 @@ $(function () {
         order       : [[0, 'asc']],
         language    : dtLang(),
         columnDefs  : [
-            { targets: [11], visible: false, searchable: false }
+            { targets: [11], visible: false }
         ],
         dom: "<'row'<'col-sm-4'l><'col-sm-8'f>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row'<'col-sm-5'i><'col-sm-7'p>>"
     });
 
-    $.fn.dataTable.ext.search.push(function (settings, data) {
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex, rowData) {
         if (settings.nTable.id !== 'tabelArsipKK') return true;
         var from    = $('#filterTglArsipKK').val();
         var to      = $('#filterTglArsipKKEnd').val();
-        var checker = $('#filterCheckerKK').val().toLowerCase();
-        var status  = $('#filterStatusKK').val().toLowerCase();
-        var tglRaw  = data[11] || '';
-        var nmChecker = data[4].toLowerCase();
-        var sts       = data[8].toLowerCase();
+        var checker = $('#filterCheckerKK').val().toLowerCase().trim();
+        var status  = $('#filterStatusKK').val().toLowerCase().trim();
+        var tglRaw  = getTglArsip(data, 11, 10, rowData);
+        var nmChecker = (data[4] || '').toLowerCase().trim();
+        var sts       = (data[8] || '').toLowerCase().trim();
 
-        if (from && tglRaw < from) return false;
-        if (to   && tglRaw > to)   return false;
+        if (from && tglRaw && tglRaw < from) return false;
+        if (to   && tglRaw && tglRaw > to)   return false;
+        if ((from || to) && !tglRaw) return false;
         if (checker && nmChecker.indexOf(checker) === -1) return false;
         if (status  && sts.indexOf(status) === -1)        return false;
         return true;

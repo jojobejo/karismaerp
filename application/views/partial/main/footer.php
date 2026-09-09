@@ -240,18 +240,24 @@
         "paging": true, "lengthChange": true, "searching": true,
         "ordering": false, "info": true, "autoWidth": false, "responsive": true,
     });
-    $('#tabelArsip').DataTable({
-        "paging": true, "lengthChange": true, "searching": true,
-        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
-    });
-    $('#tabelArsipKK').DataTable({
-        "paging": true, "lengthChange": true, "searching": true,
-        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
-    });
-    $('#tabelArsipLK').DataTable({
-        "paging": true, "lengthChange": true, "searching": true,
-        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
-    });
+    if (!$.fn.DataTable.isDataTable('#tabelArsip')) {
+        $('#tabelArsip').DataTable({
+            "paging": true, "lengthChange": true, "searching": true,
+            "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+        });
+    }
+    if (!$.fn.DataTable.isDataTable('#tabelArsipKK')) {
+        $('#tabelArsipKK').DataTable({
+            "paging": true, "lengthChange": true, "searching": true,
+            "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+        });
+    }
+    if (!$.fn.DataTable.isDataTable('#tabelArsipLK')) {
+        $('#tabelArsipLK').DataTable({
+            "paging": true, "lengthChange": true, "searching": true,
+            "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+        });
+    }
 </script>
 
 <script type="text/javascript">
