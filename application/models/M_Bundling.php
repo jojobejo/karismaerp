@@ -351,13 +351,16 @@ class M_Bundling extends CI_Model
             }
         }
 
+        // Otomatis daftarkan / perbarui produk paket di Master Barang (tbpo_barang & tbpo_barang_akun)
+        $this->ensure_product_in_master_barang($kodePaket, $data['nama_paket'], $data['satuan_paket'] ?? 'Box');
+
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             return ['status' => false, 'msg' => 'Gagal menyimpan formula bundling'];
         }
 
         $this->db->trans_commit();
-        return ['status' => true, 'id_formula' => $id, 'msg' => 'Formula bundling berhasil disimpan'];
+        return ['status' => true, 'id_formula' => $id, 'msg' => 'Formula bundling berhasil disimpan dan didaftarkan ke Master Barang'];
     }
 
     // =========================================================================
@@ -1378,32 +1381,78 @@ class M_Bundling extends CI_Model
     }
 
     /**
-     * Memastikan Paket terdaftar di master barang tbpo_barang
+     * Memastikan Paket terdaftar dan tersinkronisasi di master barang tbpo_barang & tbpo_barang_akun
      */
-    private function ensure_product_in_master_barang($kodePaket, $namaPaket, $satuan = 'Box')
+    public function ensure_product_in_master_barang($kodePaket, $namaPaket, $satuan = 'Box')
     {
+        $kodePaket = trim((string)$kodePaket);
+        $namaPaket = trim((string)$namaPaket);
+        if ($kodePaket === '') return false;
+
+        $satuan = !empty($satuan) ? trim($satuan) : 'Box';
+
         $exists = $this->db->where('kode_barang', $kodePaket)->limit(1)->get('tbpo_barang')->row();
         if (!$exists) {
             $this->db->insert('tbpo_barang', [
-                'kode_barang'             => $kodePaket,
-                'kd_suplier'              => 'BUNDLING',
-                'nama_barang'             => $namaPaket,
-                'satuan'                  => $satuan,
-                'isi'                     => 1,
-                'kemasan'                 => 1,
-                'is_active'               => 'T',
-                'is_lot'                  => 'T',
-                'is_inventori'            => 'T',
-                'is_beli'                 => 'F',
-                'is_jual'                 => 'T',
-                'hpp_average'             => 'T',
-                'kode_akun_harga_pokok'   => '51030',
-                'kode_akun_penjualan'     => '41032',
-                'kode_akun_persediaan'    => '14030',
-                'kode_akun_pengiriman_jual'=> '64030',
-                'kode_akun_retur_penjualan'=> '41034'
+                'kode_barang'              => $kodePaket,
+                'kd_suplier'               => 'BUNDLING',
+                'nama_barang'              => $namaPaket,
+                'satuan'                   => $satuan,
+                'isi'                      => 1,
+                'kemasan'                  => 1,
+                'is_active'                => 'T',
+                'is_lot'                   => 'T',
+                'is_inventori'             => 'T',
+                'is_beli'                  => 'F',
+                'is_jual'                  => 'T',
+                'hpp_average'              => 'T',
+                'kode_akun_persediaan'     => '14010', // Persediaan # 1
+                'kode_akun_harga_pokok'    => '51010', // Harga Pokok Penjualan # 1
+                'kode_akun_penjualan'      => '41011',
+                'kode_akun_pengiriman_beli'=> '51013',
+                'kode_akun_pengiriman_jual'=> '64010',
+                'kode_akun_retur_penjualan'=> '41014'
             ]);
+        } else {
+            $updateData = [
+                'nama_barang'              => $namaPaket,
+                'satuan'                   => $satuan,
+                'is_active'                => 'T',
+                'is_inventori'             => 'T',
+                'is_jual'                  => 'T',
+                'kode_akun_persediaan'     => '14010',
+                'kode_akun_harga_pokok'    => '51010',
+                'kode_akun_penjualan'      => '41011',
+                'kode_akun_pengiriman_beli'=> '51013',
+                'kode_akun_pengiriman_jual'=> '64010',
+                'kode_akun_retur_penjualan'=> '41014'
+            ];
+            $this->db->where('kode_barang', $kodePaket)->update('tbpo_barang', $updateData);
         }
+
+        // Sinkronisasi juga ke tbpo_barang_akun
+        if ($this->db->table_exists('tbpo_barang_akun')) {
+            $existsAkun = $this->db->where('kode_barang', $kodePaket)->limit(1)->get('tbpo_barang_akun')->row();
+            if (!$existsAkun) {
+                $this->db->insert('tbpo_barang_akun', [
+                    'kode_barang'              => $kodePaket,
+                    'kode_akun_penjualan'      => '41011',
+                    'kode_akun_persediaan'     => '14010',
+                    'kode_akun_harga_pokok'    => '51010',
+                    'kode_akun_retur_penjualan'=> '41014',
+                    'kode_akun_pengiriman_beli'=> '51013',
+                    'kode_akun_pengiriman_jual'=> '64010'
+                ]);
+            } else {
+                $this->db->where('kode_barang', $kodePaket)->update('tbpo_barang_akun', [
+                    'kode_akun_persediaan'  => '14010',
+                    'kode_akun_harga_pokok' => '51010',
+                    'kode_akun_penjualan'   => '41011'
+                ]);
+            }
+        }
+
+        return true;
     }
 
     /**

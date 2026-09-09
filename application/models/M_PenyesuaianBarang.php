@@ -185,12 +185,34 @@ class M_PenyesuaianBarang extends CI_Model
 
         $gudang_id = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
 
+        // Deteksi apakah transaksi merupakan perakitan bundling (ada bahan keluar negatif dan paket masuk positif)
+        $total_biaya_komponen_keluar = 0;
+        $total_qty_paket_masuk_baru = 0;
+        foreach ($data['details'] as $dCheck) {
+            $jCheck = (float)$dCheck['jumlah'];
+            if ($jCheck < 0) {
+                $hCheck = $this->get_item_hpp($dCheck['kd_barang'], $gudang_id);
+                $total_biaya_komponen_keluar += (abs($jCheck) * $hCheck);
+            } elseif ($jCheck > 0) {
+                $hCheck = $this->get_item_hpp($dCheck['kd_barang'], $gudang_id);
+                if ($hCheck <= 0) {
+                    $total_qty_paket_masuk_baru += $jCheck;
+                }
+            }
+        }
+
         foreach ($data['details'] as $detail) {
             $jumlah = (float)$detail['jumlah'];
             if ($jumlah == 0 || empty($detail['id_akun'])) continue;
 
             $kd_barang = $detail['kd_barang'];
             $hpp = $this->get_item_hpp($kd_barang, $gudang_id);
+
+            // Jika barang masuk positif belum punya HPP riwayat tetapi ada bahan keluar, gunakan proporsi nilai bahan (seperti Zahir)
+            if ($jumlah > 0 && $hpp <= 0 && $total_biaya_komponen_keluar > 0 && $total_qty_paket_masuk_baru > 0) {
+                $hpp = $total_biaya_komponen_keluar / $total_qty_paket_masuk_baru;
+            }
+
             $nominal = round(abs($jumlah) * $hpp, 2);
             if ($nominal <= 0) $nominal = round(abs($jumlah) * 1, 2);
 
@@ -415,6 +437,23 @@ class M_PenyesuaianBarang extends CI_Model
             $soStmt = $this->db->select('hrg_pokok')->where('kd_barang', $kd_barang)->where('hrg_pokok >', 0)->order_by('id', 'DESC')->limit(1)->get('tbso_sales_order_detail')->row_array();
             if ($soStmt && (float)$soStmt['hrg_pokok'] > 0) {
                 return (float)$soStmt['hrg_pokok'];
+            }
+        }
+
+        // Cek jika barang merupakan paket bundling di tberp_bundling_formula
+        if ($this->db->table_exists('tberp_bundling_formula') && $this->db->table_exists('tberp_bundling_formula_detail')) {
+            $formula = $this->db->where('kode_paket', $kd_barang)->limit(1)->get('tberp_bundling_formula')->row_array();
+            if ($formula) {
+                $details = $this->db->where('id_formula', $formula['id_formula'])->get('tberp_bundling_formula_detail')->result_array();
+                $totalHppPaket = 0.0;
+                foreach ($details as $det) {
+                    $qtyKomponen = (float)($det['qty_komponen'] ?? 1);
+                    $hppKomponen = $this->get_item_hpp($det['kode_barang_komponen'], $id_gudang);
+                    $totalHppPaket += ($qtyKomponen * $hppKomponen);
+                }
+                if ($totalHppPaket > 0) {
+                    return (float)$totalHppPaket;
+                }
             }
         }
 
