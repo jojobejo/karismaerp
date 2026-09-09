@@ -83,7 +83,7 @@
 
 <!-- Modal Form Formula -->
 <div class="modal fade" id="modalFormula" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white py-2">
                 <h6 class="modal-title font-weight-bold" id="modalFormulaTitle"><i class="fas fa-flask mr-2"></i>Formula Paket Bundling</h6>
@@ -107,14 +107,17 @@
                         </div>
                         <div class="col-md-2">
                             <div class="form-group mb-3">
-                                <label class="small font-weight-bold text-muted">Satuan</label>
+                                <label class="small font-weight-bold text-muted">Satuan Paket</label>
                                 <input type="text" name="satuan_paket" id="f_satuan_paket" class="form-control" value="Box">
                             </div>
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
-                        <label class="small font-weight-bold text-dark m-0">Komposisi Isi untuk 1 Paket:</label>
+                        <div>
+                            <label class="small font-weight-bold text-dark m-0"><i class="fas fa-layer-group text-primary mr-1"></i> Komposisi Isi untuk 1 Paket:</label>
+                            <small class="text-muted d-block">Tandai jika barang dikemas pakai Innerbox, dan tentukan jumlah box serta isi per box-nya.</small>
+                        </div>
                         <button type="button" class="btn btn-xs btn-outline-primary font-weight-bold" id="btnAddFormulaItem">
                             <i class="fas fa-plus mr-1"></i> Tambah Item
                         </button>
@@ -122,12 +125,13 @@
 
                     <div class="table-responsive">
                         <table class="table table-bordered table-sm" id="tableFormulaItems">
-                            <thead class="bg-light">
+                            <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
-                                    <th style="width: 50%;">Barang Komponen</th>
-                                    <th style="width: 20%;" class="text-center">Isi per Paket</th>
-                                    <th style="width: 20%;" class="text-center">Satuan</th>
-                                    <th style="width: 10%;" class="text-center">Hapus</th>
+                                    <th style="width: 32%;">Barang Komponen</th>
+                                    <th style="width: 18%;" class="text-center">Kemasan Innerbox?</th>
+                                    <th style="width: 32%;" class="text-center">Rincian Kebutuhan / 1 Paket</th>
+                                    <th style="width: 11%;" class="text-center">Satuan Stok</th>
+                                    <th style="width: 7%;" class="text-center">Hapus</th>
                                 </tr>
                             </thead>
                             <tbody id="formulaItemsBody">
@@ -283,10 +287,18 @@ $(document).ready(function() {
 
                     if (f.details && f.details.length > 0) {
                         f.details.forEach(function(d) {
-                            addFormulaRow(d.kode_barang_komponen, d.nama_barang_komponen, parseFloat(d.qty_komponen), d.satuan);
+                            addFormulaRow(
+                                d.kode_barang_komponen, 
+                                d.nama_barang_komponen, 
+                                parseFloat(d.qty_komponen), 
+                                d.satuan,
+                                d.is_innerbox,
+                                d.qty_innerbox,
+                                d.isi_per_innerbox
+                            );
                         });
                     } else {
-                        addFormulaRow('', '', 1, 'Pcs');
+                        addFormulaRow('', '', 1, 'Pcs', 0, 1, 12);
                     }
 
                     $('#modalFormulaTitle').html('<i class="fas fa-edit mr-2"></i> Edit Formula Paket');
@@ -302,7 +314,7 @@ $(document).ready(function() {
         let validRows = 0;
         $('#formulaItemsBody tr').each(function() {
             let kd = $(this).find('.row-kd').val();
-            let qty = parseFloat($(this).find('.row-qty').val()) || 0;
+            let qty = parseFloat($(this).find('.row-qty-total').val()) || 0;
             if (kd && kd.trim() !== '' && qty > 0) {
                 validRows++;
             }
@@ -342,11 +354,80 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Toggle checkbox innerbox
+    $(document).on('change', '.chk-innerbox', function() {
+        let row = $(this).closest('tr');
+        let isChecked = $(this).is(':checked');
+        let label = row.find('label[for="' + $(this).attr('id') + '"]');
+
+        if (isChecked) {
+            label.removeClass('text-muted').addClass('text-primary').html('<i class="fas fa-box text-warning mr-1"></i> Pakai Innerbox');
+            row.find('.wrap-innerbox-inputs').show();
+            row.find('.wrap-regular-qty').hide();
+
+            let qBox = parseFloat(row.find('.row-qty-inbox').val()) || 1;
+            let iBox = parseFloat(row.find('.row-isi-inbox').val()) || 12;
+            row.find('.row-qty-inbox').val(qBox);
+            row.find('.row-isi-inbox').val(iBox);
+            recalcFormulaRow(row);
+        } else {
+            label.removeClass('text-primary').addClass('text-muted').text('Tanpa Innerbox');
+            row.find('.wrap-innerbox-inputs').hide();
+            row.find('.wrap-regular-qty').show();
+
+            let qReg = parseFloat(row.find('.row-qty-regular').val()) || 1;
+            row.find('.row-qty-total').val(qReg);
+        }
+    });
+
+    // Event listener kalkulasi baris
+    $(document).on('input change', '.row-qty-inbox, .row-isi-inbox', function() {
+        recalcFormulaRow($(this).closest('tr'));
+    });
+
+    $(document).on('input change', '.row-qty-regular', function() {
+        let row = $(this).closest('tr');
+        row.find('.row-qty-total').val(parseFloat($(this).val()) || 0);
+    });
+
+    $(document).on('input change', '.row-satuan', function() {
+        recalcFormulaRow($(this).closest('tr'));
+    });
 });
 
-function addFormulaRow(kd, nama, qty, sat) {
+function recalcFormulaRow(row) {
+    let isChecked = row.find('.chk-innerbox').is(':checked');
+    let sat = row.find('.row-satuan').val() || 'Pcs';
+    row.find('.row-satuan-label').text(sat);
+
+    if (isChecked) {
+        let qBox = parseFloat(row.find('.row-qty-inbox').val()) || 0;
+        let iBox = parseFloat(row.find('.row-isi-inbox').val()) || 0;
+        let total = qBox * iBox;
+        row.find('.row-qty-total').val(total);
+        row.find('.row-qty-regular').val(total);
+        row.find('.row-inbox-summary').html(
+            `<i class="fas fa-box mr-1"></i> ${qBox} Box @ ${iBox} ${sat} = <strong>${total.toLocaleString('id-ID')} ${sat}</strong>`
+        );
+    } else {
+        let qReg = parseFloat(row.find('.row-qty-regular').val()) || 0;
+        row.find('.row-qty-total').val(qReg);
+    }
+}
+
+function addFormulaRow(kd, nama, qty, sat, isInbox, qtyInbox, isiInbox) {
+    isInbox = (parseInt(isInbox) === 1 || isInbox === true);
+    qtyInbox = (qtyInbox !== undefined && qtyInbox !== null && parseFloat(qtyInbox) > 0) ? parseFloat(qtyInbox) : 1;
+    isiInbox = (isiInbox !== undefined && isiInbox !== null && parseFloat(isiInbox) > 0) ? parseFloat(isiInbox) : 12;
+    qty = parseFloat(qty) || 1;
+    if (isInbox && qtyInbox > 0 && isiInbox > 0) {
+        qty = qtyInbox * isiInbox;
+    }
+    sat = sat || 'Pcs';
+
     let html = `
-        <tr>
+        <tr class="fitem-row">
             <td>
                 <div class="input-group input-group-sm mb-1">
                     <input type="text" name="komponen[${fItemIndex}][kode_barang_komponen]" 
@@ -366,16 +447,61 @@ function addFormulaRow(kd, nama, qty, sat) {
                        placeholder="Nama Barang Komponen" 
                        readonly style="background-color: #f1f5f9; color: #1e293b; font-weight: 500;">
             </td>
+            <td class="text-center align-middle bg-light">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input chk-innerbox" 
+                           id="chk_inbox_${fItemIndex}" 
+                           name="komponen[${fItemIndex}][is_innerbox]" 
+                           value="1" ${isInbox ? 'checked' : ''}>
+                    <label class="custom-control-label font-weight-bold ${isInbox ? 'text-primary' : 'text-muted'}" for="chk_inbox_${fItemIndex}">
+                        ${isInbox ? '<i class="fas fa-box text-warning mr-1"></i> Pakai Innerbox' : 'Tanpa Innerbox'}
+                    </label>
+                </div>
+                <input type="hidden" name="komponen[${fItemIndex}][satuan_innerbox]" value="Innerbox">
+            </td>
             <td class="align-middle">
-                <input type="number" step="any" min="0.001" 
-                       name="komponen[${fItemIndex}][qty_komponen]" 
-                       class="form-control form-control-sm text-center font-weight-bold row-qty" 
-                       value="${qty}" required>
+                <!-- Wrapper jika pakai innerbox -->
+                <div class="wrap-innerbox-inputs" style="${isInbox ? '' : 'display: none;'}">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="input-group input-group-sm mr-1" style="max-width: 110px;">
+                            <input type="number" step="any" min="0.001" 
+                                   name="komponen[${fItemIndex}][qty_innerbox]" 
+                                   class="form-control text-center font-weight-bold row-qty-inbox" 
+                                   value="${qtyInbox}" placeholder="Jml Box">
+                            <div class="input-group-append"><span class="input-group-text px-1 small">Box</span></div>
+                        </div>
+                        <span class="font-weight-bold text-muted mx-1">&times;</span>
+                        <div class="input-group input-group-sm ml-1" style="max-width: 135px;">
+                            <input type="number" step="any" min="0.001" 
+                                   name="komponen[${fItemIndex}][isi_per_innerbox]" 
+                                   class="form-control text-center font-weight-bold text-primary row-isi-inbox" 
+                                   value="${isiInbox}" placeholder="Isi/Box">
+                            <div class="input-group-append"><span class="input-group-text px-1 small row-satuan-label">${sat}</span></div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-1">
+                        <span class="badge badge-warning text-dark px-2 py-1 row-inbox-summary" style="font-size: 0.82rem;">
+                            <i class="fas fa-box mr-1"></i> ${qtyInbox} Box @ ${isiInbox} ${sat} = <strong>${qty} ${sat}</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Wrapper jika TIDAK pakai innerbox (regular) -->
+                <div class="wrap-regular-qty" style="${isInbox ? 'display: none;' : ''}">
+                    <div class="input-group input-group-sm mx-auto" style="max-width: 150px;">
+                        <input type="number" step="any" min="0.001" 
+                               class="form-control text-center font-weight-bold text-dark row-qty-regular" 
+                               value="${qty}" placeholder="Isi per Paket">
+                        <div class="input-group-append"><span class="input-group-text px-2 small row-satuan-label">${sat}</span></div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="komponen[${fItemIndex}][qty_komponen]" class="row-qty-total" value="${qty}">
             </td>
             <td class="align-middle">
                 <input type="text" name="komponen[${fItemIndex}][satuan]" 
-                       class="form-control form-control-sm text-center row-satuan" 
-                       value="${sat || 'Pcs'}">
+                       class="form-control form-control-sm text-center row-satuan font-weight-bold" 
+                       value="${sat}">
             </td>
             <td class="text-center align-middle">
                 <button type="button" class="btn btn-sm btn-link text-danger btn-del-frow" title="Hapus Item">

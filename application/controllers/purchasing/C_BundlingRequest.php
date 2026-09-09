@@ -97,13 +97,26 @@ class C_BundlingRequest extends CI_Controller
             if (is_array($rawDetails)) {
                 foreach ($rawDetails as $item) {
                     if (!empty($item['kode_barang_komponen'])) {
+                        $isInnerbox = !empty($item['is_innerbox']) ? 1 : 0;
+                        $qtyInnerbox = $isInnerbox ? (float)($item['qty_innerbox'] ?? 1) : 0.000;
+                        $isiPerInnerbox = $isInnerbox ? (float)($item['isi_per_innerbox'] ?? 0) : 0.000;
+                        $satuanInnerbox = $isInnerbox ? (!empty($item['satuan_innerbox']) ? trim($item['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
                         $qtyPerPaket = (float)($item['qty_per_paket'] ?? 1);
+                        if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
+                            $qtyPerPaket = $qtyInnerbox * $isiPerInnerbox;
+                        }
+
                         if ($qtyPerPaket > 0) {
                             $details[] = [
                                 'kode_barang_komponen' => trim($item['kode_barang_komponen']),
                                 'nama_barang_komponen' => trim($item['nama_barang_komponen'] ?? ''),
                                 'qty_per_paket'        => $qtyPerPaket,
-                                'satuan'               => !empty($item['satuan']) ? $item['satuan'] : 'Pcs'
+                                'satuan'               => !empty($item['satuan']) ? $item['satuan'] : 'Pcs',
+                                'is_innerbox'          => $isInnerbox,
+                                'qty_innerbox'         => $qtyInnerbox,
+                                'isi_per_innerbox'     => $isiPerInnerbox,
+                                'satuan_innerbox'      => $satuanInnerbox
                             ];
                         }
                     }
@@ -140,7 +153,11 @@ class C_BundlingRequest extends CI_Controller
                         'kode_barang_komponen' => $d['kode_barang_komponen'],
                         'nama_barang_komponen' => $d['nama_barang_komponen'],
                         'qty_komponen'         => $d['qty_per_paket'],
-                        'satuan'               => $d['satuan']
+                        'satuan'               => $d['satuan'],
+                        'is_innerbox'          => $d['is_innerbox'] ?? 0,
+                        'qty_innerbox'         => $d['qty_innerbox'] ?? 0,
+                        'isi_per_innerbox'     => $d['isi_per_innerbox'] ?? 0,
+                        'satuan_innerbox'      => $d['satuan_innerbox'] ?? 'Innerbox'
                     ];
                 }, $details));
             }
@@ -224,13 +241,26 @@ class C_BundlingRequest extends CI_Controller
             if (is_array($rawDetails)) {
                 foreach ($rawDetails as $item) {
                     if (!empty($item['kode_barang_komponen'])) {
+                        $isInnerbox = !empty($item['is_innerbox']) ? 1 : 0;
+                        $qtyInnerbox = $isInnerbox ? (float)($item['qty_innerbox'] ?? 1) : 0.000;
+                        $isiPerInnerbox = $isInnerbox ? (float)($item['isi_per_innerbox'] ?? 0) : 0.000;
+                        $satuanInnerbox = $isInnerbox ? (!empty($item['satuan_innerbox']) ? trim($item['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
                         $qtyKomponen = (float)($item['qty_komponen'] ?? 1);
+                        if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
+                            $qtyKomponen = $qtyInnerbox * $isiPerInnerbox;
+                        }
+
                         if ($qtyKomponen > 0) {
                             $details[] = [
                                 'kode_barang_komponen' => trim($item['kode_barang_komponen']),
                                 'nama_barang_komponen' => trim($item['nama_barang_komponen'] ?? ''),
                                 'qty_komponen'         => $qtyKomponen,
-                                'satuan'               => !empty($item['satuan']) ? $item['satuan'] : 'Pcs'
+                                'satuan'               => !empty($item['satuan']) ? $item['satuan'] : 'Pcs',
+                                'is_innerbox'          => $isInnerbox,
+                                'qty_innerbox'         => $qtyInnerbox,
+                                'isi_per_innerbox'     => $isiPerInnerbox,
+                                'satuan_innerbox'      => $satuanInnerbox
                             ];
                         }
                     }

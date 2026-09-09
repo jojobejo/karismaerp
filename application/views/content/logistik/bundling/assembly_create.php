@@ -128,7 +128,11 @@
                                         <tbody>
                                             <?php $cIdx = 0; ?>
                                             <?php foreach ($components as $comp): ?>
-                                                <tr class="comp-row" data-isi="<?= (float)$comp['qty_per_paket'] ?>">
+                                                <tr class="comp-row" 
+                                                    data-isi="<?= (float)$comp['qty_per_paket'] ?>"
+                                                    data-is-inbox="<?= !empty($comp['is_innerbox']) ? 1 : 0 ?>"
+                                                    data-qty-inbox="<?= (float)($comp['qty_innerbox'] ?? 0) ?>"
+                                                    data-isi-inbox="<?= (float)($comp['isi_per_innerbox'] ?? 0) ?>">
                                                     <td>
                                                         <input type="hidden" name="komponen[<?= $cIdx ?>][kode_barang]" value="<?= htmlspecialchars($comp['kode_barang_komponen']) ?>">
                                                         <input type="hidden" name="komponen[<?= $cIdx ?>][nama_barang]" value="<?= htmlspecialchars($comp['nama_barang_komponen']) ?>">
@@ -136,8 +140,15 @@
                                                         <div class="font-weight-bold text-dark"><?= htmlspecialchars($comp['nama_barang_komponen']) ?></div>
                                                         <small class="text-muted">Kode: <?= htmlspecialchars($comp['kode_barang_komponen']) ?></small>
                                                     </td>
-                                                    <td class="text-center font-weight-bold text-muted">
-                                                        <?= number_format((float)$comp['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
+                                                    <td class="text-center">
+                                                        <div class="font-weight-bold text-dark">
+                                                            <?= number_format((float)$comp['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
+                                                        </div>
+                                                        <?php if (!empty($comp['is_innerbox'])): ?>
+                                                            <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 mt-1 d-inline-block" style="font-size: 0.78rem;" title="Kemasan Innerbox">
+                                                                <i class="fas fa-box mr-1"></i> <?= number_format($comp['qty_innerbox'], 0) ?> Box (@ <?= number_format($comp['isi_per_innerbox'], 0) ?> <?= htmlspecialchars($comp['satuan']) ?>)
+                                                            </span>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td>
                                                         <?php if (empty($comp['batches'])): ?>
@@ -168,6 +179,7 @@
                                                                name="komponen[<?= $cIdx ?>][qty_digunakan]" 
                                                                class="form-control form-control-sm text-center font-weight-bold text-danger input-qty-pakai" 
                                                                value="0" readonly>
+                                                        <div class="box-pakai-badge mt-1" style="display: none;"></div>
                                                     </td>
                                                 </tr>
                                                 <?php $cIdx++; ?>
@@ -270,6 +282,16 @@ function recalcAssemblyQuantities() {
         let isi = parseFloat($(this).data('isi')) || 1;
         let butuh = qtyAsm * isi;
         $(this).find('.input-qty-pakai').val(butuh);
+
+        let isInbox = parseInt($(this).data('is-inbox')) === 1;
+        let qInbox = parseFloat($(this).data('qty-inbox')) || 0;
+        let badge = $(this).find('.box-pakai-badge');
+        if (isInbox && qInbox > 0 && qtyAsm > 0) {
+            let totalBox = qtyAsm * qInbox;
+            badge.html(`<span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.75rem;"><i class="fas fa-boxes mr-1"></i> ${totalBox.toLocaleString('id-ID')} Box</span>`).show();
+        } else {
+            badge.hide();
+        }
     });
 }
 </script>

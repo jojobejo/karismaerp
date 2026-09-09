@@ -95,7 +95,19 @@
                                         <tr>
                                             <td class="px-3">
                                                 <div class="font-weight-bold text-dark"><?= htmlspecialchars($d['nama_barang_komponen']) ?></div>
-                                                <small class="text-muted"><?= htmlspecialchars($d['kode_barang_komponen']) ?></small>
+                                                <div class="d-flex align-items-center flex-wrap mt-1">
+                                                    <small class="text-muted mr-2"><?= htmlspecialchars($d['kode_barang_komponen']) ?></small>
+                                                    <?php if (!empty($d['is_innerbox'])): ?>
+                                                        <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 mr-1" title="Komponen dikemas dalam Innerbox">
+                                                            <i class="fas fa-box mr-1"></i> Kemasan Innerbox (@ <?= number_format((float)$d['isi_per_innerbox'], 0) ?> <?= htmlspecialchars($d['satuan']) ?>)
+                                                        </span>
+                                                        <?php if (!empty($d['total_innerbox_kebutuhan']) && (float)$d['total_innerbox_kebutuhan'] > 0): ?>
+                                                            <span class="badge badge-info text-white font-weight-bold px-2 py-1">
+                                                                Total: <?= number_format((float)$d['total_innerbox_kebutuhan'], 0) ?> Box
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                </div>
                                             </td>
                                             <td><span class="badge badge-light border font-weight-bold"><?= htmlspecialchars($d['no_lot']) ?></span></td>
                                             <td><?= $d['expired_date'] ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>

@@ -203,6 +203,39 @@ class M_Bundling extends CI_Model
                 $this->db->query("ALTER TABLE `tberp_bundling_request_detail` ADD COLUMN `hpp_satuan` DECIMAL(18,2) DEFAULT 0.00 AFTER `qty_terpenuhi`, ADD COLUMN `subtotal_hpp` DECIMAL(18,2) DEFAULT 0.00 AFTER `hpp_satuan`");
             }
         }
+
+        // Pastikan kolom kemasan innerbox ada di tberp_bundling_formula_detail
+        if ($this->db->table_exists('tberp_bundling_formula_detail')) {
+            if (!$this->db->field_exists('is_innerbox', 'tberp_bundling_formula_detail')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_formula_detail` 
+                    ADD COLUMN `is_innerbox` TINYINT(1) NOT NULL DEFAULT 0 AFTER `satuan`,
+                    ADD COLUMN `qty_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `is_innerbox`,
+                    ADD COLUMN `isi_per_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `qty_innerbox`,
+                    ADD COLUMN `satuan_innerbox` VARCHAR(30) DEFAULT 'Innerbox' AFTER `isi_per_innerbox`");
+            }
+        }
+
+        // Pastikan kolom kemasan innerbox ada di tberp_bundling_request_detail
+        if ($this->db->table_exists('tberp_bundling_request_detail')) {
+            if (!$this->db->field_exists('is_innerbox', 'tberp_bundling_request_detail')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request_detail` 
+                    ADD COLUMN `is_innerbox` TINYINT(1) NOT NULL DEFAULT 0 AFTER `satuan`,
+                    ADD COLUMN `qty_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `is_innerbox`,
+                    ADD COLUMN `isi_per_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `qty_innerbox`,
+                    ADD COLUMN `satuan_innerbox` VARCHAR(30) DEFAULT 'Innerbox' AFTER `isi_per_innerbox`,
+                    ADD COLUMN `total_innerbox_kebutuhan` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `satuan_innerbox`");
+            }
+        }
+
+        // Pastikan kolom kemasan innerbox ada di tberp_bundling_assembly_detail
+        if ($this->db->table_exists('tberp_bundling_assembly_detail')) {
+            if (!$this->db->field_exists('is_innerbox', 'tberp_bundling_assembly_detail')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_assembly_detail` 
+                    ADD COLUMN `is_innerbox` TINYINT(1) NOT NULL DEFAULT 0 AFTER `satuan`,
+                    ADD COLUMN `qty_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `is_innerbox`,
+                    ADD COLUMN `isi_per_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `qty_innerbox`");
+            }
+        }
     }
 
     // =========================================================================
@@ -289,12 +322,28 @@ class M_Bundling extends CI_Model
             $insertDetails = [];
             foreach ($details as $d) {
                 if (empty($d['kode_barang_komponen'])) continue;
+
+                $isInnerbox = !empty($d['is_innerbox']) ? 1 : 0;
+                $qtyInnerbox = $isInnerbox ? (float)($d['qty_innerbox'] ?? 1) : 0.000;
+                $isiPerInnerbox = $isInnerbox ? (float)($d['isi_per_innerbox'] ?? 0) : 0.000;
+                $satuanInnerbox = $isInnerbox ? (!empty($d['satuan_innerbox']) ? trim($d['satuan_innerbox']) : 'Innerbox') : null;
+
+                $qtyKomponen = (float)($d['qty_komponen'] ?? 1);
+                // Jika pakai innerbox dan keduanya > 0, hitung otomatis total fisik
+                if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
+                    $qtyKomponen = $qtyInnerbox * $isiPerInnerbox;
+                }
+
                 $insertDetails[] = [
                     'id_formula'           => $id,
                     'kode_barang_komponen' => $d['kode_barang_komponen'],
                     'nama_barang_komponen' => $d['nama_barang_komponen'] ?? '',
-                    'qty_komponen'         => (float)($d['qty_komponen'] ?? 1),
-                    'satuan'               => $d['satuan'] ?? 'Pcs'
+                    'qty_komponen'         => $qtyKomponen,
+                    'satuan'               => $d['satuan'] ?? 'Pcs',
+                    'is_innerbox'          => $isInnerbox,
+                    'qty_innerbox'         => $qtyInnerbox,
+                    'isi_per_innerbox'     => $isiPerInnerbox,
+                    'satuan_innerbox'      => $satuanInnerbox
                 ];
             }
             if (!empty($insertDetails)) {
@@ -472,22 +521,38 @@ class M_Bundling extends CI_Model
             $kdBrg = trim($d['kode_barang_komponen'] ?? '');
             if ($kdBrg === '') continue;
 
+            $isInnerbox = !empty($d['is_innerbox']) ? 1 : 0;
+            $qtyInnerbox = $isInnerbox ? (float)($d['qty_innerbox'] ?? 1) : 0.000;
+            $isiPerInnerbox = $isInnerbox ? (float)($d['isi_per_innerbox'] ?? 0) : 0.000;
+            $satuanInnerbox = $isInnerbox ? (!empty($d['satuan_innerbox']) ? trim($d['satuan_innerbox']) : 'Innerbox') : null;
+
             $qtyPerPaket = (float)($d['qty_per_paket'] ?? 1);
-            $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis
+            if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
+                $qtyPerPaket = $qtyInnerbox * $isiPerInnerbox;
+            }
+
+            $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis total fisik
+            $totalInnerbox = $isInnerbox ? ($qtyRequest * $qtyInnerbox) : 0.000; // Total box kemasan
+
             $hppSatuan = (float)$this->get_item_average_hpp($kdBrg, $idGudangAsal, $d['nama_barang_komponen'] ?? '');
             $subtotalHpp = $qtyPerPaket * $hppSatuan;
             $totalEstHppPaket += $subtotalHpp;
 
             $detailRows[] = [
-                'id_request'           => $requestId,
-                'kode_barang_komponen' => $kdBrg,
-                'nama_barang_komponen' => $d['nama_barang_komponen'] ?? '',
-                'qty_per_paket'        => $qtyPerPaket,
-                'qty_total_kebutuhan'  => $totalKebutuhan,
-                'qty_terpenuhi'        => 0,
-                'satuan'               => $d['satuan'] ?? 'Pcs',
-                'hpp_satuan'           => $hppSatuan,
-                'subtotal_hpp'         => $subtotalHpp
+                'id_request'               => $requestId,
+                'kode_barang_komponen'     => $kdBrg,
+                'nama_barang_komponen'     => $d['nama_barang_komponen'] ?? '',
+                'qty_per_paket'            => $qtyPerPaket,
+                'qty_total_kebutuhan'      => $totalKebutuhan,
+                'qty_terpenuhi'            => 0,
+                'satuan'                   => $d['satuan'] ?? 'Pcs',
+                'is_innerbox'              => $isInnerbox,
+                'qty_innerbox'             => $qtyInnerbox,
+                'isi_per_innerbox'         => $isiPerInnerbox,
+                'satuan_innerbox'          => $satuanInnerbox,
+                'total_innerbox_kebutuhan' => $totalInnerbox,
+                'hpp_satuan'               => $hppSatuan,
+                'subtotal_hpp'             => $subtotalHpp
             ];
         }
 
@@ -533,7 +598,7 @@ class M_Bundling extends CI_Model
             'status'     => 'BATAL',
             'keterangan' => trim($req['keterangan'] . ' [Dibatalkan oleh ' . $user . ' pada ' . date('Y-m-d H:i') . ']')
         ]);
-        return ['status' => true, 'msg' => 'Request bundling berhasil dibatalkan'];
+        return ['status' => true, 'msg' => 'Request ' . $req['no_request'] . ' berhasil dibatalkan'];
     }
 
     // =========================================================================
@@ -573,19 +638,24 @@ class M_Bundling extends CI_Model
             $totalModalKebutuhan = (float)$item['qty_total_kebutuhan'] * $hppSatuan;
 
             $result[] = [
-                'kode_barang'            => $kd,
-                'nama_barang'            => $item['nama_barang_komponen'],
-                'qty_per_paket'          => (float)$item['qty_per_paket'],
-                'qty_total_kebutuhan'    => (float)$item['qty_total_kebutuhan'],
-                'qty_terpenuhi'          => (float)$item['qty_terpenuhi'],
-                'sisa_kebutuhan'         => $sisaKebutuhan,
-                'stok_gudang_induk'      => $stokInduk,
-                'stok_gudang_bundling'   => $stokBundling,
-                'kekurangan_di_bundling' => $kekuranganDiBundling,
-                'satuan'                 => $item['satuan'],
-                'hpp_satuan'             => $hppSatuan,
-                'subtotal_hpp_per_paket' => $subtotalHppPerPaket,
-                'total_modal_kebutuhan'  => $totalModalKebutuhan
+                'kode_barang'              => $kd,
+                'nama_barang'              => $item['nama_barang_komponen'],
+                'qty_per_paket'            => (float)$item['qty_per_paket'],
+                'qty_total_kebutuhan'      => (float)$item['qty_total_kebutuhan'],
+                'qty_terpenuhi'            => (float)$item['qty_terpenuhi'],
+                'sisa_kebutuhan'           => $sisaKebutuhan,
+                'stok_gudang_induk'        => $stokInduk,
+                'stok_gudang_bundling'     => $stokBundling,
+                'kekurangan_di_bundling'   => $kekuranganDiBundling,
+                'satuan'                   => $item['satuan'],
+                'is_innerbox'              => (int)($item['is_innerbox'] ?? 0),
+                'qty_innerbox'             => (float)($item['qty_innerbox'] ?? 0),
+                'isi_per_innerbox'         => (float)($item['isi_per_innerbox'] ?? 0),
+                'satuan_innerbox'          => $item['satuan_innerbox'] ?? 'Innerbox',
+                'total_innerbox_kebutuhan' => (float)($item['total_innerbox_kebutuhan'] ?? 0),
+                'hpp_satuan'               => $hppSatuan,
+                'subtotal_hpp_per_paket'   => $subtotalHppPerPaket,
+                'total_modal_kebutuhan'    => $totalModalKebutuhan
             ];
         }
         return $result;
@@ -844,6 +914,20 @@ class M_Bundling extends CI_Model
                 'created_at'   => $now
             ]);
 
+            $isInnerbox = 0;
+            $qtyInnerbox = 0.000;
+            $isiPerInnerbox = 0.000;
+            if ($req && !empty($req['details'])) {
+                foreach ($req['details'] as $rDet) {
+                    if ($rDet['kode_barang_komponen'] === $kdBrg) {
+                        $isInnerbox = (int)($rDet['is_innerbox'] ?? 0);
+                        $qtyInnerbox = (float)($rDet['qty_innerbox'] ?? 0);
+                        $isiPerInnerbox = (float)($rDet['isi_per_innerbox'] ?? 0);
+                        break;
+                    }
+                }
+            }
+
             $assemblyDetailRecords[] = [
                 'kode_barang_komponen' => $kdBrg,
                 'nama_barang_komponen' => $comp['nama_barang'] ?? '',
@@ -851,6 +935,9 @@ class M_Bundling extends CI_Model
                 'expired_date'         => $expDateComp,
                 'qty_digunakan'        => $qtyPakai,
                 'satuan'               => $comp['satuan'] ?? 'Pcs',
+                'is_innerbox'          => $isInnerbox,
+                'qty_innerbox'         => $qtyInnerbox,
+                'isi_per_innerbox'     => $isiPerInnerbox,
                 'hpp_satuan'           => $hppSatuanComp,
                 'total_hpp'            => $subtotalHpp
             ];

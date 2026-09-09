@@ -70,7 +70,7 @@
                                     <div class="col-8">
                                         <div class="form-group mb-3">
                                             <label class="small font-weight-bold text-muted">Jumlah Paket Diminta <span class="text-danger">*</span></label>
-                                            <input type="number" step="any" min="1" id="qty_request" name="qty_request" class="form-control form-control-lg font-weight-bold text-primary" placeholder="0" value="250" required>
+                                            <input type="number" step="any" min="1" id="qty_request" name="qty_request" class="form-control form-control-lg font-weight-bold text-primary" placeholder="0" value="" required>
                                         </div>
                                     </div>
                                     <div class="col-4">
@@ -135,70 +135,20 @@
                                     <table class="table table-bordered mb-0" id="tableKomponen" style="font-size: 0.92rem;">
                                         <thead style="background: #f1f5f9; color: #334155;">
                                             <tr>
-                                                <th style="width: 42%;">Komponen Barang</th>
-                                                <th style="width: 18%;" class="text-center">Isi per 1 Paket</th>
-                                                <th style="width: 14%;" class="text-center">Satuan</th>
-                                                <th style="width: 20%;" class="text-center bg-primary text-white">Total Kebutuhan</th>
-                                                <th style="width: 6%;" class="text-center">Aksi</th>
+                                                <th style="width: 32%;">Komponen Barang</th>
+                                                <th style="width: 17%;" class="text-center">Kemasan Innerbox?</th>
+                                                <th style="width: 25%;" class="text-center">Isi per 1 Paket</th>
+                                                <th style="width: 9%;" class="text-center">Satuan</th>
+                                                <th style="width: 12%;" class="text-center bg-primary text-white">Total Kebutuhan</th>
+                                                <th style="width: 5%;" class="text-center">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody id="komponenList">
-                                            <!-- Baris default awal (Contoh: Spontas, Round Up, Kaos Jitu) -->
-                                            <tr class="item-row">
-                                                <td>
-                                                    <input type="hidden" name="komponen[0][kode_barang_komponen]" class="row-kd" value="SPON-1LTR">
-                                                    <input type="text" name="komponen[0][nama_barang_komponen]" class="form-control form-control-sm row-nama font-weight-bold" value="Spontas 1 Ltr" placeholder="Pilih/ketik barang..." required>
-                                                    <small class="text-muted row-kd-text">Kode: SPON-1LTR</small>
-                                                </td>
-                                                <td>
-                                                    <input type="number" step="any" min="0.001" name="komponen[0][qty_per_paket]" class="form-control form-control-sm text-center row-qty font-weight-bold" value="1" required>
-                                                </td>
-                                                <td>
-                                                    <input type="text" name="komponen[0][satuan]" class="form-control form-control-sm text-center row-satuan" value="Ltr">
-                                                </td>
-                                                <td class="text-center align-middle font-weight-bold text-primary row-total" style="font-size: 1.05rem;">
-                                                    250
-                                                </td>
-                                                <td class="text-center align-middle">
-                                                    <button type="button" class="btn btn-sm btn-link text-danger btn-del"><i class="fas fa-trash"></i></button>
-                                                </td>
-                                            </tr>
-                                            <tr class="item-row">
-                                                <td>
-                                                    <input type="hidden" name="komponen[1][kode_barang_komponen]" class="row-kd" value="ROUN-1LTR">
-                                                    <input type="text" name="komponen[1][nama_barang_komponen]" class="form-control form-control-sm row-nama font-weight-bold" value="Round Up 1 Ltr" placeholder="Pilih/ketik barang..." required>
-                                                    <small class="text-muted row-kd-text">Kode: ROUN-1LTR</small>
-                                                </td>
-                                                <td>
-                                                    <input type="number" step="any" min="0.001" name="komponen[1][qty_per_paket]" class="form-control form-control-sm text-center row-qty font-weight-bold" value="1" required>
-                                                </td>
-                                                <td>
-                                                    <input type="text" name="komponen[1][satuan]" class="form-control form-control-sm text-center row-satuan" value="Ltr">
-                                                </td>
-                                                <td class="text-center align-middle font-weight-bold text-primary row-total" style="font-size: 1.05rem;">
-                                                    250
-                                                </td>
-                                                <td class="text-center align-middle">
-                                                    <button type="button" class="btn btn-sm btn-link text-danger btn-del"><i class="fas fa-trash"></i></button>
-                                                </td>
-                                            </tr>
-                                            <tr class="item-row">
-                                                <td>
-                                                    <input type="hidden" name="komponen[2][kode_barang_komponen]" class="row-kd" value="KAOS-JITU">
-                                                    <input type="text" name="komponen[2][nama_barang_komponen]" class="form-control form-control-sm row-nama font-weight-bold" value="Kaos Jitu" placeholder="Pilih/ketik barang..." required>
-                                                    <small class="text-muted row-kd-text">Kode: KAOS-JITU</small>
-                                                </td>
-                                                <td>
-                                                    <input type="number" step="any" min="0.001" name="komponen[2][qty_per_paket]" class="form-control form-control-sm text-center row-qty font-weight-bold" value="1" required>
-                                                </td>
-                                                <td>
-                                                    <input type="text" name="komponen[2][satuan]" class="form-control form-control-sm text-center row-satuan" value="Pcs">
-                                                </td>
-                                                <td class="text-center align-middle font-weight-bold text-primary row-total" style="font-size: 1.05rem;">
-                                                    250
-                                                </td>
-                                                <td class="text-center align-middle">
-                                                    <button type="button" class="btn btn-sm btn-link text-danger btn-del"><i class="fas fa-trash"></i></button>
+                                            <tr id="emptyRowKomponen">
+                                                <td colspan="6" class="text-center text-muted py-4">
+                                                    <i class="fas fa-layer-group text-secondary fa-2x mb-2 d-block"></i>
+                                                    Belum ada komponen barang yang ditambahkan.<br>
+                                                    <small>Pilih dari <strong>Master Formula</strong> di sebelah kiri atau klik tombol <strong><i class="fas fa-plus"></i> Tambah Komponen</strong>.</small>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -268,10 +218,30 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-let rowIndex = 3;
+let rowIndex = 0;
 let activeRowTarget = null;
 
+function checkEmptyRow() {
+    if ($('#komponenList tr.item-row').length === 0) {
+        if ($('#emptyRowKomponen').length === 0) {
+            let emptyHtml = `
+                <tr id="emptyRowKomponen">
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="fas fa-layer-group text-secondary fa-2x mb-2 d-block"></i>
+                        Belum ada komponen barang yang ditambahkan.<br>
+                        <small>Pilih dari <strong>Master Formula</strong> di sebelah kiri atau klik tombol <strong><i class="fas fa-plus"></i> Tambah Komponen</strong>.</small>
+                    </td>
+                </tr>
+            `;
+            $('#komponenList').html(emptyHtml);
+        }
+    } else {
+        $('#emptyRowKomponen').remove();
+    }
+}
+
 $(document).ready(function() {
+    checkEmptyRow();
     recalculateTotals();
 
     // Event perubahan Qty Request
@@ -279,51 +249,47 @@ $(document).ready(function() {
         recalculateTotals();
     });
 
-    // Event perubahan Qty Komponen
-    $(document).on('input change', '.row-qty', function() {
-        recalculateTotals();
-    });
-
     // Event Hapus Baris
     $(document).on('click', '.btn-del', function() {
-        if ($('#komponenList tr').length <= 1) {
-            Swal.fire('Perhatian', 'Minimal harus ada 1 komponen dalam paket bundling', 'warning');
-            return;
-        }
         $(this).closest('tr').remove();
+        checkEmptyRow();
         recalculateTotals();
     });
 
     // Tambah Baris Komponen Baru
     $('#btnAddRow').click(function() {
-        let html = `
-            <tr class="item-row">
-                <td>
-                    <input type="hidden" name="komponen[${rowIndex}][kode_barang_komponen]" class="row-kd" value="">
-                    <div class="input-group input-group-sm">
-                        <input type="text" name="komponen[${rowIndex}][nama_barang_komponen]" class="form-control row-nama font-weight-bold" placeholder="Pilih/ketik barang..." required>
-                        <div class="input-group-append">
-                            <button type="button" class="btn btn-outline-secondary btn-lookup"><i class="fas fa-search"></i></button>
-                        </div>
-                    </div>
-                    <small class="text-muted row-kd-text">Kode: -</small>
-                </td>
-                <td>
-                    <input type="number" step="any" min="0.001" name="komponen[${rowIndex}][qty_per_paket]" class="form-control form-control-sm text-center row-qty font-weight-bold" value="1" required>
-                </td>
-                <td>
-                    <input type="text" name="komponen[${rowIndex}][satuan]" class="form-control form-control-sm text-center row-satuan" value="Pcs">
-                </td>
-                <td class="text-center align-middle font-weight-bold text-primary row-total" style="font-size: 1.05rem;">
-                    0
-                </td>
-                <td class="text-center align-middle">
-                    <button type="button" class="btn btn-sm btn-link text-danger btn-del"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `;
+        $('#emptyRowKomponen').remove();
+        let html = renderRequestItemRow(rowIndex, '', '', 'Pcs', 0, 1, 12, 1);
         $('#komponenList').append(html);
         rowIndex++;
+        recalculateTotals();
+    });
+
+    // Toggle checkbox innerbox
+    $(document).on('change', '.chk-innerbox-req', function() {
+        let row = $(this).closest('tr');
+        let isChecked = $(this).is(':checked');
+        let label = row.find('label[for="' + $(this).attr('id') + '"]');
+
+        if (isChecked) {
+            label.removeClass('text-muted').addClass('text-primary').html('<i class="fas fa-box text-warning mr-1"></i> Pakai Innerbox');
+            row.find('.wrap-innerbox-inputs').show();
+            row.find('.wrap-regular-qty').hide();
+
+            let qBox = parseFloat(row.find('.row-qty-inbox').val()) || 1;
+            let iBox = parseFloat(row.find('.row-isi-inbox').val()) || 12;
+            row.find('.row-qty-inbox').val(qBox);
+            row.find('.row-isi-inbox').val(iBox);
+        } else {
+            label.removeClass('text-primary').addClass('text-muted').text('Tanpa Innerbox');
+            row.find('.wrap-innerbox-inputs').hide();
+            row.find('.wrap-regular-qty').show();
+        }
+        recalculateTotals();
+    });
+
+    // Event input kuantitas & satuan
+    $(document).on('input change', '.row-qty-inbox, .row-isi-inbox, .row-qty-regular, .row-satuan', function() {
         recalculateTotals();
     });
 
@@ -362,7 +328,14 @@ $(document).ready(function() {
     // Pilihan Formula Siap Pakai
     $('#selectFormula').change(function() {
         let idFormula = $(this).val();
-        if (!idFormula) return;
+        if (!idFormula) {
+            $('#nama_paket').val('');
+            $('#kode_paket').val('');
+            $('#komponenList').empty();
+            checkEmptyRow();
+            recalculateTotals();
+            return;
+        }
 
         let opt = $(this).find(':selected');
         $('#nama_paket').val(opt.data('nama'));
@@ -378,30 +351,20 @@ $(document).ready(function() {
                     $('#komponenList').empty();
                     rowIndex = 0;
                     res.data.details.forEach(function(d) {
-                        let html = `
-                            <tr class="item-row">
-                                <td>
-                                    <input type="hidden" name="komponen[${rowIndex}][kode_barang_komponen]" class="row-kd" value="${d.kode_barang_komponen}">
-                                    <input type="text" name="komponen[${rowIndex}][nama_barang_komponen]" class="form-control form-control-sm row-nama font-weight-bold" value="${d.nama_barang_komponen || d.kode_barang_komponen}" required>
-                                    <small class="text-muted row-kd-text">Kode: ${d.kode_barang_komponen}</small>
-                                </td>
-                                <td>
-                                    <input type="number" step="any" min="0.001" name="komponen[${rowIndex}][qty_per_paket]" class="form-control form-control-sm text-center row-qty font-weight-bold" value="${parseFloat(d.qty_komponen)}" required>
-                                </td>
-                                <td>
-                                    <input type="text" name="komponen[${rowIndex}][satuan]" class="form-control form-control-sm text-center row-satuan" value="${d.satuan || 'Pcs'}">
-                                </td>
-                                <td class="text-center align-middle font-weight-bold text-primary row-total" style="font-size: 1.05rem;">
-                                    0
-                                </td>
-                                <td class="text-center align-middle">
-                                    <button type="button" class="btn btn-sm btn-link text-danger btn-del"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `;
+                        let html = renderRequestItemRow(
+                            rowIndex,
+                            d.kode_barang_komponen,
+                            d.nama_barang_komponen || d.kode_barang_komponen,
+                            d.satuan || 'Pcs',
+                            d.is_innerbox,
+                            d.qty_innerbox,
+                            d.isi_per_innerbox,
+                            parseFloat(d.qty_komponen)
+                        );
                         $('#komponenList').append(html);
                         rowIndex++;
                     });
+                    checkEmptyRow();
                     recalculateTotals();
                 }
             }
@@ -421,7 +384,7 @@ $(document).ready(function() {
         let validRows = 0;
         $('#komponenList .item-row').each(function() {
             let kd = $(this).find('.row-kd').val();
-            let qty = parseFloat($(this).find('.row-qty').val()) || 0;
+            let qty = parseFloat($(this).find('.row-qty-total').val()) || 0;
             if (kd && kd.trim() !== '' && qty > 0) {
                 validRows++;
             }
@@ -495,12 +458,124 @@ $(document).ready(function() {
     });
 });
 
+function renderRequestItemRow(rIndex, kd, nama, sat, isInbox, qtyInbox, isiInbox, qtyTotal) {
+    isInbox = (parseInt(isInbox) === 1 || isInbox === true);
+    qtyInbox = (qtyInbox !== undefined && qtyInbox !== null && parseFloat(qtyInbox) > 0) ? parseFloat(qtyInbox) : 1;
+    isiInbox = (isiInbox !== undefined && isiInbox !== null && parseFloat(isiInbox) > 0) ? parseFloat(isiInbox) : 12;
+    qtyTotal = (qtyTotal !== undefined && qtyTotal !== null && parseFloat(qtyTotal) > 0) ? parseFloat(qtyTotal) : 1;
+    if (isInbox && qtyInbox > 0 && isiInbox > 0) {
+        qtyTotal = qtyInbox * isiInbox;
+    }
+    sat = sat || 'Pcs';
+
+    return `
+        <tr class="item-row">
+            <td>
+                <input type="hidden" name="komponen[${rIndex}][kode_barang_komponen]" class="row-kd" value="${kd}">
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" name="komponen[${rIndex}][nama_barang_komponen]" class="form-control form-control-sm row-nama font-weight-bold" value="${nama}" placeholder="Pilih/ketik barang..." required>
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-outline-secondary btn-lookup"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <small class="text-muted row-kd-text">Kode: ${kd || '-'}</small>
+            </td>
+            <td class="text-center align-middle bg-light">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input chk-innerbox-req" 
+                           id="chk_req_inbox_${rIndex}" 
+                           name="komponen[${rIndex}][is_innerbox]" 
+                           value="1" ${isInbox ? 'checked' : ''}>
+                    <label class="custom-control-label font-weight-bold ${isInbox ? 'text-primary' : 'text-muted'}" for="chk_req_inbox_${rIndex}">
+                        ${isInbox ? '<i class="fas fa-box text-warning mr-1"></i> Pakai Innerbox' : 'Tanpa Innerbox'}
+                    </label>
+                </div>
+                <input type="hidden" name="komponen[${rIndex}][satuan_innerbox]" value="Innerbox">
+            </td>
+            <td class="align-middle">
+                <!-- Wrapper jika pakai innerbox -->
+                <div class="wrap-innerbox-inputs" style="${isInbox ? '' : 'display: none;'}">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="input-group input-group-sm mr-1" style="max-width: 105px;">
+                            <input type="number" step="any" min="0.001" 
+                                   name="komponen[${rIndex}][qty_innerbox]" 
+                                   class="form-control text-center font-weight-bold row-qty-inbox" 
+                                   value="${qtyInbox}" placeholder="Jml Box">
+                            <div class="input-group-append"><span class="input-group-text px-1 small">Box</span></div>
+                        </div>
+                        <span class="font-weight-bold text-muted mx-1">&times;</span>
+                        <div class="input-group input-group-sm ml-1" style="max-width: 125px;">
+                            <input type="number" step="any" min="0.001" 
+                                   name="komponen[${rIndex}][isi_per_innerbox]" 
+                                   class="form-control text-center font-weight-bold text-primary row-isi-inbox" 
+                                   value="${isiInbox}" placeholder="Isi/Box">
+                            <div class="input-group-append"><span class="input-group-text px-1 small row-satuan-label">${sat}</span></div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-1">
+                        <span class="badge badge-warning text-dark px-2 py-1 row-inbox-summary" style="font-size: 0.78rem;">
+                            <i class="fas fa-box mr-1"></i> ${qtyInbox} Box @ ${isiInbox} ${sat} = <strong>${qtyTotal} ${sat}</strong>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Wrapper jika reguler -->
+                <div class="wrap-regular-qty" style="${isInbox ? 'display: none;' : ''}">
+                    <div class="input-group input-group-sm mx-auto" style="max-width: 130px;">
+                        <input type="number" step="any" min="0.001" 
+                               class="form-control text-center font-weight-bold row-qty-regular" 
+                               value="${qtyTotal}" placeholder="Qty">
+                        <div class="input-group-append"><span class="input-group-text px-1 small row-satuan-label">${sat}</span></div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="komponen[${rIndex}][qty_per_paket]" class="row-qty-total" value="${qtyTotal}">
+            </td>
+            <td class="align-middle">
+                <input type="text" name="komponen[${rIndex}][satuan]" 
+                       class="form-control form-control-sm text-center row-satuan font-weight-bold" 
+                       value="${sat}">
+            </td>
+            <td class="text-center align-middle font-weight-bold text-primary row-total-display" style="font-size: 0.95rem;">
+                0
+            </td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-sm btn-link text-danger btn-del" title="Hapus"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `;
+}
+
 function recalculateTotals() {
     let qtyRequest = parseFloat($('#qty_request').val()) || 0;
     $('#komponenList .item-row').each(function() {
-        let qtyPerPaket = parseFloat($(this).find('.row-qty').val()) || 0;
-        let total = qtyRequest * qtyPerPaket;
-        $(this).find('.row-total').text(total.toLocaleString('id-ID'));
+        let isInbox = $(this).find('.chk-innerbox-req').is(':checked');
+        let sat = $(this).find('.row-satuan').val() || 'Pcs';
+        $(this).find('.row-satuan-label').text(sat);
+
+        let qtyPerPaket = 0;
+        if (isInbox) {
+            let qBox = parseFloat($(this).find('.row-qty-inbox').val()) || 0;
+            let iBox = parseFloat($(this).find('.row-isi-inbox').val()) || 0;
+            qtyPerPaket = qBox * iBox;
+            $(this).find('.row-qty-total').val(qtyPerPaket);
+            $(this).find('.row-qty-regular').val(qtyPerPaket);
+            $(this).find('.row-inbox-summary').html(
+                `<i class="fas fa-box mr-1"></i> ${qBox} Box @ ${iBox} ${sat} = <strong>${qtyPerPaket.toLocaleString('id-ID')} ${sat}</strong>`
+            );
+
+            let totalPcs = qtyRequest * qtyPerPaket;
+            let totalBox = qtyRequest * qBox;
+            $(this).find('.row-total-display').html(
+                `<strong>${totalPcs.toLocaleString('id-ID')}</strong> ${sat}<br>` +
+                `<span class="badge badge-warning text-dark font-weight-bold mt-1" style="font-size: 0.78rem;"><i class="fas fa-box mr-1"></i> ${totalBox.toLocaleString('id-ID')} Box</span>`
+            );
+        } else {
+            qtyPerPaket = parseFloat($(this).find('.row-qty-regular').val()) || 0;
+            $(this).find('.row-qty-total').val(qtyPerPaket);
+            let totalPcs = qtyRequest * qtyPerPaket;
+            $(this).find('.row-total-display').html(`<strong>${totalPcs.toLocaleString('id-ID')}</strong> ${sat}`);
+        }
     });
 }
 

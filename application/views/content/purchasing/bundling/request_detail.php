@@ -198,8 +198,15 @@
                                             <div class="font-weight-bold text-dark"><?= htmlspecialchars($stk['nama_barang']) ?></div>
                                             <small class="text-muted">Kode: <?= htmlspecialchars($stk['kode_barang']) ?></small>
                                         </td>
-                                        <td class="text-center font-weight-bold">
-                                            <?= number_format($stk['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                        <td class="text-center">
+                                            <div class="font-weight-bold text-dark">
+                                                <?= number_format($stk['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                            </div>
+                                            <?php if (!empty($stk['is_innerbox'])): ?>
+                                                <span class="badge badge-warning text-dark px-2 py-1 mt-1 font-weight-bold" style="font-size: 0.76rem;" title="Komposisi Innerbox">
+                                                    <i class="fas fa-box mr-1"></i> <?= number_format($stk['qty_innerbox'], 0) ?> Box (@ <?= number_format($stk['isi_per_innerbox'], 0) ?> <?= htmlspecialchars($stk['satuan']) ?>)
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="text-right text-muted">
                                             Rp <?= number_format((float)($stk['hpp_satuan'] ?? 0), 2, ',', '.') ?>
@@ -207,8 +214,15 @@
                                         <td class="text-right font-weight-bold text-success bg-light">
                                             Rp <?= number_format((float)($stk['subtotal_hpp_per_paket'] ?? 0), 2, ',', '.') ?>
                                         </td>
-                                        <td class="text-center font-weight-bold bg-light text-primary">
-                                            <?= number_format($stk['qty_total_kebutuhan'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                        <td class="text-center bg-light text-primary">
+                                            <div class="font-weight-bold" style="font-size: 1.05rem;">
+                                                <?= number_format($stk['qty_total_kebutuhan'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                            </div>
+                                            <?php if (!empty($stk['is_innerbox'])): ?>
+                                                <span class="badge badge-warning text-dark px-2 py-1 mt-1 font-weight-bold" style="font-size: 0.76rem;" title="Total Kebutuhan Kemasan Innerbox">
+                                                    <i class="fas fa-boxes mr-1"></i> <?= number_format($stk['total_innerbox_kebutuhan'], 0, ',', '.') ?> Box
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="text-right font-weight-bold bg-light text-primary">
                                             Rp <?= number_format((float)($stk['total_modal_kebutuhan'] ?? 0), 2, ',', '.') ?>
