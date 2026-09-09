@@ -13,7 +13,7 @@
                     <h1 class="m-0 font-weight-bold" style="color: #0f172a; font-size: 1.5rem;">
                         <i class="fas fa-hammer text-primary mr-2"></i> Pembuatan Paket Bundling (Assembly)
                     </h1>
-                    <p class="text-muted mb-0 small">Transformasi komponen barang di Gudang Bundling menjadi produk Paket Bundling fisik</p>
+                    <p class="text-muted mb-0 small">Perakitan fisik paket bundling mengambil bahan dari Gudang Induk. Draft penyesuaian persediaan akan otomatis dibuat untuk Bagian Accounting.</p>
                 </div>
                 <div class="col-sm-6 text-right">
                     <a href="<?= site_url('logistik/bundling/detail/' . $request['id_request']) ?>" class="btn btn-outline-secondary font-weight-bold shadow-sm">
@@ -30,6 +30,7 @@
                 <input type="hidden" name="id_request" value="<?= $request['id_request'] ?>">
                 <input type="hidden" name="kode_paket" value="<?= htmlspecialchars($request['kode_paket']) ?>">
                 <input type="hidden" name="nama_paket" value="<?= htmlspecialchars($request['nama_paket']) ?>">
+                <input type="hidden" name="id_gudang_asal" value="<?= $request['id_gudang_asal'] ?>">
                 <input type="hidden" name="id_gudang" value="<?= $request['id_gudang_tujuan'] ?>">
                 <input type="hidden" name="satuan" value="<?= htmlspecialchars($request['satuan']) ?>">
 
@@ -53,6 +54,17 @@
                                     <label class="small font-weight-bold text-muted">Produk Paket</label>
                                     <h5 class="font-weight-bold text-dark mb-0"><?= htmlspecialchars($request['nama_paket']) ?></h5>
                                     <span class="badge badge-light border text-muted"><?= htmlspecialchars($request['kode_paket']) ?></span>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6 pr-1">
+                                        <label class="small font-weight-bold text-muted">Sumber Bahan</label>
+                                        <input type="text" class="form-control form-control-sm font-weight-bold bg-light text-primary" value="<?= htmlspecialchars($request['nama_gudang_asal'] ?: 'Gudang Induk') ?>" readonly>
+                                    </div>
+                                    <div class="col-6 pl-1">
+                                        <label class="small font-weight-bold text-muted">Gudang Paket</label>
+                                        <input type="text" class="form-control form-control-sm font-weight-bold bg-light text-success" value="<?= htmlspecialchars($request['nama_gudang_tujuan'] ?: 'Gudang Bundling') ?>" readonly>
+                                    </div>
                                 </div>
 
                                 <div class="alert alert-light border small text-muted mb-3">
@@ -104,14 +116,14 @@
                         </div>
                     </div>
 
-                    <!-- Kolom Kanan: Pengurangan Stok Komponen di Gudang Bundling -->
+                    <!-- Kolom Kanan: Pengurangan Stok Komponen di Gudang Induk -->
                     <div class="col-lg-8">
                         <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                             <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
                                 <h6 class="font-weight-bold text-dark m-0">
-                                    <i class="fas fa-layer-group text-primary mr-2"></i> Penggunaan Komponen di Gudang Bundling
+                                    <i class="fas fa-layer-group text-primary mr-2"></i> Penggunaan Komponen dari <?= htmlspecialchars($request['nama_gudang_asal'] ?: 'Gudang Induk') ?>
                                 </h6>
-                                <small class="text-muted">Komponen berikut akan berkurang otomatis dari stok fisik dan dicatat OUT pada kartu stok.</small>
+                                <small class="text-muted">Komponen berikut diambil langsung dari Gudang Induk dan otomatis dibuatkan dokumen Draft Penyesuaian Barang untuk Bagian Accounting.</small>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
@@ -120,8 +132,8 @@
                                             <tr>
                                                 <th style="width: 30%;">Komponen Barang</th>
                                                 <th style="width: 14%;" class="text-center">Isi / Paket</th>
-                                                <th style="width: 28%;">Pilih Batch Lot Gudang Bundling</th>
-                                                <th style="width: 14%;" class="text-center">Stok Ada</th>
+                                                <th style="width: 28%;">Pilih Batch Lot Gudang Induk</th>
+                                                <th style="width: 14%;" class="text-center">Stok Gdg. Induk</th>
                                                 <th style="width: 14%;" class="text-center bg-danger text-white">Qty Terpakai</th>
                                             </tr>
                                         </thead>
@@ -152,7 +164,7 @@
                                                     </td>
                                                     <td>
                                                         <?php if (empty($comp['batches'])): ?>
-                                                            <span class="badge badge-danger">Stok di Gudang Bundling 0! Mutasikan dulu.</span>
+                                                            <span class="badge badge-danger">Stok di Gudang Induk 0!</span>
                                                             <input type="hidden" name="komponen[<?= $cIdx ?>][no_lot]" value="-">
                                                             <input type="hidden" name="komponen[<?= $cIdx ?>][expired_date]" value="">
                                                         <?php else: ?>
@@ -172,7 +184,7 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="text-center font-weight-bold text-primary">
-                                                        <?= number_format($comp['stok_bundling'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
+                                                        <?= number_format($comp['stok_gudang_asal'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
                                                     </td>
                                                     <td class="text-center">
                                                         <input type="number" step="any" min="0" 
@@ -186,6 +198,10 @@
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
+                                </div>
+                                <div class="p-3 bg-light border-top small text-muted">
+                                    <i class="fas fa-info-circle text-info mr-1"></i>
+                                    <strong>Alur Akuntansi Otomatis:</strong> Setelah Logistik klik <em>Simpan & Rekam Perakitan</em>, sistem otomatis menerbitkan dokumen <strong>Draft Penyesuaian Persediaan</strong> ke modul <code>Penyesuaian Barang</code> untuk diposting oleh Bagian Accounting.
                                 </div>
 
                                 <div class="p-4 bg-light border-top">

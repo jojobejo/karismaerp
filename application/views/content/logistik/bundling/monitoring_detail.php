@@ -13,7 +13,7 @@
                     <h1 class="m-0 font-weight-bold" style="color: #0f172a; font-size: 1.5rem;">
                         <i class="fas fa-boxes text-primary mr-2"></i> Realisasi Paket Bundling #<?= htmlspecialchars($request['no_request']) ?>
                     </h1>
-                    <p class="text-muted mb-0 small">Pengecekan stok komponen, mutasi bahan, dan eksekusi perakitan paket</p>
+                    <p class="text-muted mb-0 small">Pengecekan stok komponen dan eksekusi perakitan paket (Assembly)</p>
                 </div>
                 <div class="col-sm-6 text-right">
                     <a href="<?= site_url('logistik/bundling') ?>" class="btn btn-outline-secondary font-weight-bold shadow-sm">
@@ -93,14 +93,9 @@
 
                             <div class="pt-3 border-top mt-3">
                                 <?php if ($sisa > 0): ?>
-                                    <div class="btn-group d-flex" role="group">
-                                        <a href="<?= site_url('logistik/bundling/mutasi_bahan/' . $request['id_request']) ?>" class="btn btn-outline-primary font-weight-bold">
-                                            <i class="fas fa-dolly mr-1"></i> Mutasi Bahan
-                                        </a>
-                                        <a href="<?= site_url('logistik/bundling/assembly/' . $request['id_request']) ?>" class="btn btn-success font-weight-bold shadow">
-                                            <i class="fas fa-hammer mr-1"></i> Buat Paket
-                                        </a>
-                                    </div>
+                                    <a href="<?= site_url('logistik/bundling/assembly/' . $request['id_request']) ?>" class="btn btn-success btn-block font-weight-bold shadow py-2">
+                                        <i class="fas fa-hammer mr-1"></i> Buat Paket (Assembly)
+                                    </a>
                                 <?php else: ?>
                                     <div class="alert alert-success m-0 py-2 text-center small font-weight-bold">
                                         <i class="fas fa-check-circle mr-1"></i> Request Ini Telah Terealisasi Penuh
@@ -119,11 +114,11 @@
                         <h6 class="font-weight-bold text-dark m-0">
                             <i class="fas fa-clipboard-check text-primary mr-2"></i> Pengecekan Ketersediaan Stok Komponen
                         </h6>
-                        <small class="text-muted">Pastikan komponen sudah berada di Gudang Bundling sebelum proses perakitan dilakukan.</small>
+                        <small class="text-muted">Komponen diambil langsung dari Gudang Induk saat perakitan. Setelah dirakit, draft penyesuaian akan otomatis masuk ke Bagian Accounting.</small>
                     </div>
                     <?php if ($sisa > 0): ?>
-                        <a href="<?= site_url('logistik/bundling/mutasi_bahan/' . $request['id_request']) ?>" class="btn btn-sm btn-outline-primary font-weight-bold">
-                            <i class="fas fa-exchange-alt mr-1"></i> Mutasi Bahan dari Gudang Induk
+                        <a href="<?= site_url('persediaan/penyesuaian_barang') ?>" target="_blank" class="btn btn-sm btn-outline-secondary font-weight-bold" title="Lakukan pemantauan dan posting jurnal penyesuaian persediaan di modul Penyesuaian Barang">
+                            <i class="fas fa-boxes mr-1"></i> Modul Penyesuaian Barang
                         </a>
                     <?php endif; ?>
                 </div>
@@ -137,15 +132,15 @@
                                     <th class="py-3 text-center">Total Kebutuhan</th>
                                     <th class="py-3 text-center text-success">Sudah Dirakit</th>
                                     <th class="py-3 text-center text-danger">Sisa Kebutuhan</th>
-                                    <th class="py-3 text-center">Stok Gdg. Induk (Bisa Dimutasi)</th>
-                                    <th class="py-3 text-center bg-light text-primary font-weight-bold">Stok Gdg. Bundling (Siap Dirakit)</th>
+                                    <th class="py-3 text-center bg-light text-primary font-weight-bold">Stok Gdg. Induk (Sumber Bahan)</th>
                                     <th class="py-3 text-center">Status Kesiapan</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($stock_status as $stk): ?>
                                     <?php 
-                                        $isReady = ($stk['stok_gudang_bundling'] >= $stk['sisa_kebutuhan']);
+                                        $isReady = ($stk['stok_gudang_induk'] >= $stk['sisa_kebutuhan']);
+                                        $kurangInduk = max(0, (float)$stk['sisa_kebutuhan'] - (float)$stk['stok_gudang_induk']);
                                     ?>
                                     <tr>
                                         <td class="px-3">
@@ -164,13 +159,8 @@
                                         <td class="text-center font-weight-bold text-danger">
                                             <?= number_format($stk['sisa_kebutuhan'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
                                         </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1">
-                                                <?= number_format($stk['stok_gudang_induk'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
-                                            </span>
-                                        </td>
                                         <td class="text-center bg-light font-weight-bold text-primary" style="font-size: 1.05rem;">
-                                            <?= number_format($stk['stok_gudang_bundling'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                            <?= number_format($stk['stok_gudang_induk'], 2, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
                                         </td>
                                         <td class="text-center">
                                             <?php if ($stk['sisa_kebutuhan'] <= 0): ?>
@@ -179,7 +169,7 @@
                                                 <span class="badge badge-success px-2 py-1 font-weight-bold"><i class="fas fa-check-double"></i> Stok Siap</span>
                                             <?php else: ?>
                                                 <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold">
-                                                    <i class="fas fa-exclamation-triangle"></i> Kurang <?= number_format($stk['kekurangan_di_bundling'], 2, ',', '.') ?>
+                                                    <i class="fas fa-exclamation-triangle"></i> Kurang <?= number_format($kurangInduk, 2, ',', '.') ?>
                                                 </span>
                                             <?php endif; ?>
                                         </td>
@@ -210,6 +200,7 @@
                                         <th class="py-3">No. Lot Paket</th>
                                         <th class="py-3">Expired Date</th>
                                         <th class="py-3 text-right">Nilai HPP</th>
+                                        <th class="py-3">Draft Accounting</th>
                                         <th class="py-3">Petugas</th>
                                         <th class="py-3 text-center" style="width: 100px;">Aksi</th>
                                     </tr>
@@ -226,6 +217,15 @@
                                             <td><?= $asm['expired_date_paket'] ? date('d/m/Y', strtotime($asm['expired_date_paket'])) : '-' ?></td>
                                             <td class="text-right font-weight-bold text-dark">
                                                 Rp <?= number_format((float)$asm['hpp_per_paket'], 2, ',', '.') ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($asm['no_penyesuaian'])): ?>
+                                                    <a href="<?= site_url('persediaan/penyesuaian_barang/view/' . $asm['id_penyesuaian']) ?>" target="_blank" class="badge badge-warning text-dark px-2 py-1" title="Lihat di Menu Penyesuaian Barang Accounting">
+                                                        <i class="fas fa-file-signature mr-1"></i> <?= htmlspecialchars($asm['no_penyesuaian']) ?>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">-</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td><?= htmlspecialchars($asm['user_input']) ?></td>
                                             <td class="text-center">

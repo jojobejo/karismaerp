@@ -786,6 +786,7 @@ var activeRowIdx = null;
 var selectedLookupBarang = null;
 var selectedLookupAkun = null;
 var initialDetails = <?= !empty($header['details']) ? json_encode($header['details']) : '[]' ?>;
+var DEFAULT_ADJ_ACCOUNT = <?= !empty($default_adj_account) ? json_encode($default_adj_account) : json_encode(['id_akun' => 225, 'kode_akun' => '14012', 'nama_akun' => 'Q Adjusment Persediaan']) ?>;
 
 // State Modal Lot
 var currentFormRowIdx = null;
@@ -872,6 +873,14 @@ function addNewRow(data) {
     var id_akun = data.id_akun || '';
     var kode_akun = data.kode_akun || '';
     var nama_akun = data.nama_akun || '';
+
+    // Jika id_akun belum ditentukan, defaultkan ke akun 14012 (Q Adjusment Persediaan)
+    if (!id_akun && typeof DEFAULT_ADJ_ACCOUNT !== 'undefined' && DEFAULT_ADJ_ACCOUNT) {
+        id_akun = DEFAULT_ADJ_ACCOUNT.id_akun || '';
+        kode_akun = DEFAULT_ADJ_ACCOUNT.kode_akun || '';
+        nama_akun = DEFAULT_ADJ_ACCOUNT.nama_akun || '';
+    }
+
     var label_akun = id_akun ? (kode_akun + ' - ' + nama_akun) : '';
     var no_lot = data.no_lot || '';
     var expired_date = data.expired_date || '';
@@ -1026,10 +1035,15 @@ function pilihBarang() {
     tr.find('.input-expired-date').val('');
     tr.find('.input-lot-data').val('');
 
-    // Auto-fill Akun Penyesuaian jika barang punya mapping akun default
-    if (selectedLookupBarang.id_akun && !tr.find('.input-id-akun').val()) {
-        tr.find('.input-id-akun').val(selectedLookupBarang.id_akun);
-        tr.find('.input-label-akun').val(selectedLookupBarang.kode_akun + ' - ' + selectedLookupBarang.nama_akun);
+    // Auto-fill Akun Penyesuaian menggunakan 14012 (Q Adjusment Persediaan)
+    var targetAkunId = selectedLookupBarang.id_akun || (typeof DEFAULT_ADJ_ACCOUNT !== 'undefined' && DEFAULT_ADJ_ACCOUNT ? DEFAULT_ADJ_ACCOUNT.id_akun : '');
+    var targetAkunLabel = (selectedLookupBarang.kode_akun && selectedLookupBarang.nama_akun)
+        ? (selectedLookupBarang.kode_akun + ' - ' + selectedLookupBarang.nama_akun)
+        : (typeof DEFAULT_ADJ_ACCOUNT !== 'undefined' && DEFAULT_ADJ_ACCOUNT ? (DEFAULT_ADJ_ACCOUNT.kode_akun + ' - ' + DEFAULT_ADJ_ACCOUNT.nama_akun) : '');
+
+    if (targetAkunId && !tr.find('.input-id-akun').val()) {
+        tr.find('.input-id-akun').val(targetAkunId);
+        tr.find('.input-label-akun').val(targetAkunLabel);
     }
 
     $('#modalBarang').modal('hide');

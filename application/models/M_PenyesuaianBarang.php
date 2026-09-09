@@ -308,8 +308,11 @@ class M_PenyesuaianBarang extends CI_Model
 
         $id_jurnal = $journal_res['data']['id_jurnal'];
 
-        // Update stok di stock_ledger & stock_batch
-        $this->update_stock($data);
+        // Update stok di stock_ledger & stock_batch (kecuali transaksi perakitan bundling yang batch fisiknya sudah diperbarui saat perakitan Logistik)
+        $isFromBundling = !empty($data['keterangan']) && (stripos($data['keterangan'], 'Ref #ASM-') !== false || stripos($data['keterangan'], 'Perakitan Paket Bundling') !== false);
+        if (!$isFromBundling) {
+            $this->update_stock($data);
+        }
 
         // Update status ke POSTED dan perbarui total_nilai transaksi dengan nominal rupiah
         $this->db->where('id_penyesuaian', $id_penyesuaian)->update('tbkeu_penyesuaian_barang', [
@@ -509,6 +512,37 @@ class M_PenyesuaianBarang extends CI_Model
         }
 
         return ['id_akun' => 160, 'kode_akun' => '51010', 'nama_akun' => 'Harga Pokok Penjualan # 1'];
+    }
+
+    /**
+     * Ambil akun default penyesuaian persediaan barang
+     * Menggunakan akun 14012 (Q Adjusment Persediaan)
+     */
+    public function get_default_adjustment_account()
+    {
+        $res = $this->db->where('kode_akun', '14012')
+            ->where('tipe_akun', 'POSTING')
+            ->where('is_active', 1)
+            ->limit(1)
+            ->get('tbkeu_akun')
+            ->row_array();
+
+        if ($res && !empty($res['id_akun'])) {
+            return $res;
+        }
+
+        $res2 = $this->db->like('nama_akun', 'Adjusment Persediaan')
+            ->where('tipe_akun', 'POSTING')
+            ->where('is_active', 1)
+            ->limit(1)
+            ->get('tbkeu_akun')
+            ->row_array();
+
+        if ($res2 && !empty($res2['id_akun'])) {
+            return $res2;
+        }
+
+        return ['id_akun' => 225, 'kode_akun' => '14012', 'nama_akun' => 'Q Adjusment Persediaan'];
     }
 
     /**
@@ -863,6 +897,11 @@ class M_PenyesuaianBarang extends CI_Model
             GROUP BY sb.kd_barang
         )";
 
+        $defaultAdjAcc = $this->get_default_adjustment_account();
+        $defAdjId = (int)$defaultAdjAcc['id_akun'];
+        $defAdjKode = $this->db->escape($defaultAdjAcc['kode_akun']);
+        $defAdjNama = $this->db->escape($defaultAdjAcc['nama_akun']);
+
         $this->db->select("
             pb.kode_barang AS kd_barang,
             pb.kode_barang AS kode,
@@ -874,9 +913,9 @@ class M_PenyesuaianBarang extends CI_Model
             COALESCE(stk.qty_total, 0) AS total,
             COALESCE(kd.DESKRIPSI, pb.kelompok_barang, '-') AS kelompok,
             " . (!empty($gudang_id) ? "COALESCE(g.nama_gudang, '-') AS nama_gudang," : "'-' AS nama_gudang,") . "
-            COALESCE(a.id_akun, a2.id_akun) AS id_akun,
-            COALESCE(a.kode_akun, a2.kode_akun) AS kode_akun,
-            COALESCE(a.nama_akun, a2.nama_akun) AS nama_akun
+            {$defAdjId} AS id_akun,
+            {$defAdjKode} AS kode_akun,
+            {$defAdjNama} AS nama_akun
         ", false);
 
         $this->db->from('tbpo_barang pb');
@@ -885,9 +924,6 @@ class M_PenyesuaianBarang extends CI_Model
         if (!empty($gudang_id)) {
             $this->db->join('tb_gudang g', 'g.id_gudang = stk.gudang_id', 'left');
         }
-        $this->db->join('tbkeu_akun a', 'a.kode_akun = pb.kode_akun_persediaan', 'left');
-        $this->db->join('tbpo_barang_akun ba', 'ba.kode_barang = pb.kode_barang', 'left');
-        $this->db->join('tbkeu_akun a2', 'a2.kode_akun = ba.kode_akun_persediaan', 'left');
 
         $this->db->where("(pb.is_active = 'T' OR pb.is_active = '1' OR pb.is_active IS NULL)", null, false);
         $this->db->where('pb.kode_barang IS NOT NULL');

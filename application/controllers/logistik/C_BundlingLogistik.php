@@ -76,74 +76,24 @@ class C_BundlingLogistik extends CI_Controller
     }
 
     /**
-     * Form Mutasi Bahan dari Gudang Induk ke Gudang Bundling
+     * Mutasi bahan dialihkan ke menu Penyesuaian Barang agar terbentuk jurnal akuntansi & riwayat kartu stok
      */
     public function mutasi_bahan($id_request)
     {
-        $req = $this->M_Bundling->get_request_by_id($id_request);
-        if (!$req) {
-            show_404();
-        }
-
-        $stockStatus = $this->M_Bundling->get_component_stock_status($id_request);
-
-        // Ambil batch lot yang tersedia di gudang asal
-        foreach ($stockStatus as &$stk) {
-            $stk['batches'] = $this->M_Bundling->get_stock_batches_by_gudang($stk['kode_barang'], $req['id_gudang_asal']);
-        }
-        unset($stk);
-
-        $sisaRequest = max(0, (float)$req['qty_request'] - (float)$req['qty_realisasi']);
-
-        $data['page_title']   = 'Mutasi Bahan ke Gudang Bundling - Ref #' . $req['no_request'];
-        $data['request']      = $req;
-        $data['sisa_request'] = $sisaRequest;
-        $data['stock_status'] = $stockStatus;
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/bundling/mutasi_bahan.php', $data);
-        $this->load->view('partial/main/footer.php');
+        $this->session->set_flashdata('info', 'Mutasi stok antar gudang dilakukan melalui menu Penyesuaian Barang agar tercatat di jurnal akuntansi dan riwayat kartu stok.');
+        redirect('persediaan/penyesuaian_barang');
     }
 
     /**
-     * Eksekusi Mutasi Bahan
+     * Eksekusi Mutasi Bahan (Dinonaktifkan demi integritas jurnal & kartu stok)
      */
     public function execute_mutasi()
     {
-        $user = $this->session->userdata('nik') ?: $this->session->userdata('username') ?: 'LOGISTIK';
-        $post = $this->input->post();
-
-        $idRequest = (int)($post['id_request'] ?? 0);
-        $itemsRaw = $post['items'] ?? [];
-
-        if (!$idRequest || empty($itemsRaw)) {
-            $this->output->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'msg' => 'Data mutasi tidak valid']));
-            return;
-        }
-
-        $items = [];
-        foreach ($itemsRaw as $item) {
-            $qty = (float)($item['qty_mutasi'] ?? 0);
-            if ($qty > 0 && !empty($item['kode_barang'])) {
-                $items[] = [
-                    'kode_barang'  => trim($item['kode_barang']),
-                    'nama_barang'  => trim($item['nama_barang'] ?? ''),
-                    'no_lot'       => trim($item['no_lot'] ?? '-'),
-                    'expired_date' => !empty($item['expired_date']) ? $item['expired_date'] : null,
-                    'qty_mutasi'   => $qty
-                ];
-            }
-        }
-
-        if (empty($items)) {
-            $this->output->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'msg' => 'Pilih kuantitas dan lot barang yang akan dimutasi']));
-            return;
-        }
-
-        $res = $this->M_Bundling->execute_mutasi_bahan_bundling($idRequest, $items, $user);
-        $this->output->set_content_type('application/json')->set_output(json_encode($res));
+        $this->output->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status' => false,
+                'msg'    => 'Fitur mutasi langsung dinonaktifkan. Silakan gunakan menu Penyesuaian Barang agar jurnal akuntansi dan kartu stok terbentuk.'
+            ]));
     }
 
     /**
@@ -163,11 +113,13 @@ class C_BundlingLogistik extends CI_Controller
             return;
         }
 
-        // Ambil batch lot komponen yang tersedia di Gudang Bundling
+        // Ambil batch lot komponen yang tersedia di Gudang Induk (sumber bahan baku)
+        $idGudangAsal = !empty($req['id_gudang_asal']) ? (int)$req['id_gudang_asal'] : 2; // Default Gudang Induk
         $components = $req['details'];
         foreach ($components as &$comp) {
-            $comp['batches'] = $this->M_Bundling->get_stock_batches_by_gudang($comp['kode_barang_komponen'], $req['id_gudang_tujuan']);
-            $comp['stok_bundling'] = $this->M_Bundling->get_stock_available_by_gudang($comp['kode_barang_komponen'], $req['id_gudang_tujuan']);
+            $comp['batches'] = $this->M_Bundling->get_stock_batches_by_gudang($comp['kode_barang_komponen'], $idGudangAsal);
+            $comp['stok_gudang_asal'] = $this->M_Bundling->get_stock_available_by_gudang($comp['kode_barang_komponen'], $idGudangAsal);
+            $comp['stok_bundling'] = $comp['stok_gudang_asal']; // alias kompatibilitas view
         }
         unset($comp);
 
@@ -202,6 +154,7 @@ class C_BundlingLogistik extends CI_Controller
             'tanggal'            => !empty($post['tanggal']) ? $post['tanggal'] : date('Y-m-d'),
             'kode_paket'         => trim($post['kode_paket']),
             'nama_paket'         => trim($post['nama_paket']),
+            'id_gudang_asal'     => !empty($post['id_gudang_asal']) ? (int)$post['id_gudang_asal'] : 2,
             'id_gudang'          => !empty($post['id_gudang']) ? (int)$post['id_gudang'] : 12,
             'qty_assembly'       => $qtyAssembly,
             'satuan'             => $post['satuan'] ?: 'Box',

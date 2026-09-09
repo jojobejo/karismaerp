@@ -666,6 +666,7 @@ class C_Ics extends CI_Controller
         $data['can_sync_po'] = $canSyncPo;
         $data['can_lpb_manual'] = $this->can_access_lpb_manual();
         $data['can_lpb_report'] = $this->can_access_lpb_report();
+        $data['can_lpb_revision'] = $this->can_access_lpb_revision();
         $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['lpb_revision_badge_count'] = $this->M_LpbRevisionRequest->open_count();
         $data['lpb_panel_mode'] = $lpbPanelMode;
@@ -677,6 +678,8 @@ class C_Ics extends CI_Controller
         $data['lpb_purchasing'] = $showPurchasingPanel
             ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2)
             : [];
+        $data['lpb_manual']   = $this->M_Logistik->get_lpb_manual_view($date1, $date2);
+        $data['active_tab']   = $this->input->get('tab') ?: '';
         $data['date1']      = $date1;
         $data['date2']      = $date2;
         $data['sync_api_url'] = base_url('sync_pre_po_erp');
@@ -698,17 +701,22 @@ class C_Ics extends CI_Controller
         $data['can_sync_po'] = FALSE;
         $data['can_lpb_manual'] = $this->can_access_lpb_manual();
         $data['can_lpb_report'] = $this->can_access_lpb_report();
+        $data['can_lpb_revision'] = $this->can_access_lpb_revision();
         $data['is_data_lpb_page'] = TRUE;
         $data['is_admlpb_user'] = $this->is_admlpb_user();
         $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['lpb_revision_badge_count'] = $this->M_LpbRevisionRequest->open_count();
-        $data['lpb_panel_mode'] = 'both';
+        $isAdmlpb = $this->is_admlpb_user();
+        $showPurchasingPanel = !$isAdmlpb && $this->resolve_ics_po_panel_mode() !== 'logistik';
+        $data['lpb_panel_mode'] = $showPurchasingPanel ? 'both' : 'logistik';
         $data['show_logistik_panel'] = TRUE;
-        $data['show_purchasing_panel'] = TRUE;
+        $data['show_purchasing_panel'] = $showPurchasingPanel;
         $data['hide_lpb_supplier_code'] = TRUE;
         $data['hide_lpb_last_input'] = TRUE;
         $data['lpb'] = $this->M_Logistik->get_lpb($date1, $date2);
-        $data['lpb_purchasing'] = $this->M_Logistik->get_lpb_purchasing_view($date1, $date2);
+        $data['lpb_purchasing'] = $showPurchasingPanel ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2) : [];
+        $data['lpb_manual'] = $this->M_Logistik->get_lpb_manual_view($date1, $date2);
+        $data['active_tab'] = $this->input->get('tab') ?: '';
         $data['date1'] = $date1;
         $data['date2'] = $date2;
         $data['sync_api_url'] = '';
@@ -1115,7 +1123,7 @@ class C_Ics extends CI_Controller
             'is_draft' => $isDraft ? 1 : 0,
             'id_lpb' => (int) $idLpb,
             'manual_ref_no' => $payload['manual_ref_no'],
-            'redirect_url' => base_url('ics/lpb_report?source=manual')
+            'redirect_url' => base_url('ics/data_lpb?tab=lpb-manual')
         ]);
     }
 

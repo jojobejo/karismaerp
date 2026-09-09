@@ -706,8 +706,10 @@ class M_Keuangan extends CI_Model
 
     public function master_barang_supplier_options()
     {
-        return $this->db->select('kd_suplier, nama_suplier')
+        return $this->db->select("kd_suplier, COALESCE(NULLIF(MAX(nama_suplier), ''), kd_suplier) AS nama_suplier", false)
             ->from('tbpo_suplier')
+            ->where('kd_suplier IS NOT NULL', null, false)
+            ->where("TRIM(kd_suplier) != ''", null, false)
             ->group_by('kd_suplier')
             ->order_by('nama_suplier', 'ASC')
             ->get()

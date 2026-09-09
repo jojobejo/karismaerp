@@ -33,16 +33,19 @@ sequenceDiagram
     actor DIR as Direktur / Manajemen
     actor PUR as Purchasing
     actor LOG as Logistik / Gudang
+    actor ACC as Accounting
     participant SYS as KarismaERP Engine
 
     DIR->>PUR: Instruksi Pembuatan Paket Bundling
     PUR->>SYS: Buat Formula Paket (Komposisi Barang)
     PUR->>SYS: Input Request Pembuatan Paket (Qty Target)
     SYS-->>LOG: Notifikasi / Monitoring Request Masuk
-    LOG->>SYS: Cek Ketersediaan Stok Komponen
-    LOG->>SYS: Mutasi Bahan dari Gudang Induk (ID 2) ke Gudang Bundling (ID 12)
-    LOG->>SYS: Realisasi Pembuatan (Assembly) - Partial / Full
-    SYS->>SYS: Potong Stok Komponen di Gdg Bundling & Tambah Stok Paket Fisik
+    LOG->>SYS: Cek Ketersediaan Stok Komponen di Gudang Induk (ID 2)
+    LOG->>SYS: Realisasi Pembuatan (Assembly) langsung dari Gudang Induk
+    SYS->>SYS: Potong Stok Komponen Gudang Induk & Tambah Stok Paket Jadi
+    SYS->>ACC: Otomatis Terbitkan Draft Dokumen Penyesuaian Barang (Ref #APB...)
+    ACC->>SYS: Verifikasi Akun & Post Jurnal Penyesuaian Persediaan
+    SYS->>SYS: Jurnal Akuntansi & Kartu Stok Resmi Terbit (Tanpa Double Potong Batch)
     opt Skenario Khusus Eceran
         LOG->>SYS: Pembongkaran Paket (Disassembly)
         SYS->>SYS: Potong Stok Paket & Kembalikan Komponen ke Eceran Bebas
@@ -61,7 +64,7 @@ sequenceDiagram
 1. **Buat Request Baru (`/purchasing/bundling/request/create`)**:
    - Pilih barang paket bundling.
    - Masukkan tanggal target selesai dan jumlah box/paket yang diminta.
-   - Sistem secara otomatis menampilkan tabel kebutuhan komponen beserta jumlah total yang dibutuhkan.
+   - Sistem secara otomatis menampilkan tabel kebutuhan komponen beserta jumlah total yang dibutuhkan dan estimasi modal HPP.
    - Klik **Simpan Request**. Nomor dokumen otomatis digenerate (contoh: `RPB-20260907-0001`).
 2. **Monitoring & Detail (`/purchasing/bundling/request/detail/{id}`)**:
    - Melihat progress realisasi pembuatan oleh tim Logistik (Persentase Progress, Qty Realisasi, Sisa yang belum dibuat).
@@ -69,28 +72,33 @@ sequenceDiagram
 
 ---
 
-## 4. Fitur di Sisi Logistik
+## 4. Fitur di Sisi Logistik & Integrasi Accounting (Opsi A)
 
-### A. Monitoring Request Purchasing (`/logistik/bundling/monitoring`)
+### A. Monitoring Request Purchasing (`/logistik/bundling/monitoring` & `/logistik/bundling/detail/{id}`)
 - Logistik melihat daftar seluruh request paket yang masuk dari Purchasing.
+- Mengecek kesiapan stok komponen yang tersedia langsung di **Gudang Induk (ID 2)**.
 - Status request:
   - `MENUNGGU_PROSES`: Belum ada assembly yang dilakukan.
   - `PROSES_SEBAGIAN`: Sudah dirakit sebagian (partial fulfillment).
   - `SELESAI`: Seluruh target paket telah selesai dirakit ($100\%$).
 
-### B. Mutasi Bahan ke Gudang Bundling (`/logistik/bundling/mutasi/{id_request}`)
-- Sebelum perakitan fisik dilakukan, bahan komponen dipindahkan dari **Gudang Induk (ID 2)** ke **Gudang Bundling (ID 12)**.
-- Sistem menyediakan tombol cepat untuk memutasi bahan sesuai sisa kebutuhan request.
-- Mutasi bahan tercatat resmi di kartu stok persediaan (`tberp_stock_ledger` & `tberp_stock_batch`) dengan tipe referensi `MUTASI_BUNDLING`.
+### B. Pembuatan Paket Bundling Fisik (Assembly) (`/logistik/bundling/assembly/{id_request}`)
+- Logistik mengambil bahan komponen langsung dari **Gudang Induk (ID 2)** sesuai ketersediaan batch lot.
+- Mendukung perakitan bertahap / harian (contoh: request 100 paket, hari ini selesai 10 paket).
+- Saat tombol **Simpan Perakitan** diklik:
+  1. Stok fisik komponen terpotong otomatis dari Gudang Induk (tipe `ASSEMBLY_KOMPONEN_OUT`).
+  2. Stok fisik paket jadi bertambah di Gudang Penerima Paket (tipe `ASSEMBLY_PAKET`).
+  3. **Otomatis Diterbitkan 1 Dokumen Transaksi Draft ke Modul Penyesuaian Barang Accounting (`tbkeu_penyesuaian_barang` dengan status `DRAFT` dan nomor `APB...`)**.
+  4. Dokumen draft tersebut sudah berisi rincian:
+     - Barang Komponen: Nilai kuantitas minus (pengurangan persediaan bahan baku).
+     - Produk Paket Jadi: Nilai kuantitas positif (penambahan persediaan produk jadi).
+     - Akun persediaan dan HPP telah ter-mapping otomatis.
 
-### C. Realisasi Pembuatan Paket (Assembly) (`/logistik/bundling/assembly/create/{id_request}`)
-- Logistik dapat merakit sebagian (contoh: target 250 box, dirakit 100 box terlebih dahulu).
-- Sistem memvalidasi apakah stok bahan di Gudang Bundling mencukupi untuk jumlah box yang dirakit.
-- Saat disimpan (`ASM-YYYYMMDD-XXXX`):
-  1. Stok komponen di Gudang Bundling berkurang sebesar $(\text{Qty Assembly} \times \text{Isi per Paket})$.
-  2. Stok paket jadi bertambah di Gudang Bundling sebesar $\text{Qty Assembly}$.
-  3. HPP paket otomatis dihitung dari total HPP komponen yang digunakan.
-  4. Status request Purchasing otomatis ter-update (`PROSES_SEBAGIAN` atau `SELESAI`).
+### C. Verifikasi & Posting oleh Accounting (`/persediaan/penyesuaian_barang`)
+- Bagian Accounting membuka menu **Penyesuaian Barang**.
+- Dokumen draft perakitan dari Logistik akan muncul dengan keterangan jelas: `Perakitan Paket Bundling [Nama Paket] ([Qty] Box) Ref #ASM-...`.
+- Accounting memverifikasi akun-akun biaya/persediaan, kemudian menekan **Post Jurnal**.
+- Sistem menerbitkan jurnal akuntansi resmi ke buku besar dan riwayat kartu stok gudang tanpa menduplikasi pemotongan batch fisik.
 
 ---
 

@@ -11,16 +11,33 @@ $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
 $canLpbManual = !empty($can_lpb_manual);
 $canLpbReport = !empty($can_lpb_report);
+$isAdmlpbUser = !empty($is_admlpb_user);
+$canLpbRevision = !empty($can_lpb_revision) && !$isAdmlpbUser;
 $lpbRevisionBadgeCount = isset($lpb_revision_badge_count) ? (int) $lpb_revision_badge_count : 0;
 $canViewLpbNominal = !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal);
 $isDataLpbPage = !empty($is_data_lpb_page);
-$isAdmlpbUser = !empty($is_admlpb_user);
 $hideSupplierCode = !empty($hide_lpb_supplier_code);
 $hideLastInput = !empty($hide_lpb_last_input);
 $lpbTableColspan = 10 - ($hideSupplierCode ? 1 : 0) - ($hideLastInput ? 1 : 0);
-$showPanelTabs = $showLogistikPanel && $showPurchasingPanel;
-$logistikPanelClass = $showPanelTabs ? 'tab-pane fade show active' : '';
-$purchasingPanelClass = $showPanelTabs ? 'tab-pane fade' : '';
+$panelCount = ($showLogistikPanel ? 1 : 0) + ($showPurchasingPanel ? 1 : 0) + 1;
+$showPanelTabs = $panelCount > 1;
+$isManualTabActive = (!empty($active_tab) && $active_tab === 'lpb-manual');
+$isLogistikActive = !$isManualTabActive && $showLogistikPanel;
+$isPurchasingActive = !$isManualTabActive && !$showLogistikPanel && $showPurchasingPanel;
+
+$logistikPanelClass = $showPanelTabs ? ($isLogistikActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
+$purchasingPanelClass = $showPanelTabs ? ($isPurchasingActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
+$manualPanelClass = $showPanelTabs ? ($isManualTabActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
+
+$unpostedManualCount = 0;
+if (!empty($lpb_manual)) {
+    foreach ($lpb_manual as $mCheck) {
+        $st = $mCheck['status_lpb'] ?? null;
+        if ($st === null || (string) $st !== '1') {
+            $unpostedManualCount++;
+        }
+    }
+}
 $panelTitle = $isDataLpbPage
     ? 'Data LPB'
     : ($showPurchasingPanel && !$showLogistikPanel
@@ -276,12 +293,14 @@ $formatDate = function ($dateStr) {
                                         </a>
                                     </div>
                                     <?php endif; ?>
+                                    <?php if ($canLpbRevision) : ?>
                                     <div class="col-md-2 col-sm-6 mb-2">
                                         <a class="btn btn-danger btn-block" href="<?= base_url('ics/lpb_revision') ?>">
                                             <i class="fas fa-exclamation-triangle"></i> List Revisi Harga LPB
                                             <span class="badge badge-light ml-1"><?= $lpbRevisionBadgeCount ?></span>
                                         </a>
                                     </div>
+                                    <?php endif; ?>
                                     <?php if ($canSyncPo && $showLpbActions) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
@@ -328,14 +347,26 @@ $formatDate = function ($dateStr) {
 
                                 <?php if ($showPanelTabs) : ?>
                                 <ul class="nav nav-tabs mb-3" id="poPanelTabs" role="tablist">
+                                    <?php if ($showLogistikPanel) : ?>
                                     <li class="nav-item">
-                                        <a class="nav-link active" id="logistik-tab" data-toggle="tab" href="#logistik-panel" role="tab" aria-controls="logistik-panel" aria-selected="true">
+                                        <a class="nav-link <?= $isLogistikActive ? 'active' : '' ?>" id="logistik-tab" data-toggle="tab" href="#logistik-panel" role="tab" aria-controls="logistik-panel" aria-selected="<?= $isLogistikActive ? 'true' : 'false' ?>">
                                             <i class="fas fa-file-invoice mr-1"></i> Data PO
                                         </a>
                                     </li>
+                                    <?php endif; ?>
+                                    <?php if ($showPurchasingPanel) : ?>
                                     <li class="nav-item">
-                                        <a class="nav-link" id="purchasing-tab" data-toggle="tab" href="#purchasing-panel" role="tab" aria-controls="purchasing-panel" aria-selected="false">
+                                        <a class="nav-link <?= $isPurchasingActive ? 'active' : '' ?>" id="purchasing-tab" data-toggle="tab" href="#purchasing-panel" role="tab" aria-controls="purchasing-panel" aria-selected="<?= $isPurchasingActive ? 'true' : 'false' ?>">
                                             <i class="fas fa-clipboard-list mr-1"></i> Data LPB
+                                        </a>
+                                    </li>
+                                    <?php endif; ?>
+                                    <li class="nav-item">
+                                        <a class="nav-link <?= $isManualTabActive ? 'active' : '' ?>" id="lpb-manual-tab" data-toggle="tab" href="#lpb-manual-panel" role="tab" aria-controls="lpb-manual-panel" aria-selected="<?= $isManualTabActive ? 'true' : 'false' ?>">
+                                            <i class="fas fa-keyboard mr-1 text-success"></i> LPB Manual
+                                            <?php if ($unpostedManualCount > 0) : ?>
+                                                <span class="badge badge-warning text-dark ml-1" title="<?= $unpostedManualCount ?> LPB Manual belum diposting"><?= $unpostedManualCount ?></span>
+                                            <?php endif; ?>
                                         </a>
                                     </li>
                                 </ul>
@@ -592,6 +623,109 @@ $formatDate = function ($dateStr) {
                                         </div>
                                     </div>
                                     <?php endif; ?>
+
+                                    <div class="<?= $manualPanelClass ?>" id="lpb-manual-panel" role="tabpanel" aria-labelledby="lpb-manual-tab">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                                            <div class="lpb-filter-toolbar" id="lpbManualStatusFilter">
+                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="draft">
+                                                    <i class="fas fa-clock mr-1"></i> Draft / Unpost
+                                                    <?php if ($unpostedManualCount > 0) : ?>
+                                                        <span class="badge badge-warning text-dark ml-1"><?= $unpostedManualCount ?></span>
+                                                    <?php endif; ?>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="post">
+                                                    <i class="fas fa-check mr-1"></i> Post
+                                                </button>
+                                            </div>
+                                            <?php if ($canLpbManual) : ?>
+                                                <div>
+                                                    <a href="<?= base_url('ics/lpb_manual') ?>" class="btn btn-success btn-sm font-weight-bold shadow-sm">
+                                                        <i class="fas fa-plus mr-1"></i> Input LPB Manual Baru
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover" id="idtb_ics_lpb_manual" style="width:100%;">
+                                                <thead class="thead-dark text-center">
+                                                    <tr>
+                                                        <th>Tgl LPB</th>
+                                                        <th>No. LPB</th>
+                                                        <th>Ref Manual</th>
+                                                        <th>Gudang</th>
+                                                        <th>No. SJ</th>
+                                                        <th>Tgl SJ</th>
+                                                        <th>Checker / Petugas</th>
+                                                        <th class="text-center">Total Item</th>
+                                                        <th class="text-center">Total Qty</th>
+                                                        <?php if ($canViewLpbNominal) : ?>
+                                                            <th class="text-right">Grand Total</th>
+                                                        <?php endif; ?>
+                                                        <th class="text-center">Status Barang</th>
+                                                        <th>Keterangan</th>
+                                                        <th class="text-center" style="width: 110px;">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php if (!empty($lpb_manual)) : ?>
+                                                        <?php foreach ($lpb_manual as $mRow) :
+                                                            $statusLpbRaw = $mRow['status_lpb'] ?? null;
+                                                            if ($statusLpbRaw === null || $statusLpbRaw === '') {
+                                                                $statusFilterKey = 'draft';
+                                                                $statusBarangBadge = '<span class="badge badge-secondary px-2 py-1"><i class="fas fa-pencil-alt mr-1"></i> DRAFT</span>';
+                                                            } elseif ((string) $statusLpbRaw === '0') {
+                                                                $statusFilterKey = 'draft';
+                                                                $statusBarangBadge = '<span class="badge badge-warning px-2 py-1"><i class="fas fa-clock mr-1"></i> UNPOST</span>';
+                                                            } else {
+                                                                $statusFilterKey = 'post';
+                                                                $statusBarangBadge = '<span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> POST</span>';
+                                                            }
+                                                            $detailManualUrl = base_url('ics/detail_record_lpb?id_lpb=' . (int) $mRow['id_lpb'] . '&kd_po=' . urlencode($mRow['kd_po'] ?? '') . '&no_po=' . urlencode($mRow['no_po'] ?? ''));
+                                                            $printManualUrl = base_url('ics/print_lpb_record/' . (int) $mRow['id_lpb']);
+                                                        ?>
+                                                        <tr data-lpb-status="<?= $statusFilterKey ?>">
+                                                            <td data-order="<?= htmlspecialchars($mRow['tgl_lpb'] ?? '') ?>"><?= htmlspecialchars($formatDate($mRow['tgl_lpb'] ?? '')) ?></td>
+                                                            <td class="font-weight-bold text-primary">
+                                                                <a href="<?= $detailManualUrl ?>" target="_blank" title="Buka Detail LPB Manual">
+                                                                    <?= htmlspecialchars($mRow['nomor_lpb'] ?? '-') ?>
+                                                                </a>
+                                                            </td>
+                                                            <td><span class="badge badge-light border font-weight-bold"><?= htmlspecialchars($mRow['manual_ref_no'] ?? $mRow['kd_po'] ?? '-') ?></span></td>
+                                                            <td><?= htmlspecialchars($mRow['nama_gudang'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($mRow['nosj'] ?? '-') ?></td>
+                                                            <td data-order="<?= htmlspecialchars($mRow['tgl_sj'] ?? '') ?>"><?= htmlspecialchars($formatDate($mRow['tgl_sj'] ?? '')) ?></td>
+                                                            <td><?= htmlspecialchars($mRow['checker_name'] ?? '-') ?></td>
+                                                            <td class="text-center font-weight-bold"><?= number_format((int) ($mRow['total_detail'] ?? 0)) ?></td>
+                                                            <td class="text-center font-weight-bold text-success"><?= number_format((float) ($mRow['total_qty'] ?? 0), 2, ',', '.') ?></td>
+                                                            <?php if ($canViewLpbNominal) : ?>
+                                                                <td class="text-right font-weight-bold"><?= 'Rp ' . number_format((float) ($mRow['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
+                                                            <?php endif; ?>
+                                                            <td class="text-center"><?= $statusBarangBadge ?></td>
+                                                            <td><small class="text-muted"><?= htmlspecialchars($mRow['keterangan'] ?? '-') ?></small></td>
+                                                            <td class="text-center">
+                                                                <div class="btn-group btn-group-sm">
+                                                                    <a href="<?= $detailManualUrl ?>" class="btn btn-info btn-sm" target="_blank" title="Lihat Rincian Barang LPB Manual">
+                                                                        <i class="fas fa-eye"></i> Detail
+                                                                    </a>
+                                                                    <a href="<?= $printManualUrl ?>" class="btn btn-outline-secondary btn-sm" target="_blank" title="Cetak Bukti LPB">
+                                                                        <i class="fas fa-print"></i>
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <?php endforeach; ?>
+                                                    <?php else : ?>
+                                                        <tr>
+                                                            <td colspan="<?= $canViewLpbNominal ? 13 : 12 ?>" class="text-center text-muted py-4">
+                                                                <i class="fas fa-inbox mr-1"></i> Belum ada data LPB Manual yang di-input.
+                                                            </td>
+                                                        </tr>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -733,6 +867,63 @@ $formatDate = function ($dateStr) {
                     .addClass('btn-primary active');
                 purchasingTable.draw();
             });
+            <?php endif; ?>
+
+            // Inisialisasi DataTable LPB Manual
+            var lpbManualStatusFilter = 'all';
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (!settings.nTable || settings.nTable.id !== 'idtb_ics_lpb_manual') {
+                    return true;
+                }
+
+                if (lpbManualStatusFilter === 'all') {
+                    return true;
+                }
+
+                var $row = $(settings.aoData[dataIndex].nTr);
+                return String($row.data('lpb-status')) === lpbManualStatusFilter;
+            });
+
+            var lpbManualTable = $('#idtb_ics_lpb_manual').DataTable({
+                responsive: true,
+                autoWidth: false,
+                pageLength: 25,
+                order: [
+                    [0, 'desc']
+                ],
+                columnDefs: [{
+                    orderable: false,
+                    targets: -1
+                }],
+                language: {
+                    search: 'Cari LPB Manual:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                    zeroRecords: 'Tidak ada data LPB Manual ditemukan',
+                    emptyTable: 'Belum ada data LPB Manual',
+                    paginate: {
+                        first: 'Pertama',
+                        last: 'Terakhir',
+                        next: 'Berikutnya',
+                        previous: 'Sebelumnya'
+                    }
+                }
+            });
+
+            $('#lpbManualStatusFilter').on('click', 'button[data-filter]', function() {
+                lpbManualStatusFilter = $(this).data('filter') || 'all';
+                $('#lpbManualStatusFilter button[data-filter]')
+                    .removeClass('btn-primary active')
+                    .addClass('btn-outline-secondary');
+                $(this)
+                    .removeClass('btn-outline-secondary')
+                    .addClass('btn-primary active');
+                lpbManualTable.draw();
+            });
+
+            <?php if (!empty($active_tab) && $active_tab === 'lpb-manual') : ?>
+                $('#lpb-manual-tab').tab('show');
             <?php endif; ?>
         });
     </script>

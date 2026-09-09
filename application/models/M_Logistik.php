@@ -4035,7 +4035,7 @@ FROM (
         return $this->db->query($sql, $params)->result_array();
     }
 
-    public function get_lpb_purchasing_view($date1 = null, $date2 = null, $noPo = null, $kdPo = null, $requireDonePo = TRUE)
+    public function get_lpb_purchasing_view($date1 = null, $date2 = null, $noPo = null, $kdPo = null, $requireDonePo = TRUE, $includeManual = FALSE)
     {
         $tanggalInvoiceSelect = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
             ? "COALESCE(DATE_FORMAT(h.tanggal_invoice, '%Y-%m-%d'), CASE WHEN COALESCE(NULLIF(TRIM(h.no_invoice), ''), '-') = '-' THEN '-' ELSE COALESCE(DATE_FORMAT(invlog.tanggal_invoice, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') END) AS tanggal_invoice"
@@ -4170,11 +4170,25 @@ FROM (
 
         $params = [];
 
+        if (!$includeManual) {
+            if ($this->db->field_exists('source_type', 'tb_lpb')) {
+                $sql .= " AND UPPER(TRIM(COALESCE(h.source_type, ''))) != 'MANUAL'";
+            }
+            $sql .= " AND h.kd_po NOT LIKE 'LPBM-%'";
+            if ($this->db->field_exists('manual_ref_no', 'tb_lpb')) {
+                $sql .= " AND (h.manual_ref_no IS NULL OR TRIM(h.manual_ref_no) = '')";
+            }
+        }
+
         if ($requireDonePo) {
-            $sourceTypeExpr = $this->db->field_exists('source_type', 'tb_lpb')
-                ? "UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR "
-                : "";
-            $sql .= " AND ({$sourceTypeExpr}h.kd_po LIKE 'LPBM-%' OR UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE')";
+            if ($includeManual) {
+                $sourceTypeExpr = $this->db->field_exists('source_type', 'tb_lpb')
+                    ? "UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR "
+                    : "";
+                $sql .= " AND ({$sourceTypeExpr}h.kd_po LIKE 'LPBM-%' OR UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE')";
+            } else {
+                $sql .= " AND UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
+            }
         }
 
         if (!empty($noPo)) {
@@ -4329,6 +4343,83 @@ FROM (
         unset($row);
 
         return array_values($grouped);
+    }
+
+    /**
+     * Mengambil daftar LPB Manual untuk tab LPB Manual
+     */
+    public function get_lpb_manual_view($date1 = null, $date2 = null)
+    {
+        $nomorLpbSelect = $this->db->field_exists('nomor_lpb', 'tb_lpb')
+            ? "COALESCE(NULLIF(h.nomor_lpb, ''), CONCAT('LPB-', h.id_lpb)) AS nomor_lpb"
+            : "CONCAT('LPB-', h.id_lpb) AS nomor_lpb";
+        $manualRefSelect = $this->db->field_exists('manual_ref_no', 'tb_lpb')
+            ? "COALESCE(NULLIF(h.manual_ref_no, ''), h.kd_po) AS manual_ref_no"
+            : "h.kd_po AS manual_ref_no";
+        $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
+            ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
+            : "'' AS jenis_lpb";
+        $statusLpbSelect = $this->db->field_exists('status_lpb', 'tb_lpb')
+            ? "h.status_lpb"
+            : "1 AS status_lpb";
+        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-')"
+            : "'-'";
+
+        $sql = "SELECT
+                    h.id_lpb,
+                    h.kd_po,
+                    h.no_po,
+                    COALESCE(DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_lpb,
+                    {$nomorLpbSelect},
+                    {$manualRefSelect},
+                    {$jenisLpbSelect},
+                    {$statusLpbSelect},
+                    h.nosj,
+                    h.tgl_sj,
+                    h.no_invoice,
+                    h.keterangan,
+                    h.gudang_id,
+                    COALESCE(g.nama_gudang, CONCAT('Gudang ', h.gudang_id)) AS nama_gudang,
+                    {$checkerSelect} AS checker_name,
+                    COALESCE(ds.total_detail, 0) AS total_detail,
+                    COALESCE(ds.total_qty, 0) AS total_qty,
+                    COALESCE(ds.grand_total_lpb, 0) AS grand_total_lpb,
+                    COALESCE(ds.total_verified, 0) AS total_verified,
+                    h.input_at
+                FROM tb_lpb h
+                LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
+                LEFT JOIN (
+                    SELECT
+                        id_lpb,
+                        COUNT(id_detail_lpb) AS total_detail,
+                        SUM(COALESCE(qty_diterima, 0)) AS total_qty,
+                        SUM(CASE WHEN harga_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS total_verified,
+                        SUM(COALESCE(total_harga, 0)) AS grand_total_lpb
+                    FROM tb_lpb_detail
+                    GROUP BY id_lpb
+                ) ds ON ds.id_lpb = h.id_lpb
+                WHERE (
+                    (UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL')
+                    OR (h.kd_po LIKE 'LPBM-%')
+                    OR (h.no_po LIKE 'LPBM-%')
+                    " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "OR (h.manual_ref_no IS NOT NULL AND TRIM(h.manual_ref_no) <> '')" : "") . "
+                )
+        ";
+
+        $params = [];
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+            $sql .= " AND DATE(h.input_at) BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= " ORDER BY h.id_lpb DESC";
+
+        $rows = $this->db->query($sql, $params)->result_array();
+        return $this->append_lpb_operational_alerts($rows);
     }
 
     private function default_lpb_operational_alert()

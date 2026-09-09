@@ -74,6 +74,8 @@ class C_PenyesuaianBarang extends CI_Controller
             $data['next_ref'] = $data['header']['no_referensi'];
         }
 
+        $data['default_adj_account'] = $this->M_PenyesuaianBarang->get_default_adjustment_account();
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/penyesuaian_barang_form.php', $data);
         $this->load->view('partial/main/footergdg.php');

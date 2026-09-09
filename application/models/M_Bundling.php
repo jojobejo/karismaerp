@@ -236,6 +236,19 @@ class M_Bundling extends CI_Model
                     ADD COLUMN `isi_per_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `qty_innerbox`");
             }
         }
+
+        // Pastikan kolom referensi penyesuaian barang ada di tberp_bundling_assembly
+        if ($this->db->table_exists('tberp_bundling_assembly')) {
+            if (!$this->db->field_exists('id_penyesuaian', 'tberp_bundling_assembly')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_assembly` ADD COLUMN `id_penyesuaian` BIGINT(20) DEFAULT NULL AFTER `id_gudang`");
+            }
+            if (!$this->db->field_exists('no_penyesuaian', 'tberp_bundling_assembly')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_assembly` ADD COLUMN `no_penyesuaian` VARCHAR(50) DEFAULT NULL AFTER `id_penyesuaian`");
+            }
+            if (!$this->db->field_exists('id_gudang_asal', 'tberp_bundling_assembly')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_assembly` ADD COLUMN `id_gudang_asal` INT(11) DEFAULT 2 AFTER `id_request`");
+            }
+        }
     }
 
     // =========================================================================
@@ -837,7 +850,8 @@ class M_Bundling extends CI_Model
 
         $kodePaket = trim($data['kode_paket']);
         $namaPaket = trim($data['nama_paket']);
-        $gudangId = !empty($data['id_gudang']) ? (int)$data['id_gudang'] : 12; // Gudang Bundling
+        $gudangAsalId = !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : ($req ? (int)$req['id_gudang_asal'] : 2); // Gudang Induk (Sumber Bahan)
+        $gudangId = !empty($data['id_gudang']) ? (int)$data['id_gudang'] : ($req ? (int)$req['id_gudang_tujuan'] : 12); // Gudang Penerima Paket
         $noAssembly = $this->generate_assembly_number();
         $tanggal = !empty($data['tanggal']) ? $data['tanggal'] : date('Y-m-d');
         $noLotPaket = !empty($data['no_lot_paket']) ? trim($data['no_lot_paket']) : 'LOT-' . date('ymd') . '-' . substr(uniqid(), -4);
@@ -861,7 +875,7 @@ class M_Bundling extends CI_Model
         $assemblyDetailRecords = [];
         $earliestExpDate = null;
 
-        // 1. Proses Pengurangan Stok Komponen di Gudang Bundling
+        // 1. Proses Pengurangan Stok Komponen di Gudang Asal (Gudang Induk)
         foreach ($componentLots as $comp) {
             $kdBrg = trim($comp['kode_barang']);
             $qtyPakai = (float)$comp['qty_digunakan'];
@@ -876,20 +890,20 @@ class M_Bundling extends CI_Model
                 }
             }
 
-            // Validasi stok fisik komponen di Gudang Bundling
-            $batchComp = $this->get_stock_batch_row($kdBrg, $gudangId, $noLotComp, $expDateComp);
+            // Validasi stok fisik komponen di Gudang Asal (Gudang Induk)
+            $batchComp = $this->get_stock_batch_row($kdBrg, $gudangAsalId, $noLotComp, $expDateComp);
             $availableComp = $batchComp ? ((float)$batchComp['qty_on_hand'] - (float)$batchComp['qty_reserved']) : 0;
 
             if ($availableComp + 0.0001 < $qtyPakai) {
                 $this->db->trans_rollback();
                 return [
                     'status' => false,
-                    'msg'    => 'Stok komponen ' . ($comp['nama_barang'] ?? $kdBrg) . ' (Lot: ' . $noLotComp . ') di Gudang Bundling tidak mencukupi. Tersedia: ' . $availableComp . ', Dibutuhkan: ' . $qtyPakai
+                    'msg'    => 'Stok komponen ' . ($comp['nama_barang'] ?? $kdBrg) . ' (Lot: ' . $noLotComp . ') di Gudang Induk tidak mencukupi. Tersedia: ' . $availableComp . ', Dibutuhkan: ' . $qtyPakai
                 ];
             }
 
             // Ambil Average HPP Komponen
-            $hppSatuanComp = (float)$this->get_item_average_hpp($kdBrg, $gudangId, $comp['nama_barang'] ?? '');
+            $hppSatuanComp = (float)$this->get_item_average_hpp($kdBrg, $gudangAsalId, $comp['nama_barang'] ?? '');
             if ($hppSatuanComp <= 0 && $req && !empty($req['details'])) {
                 foreach ($req['details'] as $rDet) {
                     if ($rDet['kode_barang_komponen'] === $kdBrg && !empty($rDet['hpp_satuan']) && (float)$rDet['hpp_satuan'] > 0) {
@@ -901,13 +915,13 @@ class M_Bundling extends CI_Model
             $subtotalHpp = $qtyPakai * $hppSatuanComp;
             $totalHppAssembly += $subtotalHpp;
 
-            // Potong batch komponen di Gudang Bundling
-            $this->apply_batch_delta($kdBrg, $gudangId, $noLotComp, $expDateComp, -$qtyPakai);
+            // Potong batch komponen di Gudang Asal (Gudang Induk)
+            $this->apply_batch_delta($kdBrg, $gudangAsalId, $noLotComp, $expDateComp, -$qtyPakai);
 
             // Catat Kartu Stok Ledger OUT Komponen
             $this->db->insert('tberp_stock_ledger', [
                 'kd_barang'    => $kdBrg,
-                'gudang_id'    => $gudangId,
+                'gudang_id'    => $gudangAsalId,
                 'no_lot'       => $noLotComp,
                 'expired_date' => $expDateComp,
                 'qty'          => $qtyPakai,
@@ -962,6 +976,7 @@ class M_Bundling extends CI_Model
         $assemblyHeader = [
             'no_assembly'        => $noAssembly,
             'id_request'         => $idRequest,
+            'id_gudang_asal'     => $gudangAsalId,
             'no_request'         => $req ? $req['no_request'] : null,
             'tanggal'            => $tanggal,
             'kode_paket'         => $kodePaket,
@@ -986,7 +1001,7 @@ class M_Bundling extends CI_Model
         }
         $this->db->insert_batch('tberp_bundling_assembly_detail', $assemblyDetailRecords);
 
-        // 4. Tambah Stok Produk Paket di Gudang Bundling (IN)
+        // 4. Tambah Stok Produk Paket di Gudang Penerima Paket (IN)
         $this->apply_batch_delta($kodePaket, $gudangId, $noLotPaket, $expDatePaket, $qtyAssembly);
 
         // Catat Kartu Stok Ledger IN Paket
@@ -1022,6 +1037,68 @@ class M_Bundling extends CI_Model
             }
         }
 
+        // 6. Otomatis Terbitkan Dokumen Draft Penyesuaian Barang untuk Accounting (Opsi A)
+        $idPenyesuaian = null;
+        $noPenyesuaian = null;
+        try {
+            $this->load->model('M_PenyesuaianBarang');
+            $noPenyesuaian = $this->M_PenyesuaianBarang->generate_ref_no();
+
+            $draftHeader = [
+                'no_referensi'   => $noPenyesuaian,
+                'tanggal'        => $tanggal,
+                'id_gudang_dari' => $gudangAsalId,
+                'id_gudang_ke'   => $gudangId,
+                'keterangan'     => 'Perakitan Paket Bundling ' . $namaPaket . ' (' . $qtyAssembly . ' Box) Ref #' . $noAssembly,
+                'total_nilai'    => $totalHppAssembly,
+                'status'         => 'DRAFT',
+                'created_by'     => (int)($this->session->userdata('id_user') ?: $this->session->userdata('nik') ?: 1),
+                'created_at'     => $now
+            ];
+
+            $draftDetails = [];
+            // Ambil Akun Penyesuaian Barang default: 14012 (Q Adjusment Persediaan)
+            $adjAccount = $this->M_PenyesuaianBarang->get_default_adjustment_account();
+            $idAkunPenyesuaian = !empty($adjAccount['id_akun']) ? (int)$adjAccount['id_akun'] : 225;
+
+            // Komponen OUT (jumlah negatif)
+            foreach ($assemblyDetailRecords as $dRec) {
+                $draftDetails[] = [
+                    'kd_barang'    => $dRec['kode_barang_komponen'],
+                    'nm_barang'    => $dRec['nama_barang_komponen'],
+                    'jumlah'       => -abs((float)$dRec['qty_digunakan']),
+                    'satuan'       => $dRec['satuan'] ?? 'Pcs',
+                    'id_akun'      => $idAkunPenyesuaian,
+                    'no_lot'       => $dRec['no_lot'],
+                    'expired_date' => $dRec['expired_date'],
+                    'lot_data'     => null
+                ];
+            }
+
+            // Paket Jadi IN (jumlah positif)
+            $draftDetails[] = [
+                'kd_barang'    => $kodePaket,
+                'nm_barang'    => $namaPaket,
+                'jumlah'       => abs($qtyAssembly),
+                'satuan'       => $data['satuan'] ?? 'Box',
+                'id_akun'      => $idAkunPenyesuaian,
+                'no_lot'       => $noLotPaket,
+                'expired_date' => $expDatePaket,
+                'lot_data'     => null
+            ];
+
+            $idPenyesuaian = $this->M_PenyesuaianBarang->save($draftHeader, $draftDetails);
+
+            if ($idPenyesuaian) {
+                $this->db->where('id_assembly', $assemblyId)->update('tberp_bundling_assembly', [
+                    'id_penyesuaian' => $idPenyesuaian,
+                    'no_penyesuaian' => $noPenyesuaian
+                ]);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Gagal auto-draft penyesuaian barang: ' . $e->getMessage());
+        }
+
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             return ['status' => false, 'msg' => 'Gagal merekam proses pembuatan paket bundling'];
@@ -1029,12 +1106,13 @@ class M_Bundling extends CI_Model
 
         $this->db->trans_commit();
         return [
-            'status'        => true,
-            'no_assembly'   => $noAssembly,
-            'qty_assembly'  => $qtyAssembly,
-            'total_hpp'     => $totalHppAssembly,
-            'hpp_per_paket' => $hppPerPaket,
-            'msg'           => 'Pembuatan ' . $qtyAssembly . ' Box ' . $namaPaket . ' berhasil direkam (' . $noAssembly . ')'
+            'status'         => true,
+            'no_assembly'    => $noAssembly,
+            'qty_assembly'   => $qtyAssembly,
+            'total_hpp'      => $totalHppAssembly,
+            'hpp_per_paket'  => $hppPerPaket,
+            'no_penyesuaian' => $noPenyesuaian,
+            'msg'            => 'Pembuatan ' . $qtyAssembly . ' Box ' . $namaPaket . ' berhasil direkam (' . $noAssembly . '). Draft Penyesuaian Barang ' . ($noPenyesuaian ? '(#'.$noPenyesuaian.')' : '') . ' telah otomatis diterbitkan untuk Accounting.'
         ];
     }
 
