@@ -41,7 +41,7 @@ class C_pembayaran extends CI_Controller
         $data['due_payments'] = $this->M_pembayaran->get_due_pending_payments();
         $data['pending_kasir'] = $this->M_pembayaran->get_pending_kasir_payments();
         
-        $pending_retur_query = "SELECT h.*, c.nama_customer, f.id_faktur FROM tbrp_retur_penjualan_header h LEFT JOIN tb_customer c ON h.kd_customer = c.kd_customer LEFT JOIN tbso_faktur_penjualan f ON h.no_faktur_potong = f.no_faktur WHERE h.no_faktur_potong IS NOT NULL AND h.no_faktur_potong != '' AND NOT EXISTS (SELECT 1 FROM tbkeu_pembayaran_faktur p WHERE p.no_faktur = h.no_faktur_potong AND p.metode_pembayaran = 'retur')";
+        $pending_retur_query = "SELECT h.*, c.nama_customer, c.nama_kios, f.id_faktur FROM tbrp_retur_penjualan_header h LEFT JOIN tb_customer c ON h.kd_customer = c.kd_customer LEFT JOIN tbso_faktur_penjualan f ON h.no_faktur_potong = f.no_faktur WHERE h.no_faktur_potong IS NOT NULL AND h.no_faktur_potong != '' AND NOT EXISTS (SELECT 1 FROM tbkeu_pembayaran_faktur p WHERE p.no_faktur = h.no_faktur_potong AND p.metode_pembayaran = 'retur')";
         $pending_returs = $this->db->query($pending_retur_query)->result_array();
         
         foreach ($pending_returs as &$pr) {

@@ -216,9 +216,14 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $data['page_title']  = 'KARISMA — Buat SPR Baru';
-        $data['customers']   = $this->M_ReturPenjualan->get_customers(
-            $this->_isSC() ? $user['nama'] : null
-        );
+        $jobdesk_raw         = strtoupper((string) ($this->session->userdata('jobdesk') ?? ''));
+        $nama_sales_filter   = ($jobdesk_raw === 'SC') ? $user['nama'] : null;
+        $customers           = $this->M_ReturPenjualan->get_customers($nama_sales_filter);
+        // Jika SC ini belum ada customer ter-assign atau user adalah Admin, tampilkan semua customer
+        if (empty($customers)) {
+            $customers = $this->M_ReturPenjualan->get_customers(null);
+        }
+        $data['customers']   = $customers;
         $data['user']        = $user;
         $data['no_spr']      = $this->M_ReturPenjualan->generate_no_spr();
 
@@ -552,36 +557,82 @@ class C_ReturPenjualan extends CI_Controller
     }
 
     // ================================================================
-    // AJAX — Search Barang untuk Select2
+    // AJAX — Search Barang untuk Modal & Select2
     // ================================================================
 
     public function ajax_search_barang()
     {
         header('Content-Type: application/json');
-        $q = $this->input->get('q', true);
-        if (empty($q) || strlen(trim($q)) < 2) {
-            echo json_encode(['results' => []]);
-            return;
-        }
+        $q = trim((string) $this->input->get('q', true));
+        
         $this->db->select('kode_barang AS kd_barang, nama_barang, satuan, 0 AS hpp');
         $this->db->from('tbpo_barang');
-        $this->db->group_start();
-        $this->db->like('nama_barang', $q);
-        $this->db->or_like('kode_barang', $q);
-        $this->db->group_end();
+        $this->db->where('is_active', 'T');
+        
+        if ($q !== '') {
+            $this->db->group_start();
+            $this->db->like('nama_barang', $q);
+            $this->db->or_like('kode_barang', $q);
+            $this->db->group_end();
+        }
+        
         $this->db->order_by('nama_barang', 'ASC');
-        $this->db->limit(30);
+        $this->db->limit(50);
         $rows = $this->db->get()->result_array();
 
         $results = array_map(function($r) {
             return [
-                'id'        => $r['nama_barang'],
-                'kd_barang' => $r['kd_barang'],
-                'text'      => '[' . $r['kd_barang'] . '] ' . $r['nama_barang'],
-                'satuan'    => $r['satuan'],
-                'harga'     => (float) $r['hpp'],
+                'id'          => $r['nama_barang'],
+                'kd_barang'   => $r['kd_barang'],
+                'nama_barang' => $r['nama_barang'],
+                'text'        => '[' . $r['kd_barang'] . '] ' . $r['nama_barang'],
+                'satuan'      => $r['satuan'] ?? '-',
+                'harga'       => (float) $r['hpp'],
             ];
         }, $rows);
+
+        echo json_encode(['results' => $results]);
+    }
+
+    // ================================================================
+    // AJAX — Search Customer untuk Modal Lookup
+    // ================================================================
+
+    public function ajax_search_customer()
+    {
+        header('Content-Type: application/json');
+        $q    = trim((string) $this->input->get('q', true));
+        $user = $this->_getUser();
+        $jobdesk_raw = strtoupper((string) ($this->session->userdata('jobdesk') ?? ''));
+
+        $this->db->select('kd_customer, nama_customer, nama_kios, alamat_kios, nama_sales');
+        $this->db->from('tb_customer');
+
+        if ($q !== '') {
+            $this->db->group_start();
+            $this->db->like('nama_customer', $q);
+            $this->db->or_like('kd_customer', $q);
+            $this->db->or_like('nama_kios', $q);
+            $this->db->or_like('alamat_kios', $q);
+            $this->db->or_like('nama_sales', $q);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('nama_customer', 'ASC');
+        $this->db->limit(100);
+        $rows = $this->db->get()->result_array();
+
+        // Sanitize string UTF-8 agar json_encode selalu sukses
+        $results = [];
+        foreach ($rows as $c) {
+            $results[] = [
+                'kd_customer'   => (string) ($c['kd_customer'] ?? ''),
+                'nama_customer' => is_string($c['nama_customer'] ?? null) ? mb_convert_encoding($c['nama_customer'], 'UTF-8', 'UTF-8') : '',
+                'nama_kios'     => is_string($c['nama_kios'] ?? null) ? mb_convert_encoding($c['nama_kios'], 'UTF-8', 'UTF-8') : '',
+                'alamat_kios'   => is_string($c['alamat_kios'] ?? null) ? mb_convert_encoding($c['alamat_kios'], 'UTF-8', 'UTF-8') : '',
+                'nama_sales'    => is_string($c['nama_sales'] ?? null) ? mb_convert_encoding($c['nama_sales'], 'UTF-8', 'UTF-8') : '',
+            ];
+        }
 
         echo json_encode(['results' => $results]);
     }

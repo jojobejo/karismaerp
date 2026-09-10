@@ -373,6 +373,7 @@ class M_pembayaran extends CI_Model
         $this->db->select("
             x.kd_customer,
             x.nama_customer,
+            x.nama_kios,
             COUNT(*) AS total_faktur,
             SUM(x.total_tagihan) AS total_tagihan,
             SUM(x.total_pembayaran) AS total_pembayaran,
@@ -381,7 +382,7 @@ class M_pembayaran extends CI_Model
         ", false);
         $this->db->from('(' . $invoice_summary_sql . ') x');
         $this->db->where('x.sisa_tagihan >', 0);
-        $this->db->group_by('x.kd_customer, x.nama_customer');
+        $this->db->group_by('x.kd_customer, x.nama_customer, x.nama_kios');
         $this->db->order_by('x.nama_customer', 'ASC');
 
         return $this->db->get()->result_array();
@@ -394,6 +395,7 @@ class M_pembayaran extends CI_Model
             $this->db->group_start();
             $this->db->like('f.customer_name', $keyword);
             $this->db->or_like('c.nama_customer', $keyword);
+            $this->db->or_like('c.nama_kios', $keyword);
             $this->db->or_like('f.kd_customer', $keyword);
             $this->db->group_end();
         }

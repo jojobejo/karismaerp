@@ -145,7 +145,7 @@
                                                 <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($customer['kd_customer'])) ?>">
                                                     <strong><?= htmlspecialchars($customer['nama_customer']) ?></strong>
                                                 </a>
-                                                <br><small class="text-muted"><?= htmlspecialchars($customer['kd_customer']) ?></small>
+                                                <br><small class="text-muted"><?= htmlspecialchars($customer['nama_kios'] ?: '-') ?></small>
                                             </td>
                                             <td class="text-center"><?= number_format((float)$customer['total_faktur'], 0, ',', '.') ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$customer['total_tagihan'], 0, ',', '.') ?></td>
@@ -208,7 +208,7 @@
                                 <?php foreach ($pending_returs as $pr): ?>
                                     <tr>
                                         <td><strong><?= htmlspecialchars($pr['no_retur']) ?></strong></td>
-                                        <td><?= htmlspecialchars($pr['nama_customer']) ?><br><small class="text-muted"><?= htmlspecialchars($pr['kd_customer']) ?></small></td>
+                                        <td><?= htmlspecialchars($pr['nama_customer']) ?><br><small class="text-muted"><?= htmlspecialchars($pr['nama_kios'] ?: ($pr['kd_customer'] ?? '-')) ?></small></td>
                                         <td><?= date('d/m/Y H:i', strtotime($pr['collection_at'])) ?></td>
                                         <td><strong><?= htmlspecialchars($pr['no_faktur_potong']) ?></strong></td>
                                         <td class="text-right text-danger font-weight-bold">Rp <?= number_format((float)($pr['sisa_tagihan'] ?? 0), 0, ',', '.') ?></td>

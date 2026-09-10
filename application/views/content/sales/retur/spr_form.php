@@ -82,21 +82,63 @@
         margin-bottom: 2px;
     }
     #rowTemplate { display: none; }
-    /* Select2 di dalam tabel */
-    .select2-container { width: 100% !important; }
-    .select2-container .select2-selection--single {
-        height: 34px;
-        font-size: 14px;
+    
+    /* Styling Modal Lookup Retur */
+    .modal-lookup-search {
+        position: relative;
+        margin-bottom: 12px;
+    }
+    .modal-lookup-search input {
+        width: 100%;
+        padding: 8px 36px 8px 12px;
+        font-size: 13px;
         border: 1px solid #ced4da;
-        border-radius: 3px;
+        border-radius: 4px;
     }
-    .select2-container .select2-selection--single .select2-selection__rendered {
-        line-height: 32px;
-        padding-left: 8px;
-        font-size: 14px;
+    .modal-lookup-search i {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
     }
-    .select2-container .select2-selection--single .select2-selection__arrow {
-        height: 32px;
+    .modal-lookup-scroll {
+        max-height: 380px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+    }
+    .modal-lookup-table {
+        width: 100%;
+        margin-bottom: 0;
+        font-size: 13px;
+    }
+    .modal-lookup-table thead th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        padding: 8px 10px;
+    }
+    .modal-lookup-table tbody td {
+        padding: 8px 10px;
+        vertical-align: middle;
+    }
+    .modal-lookup-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+    .modal-lookup-table tbody tr:hover {
+        background-color: #fff5f5;
+    }
+    .modal-lookup-table tbody tr.selected {
+        background-color: #ffe3e3 !important;
+    }
+    .input-clickable {
+        background-color: #fff !important;
+        cursor: pointer;
     }
 </style>
 
@@ -183,22 +225,22 @@
                                          <label class="custom-control-label font-weight-bold text-success" for="is_jagung">KUB</label>
                                      </div>
                                  </div>
-                                 <div class="col-md-4">
-                                     <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
-                                     <select class="form-control form-control-sm" name="kd_customer" id="kd_customer" required>
-                                         <option value="">-- Pilih Customer --</option>
-                                         <?php foreach ($customers as $c): ?>
-                                             <option value="<?= htmlspecialchars($c['kd_customer']) ?>"
-                                                     <?= ($is_edit && $spr['kd_customer'] == $c['kd_customer']) ? 'selected' : '' ?>
-                                                     data-nama="<?= htmlspecialchars($c['nama_customer']) ?>"
-                                                     data-alamat="<?= htmlspecialchars($c['alamat_kios'] ?? '') ?>"
-                                                     data-sales="<?= htmlspecialchars($c['nama_sales'] ?? '') ?>">
-                                                 <?= htmlspecialchars($c['kd_customer'] . ' - ' . $c['nama_customer']) ?>
-                                             </option>
-                                         <?php endforeach; ?>
-                                     </select>
-                                     <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
-                                 </div>
+                                  <div class="col-md-4">
+                                      <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
+                                      <div class="input-group input-group-sm">
+                                          <input type="text" class="form-control form-control-sm input-clickable" id="customer_display"
+                                                 placeholder="-- Klik untuk Pilih Customer --"
+                                                 value="<?= $is_edit ? htmlspecialchars(($spr['kd_customer'] ?? '') . ' - ' . ($spr['nama_customer'] ?? '')) : '' ?>"
+                                                 readonly>
+                                          <div class="input-group-append">
+                                              <button class="btn btn-danger btn-sm" type="button" id="btnOpenModalCustomer" title="Pilih Customer">
+                                                  <i class="fas fa-search"></i>
+                                              </button>
+                                          </div>
+                                      </div>
+                                      <input type="hidden" name="kd_customer" id="kd_customer" value="<?= $is_edit ? htmlspecialchars($spr['kd_customer']) : '' ?>" required>
+                                      <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
+                                  </div>
                              </div>
                             <div class="row mb-3">
                                 <div class="col-md-8">
@@ -408,10 +450,14 @@
                         <tr class="item-row">
                             <td class="text-center row-no font-weight-bold">1</td>
                             <td>
-                                <!-- Select2 untuk nama barang -->
-                                <select class="form-control form-control-sm select2-barang" name="nama_barang[]">
-                                    <option value=""></option>
-                                </select>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control form-control-sm input-clickable input-nama-barang" name="nama_barang[]" placeholder="-- Klik Pilih Barang --" readonly>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-danger btn-sm btn-lookup-barang" type="button" title="Pilih Barang">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <input type="hidden" name="kd_barang[]" class="field-kd-barang">
                             </td>
                             <td><input type="text" class="form-control form-control-sm" name="no_faktur[]" placeholder="No. Faktur"></td>
@@ -432,6 +478,101 @@
         </section>
     </div>
 
+    <!-- MODAL LOOKUP CUSTOMER -->
+    <div class="modal fade" id="modalCustomer" tabindex="-1" role="dialog" aria-labelledby="modalCustomerLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h5 class="modal-title font-weight-bold" id="modalCustomerLabel">
+                        <i class="fas fa-users mr-1"></i> Pilih Customer
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="modal-lookup-search">
+                        <input type="text" id="searchCustomerInput" placeholder="Ketik untuk mencari nama customer, kode, atau alamat/kios..." autocomplete="off">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="modal-lookup-scroll">
+                        <table class="table table-bordered table-sm table-hover modal-lookup-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">No</th>
+                                    <th style="width: 120px;">Kode</th>
+                                    <th>Nama Customer</th>
+                                    <th>Nama Kios</th>
+                                    <th>Alamat Kios</th>
+                                    <th style="width: 80px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listCustomerBody">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data customer...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i> Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOOKUP BARANG -->
+    <div class="modal fade" id="modalBarang" tabindex="-1" role="dialog" aria-labelledby="modalBarangLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h5 class="modal-title font-weight-bold" id="modalBarangLabel">
+                        <i class="fas fa-boxes mr-1"></i> Pilih Barang Retur
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="modal-lookup-search">
+                        <input type="text" id="searchBarangInput" placeholder="Ketik untuk mencari nama barang atau kode barang..." autocomplete="off">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="modal-lookup-scroll">
+                        <table class="table table-bordered table-sm table-hover modal-lookup-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">No</th>
+                                    <th style="width: 150px;">Kode Barang</th>
+                                    <th>Nama Barang</th>
+                                    <th style="width: 110px;" class="text-center">Satuan</th>
+                                    <th style="width: 80px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listBarangBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data barang...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i> Batal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.
@@ -440,10 +581,33 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
+<?php
+$cust_initial = [];
+if (!empty($customers)) {
+    $slice = array_slice($customers, 0, 500);
+    foreach ($slice as $c) {
+        $cust_initial[] = [
+            'kd_customer'   => (string) ($c['kd_customer'] ?? ''),
+            'nama_customer' => is_string($c['nama_customer'] ?? null) ? mb_convert_encoding($c['nama_customer'], 'UTF-8', 'UTF-8') : '',
+            'nama_kios'     => is_string($c['nama_kios'] ?? null) ? mb_convert_encoding($c['nama_kios'], 'UTF-8', 'UTF-8') : '',
+            'alamat_kios'   => is_string($c['alamat_kios'] ?? null) ? mb_convert_encoding($c['alamat_kios'], 'UTF-8', 'UTF-8') : '',
+            'nama_sales'    => is_string($c['nama_sales'] ?? null) ? mb_convert_encoding($c['nama_sales'], 'UTF-8', 'UTF-8') : '',
+        ];
+    }
+}
+?>
+
 <script>
+var INITIAL_CUSTOMERS = <?= json_encode($cust_initial, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+
 $(document).ready(function () {
 
-    var AJAX_BARANG_URL = '<?= base_url("retur_penjualan/ajax/search_barang") ?>';
+    var AJAX_BARANG_URL   = '<?= base_url("retur_penjualan/ajax/search_barang") ?>';
+    var AJAX_CUSTOMER_URL = '<?= base_url("retur_penjualan/ajax/search_customer") ?>';
+
+    var $activeBarangRow = null;
+    var customerSearchTimer = null;
+    var barangSearchTimer   = null;
 
     function formatRupiahInput(val) {
         if (val === null || val === undefined) return '';
@@ -457,25 +621,218 @@ $(document).ready(function () {
         return formattedInt + decimalPart;
     }
 
-    // ---- Searchable customer ----
-    $('#kd_customer').select2({
-        theme: 'default',
-        placeholder: '-- Pilih Customer --',
-        allowClear: true
-    });
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        return $('<div>').text(text).html();
+    }
 
-    // ---- Auto-fill customer ----
-    $('#kd_customer').on('change', function() {
-        var opt = $(this).find(':selected');
-        $('#nama_customer').val(opt.data('nama') || '');
-        $('#alamat').val(opt.data('alamat') || '');
-        // Jangan override nama_sales jika sudah ada
-        if (!$('#nama_sales').val()) {
-            $('#nama_sales').val(opt.data('sales') || '');
+    // ================================================================
+    // MODAL LOOKUP CUSTOMER
+    // ================================================================
+
+    function renderCustomerRows(items) {
+        if (!items || !items.length) {
+            $('#listCustomerBody').html('<tr><td colspan="6" class="text-center py-4 text-muted">Customer tidak ditemukan.</td></tr>');
+            return;
         }
+
+        var html = '';
+        $.each(items, function(idx, c) {
+            var jsonStr = encodeURIComponent(JSON.stringify(c));
+            html += '<tr class="customer-row-select" data-info="' + jsonStr + '">';
+            html += '<td class="text-center">' + (idx + 1) + '</td>';
+            html += '<td><strong class="text-danger">' + escapeHtml(c.kd_customer || '-') + '</strong></td>';
+            html += '<td class="font-weight-bold">' + escapeHtml(c.nama_customer || '-') + '</td>';
+            html += '<td>' + escapeHtml(c.nama_kios || '-') + '</td>';
+            html += '<td>' + escapeHtml(c.alamat_kios || '-') + '</td>';
+            html += '<td class="text-center">';
+            html += '<button type="button" class="btn btn-xs btn-outline-danger btn-select-cust" data-info="' + jsonStr + '"><i class="fas fa-check mr-1"></i>Pilih</button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+
+        $('#listCustomerBody').html(html);
+    }
+
+    function filterLocalCustomers(q) {
+        if (!INITIAL_CUSTOMERS || !INITIAL_CUSTOMERS.length) return [];
+        if (!q) return INITIAL_CUSTOMERS.slice(0, 50);
+        var qLower = q.toLowerCase();
+        return INITIAL_CUSTOMERS.filter(function(c) {
+            return (String(c.nama_customer || '').toLowerCase().indexOf(qLower) >= 0) ||
+                   (String(c.kd_customer || '').toLowerCase().indexOf(qLower) >= 0) ||
+                   (String(c.nama_kios || '').toLowerCase().indexOf(qLower) >= 0) ||
+                   (String(c.alamat_kios || '').toLowerCase().indexOf(qLower) >= 0);
+        }).slice(0, 50);
+    }
+
+    function openCustomerModal() {
+        $('#searchCustomerInput').val('');
+        $('#modalCustomer').modal('show');
+        if (INITIAL_CUSTOMERS && INITIAL_CUSTOMERS.length > 0) {
+            renderCustomerRows(INITIAL_CUSTOMERS.slice(0, 50));
+        } else {
+            loadCustomerList('');
+        }
+    }
+
+    $('#customer_display, #btnOpenModalCustomer').on('click', function(e) {
+        e.preventDefault();
+        openCustomerModal();
     });
 
-    // ---- Global Checklist Toggle ----
+    $('#modalCustomer').on('shown.bs.modal', function () {
+        $('#searchCustomerInput').trigger('focus');
+    });
+
+    function loadCustomerList(q) {
+        var localMatch = filterLocalCustomers(q);
+        if (localMatch.length > 0) {
+            renderCustomerRows(localMatch);
+        } else {
+            $('#listCustomerBody').html('<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data customer...</td></tr>');
+        }
+
+        $.ajax({
+            url: AJAX_CUSTOMER_URL,
+            type: 'GET',
+            dataType: 'json',
+            data: { q: q },
+            success: function(res) {
+                var items = res.results || [];
+                if (items.length > 0) {
+                    renderCustomerRows(items);
+                } else if (!localMatch.length) {
+                    $('#listCustomerBody').html('<tr><td colspan="6" class="text-center py-4 text-muted">Customer tidak ditemukan.</td></tr>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.warn("AJAX Customer notice:", status, error);
+                var fallback = filterLocalCustomers(q);
+                if (fallback.length > 0) {
+                    renderCustomerRows(fallback);
+                } else {
+                    $('#listCustomerBody').html('<tr><td colspan="6" class="text-center py-4 text-muted">Customer tidak ditemukan.</td></tr>');
+                }
+            }
+        });
+    }
+
+    $('#searchCustomerInput').on('input', function() {
+        var query = $(this).val();
+        clearTimeout(customerSearchTimer);
+        customerSearchTimer = setTimeout(function() {
+            loadCustomerList(query);
+        }, 250);
+    });
+
+    function applyCustomer(c) {
+        if (!c) return;
+        $('#kd_customer').val(c.kd_customer || '');
+        $('#nama_customer').val(c.nama_customer || '');
+        $('#customer_display').val((c.kd_customer ? c.kd_customer + ' - ' : '') + (c.nama_customer || ''));
+        $('#alamat').val(c.alamat_kios || '');
+        if (c.nama_sales) {
+            $('#nama_sales').val(c.nama_sales);
+        }
+        $('#modalCustomer').modal('hide');
+    }
+
+    $(document).on('click', '.btn-select-cust', function(e) {
+        e.stopPropagation();
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyCustomer(info);
+    });
+
+    $(document).on('click', '.customer-row-select', function() {
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyCustomer(info);
+    });
+
+    // ================================================================
+    // MODAL LOOKUP BARANG
+    // ================================================================
+
+    function openBarangModal($row) {
+        $activeBarangRow = $row;
+        $('#searchBarangInput').val('');
+        $('#modalBarang').modal('show');
+        loadBarangList('');
+    }
+
+    $('#modalBarang').on('shown.bs.modal', function () {
+        $('#searchBarangInput').trigger('focus');
+    });
+
+    function loadBarangList(q) {
+        $('#listBarangBody').html('<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data barang...</td></tr>');
+
+        $.ajax({
+            url: AJAX_BARANG_URL,
+            type: 'GET',
+            dataType: 'json',
+            data: { q: q },
+            success: function(res) {
+                var items = res.results || [];
+                if (!items.length) {
+                    $('#listBarangBody').html('<tr><td colspan="5" class="text-center py-4 text-muted">Barang tidak ditemukan.</td></tr>');
+                    return;
+                }
+
+                var html = '';
+                $.each(items, function(idx, b) {
+                    var jsonStr = encodeURIComponent(JSON.stringify(b));
+                    html += '<tr class="barang-row-select" data-info="' + jsonStr + '">';
+                    html += '<td class="text-center">' + (idx + 1) + '</td>';
+                    html += '<td><strong class="text-danger">' + escapeHtml(b.kd_barang || '-') + '</strong></td>';
+                    html += '<td class="font-weight-bold">' + escapeHtml(b.nama_barang || '-') + '</td>';
+                    html += '<td class="text-center">' + escapeHtml(b.satuan || '-') + '</td>';
+                    html += '<td class="text-center">';
+                    html += '<button type="button" class="btn btn-xs btn-outline-danger btn-select-brg" data-info="' + jsonStr + '"><i class="fas fa-check mr-1"></i>Pilih</button>';
+                    html += '</td>';
+                    html += '</tr>';
+                });
+
+                $('#listBarangBody').html(html);
+            },
+            error: function() {
+                $('#listBarangBody').html('<tr><td colspan="5" class="text-center py-4 text-danger">Gagal mengambil data barang dari server.</td></tr>');
+            }
+        });
+    }
+
+    $('#searchBarangInput').on('input', function() {
+        var query = $(this).val();
+        clearTimeout(barangSearchTimer);
+        barangSearchTimer = setTimeout(function() {
+            loadBarangList(query);
+        }, 250);
+    });
+
+    function applyBarang(b) {
+        if (!b || !$activeBarangRow) return;
+        $activeBarangRow.find('.input-nama-barang').val(b.nama_barang || '');
+        $activeBarangRow.find('.field-kd-barang').val(b.kd_barang || '');
+        $('#modalBarang').modal('hide');
+        // Arahkan fokus ke No Faktur atau Qty baris bersangkutan
+        $activeBarangRow.find('input[name="no_faktur[]"]').focus();
+    }
+
+    $(document).on('click', '.btn-select-brg', function(e) {
+        e.stopPropagation();
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyBarang(info);
+    });
+
+    $(document).on('click', '.barang-row-select', function() {
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyBarang(info);
+    });
+
+    // ================================================================
+    // CHECKLIST TOGGLE & FORM TABLE HANDLERS
+    // ================================================================
+
     $('.chk-bermasalah').on('change', function() {
         $('.alasan-bermasalah-opt').toggle(this.checked);
         if (!this.checked) $('.alasan-bermasalah-opt input').prop('checked', false);
@@ -485,37 +842,6 @@ $(document).ready(function () {
         if (!this.checked) $('.alasan-expired-opt input').prop('checked', false);
     });
 
-    // ---- Inisialisasi Select2 pada sebuah row ----
-    function initSelect2Barang($row) {
-        $row.find('.select2-barang').select2({
-            theme: 'default',
-            placeholder: 'Ketik nama barang...',
-            allowClear: true,
-            minimumInputLength: 2,
-            ajax: {
-                url: AJAX_BARANG_URL,
-                dataType: 'json',
-                delay: 300,
-                data: function(params) { return { q: params.term }; },
-                processResults: function(data) { return { results: data.results }; },
-                cache: true
-            },
-            templateResult: function(item) {
-                if (!item.id) return item.text;
-                return $('<span>' + item.text + '</span>');
-            },
-            dropdownParent: $('body')
-        }).on('select2:select', function(e) {
-            var data = e.params.data;
-            if (data && data.kd_barang) {
-                $row.find('.field-kd-barang').val(data.kd_barang);
-            }
-        }).on('select2:clear', function() {
-            $row.find('.field-kd-barang').val('');
-        });
-    }
-
-    // ---- Add row ----
     function renumberRows() {
         $('#rowContainer .item-row').each(function(i) {
             $(this).find('.row-no').text(i + 1);
@@ -524,23 +850,17 @@ $(document).ready(function () {
 
     function addRow() {
         var tmpl = $('#rowTemplate tbody tr.item-row').clone();
-        // Reset nilai select2 template agar tidak duplikat id
-        tmpl.find('.select2-barang').val('');
+        tmpl.find('.input-nama-barang').val('');
         tmpl.find('.field-kd-barang').val('');
         $('#rowContainer').append(tmpl);
         renumberRows();
         bindRowEvents(tmpl);
-        initSelect2Barang(tmpl);
     }
 
     function addRowWithData(item) {
         var tmpl = $('#rowTemplate tbody tr.item-row').clone();
-        if (item.nama_barang) {
-            tmpl.find('.select2-barang').append(new Option(item.nama_barang, item.nama_barang, true, true));
-        }
-        if (item.kd_barang) {
-            tmpl.find('.field-kd-barang').val(item.kd_barang);
-        }
+        tmpl.find('.input-nama-barang').val(item.nama_barang || '');
+        tmpl.find('.field-kd-barang').val(item.kd_barang || '');
         tmpl.find('input[name="no_faktur[]"]').val(item.no_faktur || '');
         tmpl.find('input[name="no_batch[]"]').val(item.no_batch || '');
         tmpl.find('input[name="expired_date[]"]').val(item.expired_date || '');
@@ -550,10 +870,14 @@ $(document).ready(function () {
         $('#rowContainer').append(tmpl);
         renumberRows();
         bindRowEvents(tmpl);
-        initSelect2Barang(tmpl);
     }
 
     function bindRowEvents($row) {
+        $row.find('.input-nama-barang, .btn-lookup-barang').on('click', function(e) {
+            e.preventDefault();
+            openBarangModal($row);
+        });
+
         $row.find('.field-harga').on('input', function() {
             var cursorPosition = this.selectionStart;
             var originalLength = this.value.length;
@@ -566,8 +890,6 @@ $(document).ready(function () {
 
         $row.find('.btn-del-row').on('click', function() {
             if ($('#rowContainer .item-row').length > 1) {
-                // Destroy select2 sebelum hapus
-                $row.find('.select2-barang').select2('destroy');
                 $row.remove();
                 renumberRows();
             } else {
@@ -578,7 +900,7 @@ $(document).ready(function () {
 
     $('#btnAddRow').on('click', addRow);
 
-    // Init rows
+    // Inisialisasi baris (Edit / Baru)
     var isEdit = <?= isset($spr_detail) ? 'true' : 'false' ?>;
     if (isEdit) {
         var initDetail = <?= isset($spr_detail) ? json_encode($spr_detail) : '[]' ?>;
@@ -594,16 +916,17 @@ $(document).ready(function () {
         addRow();
     }
 
-    // ---- Konfirmasi ajukan ----
+    // Validasi Form Submission
     $('#btnAjukan').on('click', function(e) {
-        var nama = $('#kd_customer').val();
-        if (!nama) {
+        var customerId = $('#kd_customer').val();
+        if (!customerId) {
             e.preventDefault();
             alert('Pilih Customer terlebih dahulu!');
+            openCustomerModal();
             return;
         }
         var items = 0;
-        $('#rowContainer .item-row .select2-barang').each(function(){
+        $('#rowContainer .item-row .input-nama-barang').each(function(){
             if ($(this).val() && $(this).val().trim()) items++;
         });
         if (items === 0) {

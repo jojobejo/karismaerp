@@ -906,6 +906,7 @@ $route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPen
 $route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
 $route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
 $route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPenjualan/ajax_search_barang';
+$route['retur_penjualan/ajax/search_customer']               = 'sales/C_ReturPenjualan/ajax_search_customer';
 // Manager SC (Mng SC)
 $route['retur_penjualan/mngsc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/mngsc_verifikasi/$1';
 $route['retur_penjualan/mngsc/simpan/(:any)']              = 'sales/C_ReturPenjualan/mngsc_simpan/$1';
