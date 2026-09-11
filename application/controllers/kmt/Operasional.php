@@ -80,12 +80,6 @@ class Operasional extends CI_Controller {
     // TAMBAH
     // ================================================================
     public function tambah() {
-        // Adm Keu tidak bisa tambah data
-        if ($this->is_admkeu()) {
-            $this->session->set_flashdata('error', 'Adm Keuangan tidak dapat menambah data.');
-            redirect('kmt/operasional');
-        }
-
         $data = [
             'page_title'      => 'Tambah Biaya Operasional',
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),

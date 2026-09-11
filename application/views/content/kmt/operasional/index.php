@@ -37,12 +37,10 @@
                 <!-- ── Tombol aksi ── -->
                 <div class="mb-3 d-flex justify-content-between flex-wrap">
                     <div>
-                        <?php if ($lv !== 2): ?>
                         <a href="<?= base_url('kmt/operasional/tambah') ?>"
                            class="btn btn-warning btn-sm">
                             <i class="fas fa-plus mr-1"></i> Tambah Biaya
                         </a>
-                        <?php endif; ?>
                     </div>
                     <div>
                         <a href="<?= base_url('kmt/operasional/export')
