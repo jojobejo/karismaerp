@@ -93,6 +93,33 @@ class M_SalesOrder extends CI_Model
     const BATAS_TONASE   = 7;
     const BATAS_KUBIKASI = 9;
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->_ensure_columns();
+    }
+
+    /**
+     * Memastikan kolom pembeda so_source dan tanggal_selesai_do tersedia di tabel SO dan Faktur.
+     */
+    private function _ensure_columns()
+    {
+        if ($this->db->table_exists('tbso_sales_order')) {
+            if (!$this->db->field_exists('so_source', 'tbso_sales_order')) {
+                $this->db->query("ALTER TABLE `tbso_sales_order` ADD COLUMN `so_source` VARCHAR(20) NOT NULL DEFAULT 'SALES' AFTER `status`");
+            }
+        }
+
+        if ($this->db->table_exists('tbso_faktur_penjualan')) {
+            if (!$this->db->field_exists('so_source', 'tbso_faktur_penjualan')) {
+                $this->db->query("ALTER TABLE `tbso_faktur_penjualan` ADD COLUMN `so_source` VARCHAR(20) NOT NULL DEFAULT 'SALES' AFTER `status`");
+            }
+            if (!$this->db->field_exists('tanggal_selesai_do', 'tbso_faktur_penjualan')) {
+                $this->db->query("ALTER TABLE `tbso_faktur_penjualan` ADD COLUMN `tanggal_selesai_do` DATE NULL DEFAULT NULL AFTER `tanggal_faktur`");
+            }
+        }
+    }
+
     // ================================================================
     // HELPER — TANGGAL
     // ================================================================
