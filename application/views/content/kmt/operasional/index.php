@@ -145,7 +145,7 @@
                                         <th>Waktu Input</th>
                                         <th>Wilayah</th>
                                         <th>Nama ABM</th>
-                                        <th>MDO</th>
+                                        <th class="text-right">Sewa Kendaraan</th>
                                         <th class="text-right">Hotel</th>
                                         <th class="text-right">Per Diem</th>
                                         <th class="text-right">Entertain</th>
@@ -180,8 +180,8 @@
                                     <td class="align-middle">
                                         <?= htmlspecialchars($row['nama']) ?>
                                     </td>
-                                    <td class="align-middle">
-                                        <?= htmlspecialchars($row['nama_mdo'] ?? '-') ?>
+                                    <td class="text-right align-middle">
+                                        <?= (isset($row['sewa_kendaraan']) && $row['sewa_kendaraan'] > 0) ? number_format($row['sewa_kendaraan'], 0, ',', '.') : '-' ?>
                                     </td>
                                     <td class="text-right align-middle">
                                         <?= $row['hotel'] > 0 ? number_format($row['hotel'],0,',','.') : '-' ?>
@@ -389,7 +389,7 @@ $(function () {
         pageLength  : 25,
         order       : [[1, 'desc']],
         columnDefs  : [
-            { targets: [6,7,8,9,10,11,12], className: 'dt-right' },
+            { targets: [5,6,7,8,9,10,11,12], className: 'dt-right' },
             { targets: [13,14], orderable: false }
         ],
         language: { url: '<?= base_url('assets/plugins/datatables/id.json') ?>' }
