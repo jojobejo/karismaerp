@@ -138,6 +138,7 @@ class C_Transaksi extends CI_Controller
                 'success' => true,
                 'journal' => $detail['journal'],
                 'journal_lines' => $detail['journal_lines'],
+                'journals' => $detail['journals'] ?? [],
             ]);
         } catch (Exception $e) {
             $this->_json(['success' => false, 'message' => $e->getMessage()], 500);

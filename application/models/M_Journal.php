@@ -538,6 +538,36 @@ class M_Journal extends CI_Model
             return false;
         }
 
+        // Retur tipe replace (ganti barang) dan service (servis barang) tidak membentuk jurnal akuntansi
+        $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
+        if (in_array($tipe_retur, ['replace', 'service'])) {
+            // Hapus jurnal lama jika sebelumnya pernah terposting
+            $existing_journals = $this->db->get_where('tbkeu_jurnal', [
+                'source_module' => 'SALES',
+                'source_type'   => 'RETUR_PENJUALAN',
+                'source_id'     => $id_retur
+            ])->result_array();
+
+            foreach ($existing_journals as $ej) {
+                $this->db->delete('tbkeu_jurnal_detail', ['id_jurnal' => $ej['id_jurnal']]);
+                $this->db->delete('tbkeu_jurnal', ['id_jurnal' => $ej['id_jurnal']]);
+            }
+
+            if (!empty($retur['no_retur'])) {
+                $no_journals = $this->db->get_where('tbkeu_jurnal', [
+                    'source_module' => 'SALES',
+                    'source_type'   => 'RETUR_PENJUALAN',
+                    'source_no'     => trim($retur['no_retur'])
+                ])->result_array();
+                foreach ($no_journals as $nj) {
+                    $this->db->delete('tbkeu_jurnal_detail', ['id_jurnal' => $nj['id_jurnal']]);
+                    $this->db->delete('tbkeu_jurnal', ['id_jurnal' => $nj['id_jurnal']]);
+                }
+            }
+
+            return false;
+        }
+
         // Query detail retur
         $details = $this->db->get_where('tbrp_retur_penjualan_detail', ['id_retur' => $id_retur])->result_array();
         if (empty($details)) {

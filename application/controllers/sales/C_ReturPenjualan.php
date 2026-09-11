@@ -2273,9 +2273,12 @@ class C_ReturPenjualan extends CI_Controller
                 $total_retur += (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             }
             
+            $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
+            $is_non_journal = in_array($tipe_retur, ['replace', 'service']);
+
             $sisa_saldo = $total_retur;
-            if (isset($retur['is_revisi']) && $retur['is_revisi'] == 1) {
-                $sisa_saldo = 0; // Jika retur revisi, saldo = 0 (tidak bisa potong tagihan)
+            if ((isset($retur['is_revisi']) && $retur['is_revisi'] == 1) || $is_non_journal) {
+                $sisa_saldo = 0; // Jika retur revisi / replace / service, saldo = 0 (tidak bisa potong tagihan / tidak ada refund)
             }
 
             $this->db->where('id_retur', $id_retur);
@@ -2284,10 +2287,14 @@ class C_ReturPenjualan extends CI_Controller
                 'sisa_saldo_retur'  => $sisa_saldo
             ]);
 
-            $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
             $is_refund = ($tipe_retur === 'biasa' || $tipe_retur === 'refund');
             
-            if (!isset($retur['is_revisi']) || $retur['is_revisi'] == 0) {
+            if ($is_non_journal) {
+                // Tipe replace / service tidak menghasilkan jurnal akuntansi
+                $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_retur_penjualan($id_retur); // Memastikan jika ada jurnal lama akan dibersihkan
+                $msg = "Retur {$retur['no_retur']} (tipe " . ucfirst($tipe_retur) . ") berhasil disetujui tanpa jurnal akuntansi.";
+            } else if (!isset($retur['is_revisi']) || $retur['is_revisi'] == 0) {
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_retur_penjualan($id_retur);
                 $msg = "Retur {$retur['no_retur']} berhasil disetujui, jurnal otomatis diposting" . ($is_refund ? " dan masuk antrian Collection." : ".");

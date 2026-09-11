@@ -218,12 +218,27 @@ class M_Transaksi extends CI_Model
                         COALESCE(NULLIF(rp.nama_customer, ''), 'Customer') AS nama_entitas,
                         COALESCE(rp.status_retur, 'selesai') AS status_transaksi,
                         COALESCE((SELECT SUM(rpd.qty_retur * rpd.harga_satuan) FROM tbrp_retur_penjualan_detail rpd WHERE rpd.id_retur = rp.id_retur), 0) AS total_nominal,
-                        CONCAT('Retur Penjualan: ', rp.no_retur, ' (SPR: ', COALESCE(rp.no_spr, ''), ')') AS keterangan,
-                        j.id_jurnal,
-                        j.nomor_jurnal,
-                        j.status AS status_jurnal,
-                        j.total_debit AS journal_debit,
-                        j.total_kredit AS journal_kredit,
+                        CONCAT('Retur Penjualan: ', rp.no_retur, ' (Tipe: ', UPPER(COALESCE(rp.tipe_retur, 'BIASA')), ', SPR: ', COALESCE(rp.no_spr, ''), ')') AS keterangan,
+                        CASE 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN NULL 
+                            ELSE j.id_jurnal 
+                        END AS id_jurnal,
+                        CASE 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN NULL 
+                            ELSE j.nomor_jurnal 
+                        END AS nomor_jurnal,
+                        CASE 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 'NON_JURNAL' 
+                            ELSE j.status 
+                        END AS status_jurnal,
+                        CASE 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 0 
+                            ELSE j.total_debit 
+                        END AS journal_debit,
+                        CASE 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 0 
+                            ELSE j.total_kredit 
+                        END AS journal_kredit,
                         rp.create_at_retur AS created_at
                     FROM tbrp_retur_penjualan_header rp
                     LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
@@ -301,7 +316,7 @@ class M_Transaksi extends CI_Model
             if ($status === 'POSTED') {
                 $where[] = "(u.status_jurnal = 'POSTED' OR u.status_transaksi = 'POSTED' OR u.status_transaksi = 'selesai' OR u.status_transaksi = 'done')";
             } elseif ($status === 'UNPOSTED') {
-                $where[] = "(u.id_jurnal IS NULL OR u.status_jurnal != 'POSTED')";
+                $where[] = "((u.id_jurnal IS NULL OR u.status_jurnal != 'POSTED') AND u.status_jurnal != 'NON_JURNAL')";
             } elseif ($status === 'CANCELLED') {
                 $where[] = "(u.status_transaksi = 'cancelled' OR u.status_transaksi = 'ditolak' OR u.status_jurnal = 'VOID')";
             } else {
@@ -328,7 +343,7 @@ class M_Transaksi extends CI_Model
                 COUNT(*) AS total_count,
                 COALESCE(SUM(u.total_nominal), 0) AS total_nominal,
                 COALESCE(SUM(CASE WHEN u.id_jurnal IS NOT NULL AND u.status_jurnal = 'POSTED' THEN 1 ELSE 0 END), 0) AS total_posted,
-                COALESCE(SUM(CASE WHEN u.id_jurnal IS NULL OR u.status_jurnal != 'POSTED' THEN 1 ELSE 0 END), 0) AS total_unposted
+                COALESCE(SUM(CASE WHEN (u.id_jurnal IS NULL OR u.status_jurnal != 'POSTED') AND u.status_jurnal != 'NON_JURNAL' THEN 1 ELSE 0 END), 0) AS total_unposted
             FROM ({$unionSql}) u
             {$whereClause}
         ";
@@ -377,6 +392,8 @@ class M_Transaksi extends CI_Model
             'journal_lines' => [],
         ];
 
+        $journals = [];
+
         switch ($category) {
             case 'penjualan':
             case 'faktur_penjualan':
@@ -400,15 +417,54 @@ class M_Transaksi extends CI_Model
                         ->get('tbso_faktur_detail d')
                         ->result_array();
 
-                    // Journal
-                    $result['journal'] = $this->db->where('source_module', 'SALES')
-                        ->group_start()
-                        ->where('source_id', $header['no_faktur'])
-                        ->or_where('source_no', $header['no_faktur'])
-                        ->or_where('idempotency_key', 'SALES_INVOICE-FAKTUR-' . $header['no_faktur'])
-                        ->group_end()
-                        ->order_by('id_jurnal', 'DESC')
-                        ->get('tbkeu_jurnal')->row_array();
+                    // Ambil SEMUA jurnal akuntansi terkait Faktur Penjualan:
+                    // 1. Jurnal Penjualan & Piutang (SALES_INVOICE)
+                    // 2. Jurnal HPP & Persediaan (GOODS_ISSUE)
+                    // 3. Jurnal Promosi Penjualan (PROMOSI_PENJUALAN jika ada)
+                    // 4. Jurnal Penerimaan Pembayaran Kasir (jika sudah ada pembayaran)
+                    $journals = $this->db->query("
+                        SELECT j.*,
+                            CASE 
+                                WHEN j.idempotency_key LIKE 'SALES_INVOICE%' THEN 'Jurnal Penjualan & Piutang'
+                                WHEN j.idempotency_key LIKE 'GOODS_ISSUE%' THEN 'Jurnal Beban Pokok Penjualan (HPP) & Persediaan'
+                                WHEN j.source_type = 'PROMOSI_PENJUALAN' THEN 'Jurnal Biaya Promosi & Persediaan'
+                                WHEN j.source_module = 'KEUANGAN' AND j.source_type = 'PEMBAYARAN_FAKTUR' THEN 'Jurnal Pembayaran Customer / Kasir'
+                                WHEN j.keterangan LIKE 'Penerimaan %' THEN 'Jurnal Penerimaan Kasir'
+                                ELSE 'Jurnal Akuntansi Faktur'
+                            END AS label_jurnal,
+                            CASE 
+                                WHEN j.idempotency_key LIKE 'SALES_INVOICE%' THEN 'primary'
+                                WHEN j.idempotency_key LIKE 'GOODS_ISSUE%' THEN 'warning text-dark'
+                                WHEN j.source_type = 'PROMOSI_PENJUALAN' THEN 'purple text-white'
+                                WHEN j.source_module = 'KEUANGAN' AND j.source_type = 'PEMBAYARAN_FAKTUR' THEN 'success'
+                                WHEN j.keterangan LIKE 'Penerimaan %' THEN 'success'
+                                ELSE 'info'
+                            END AS badge_color
+                        FROM tbkeu_jurnal j
+                        WHERE (
+                            (j.source_module = 'SALES' AND (j.source_no = ? OR j.source_id = ? OR j.idempotency_key LIKE ?))
+                            OR (j.source_module = 'KEUANGAN' AND j.source_type = 'PEMBAYARAN_FAKTUR' AND j.source_id IN (
+                                SELECT CAST(pf.id_pembayaran AS CHAR) FROM tbkeu_pembayaran_faktur pf WHERE pf.no_faktur = ? OR pf.id_faktur = ?
+                            ))
+                            OR (j.keterangan LIKE ?)
+                        )
+                        ORDER BY 
+                            CASE 
+                                WHEN j.idempotency_key LIKE 'SALES_INVOICE%' THEN 1
+                                WHEN j.idempotency_key LIKE 'GOODS_ISSUE%' THEN 2
+                                WHEN j.source_type = 'PROMOSI_PENJUALAN' THEN 3
+                                WHEN j.source_type = 'PEMBAYARAN_FAKTUR' THEN 4
+                                ELSE 5
+                            END ASC,
+                            j.id_jurnal ASC
+                    ", [
+                        $header['no_faktur'],
+                        $header['no_faktur'],
+                        '%-FAKTUR-' . $header['no_faktur'],
+                        $header['no_faktur'],
+                        (int)$header['id_faktur'],
+                        '%' . $header['no_faktur'] . '%'
+                    ])->result_array();
                 }
                 break;
 
@@ -435,11 +491,20 @@ class M_Transaksi extends CI_Model
                         ->where('d.id_lpb', (int)$header['id_lpb'])
                         ->get()->result_array();
 
-                    $result['journal'] = $this->db->where('source_module', 'LOGISTIK')
-                        ->where('source_type', 'LPB_FINAL')
-                        ->where('source_id', (string)$header['id_lpb'])
-                        ->order_by('id_jurnal', 'DESC')
-                        ->get('tbkeu_jurnal')->row_array();
+                    $journals = $this->db->query("
+                        SELECT j.*,
+                            'Jurnal Penerimaan Barang (LPB) / Hutang' AS label_jurnal,
+                            'success' AS badge_color
+                        FROM tbkeu_jurnal j
+                        WHERE (
+                            (j.source_module = 'LOGISTIK' AND j.source_type = 'LPB_FINAL' AND j.source_id = ?)
+                            OR j.idempotency_key = ?
+                        )
+                        ORDER BY (CASE WHEN j.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j.id_jurnal DESC
+                    ", [
+                        (string)$header['id_lpb'],
+                        'GOODS_RECEIPT-LPB-' . $header['id_lpb']
+                    ])->result_array();
                 }
                 break;
 
@@ -460,11 +525,19 @@ class M_Transaksi extends CI_Model
 
                     $result['header'] = $header;
                     $result['items'] = [$header];
-                    $result['journal'] = $this->db->where('source_module', 'KEUANGAN')
-                        ->where('source_type', 'PEMBAYARAN_FAKTUR')
-                        ->where('source_id', (string)$header['id_pembayaran'])
-                        ->order_by('id_jurnal', 'DESC')
-                        ->get('tbkeu_jurnal')->row_array();
+
+                    $journals = $this->db->query("
+                        SELECT j.*,
+                            'Jurnal Pelunasan Piutang Customer' AS label_jurnal,
+                            'info' AS badge_color
+                        FROM tbkeu_jurnal j
+                        WHERE j.source_module = 'KEUANGAN' 
+                          AND j.source_type = 'PEMBAYARAN_FAKTUR' 
+                          AND j.source_id = ?
+                        ORDER BY (CASE WHEN j.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j.id_jurnal DESC
+                    ", [
+                        (string)$header['id_pembayaran']
+                    ])->result_array();
                 }
                 break;
 
@@ -489,8 +562,25 @@ class M_Transaksi extends CI_Model
                     } else {
                         $result['items'] = [$header];
                     }
+
                     if (!empty($header['id_jurnal'])) {
-                        $result['journal'] = $this->db->where('id_jurnal', (int)$header['id_jurnal'])->get('tbkeu_jurnal')->row_array();
+                        $journals = $this->db->query("
+                            SELECT j.*, 'Jurnal Pembayaran Hutang Supplier' AS label_jurnal, 'indigo text-white' AS badge_color
+                            FROM tbkeu_jurnal j WHERE j.id_jurnal = ?
+                        ", [(int)$header['id_jurnal']])->result_array();
+                    } else {
+                        $journals = $this->db->query("
+                            SELECT j.*, 'Jurnal Pembayaran Hutang Supplier' AS label_jurnal, 'indigo text-white' AS badge_color
+                            FROM tbkeu_jurnal j
+                            WHERE (j.source_module = 'KEUANGAN' AND j.source_type = 'SUPPLIER_PAYMENT' AND (j.source_id = ? OR j.source_id = ? OR j.source_no = ?))
+                               OR j.idempotency_key = ?
+                            ORDER BY (CASE WHEN j.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j.id_jurnal DESC
+                        ", [
+                            (string)$header['id_pembayaran'],
+                            $header['nomor_pembayaran'] ?? '',
+                            $header['nomor_pembayaran'] ?? '',
+                            'SUPPLIER_PAYMENT-' . ($header['nomor_pembayaran'] ?? '')
+                        ])->result_array();
                     }
                 }
                 break;
@@ -507,7 +597,11 @@ class M_Transaksi extends CI_Model
                     $header['tanggal_transaksi'] = $header['tanggal_retur'];
                     $header['nama_entitas'] = $header['nama_customer'] ?: 'Customer';
                     $header['status_transaksi'] = $header['status_retur'] ?: 'selesai';
-                    $header['keterangan'] = 'Retur Penjualan: ' . $header['no_retur'] . ' (SPR: ' . ($header['no_spr'] ?? '') . ')';
+                    
+                    $tipeRetur = strtolower(trim($header['tipe_retur'] ?? 'biasa'));
+                    $isNonJournal = in_array($tipeRetur, ['replace', 'service']);
+                    $header['is_non_journal'] = $isNonJournal;
+                    $header['keterangan'] = 'Retur Penjualan: ' . $header['no_retur'] . ' (Tipe: ' . strtoupper($tipeRetur) . ', SPR: ' . ($header['no_spr'] ?? '') . ')';
 
                     $result['header'] = $header;
                     $result['items'] = $this->db->select('d.*, d.qty_retur AS qty, (d.qty_retur * d.harga_satuan) AS subtotal, COALESCE(mb.kode_barang, mb.kd_system, "") AS kd_barang_master')
@@ -516,14 +610,21 @@ class M_Transaksi extends CI_Model
                         ->where('d.id_retur', (int)$header['id_retur'])
                         ->get()->result_array();
 
-                    $result['journal'] = $this->db->where('source_module', 'SALES')
-                        ->where('source_type', 'RETUR_PENJUALAN')
-                        ->group_start()
-                        ->where('source_id', (string)$header['id_retur'])
-                        ->or_where('source_no', $header['no_retur'])
-                        ->group_end()
-                        ->order_by('id_jurnal', 'DESC')
-                        ->get('tbkeu_jurnal')->row_array();
+                    if ($isNonJournal) {
+                        $journals = [];
+                    } else {
+                        $journals = $this->db->query("
+                            SELECT j.*, 'Jurnal Retur Penjualan' AS label_jurnal, 'warning text-dark' AS badge_color
+                            FROM tbkeu_jurnal j
+                            WHERE j.source_module = 'SALES' 
+                              AND j.source_type = 'RETUR_PENJUALAN'
+                              AND (j.source_id = ? OR j.source_no = ?)
+                            ORDER BY (CASE WHEN j.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j.id_jurnal DESC
+                        ", [
+                            (string)$header['id_retur'],
+                            $header['no_retur']
+                        ])->result_array();
+                    }
                 }
                 break;
 
@@ -550,28 +651,53 @@ class M_Transaksi extends CI_Model
                         ->get()->result_array();
 
                     if (!empty($header['id_jurnal'])) {
-                        $result['journal'] = $this->db->where('id_jurnal', (int)$header['id_jurnal'])->get('tbkeu_jurnal')->row_array();
+                        $journals = $this->db->query("
+                            SELECT j.*, 'Jurnal Retur Pembelian' AS label_jurnal, 'orange text-white' AS badge_color
+                            FROM tbkeu_jurnal j WHERE j.id_jurnal = ?
+                        ", [(int)$header['id_jurnal']])->result_array();
                     } else {
-                        $result['journal'] = $this->db->where('source_module', 'LOGISTIK')
-                            ->where('source_type', 'RETUR_PEMBELIAN')
-                            ->where('source_id', (string)$header['id_retur_pembelian'])
-                            ->order_by('id_jurnal', 'DESC')
-                            ->get('tbkeu_jurnal')->row_array();
+                        $journals = $this->db->query("
+                            SELECT j.*, 'Jurnal Retur Pembelian' AS label_jurnal, 'orange text-white' AS badge_color
+                            FROM tbkeu_jurnal j
+                            WHERE j.source_module = 'LOGISTIK' 
+                              AND j.source_type = 'RETUR_PEMBELIAN' 
+                              AND j.source_id = ?
+                            ORDER BY (CASE WHEN j.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j.id_jurnal DESC
+                        ", [
+                            (string)$header['id_retur_pembelian']
+                        ])->result_array();
                     }
                 }
                 break;
         }
 
-        // Ambil journal detail lines jika ada ID Jurnal
-        if (!empty($result['journal']['id_jurnal'])) {
-            $idJurnal = (int)$result['journal']['id_jurnal'];
-            $result['journal_lines'] = $this->db->select('d.*, a.kode_akun, a.nama_akun')
+        // Ambil baris detail jurnal untuk semua jurnal yang ditemukan
+        $journalIds = !empty($journals) ? array_column($journals, 'id_jurnal') : [];
+        $linesByJournal = [];
+        $allJournalLines = [];
+
+        if (!empty($journalIds)) {
+            $allJournalLines = $this->db->select('d.*, a.kode_akun, a.nama_akun')
                 ->from('tbkeu_jurnal_detail d')
                 ->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left')
-                ->where('d.id_jurnal', $idJurnal)
+                ->where_in('d.id_jurnal', $journalIds)
+                ->order_by('d.id_jurnal', 'ASC')
                 ->order_by('d.nomor_baris', 'ASC')
                 ->get()->result_array();
+
+            foreach ($allJournalLines as $line) {
+                $linesByJournal[$line['id_jurnal']][] = $line;
+            }
+
+            foreach ($journals as &$j) {
+                $j['lines'] = $linesByJournal[$j['id_jurnal']] ?? [];
+            }
+            unset($j);
         }
+
+        $result['journals'] = $journals;
+        $result['journal'] = !empty($journals) ? $journals[0] : null;
+        $result['journal_lines'] = $allJournalLines;
 
         return $result;
     }
@@ -772,7 +898,10 @@ class M_Transaksi extends CI_Model
                     if (!$rp) throw new Exception('Retur penjualan tidak ditemukan.');
 
                     $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$rp['id_retur'], '', $rp['no_retur']);
-                    $this->M_Journal->post_jurnal_retur_penjualan((int)$rp['id_retur']);
+                    $tipe_retur = strtolower(trim($rp['tipe_retur'] ?? 'biasa'));
+                    if (!in_array($tipe_retur, ['replace', 'service'])) {
+                        $this->M_Journal->post_jurnal_retur_penjualan((int)$rp['id_retur']);
+                    }
                     break;
 
                 case 'retur_pembelian':
@@ -1346,7 +1475,10 @@ class M_Transaksi extends CI_Model
 
         // Sinkronisasi Jurnal Retur Penjualan
         $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$idRetur, '', $rp['no_retur']);
-        $this->M_Journal->post_jurnal_retur_penjualan($idRetur);
+        $tipe_retur = strtolower(trim($rp['tipe_retur'] ?? 'biasa'));
+        if (!in_array($tipe_retur, ['replace', 'service'])) {
+            $this->M_Journal->post_jurnal_retur_penjualan($idRetur);
+        }
 
         return ['success' => true, 'message' => 'Retur penjualan dan jurnal berhasil diperbarui.'];
     }

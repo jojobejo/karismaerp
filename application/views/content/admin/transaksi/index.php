@@ -282,8 +282,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link font-weight-bold" data-toggle="tab" href="#tab-detail-journal">
-                            <i class="fas fa-book mr-1"></i> Jurnal Akuntansi (<span id="detail-journal-no-badge">-</span>)
+                        <a class="nav-link font-weight-bold" data-toggle="tab" href="#tab-detail-journal" id="tab-link-detail-journal">
+                            <i class="fas fa-book mr-1"></i> Jurnal Akuntansi
                         </a>
                     </li>
                 </ul>
@@ -298,32 +298,8 @@
 
                     <!-- Tab Journal -->
                     <div class="tab-pane fade" id="tab-detail-journal">
-                        <div class="alert alert-info py-2 mb-2 small" id="journal-balance-alert">
-                            <i class="fas fa-balance-scale mr-1"></i> Buku Besar Akuntansi: Periksa kesesuaian debit dan kredit.
-                        </div>
-                        <div class="table-responsive bg-white rounded border shadow-sm">
-                            <table class="table table-sm table-bordered table-hover mb-0" id="table-detail-journal-lines">
-                                <thead class="bg-light text-center">
-                                    <tr>
-                                        <th style="width: 40px;">No</th>
-                                        <th style="width: 140px;">Kode Akun</th>
-                                        <th>Nama Akun (COA)</th>
-                                        <th>Keterangan Baris</th>
-                                        <th class="text-right" style="width: 160px;">Debit (Rp)</th>
-                                        <th class="text-right" style="width: 160px;">Kredit (Rp)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Filled by JS -->
-                                </tbody>
-                                <tfoot class="bg-light font-weight-bold">
-                                    <tr>
-                                        <td colspan="4" class="text-right">TOTAL:</td>
-                                        <td class="text-right text-success" id="tot-journal-debit">Rp 0</td>
-                                        <td class="text-right text-primary" id="tot-journal-kredit">Rp 0</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        <div id="detail-journal-container">
+                            <!-- Rendered dynamically by JS (Mendukung Multi-Jurnal: Jurnal Penjualan, Jurnal HPP, Jurnal Kasir, dll) -->
                         </div>
                     </div>
                 </div>
@@ -753,6 +729,9 @@ $(document).ready(function() {
     }
 
     function getJournalBadge(row) {
+        if (row.status_jurnal === 'NON_JURNAL' || row.is_non_journal) {
+            return `<span class="badge badge-light border text-muted px-2 py-1" title="Transaksi jenis ini tidak berdampak jurnal akuntansi"><i class="fas fa-minus-circle mr-1"></i>Non Jurnal</span>`;
+        }
         if (row.id_jurnal && row.status_jurnal === 'POSTED') {
             return `
                 <a href="javascript:void(0)" class="badge badge-success px-2 py-1 btn-view-journal" data-category="${row.trans_category}" data-id="${row.id_transaksi}" title="Klik untuk lihat detail jurnal">
@@ -769,6 +748,7 @@ $(document).ready(function() {
     $(document).on('click', '.btn-detail, .btn-view-journal', function() {
         const cat = $(this).data('category');
         const id = $(this).data('id');
+        const isJournalDirect = $(this).hasClass('btn-view-journal');
 
         $.ajax({
             url: `<?= base_url('admin/transaksi/detail/') ?>${cat}/${id}`,
@@ -776,7 +756,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(res) {
                 if (res.success && res.data) {
-                    showDetailModal(res.data);
+                    showDetailModal(res.data, isJournalDirect);
                 } else {
                     Swal.fire('Error', res.message || 'Gagal memuat detail transaksi.', 'error');
                 }
@@ -788,7 +768,7 @@ $(document).ready(function() {
     });
 
     // Populate and Show Detail Modal
-    function showDetailModal(data) {
+    function showDetailModal(data, openJournalTab = false) {
         const h = data.header || {};
         const cat = data.category || '';
         const docNo = h.no_dokumen || h.no_faktur || h.nomor_lpb || h.no_retur || h.no_retur_pembelian || (h.id_transaksi ? '#' + h.id_transaksi : '-');
@@ -917,39 +897,165 @@ $(document).ready(function() {
 
         $('#detail-items-content').html(contentHtml);
 
-        // Render Journal Table
-        let jRows = '';
-        const jLines = data.journal_lines || [];
-        let totDeb = 0;
-        let totKre = 0;
+        // =========================================================================
+        // Render Seluruh Jurnal Akuntansi Terkait (Multi-Jurnal Support)
+        // =========================================================================
+        const journals = (data.journals && data.journals.length > 0)
+            ? data.journals
+            : (data.journal ? [Object.assign({}, data.journal, { lines: data.journal_lines || [] })] : []);
 
-        if (jLines.length > 0) {
-            $('#detail-journal-no-badge').text(data.journal ? data.journal.nomor_jurnal : 'POSTED');
-            jLines.forEach((jl, idx) => {
-                const deb = Number(jl.debit || 0);
-                const kre = Number(jl.kredit || 0);
-                totDeb += deb;
-                totKre += kre;
+        let journalHtml = '';
+        let totalAllDeb = 0;
+        let totalAllKre = 0;
 
-                jRows += `
-                    <tr>
-                        <td class="text-center font-weight-bold">${idx + 1}</td>
-                        <td class="font-weight-bold text-teal text-center">${escapeHtml(jl.kode_akun || '-')}</td>
-                        <td><strong>${escapeHtml(jl.nama_akun || '-')}</strong></td>
-                        <td><small>${escapeHtml(jl.keterangan || '-')}</small></td>
-                        <td class="text-right font-weight-bold text-success">${formatRupiah(deb)}</td>
-                        <td class="text-right font-weight-bold text-primary">${formatRupiah(kre)}</td>
-                    </tr>
+        if (journals.length === 0) {
+            const isNonJournal = h.is_non_journal || (h.tipe_retur && ['replace', 'service'].includes(String(h.tipe_retur).toLowerCase()));
+            if (isNonJournal) {
+                const tipeLabel = String(h.tipe_retur || 'Replace / Service').toUpperCase();
+                journalHtml = `
+                    <div class="alert alert-info text-center py-4 mb-0 border">
+                        <i class="fas fa-info-circle fa-2x text-info mb-2 d-block"></i>
+                        <h6 class="font-weight-bold mb-1">Transaksi Non Jurnal (${escapeHtml(tipeLabel)})</h6>
+                        <p class="text-muted small mb-0">Retur Penjualan tipe <strong>${escapeHtml(tipeLabel)}</strong> (Ganti Barang / Servis) merupakan transaksi operasional pertukaran fisik atau reparasi barang tanpa pengembalian uang maupun pemotongan piutang faktur, sehingga tidak membentuk jurnal keuangan akuntansi.</p>
+                    </div>
+                `;
+            } else {
+                journalHtml = `
+                    <div class="alert alert-secondary text-center py-4 mb-0 border">
+                        <i class="fas fa-info-circle fa-2x text-muted mb-2 d-block"></i>
+                        <h6 class="font-weight-bold mb-1">Belum Ada Jurnal Akuntansi</h6>
+                        <p class="text-muted small mb-0">Transaksi ini belum memiliki catatan jurnal akuntansi yang terposting.</p>
+                    </div>
+                `;
+            }
+        } else {
+            if (journals.length > 1) {
+                journalHtml += `
+                    <div class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center justify-content-between">
+                        <div>
+                            <i class="fas fa-layer-group mr-2"></i>
+                            Transaksi ini memiliki <strong>${journals.length} voucher jurnal akuntansi</strong> terkait (pengakuan penjualan, piutang usaha, serta penyesuaian beban pokok persediaan / HPP).
+                        </div>
+                    </div>
+                `;
+            }
+
+            journals.forEach((j, jIdx) => {
+                const jLines = j.lines || [];
+                let subDeb = 0;
+                let subKre = 0;
+                let lineRows = '';
+
+                if (jLines.length > 0) {
+                    jLines.forEach((jl, lIdx) => {
+                        const deb = Number(jl.debit || 0);
+                        const kre = Number(jl.kredit || 0);
+                        subDeb += deb;
+                        subKre += kre;
+                        totalAllDeb += deb;
+                        totalAllKre += kre;
+
+                        lineRows += `
+                            <tr>
+                                <td class="text-center font-weight-bold text-muted">${lIdx + 1}</td>
+                                <td class="font-weight-bold text-teal text-center">${escapeHtml(jl.kode_akun || '-')}</td>
+                                <td><strong>${escapeHtml(jl.nama_akun || '-')}</strong></td>
+                                <td><small class="text-muted">${escapeHtml(jl.keterangan || '-')}</small></td>
+                                <td class="text-right font-weight-bold text-success">${deb > 0 ? formatRupiah(deb) : '-'}</td>
+                                <td class="text-right font-weight-bold text-primary">${kre > 0 ? formatRupiah(kre) : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    lineRows = `<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada baris akun pada voucher jurnal ini.</td></tr>`;
+                }
+
+                const isBalanced = Math.abs(subDeb - subKre) < 0.01;
+                const balanceBadge = isBalanced
+                    ? `<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Balance</span>`
+                    : `<span class="badge badge-danger px-2 py-1"><i class="fas fa-exclamation-triangle mr-1"></i>Selisih: ${formatRupiah(Math.abs(subDeb - subKre))}</span>`;
+
+                const badgeColor = j.badge_color || 'info';
+                const labelJurnal = j.label_jurnal || ('Jurnal #' + (jIdx + 1));
+
+                journalHtml += `
+                    <div class="card shadow-sm border mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                            <div>
+                                <span class="badge badge-${badgeColor} mr-2 px-2 py-1 font-12">${escapeHtml(labelJurnal)}</span>
+                                <strong class="text-dark font-14"><i class="fas fa-receipt mr-1 text-secondary"></i>${escapeHtml(j.nomor_jurnal || '-')}</strong>
+                                <span class="text-muted ml-2 small">| Tanggal: <strong>${j.tanggal_transaksi || '-'}</strong></span>
+                            </div>
+                            <div>
+                                <span class="text-muted small mr-2">Status:</span>
+                                ${getStatusBadge(j.status || 'POSTED')}
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="px-3 py-2 bg-white border-bottom small text-secondary d-flex justify-content-between align-items-center">
+                                <div><i class="fas fa-comment-alt mr-1 text-muted"></i> Keterangan: <strong>${escapeHtml(j.keterangan || '-')}</strong></div>
+                                <div>${balanceBadge}</div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered table-hover mb-0">
+                                    <thead class="bg-light text-center">
+                                        <tr>
+                                            <th style="width: 40px;">No</th>
+                                            <th style="width: 140px;">Kode Akun</th>
+                                            <th>Nama Akun (COA)</th>
+                                            <th>Keterangan Baris</th>
+                                            <th class="text-right" style="width: 160px;">Debit (Rp)</th>
+                                            <th class="text-right" style="width: 160px;">Kredit (Rp)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${lineRows}
+                                    </tbody>
+                                    <tfoot class="bg-light font-weight-bold">
+                                        <tr>
+                                            <td colspan="4" class="text-right">Subtotal ${escapeHtml(j.nomor_jurnal || '')}:</td>
+                                            <td class="text-right text-success font-14">${formatRupiah(subDeb)}</td>
+                                            <td class="text-right text-primary font-14">${formatRupiah(subKre)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 `;
             });
-        } else {
-            $('#detail-journal-no-badge').text('Belum Terposting');
-            jRows = `<tr><td colspan="6" class="text-center text-muted py-3">Belum ada baris jurnal akuntansi untuk transaksi ini.</td></tr>`;
+
+            // Jika ada lebih dari 1 voucher jurnal, tampilkan Rekapitulasi Total Keseluruhan
+            if (journals.length > 1) {
+                const isAllBalanced = Math.abs(totalAllDeb - totalAllKre) < 0.01;
+                journalHtml += `
+                    <div class="card border-info bg-light shadow-sm p-3 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="font-weight-bold text-dark mb-1"><i class="fas fa-balance-scale mr-1 text-teal"></i> Rekapitulasi Akumulasi Jurnal Akuntansi Terkait</h6>
+                                <small class="text-muted">Total mutasi gabungan dari ${journals.length} voucher jurnal akuntansi di atas.</small>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-14">
+                                    <span class="mr-3 font-weight-bold">Total Debit: <span class="text-success">${formatRupiah(totalAllDeb)}</span></span>
+                                    <span class="font-weight-bold">Total Kredit: <span class="text-primary">${formatRupiah(totalAllKre)}</span></span>
+                                    <span class="ml-2">${isAllBalanced ? '<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Balance</span>' : '<span class="badge badge-danger px-2 py-1">Selisih</span>'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
-        $('#table-detail-journal-lines tbody').html(jRows);
-        $('#tot-journal-debit').text(formatRupiah(totDeb));
-        $('#tot-journal-kredit').text(formatRupiah(totKre));
+        $('#detail-journal-container').html(journalHtml);
+
+        // Pilih tab aktif: jika diklik dari tombol jurnal langsung, buka tab jurnal, selain itu buka tab rincian item barang
+        if (openJournalTab) {
+            $('#tab-link-detail-journal').tab('show');
+        } else {
+            $('#tab-link-detail-items').tab('show');
+        }
 
         $('#modal-detail-transaksi').modal('show');
     }
