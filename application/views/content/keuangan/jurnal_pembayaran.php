@@ -195,16 +195,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadList(searchValue) {
-        if (!schemaReady) return;
+        if (!schemaReady) {
+            $('#paymentJournalRows').html('<tr><td colspan="6" class="text-center text-muted py-4">Schema jurnal accounting belum siap.</td></tr>');
+            return;
+        }
         $.ajax({
             url: endpointBase + '/payment-list',
             type: 'POST',
             dataType: 'json',
             data: { search: searchValue || '' },
             success: function(resp) {
-                if (!resp.success) return;
+                if (!resp.success) {
+                    $('#paymentJournalRows').html('<tr><td colspan="6" class="text-center text-danger py-4">' + escapeHtml(resp.message || 'Gagal memuat jurnal pembayaran.') + '</td></tr>');
+                    return;
+                }
                 var rows = (resp.data && resp.data.rows) ? resp.data.rows : [];
                 renderRows(rows);
+            },
+            error: function(xhr) {
+                var msg = 'Gagal memuat jurnal pembayaran.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                $('#paymentJournalRows').html('<tr><td colspan="6" class="text-center text-danger py-4">' + escapeHtml(msg) + '</td></tr>');
             }
         });
     }

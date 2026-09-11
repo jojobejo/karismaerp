@@ -83,7 +83,11 @@ class Accounting_source_service
             $kelompok = (int)($item->kelompok_dagang ?? 0);
             
             $subtotal = (float)$item->subtotal_after_disc;
-            $cogs = (float)$item->qty * (float)$item->hrg_pokok;
+            $hrg_satuan = (float)($item->hrg_satuan ?? 0);
+
+            // Item dengan harga 0 (faktur harga 0 / sampel / replacement) tidak memiliki jurnal HPP (hanya kartu stok)
+            $is_zero_price = ($hrg_satuan <= 0 || $subtotal <= 0);
+            $cogs = $is_zero_price ? 0.0 : ((float)$item->qty * (float)$item->hrg_pokok);
             
             $normal_amount += $subtotal;
             $normal_cogs += $cogs;
@@ -94,27 +98,33 @@ class Accounting_source_service
             if ($kelompok === 5) {
                 $promo_value += $cogs;
                 
-                $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
-                if (!isset($groupPromoCogs[$id_cogs])) $groupPromoCogs[$id_cogs] = 0.0;
-                $groupPromoCogs[$id_cogs] += $cogs;
-                
-                $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
-                if (!isset($groupPromoInv[$id_inv])) $groupPromoInv[$id_inv] = 0.0;
-                $groupPromoInv[$id_inv] += $cogs;
+                if ($cogs > 0) {
+                    $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
+                    if (!isset($groupPromoCogs[$id_cogs])) $groupPromoCogs[$id_cogs] = 0.0;
+                    $groupPromoCogs[$id_cogs] += $cogs;
+                    
+                    $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
+                    if (!isset($groupPromoInv[$id_inv])) $groupPromoInv[$id_inv] = 0.0;
+                    $groupPromoInv[$id_inv] += $cogs;
+                }
             }
 
-            $id_rev = isset($akunMap[$item->kode_akun_penjualan]) ? $akunMap[$item->kode_akun_penjualan] : 0;
-            if (!isset($groupRev[$id_rev])) $groupRev[$id_rev] = 0.0;
-            $groupRev[$id_rev] += $subtotal;
+            if ($subtotal > 0) {
+                $id_rev = isset($akunMap[$item->kode_akun_penjualan]) ? $akunMap[$item->kode_akun_penjualan] : 0;
+                if (!isset($groupRev[$id_rev])) $groupRev[$id_rev] = 0.0;
+                $groupRev[$id_rev] += $subtotal;
+            }
 
             if ($kelompok !== 5) {
-                $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
-                if (!isset($groupCogs[$id_cogs])) $groupCogs[$id_cogs] = 0.0;
-                $groupCogs[$id_cogs] += $cogs;
-                
-                $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
-                if (!isset($groupInv[$id_inv])) $groupInv[$id_inv] = 0.0;
-                $groupInv[$id_inv] += $cogs;
+                if ($cogs > 0) {
+                    $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
+                    if (!isset($groupCogs[$id_cogs])) $groupCogs[$id_cogs] = 0.0;
+                    $groupCogs[$id_cogs] += $cogs;
+                    
+                    $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
+                    if (!isset($groupInv[$id_inv])) $groupInv[$id_inv] = 0.0;
+                    $groupInv[$id_inv] += $cogs;
+                }
             }
 
             if ($kelompok > 0) {
@@ -126,6 +136,17 @@ class Accounting_source_service
                     }
                 }
             }
+        }
+
+        // Jika faktur penjualan bernilai 0 (faktur dengan harga 0 / sampel / replacement):
+        // Tidak perlu ada jurnal penjualan, HPP, maupun promosi; hanya tercatat mutasi fisik di kartu stok
+        if ($normal_amount <= 0) {
+            return [
+                'success' => true,
+                'message' => 'Faktur penjualan dengan harga 0 berhasil diproses tanpa pencatatan jurnal akuntansi (hanya tercatat mutasi pada kartu stok).',
+                'data' => ['sales_invoice' => null, 'goods_issue' => null],
+                'errors' => [],
+            ];
         }
 
         $customerName = '';

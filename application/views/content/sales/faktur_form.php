@@ -289,6 +289,13 @@ $faktur_back_url = $is_admin_sc_context
                                             <th colspan="5" class="text-right">Grand Total Harga:</th>
                                             <th class="text-right" id="grandTotalHarga">Rp 0</th>
                                         </tr>
+                                        <tr id="zeroPriceNoteRow" style="display: none;">
+                                            <td colspan="6" class="text-right py-2 bg-light">
+                                                <small class="text-info font-weight-bold">
+                                                    <i class="fas fa-info-circle mr-1"></i>Faktur dengan harga Rp 0 tidak membentuk jurnal akuntansi/HPP (hanya tercatat mutasi pada kartu stok).
+                                                </small>
+                                            </td>
+                                        </tr>
                                     </tfoot>
                                 </table>
                             </div>
@@ -444,6 +451,12 @@ $(document).ready(function () {
         $('#totalNilaiFaktur').text('Rp ' + Math.round(totalNilaiFaktur).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
         $('#totalTax').text('Rp ' + Math.round(totalTax).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
         $('#grandTotalHarga').text('Rp ' + Math.round(grandTotalHarga).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+
+        if (grandTotalHarga <= 0) {
+            $('#zeroPriceNoteRow').show();
+        } else {
+            $('#zeroPriceNoteRow').hide();
+        }
     }
 
     function formatRupiah(value) {
