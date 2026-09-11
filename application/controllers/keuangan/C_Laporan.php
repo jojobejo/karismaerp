@@ -235,15 +235,15 @@ class C_Laporan extends CI_Controller
             $adj_query = "SELECT pb.tanggal, pb.no_referensi AS referensi, 
                                  ABS(pbd.jumlah) AS qty, 
                                  0 AS harga, 
-                                 pb.id_gudang_dari AS gudang_id, 
+                                 pb.id_gudang_dari, 
+                                 pb.id_gudang_ke,
                                  IF(pbd.jumlah > 0, 'IN', 'OUT') AS type, 
                                  'PB ' AS ref_prefix, 
-                                 b.satuan,
-                                 pb.id_gudang_ke
+                                 b.satuan
                           FROM tbkeu_penyesuaian_barang pb
                           JOIN tbkeu_penyesuaian_barang_detail pbd ON pb.id_penyesuaian = pbd.id_penyesuaian
                           JOIN tbpo_barang b ON pbd.kd_barang = b.kode_barang
-                          WHERE pbd.kd_barang = ? AND pb.status NOT IN ('BATAL', 'CANCEL')";
+                          WHERE pbd.kd_barang = ? AND pb.status = 'POSTED'";
             $params_adj = [$prod['kode_barang']];
             $adj_tx = $this->db->query($adj_query, $params_adj)->result_array();
 
@@ -251,26 +251,23 @@ class C_Laporan extends CI_Controller
             $adj_out_tx = [];
 
             foreach ($adj_tx as $atx) {
-                $gudang_dari = !empty($atx['gudang_id']) ? (int)$atx['gudang_id'] : 0;
+                $gudang_dari = !empty($atx['id_gudang_dari']) ? (int)$atx['id_gudang_dari'] : 0;
                 $gudang_ke   = !empty($atx['id_gudang_ke']) ? (int)$atx['id_gudang_ke'] : 0;
 
-                // 1. Gudang Asal
-                if (!$id_gudang || $id_gudang === 'all' || (string)$gudang_dari === (string)$id_gudang) {
+                // Tentukan gudang transaksi:
+                // Jika barang bertambah/masuk (IN), gudang penerima adalah gudang_ke (jika ada) atau gudang_dari
+                // Jika barang berkurang/keluar (OUT), gudang pengeluar adalah gudang_dari (jika ada) atau gudang_ke
+                $gudang_tx = ($atx['type'] === 'IN') 
+                    ? ($gudang_ke ?: $gudang_dari) 
+                    : ($gudang_dari ?: $gudang_ke);
+
+                $atx['gudang_id'] = $gudang_tx;
+
+                if (!$id_gudang || $id_gudang === 'all' || (string)$gudang_tx === (string)$id_gudang) {
                     if ($atx['type'] === 'IN') {
                         $adj_in_tx[] = $atx;
                     } else {
                         $adj_out_tx[] = $atx;
-                    }
-                }
-
-                // 2. Gudang Tujuan (HANYA jika transfer ke gudang berbeda dan barang keluar dari gudang asal)
-                if ($gudang_ke > 0 && $gudang_ke !== $gudang_dari && $atx['type'] === 'OUT') {
-                    if (!$id_gudang || $id_gudang === 'all' || (string)$gudang_ke === (string)$id_gudang) {
-                        $in_transfer = $atx;
-                        $in_transfer['gudang_id'] = $gudang_ke;
-                        $in_transfer['type'] = 'IN';
-                        $in_transfer['ref_prefix'] = 'TF ';
-                        $adj_in_tx[] = $in_transfer;
                     }
                 }
             }
