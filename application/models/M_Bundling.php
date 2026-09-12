@@ -1063,12 +1063,20 @@ class M_Bundling extends CI_Model
 
             // Komponen OUT (jumlah negatif)
             foreach ($assemblyDetailRecords as $dRec) {
+                $kdKomponen = $dRec['kode_barang_komponen'];
+                $akunKomponen = $this->M_PenyesuaianBarang->get_item_inventory_account($kdKomponen);
+                $idAkunBaris = $idAkunPenyesuaian;
+                // Jika komponen memiliki akun khusus persediaan (misal 14031 Barang Promosi), gunakan akun tersebut
+                if (!empty($akunKomponen['kode_akun']) && $akunKomponen['kode_akun'] === '14031') {
+                    $idAkunBaris = (int)$akunKomponen['id_akun'];
+                }
+
                 $draftDetails[] = [
-                    'kd_barang'    => $dRec['kode_barang_komponen'],
+                    'kd_barang'    => $kdKomponen,
                     'nm_barang'    => $dRec['nama_barang_komponen'],
                     'jumlah'       => -abs((float)$dRec['qty_digunakan']),
                     'satuan'       => $dRec['satuan'] ?? 'Pcs',
-                    'id_akun'      => $idAkunPenyesuaian,
+                    'id_akun'      => $idAkunBaris,
                     'no_lot'       => $dRec['no_lot'],
                     'expired_date' => $dRec['expired_date'],
                     'lot_data'     => null
@@ -1076,12 +1084,15 @@ class M_Bundling extends CI_Model
             }
 
             // Paket Jadi IN (jumlah positif)
+            $akunPaket = $this->M_PenyesuaianBarang->get_item_inventory_account($kodePaket);
+            $idAkunPaket = !empty($akunPaket['id_akun']) ? (int)$akunPaket['id_akun'] : 102; // Default 14010 (Persediaan # 1)
+
             $draftDetails[] = [
                 'kd_barang'    => $kodePaket,
                 'nm_barang'    => $namaPaket,
                 'jumlah'       => abs($qtyAssembly),
                 'satuan'       => $data['satuan'] ?? 'Box',
-                'id_akun'      => $idAkunPenyesuaian,
+                'id_akun'      => $idAkunPaket,
                 'no_lot'       => $noLotPaket,
                 'expired_date' => $expDatePaket,
                 'lot_data'     => null

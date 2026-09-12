@@ -185,21 +185,28 @@ class M_PenyesuaianBarang extends CI_Model
 
         $gudang_id = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
 
-        // Deteksi apakah transaksi merupakan perakitan bundling (ada bahan keluar negatif dan paket masuk positif)
+        // Deteksi apakah transaksi merupakan perakitan/konversi (ada bahan keluar negatif dan paket masuk positif)
         $total_biaya_komponen_keluar = 0;
         $total_qty_paket_masuk_baru = 0;
+        $has_item_in = false;
+        $has_item_out = false;
+
         foreach ($data['details'] as $dCheck) {
             $jCheck = (float)$dCheck['jumlah'];
             if ($jCheck < 0) {
+                $has_item_out = true;
                 $hCheck = $this->get_item_hpp($dCheck['kd_barang'], $gudang_id);
                 $total_biaya_komponen_keluar += (abs($jCheck) * $hCheck);
             } elseif ($jCheck > 0) {
+                $has_item_in = true;
                 $hCheck = $this->get_item_hpp($dCheck['kd_barang'], $gudang_id);
                 if ($hCheck <= 0) {
                     $total_qty_paket_masuk_baru += $jCheck;
                 }
             }
         }
+
+        $is_assembly_conversion = ($has_item_in && $has_item_out);
 
         foreach ($data['details'] as $detail) {
             $jumlah = (float)$detail['jumlah'];
@@ -216,37 +223,79 @@ class M_PenyesuaianBarang extends CI_Model
             $nominal = round(abs($jumlah) * $hpp, 2);
             if ($nominal <= 0) $nominal = round(abs($jumlah) * 1, 2);
 
-            $total_nilai_transaksi += $nominal;
+            if ($is_assembly_conversion) {
+                // Pada transaksi perakitan/bundling, total nilai transaksi dihitung dari nilai barang jadi/komponen
+                if ($jumlah > 0) {
+                    $total_nilai_transaksi += $nominal;
+                }
+            } else {
+                $total_nilai_transaksi += $nominal;
+            }
 
-            // 1. Akun yang dipilih di Form (Akun Beban / HPP / Selisih Persediaan)
+            // 1. Akun yang dipilih di Form
             $id_akun_form = (int)$detail['id_akun'];
 
             // 2. Akun Persediaan barang dari master mapping
             $akun_persediaan = $this->get_item_inventory_account($kd_barang);
             $id_akun_persediaan = (int)$akun_persediaan['id_akun'];
 
-            // Jika akun form sama dengan akun persediaan, fallback akun form ke HPP
-            if ($id_akun_form === $id_akun_persediaan) {
-                $akun_hpp = $this->get_item_cogs_account($kd_barang);
-                if (!empty($akun_hpp['id_akun'])) {
-                    $id_akun_form = (int)$akun_hpp['id_akun'];
+            if ($is_assembly_conversion) {
+                // Pola Perakitan / Bundling (Assembling):
+                // Barang MASUK (+): Persediaan Barang Jadi BERTAMBAH di DEBIT (misal 14010 - Persediaan # 1)
+                // Barang KELUAR (-): Persediaan Komponen BERKURANG di KREDIT (misal 14012 untuk barang Q, 14031 untuk promosi)
+                if ($jumlah > 0) {
+                    $target_debit_akun = $id_akun_persediaan ?: $id_akun_form;
+                    if (!isset($grouped_debits[$target_debit_akun])) $grouped_debits[$target_debit_akun] = 0;
+                    $grouped_debits[$target_debit_akun] += $nominal;
+                } else {
+                    // Jika komponen memiliki akun persediaan khusus selain persediaan umum (misal 14031 Promosi), utamakan akun khusus tersebut
+                    // Jika tidak, gunakan akun penyesuaian yang dipilih di form (misal 14012 Q Adjusment Persediaan)
+                    $target_kredit_akun = $id_akun_form;
+                    if (!empty($akun_persediaan['kode_akun']) && $akun_persediaan['kode_akun'] === '14031') {
+                        $target_kredit_akun = $id_akun_persediaan;
+                    }
+
+                    if (!isset($grouped_kredits[$target_kredit_akun])) $grouped_kredits[$target_kredit_akun] = 0;
+                    $grouped_kredits[$target_kredit_akun] += $nominal;
+                }
+            } else {
+                // Penyesuaian Satu Arah Biasa (hanya keluar atau hanya masuk)
+                if ($id_akun_form === $id_akun_persediaan) {
+                    $akun_hpp = $this->get_item_cogs_account($kd_barang);
+                    if (!empty($akun_hpp['id_akun'])) {
+                        $id_akun_form = (int)$akun_hpp['id_akun'];
+                    }
+                }
+
+                if ($jumlah < 0) {
+                    // Barang KELUAR: DEBIT Akun Beban/HPP, KREDIT Akun Persediaan
+                    if (!isset($grouped_debits[$id_akun_form])) $grouped_debits[$id_akun_form] = 0;
+                    $grouped_debits[$id_akun_form] += $nominal;
+
+                    if (!isset($grouped_kredits[$id_akun_persediaan])) $grouped_kredits[$id_akun_persediaan] = 0;
+                    $grouped_kredits[$id_akun_persediaan] += $nominal;
+                } else {
+                    // Barang MASUK: DEBIT Akun Persediaan, KREDIT Akun Beban/HPP
+                    if (!isset($grouped_debits[$id_akun_persediaan])) $grouped_debits[$id_akun_persediaan] = 0;
+                    $grouped_debits[$id_akun_persediaan] += $nominal;
+
+                    if (!isset($grouped_kredits[$id_akun_form])) $grouped_kredits[$id_akun_form] = 0;
+                    $grouped_kredits[$id_akun_form] += $nominal;
                 }
             }
+        }
 
-            if ($jumlah < 0) {
-                // Barang KELUAR: DEBIT Akun Beban/HPP, KREDIT Akun Persediaan
-                if (!isset($grouped_debits[$id_akun_form])) $grouped_debits[$id_akun_form] = 0;
-                $grouped_debits[$id_akun_form] += $nominal;
-
-                if (!isset($grouped_kredits[$id_akun_persediaan])) $grouped_kredits[$id_akun_persediaan] = 0;
-                $grouped_kredits[$id_akun_persediaan] += $nominal;
-            } else {
-                // Barang MASUK: DEBIT Akun Persediaan, KREDIT Akun Beban/HPP
-                if (!isset($grouped_debits[$id_akun_persediaan])) $grouped_debits[$id_akun_persediaan] = 0;
-                $grouped_debits[$id_akun_persediaan] += $nominal;
-
-                if (!isset($grouped_kredits[$id_akun_form])) $grouped_kredits[$id_akun_form] = 0;
-                $grouped_kredits[$id_akun_form] += $nominal;
+        // Netting otomatis jika suatu akun muncul di Debit dan Kredit agar tidak terjadi duplikasi nominal
+        foreach ($grouped_debits as $id_akun => $val_d) {
+            if (isset($grouped_kredits[$id_akun]) && $grouped_kredits[$id_akun] > 0) {
+                $val_k = $grouped_kredits[$id_akun];
+                if ($val_d >= $val_k) {
+                    $grouped_debits[$id_akun] = round($val_d - $val_k, 2);
+                    $grouped_kredits[$id_akun] = 0;
+                } else {
+                    $grouped_kredits[$id_akun] = round($val_k - $val_d, 2);
+                    $grouped_debits[$id_akun] = 0;
+                }
             }
         }
 
