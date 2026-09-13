@@ -249,6 +249,50 @@ class M_Bundling extends CI_Model
                 $this->db->query("ALTER TABLE `tberp_bundling_assembly` ADD COLUMN `id_gudang_asal` INT(11) DEFAULT 2 AFTER `id_request`");
             }
         }
+
+        // Pastikan kolom konfigurasi kemasan innerbox & biaya kemasan ada di level header tberp_bundling_formula
+        if ($this->db->table_exists('tberp_bundling_formula')) {
+            if (!$this->db->field_exists('is_innerbox', 'tberp_bundling_formula')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_formula` 
+                    ADD COLUMN `is_innerbox` TINYINT(1) NOT NULL DEFAULT 0 AFTER `satuan_paket`,
+                    ADD COLUMN `jumlah_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `is_innerbox`,
+                    ADD COLUMN `satuan_innerbox` VARCHAR(50) DEFAULT 'Innerbox' AFTER `jumlah_innerbox`");
+            }
+            if (!$this->db->field_exists('biaya_innerbox', 'tberp_bundling_formula')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_formula` 
+                    ADD COLUMN `biaya_innerbox` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `satuan_innerbox`,
+                    ADD COLUMN `biaya_outerbox` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `biaya_innerbox`,
+                    ADD COLUMN `biaya_kemasan_lain` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `biaya_outerbox`,
+                    ADD COLUMN `keterangan_biaya_kemasan` VARCHAR(255) DEFAULT NULL AFTER `biaya_kemasan_lain`");
+            }
+            if (!$this->db->field_exists('rincian_biaya_kemasan', 'tberp_bundling_formula')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_formula` ADD COLUMN `rincian_biaya_kemasan` TEXT DEFAULT NULL AFTER `keterangan_biaya_kemasan`");
+            }
+        }
+
+        // Pastikan kolom konfigurasi kemasan innerbox & biaya kemasan ada di level header tberp_bundling_request
+        if ($this->db->table_exists('tberp_bundling_request')) {
+            if (!$this->db->field_exists('is_innerbox', 'tberp_bundling_request')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request` 
+                    ADD COLUMN `is_innerbox` TINYINT(1) NOT NULL DEFAULT 0 AFTER `satuan`,
+                    ADD COLUMN `jumlah_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `is_innerbox`,
+                    ADD COLUMN `total_innerbox` DECIMAL(15,3) NOT NULL DEFAULT 0.000 AFTER `jumlah_innerbox`,
+                    ADD COLUMN `satuan_innerbox` VARCHAR(50) DEFAULT 'Innerbox' AFTER `total_innerbox`");
+            }
+            if (!$this->db->field_exists('biaya_innerbox', 'tberp_bundling_request')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request` 
+                    ADD COLUMN `biaya_innerbox` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `satuan_innerbox`,
+                    ADD COLUMN `biaya_outerbox` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `biaya_innerbox`,
+                    ADD COLUMN `biaya_kemasan_lain` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `biaya_outerbox`,
+                    ADD COLUMN `keterangan_biaya_kemasan` VARCHAR(255) DEFAULT NULL AFTER `biaya_kemasan_lain`,
+                    ADD COLUMN `total_biaya_kemasan_per_paket` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `keterangan_biaya_kemasan`,
+                    ADD COLUMN `total_biaya_kemasan_keseluruhan` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `total_biaya_kemasan_per_paket`,
+                    ADD COLUMN `estimasi_hpp_bahan_per_paket` DECIMAL(18,2) NOT NULL DEFAULT 0.00 AFTER `total_biaya_kemasan_keseluruhan`");
+            }
+            if (!$this->db->field_exists('rincian_biaya_kemasan', 'tberp_bundling_request')) {
+                $this->db->query("ALTER TABLE `tberp_bundling_request` ADD COLUMN `rincian_biaya_kemasan` TEXT DEFAULT NULL AFTER `keterangan_biaya_kemasan`");
+            }
+        }
     }
 
     // =========================================================================
@@ -272,12 +316,75 @@ class M_Bundling extends CI_Model
         return $this->db->get()->result_array();
     }
 
+    /**
+     * Mem-parsing daftar item biaya kemasan dinamis dari JSON atau fallback ke nilai kolom statis
+     */
+    public function parse_packaging_items($row)
+    {
+        $items = [];
+        if (!empty($row['rincian_biaya_kemasan'])) {
+            $decoded = json_decode($row['rincian_biaya_kemasan'], true);
+            if (is_array($decoded) && !empty($decoded)) {
+                foreach ($decoded as $it) {
+                    $nama = trim($it['nama'] ?? '');
+                    $nominal = (float)str_replace(',', '', $it['nominal'] ?? 0);
+                    if ($nama !== '' || $nominal > 0) {
+                        $items[] = [
+                            'nama'    => $nama !== '' ? $nama : 'Biaya Kemasan / Printilan',
+                            'nominal' => $nominal
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Fallback jika JSON kosong tetapi ada data statis lama
+        if (empty($items)) {
+            $bInner = (float)($row['biaya_innerbox'] ?? 0);
+            $bOuter = (float)($row['biaya_outerbox'] ?? 0);
+            $bLain  = (float)($row['biaya_kemasan_lain'] ?? 0);
+            $isInbox = !empty($row['is_innerbox']);
+            $jmlInbox = (float)($row['jumlah_innerbox'] ?? 0);
+            $subInner = ($isInbox && $jmlInbox > 0) ? ($jmlInbox * $bInner) : 0.0;
+
+            if ($subInner > 0) {
+                $items[] = [
+                    'nama'    => 'Kardus Innerbox (' . (int)$jmlInbox . ' ' . ($row['satuan_innerbox'] ?? 'Innerbox') . ')',
+                    'nominal' => $subInner
+                ];
+            }
+            if ($bOuter > 0) {
+                $items[] = [
+                    'nama'    => 'Kardus Outer (Master Box)',
+                    'nominal' => $bOuter
+                ];
+            }
+            if ($bLain > 0) {
+                $items[] = [
+                    'nama'    => !empty($row['keterangan_biaya_kemasan']) ? $row['keterangan_biaya_kemasan'] : 'Stiker Hologram & Printilan',
+                    'nominal' => $bLain
+                ];
+            }
+        }
+
+        // Jika benar-benar kosong, sediakan 1 baris inputan default
+        if (empty($items)) {
+            $items[] = [
+                'nama'    => '',
+                'nominal' => 0.0
+            ];
+        }
+
+        return $items;
+    }
+
     public function get_formula_by_id($id_formula)
     {
         $this->ensure_bundling_schema();
         $formula = $this->db->where('id_formula', $id_formula)->get('tberp_bundling_formula')->row_array();
         if ($formula) {
             $formula['details'] = $this->db->where('id_formula', $id_formula)->get('tberp_bundling_formula_detail')->result_array();
+            $formula['kemasan_items'] = $this->parse_packaging_items($formula);
         }
         return $formula;
     }
@@ -288,6 +395,7 @@ class M_Bundling extends CI_Model
         $formula = $this->db->where('kode_paket', $kode_paket)->get('tberp_bundling_formula')->row_array();
         if ($formula) {
             $formula['details'] = $this->db->where('id_formula', $formula['id_formula'])->get('tberp_bundling_formula_detail')->result_array();
+            $formula['kemasan_items'] = $this->parse_packaging_items($formula);
         }
         return $formula;
     }
@@ -310,24 +418,70 @@ class M_Bundling extends CI_Model
             }
         }
 
+        $isInnerboxFormula = !empty($data['is_innerbox']) ? 1 : 0;
+        $jmlInnerboxFormula = $isInnerboxFormula ? (float)($data['jumlah_innerbox'] ?? 1) : 0.000;
+        $satInnerboxFormula = $isInnerboxFormula ? (!empty($data['satuan_innerbox']) ? trim($data['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
+        // Proses rincian item biaya kemasan dinamis
+        $rawKemasan = $data['kemasan_items'] ?? $data['rincian_biaya_kemasan'] ?? [];
+        if (is_string($rawKemasan)) {
+            $rawKemasan = json_decode($rawKemasan, true) ?: [];
+        }
+
+        $validKemasan = [];
+        $totalKemasanFml = 0.0;
+        $summaryKemasan = [];
+
+        if (is_array($rawKemasan)) {
+            foreach ($rawKemasan as $k) {
+                $nm = trim($k['nama'] ?? '');
+                $nom = (float)str_replace(',', '', $k['nominal'] ?? 0);
+                if ($nm !== '' || $nom > 0) {
+                    if ($nm === '') $nm = 'Biaya Kemasan';
+                    $validKemasan[] = ['nama' => $nm, 'nominal' => $nom];
+                    $totalKemasanFml += $nom;
+                    $summaryKemasan[] = $nm . ' (Rp ' . number_format($nom, 0, ',', '.') . ')';
+                }
+            }
+        }
+
+        // Fallback jika tidak ada kemasan_items tetapi ada field lama
+        $biayaInnerbox = (float)($data['biaya_innerbox'] ?? 0);
+        $biayaOuterbox = (float)($data['biaya_outerbox'] ?? 0);
+        $biayaKemasanLain = (float)($data['biaya_kemasan_lain'] ?? 0);
+        if (empty($validKemasan) && ($biayaInnerbox > 0 || $biayaOuterbox > 0 || $biayaKemasanLain > 0)) {
+            $subInner = $isInnerboxFormula ? ($jmlInnerboxFormula * $biayaInnerbox) : 0.0;
+            if ($subInner > 0) $validKemasan[] = ['nama' => 'Kardus Innerbox', 'nominal' => $subInner];
+            if ($biayaOuterbox > 0) $validKemasan[] = ['nama' => 'Kardus Outer (Master Box)', 'nominal' => $biayaOuterbox];
+            if ($biayaKemasanLain > 0) $validKemasan[] = ['nama' => !empty($data['keterangan_biaya_kemasan']) ? $data['keterangan_biaya_kemasan'] : 'Printilan / Stiker Hologram', 'nominal' => $biayaKemasanLain];
+            $totalKemasanFml = $subInner + $biayaOuterbox + $biayaKemasanLain;
+        }
+
+        $rincianKemasanJson = !empty($validKemasan) ? json_encode($validKemasan, JSON_UNESCAPED_UNICODE) : null;
+        $ketBiayaKemasan = !empty($summaryKemasan) ? implode(', ', $summaryKemasan) : (!empty($data['keterangan_biaya_kemasan']) ? trim($data['keterangan_biaya_kemasan']) : null);
+
+        $formulaHeader = [
+            'kode_paket'               => $kodePaket,
+            'nama_paket'               => $data['nama_paket'],
+            'satuan_paket'             => $data['satuan_paket'] ?? 'Box',
+            'is_innerbox'              => $isInnerboxFormula,
+            'jumlah_innerbox'          => $jmlInnerboxFormula,
+            'satuan_innerbox'          => $satInnerboxFormula,
+            'biaya_innerbox'           => $biayaInnerbox,
+            'biaya_outerbox'           => $biayaOuterbox,
+            'biaya_kemasan_lain'       => $biayaKemasanLain,
+            'keterangan_biaya_kemasan' => $ketBiayaKemasan,
+            'rincian_biaya_kemasan'    => $rincianKemasanJson,
+            'keterangan'               => $data['keterangan'] ?? null,
+            'is_active'                => isset($data['is_active']) ? (int)$data['is_active'] : 1
+        ];
+
         if ($id > 0) {
-            $this->db->where('id_formula', $id)->update('tberp_bundling_formula', [
-                'kode_paket'   => $kodePaket,
-                'nama_paket'   => $data['nama_paket'],
-                'satuan_paket' => $data['satuan_paket'] ?? 'Box',
-                'keterangan'   => $data['keterangan'] ?? null,
-                'is_active'    => isset($data['is_active']) ? (int)$data['is_active'] : 1
-            ]);
+            $this->db->where('id_formula', $id)->update('tberp_bundling_formula', $formulaHeader);
             $this->db->where('id_formula', $id)->delete('tberp_bundling_formula_detail');
         } else {
-            $this->db->insert('tberp_bundling_formula', [
-                'kode_paket'   => $kodePaket,
-                'nama_paket'   => $data['nama_paket'],
-                'satuan_paket' => $data['satuan_paket'] ?? 'Box',
-                'keterangan'   => $data['keterangan'] ?? null,
-                'is_active'    => 1,
-                'created_at'   => date('Y-m-d H:i:s')
-            ]);
+            $formulaHeader['created_at'] = date('Y-m-d H:i:s');
+            $this->db->insert('tberp_bundling_formula', $formulaHeader);
             $id = $this->db->insert_id();
         }
 
@@ -336,15 +490,20 @@ class M_Bundling extends CI_Model
             foreach ($details as $d) {
                 if (empty($d['kode_barang_komponen'])) continue;
 
-                $isInnerbox = !empty($d['is_innerbox']) ? 1 : 0;
-                $qtyInnerbox = $isInnerbox ? (float)($d['qty_innerbox'] ?? 1) : 0.000;
-                $isiPerInnerbox = $isInnerbox ? (float)($d['isi_per_innerbox'] ?? 0) : 0.000;
-                $satuanInnerbox = $isInnerbox ? (!empty($d['satuan_innerbox']) ? trim($d['satuan_innerbox']) : 'Innerbox') : null;
-
-                $qtyKomponen = (float)($d['qty_komponen'] ?? 1);
-                // Jika pakai innerbox dan keduanya > 0, hitung otomatis total fisik
-                if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
-                    $qtyKomponen = $qtyInnerbox * $isiPerInnerbox;
+                if ($isInnerboxFormula) {
+                    $isiPerInnerbox = (float)($d['isi_per_innerbox'] ?? 0);
+                    if ($isiPerInnerbox <= 0 && !empty($d['qty_komponen'])) {
+                        // Fallback jika dikirim qty_komponen langsung
+                        $isiPerInnerbox = $jmlInnerboxFormula > 0 ? ((float)$d['qty_komponen'] / $jmlInnerboxFormula) : (float)$d['qty_komponen'];
+                    }
+                    $qtyKomponen = $jmlInnerboxFormula * $isiPerInnerbox;
+                    $qtyInnerbox = $jmlInnerboxFormula;
+                    $satInnerbox = $satInnerboxFormula;
+                } else {
+                    $isiPerInnerbox = 0.000;
+                    $qtyInnerbox = 0.000;
+                    $qtyKomponen = (float)($d['qty_komponen'] ?? 1);
+                    $satInnerbox = null;
                 }
 
                 $insertDetails[] = [
@@ -353,10 +512,10 @@ class M_Bundling extends CI_Model
                     'nama_barang_komponen' => $d['nama_barang_komponen'] ?? '',
                     'qty_komponen'         => $qtyKomponen,
                     'satuan'               => $d['satuan'] ?? 'Pcs',
-                    'is_innerbox'          => $isInnerbox,
+                    'is_innerbox'          => $isInnerboxFormula,
                     'qty_innerbox'         => $qtyInnerbox,
                     'isi_per_innerbox'     => $isiPerInnerbox,
-                    'satuan_innerbox'      => $satuanInnerbox
+                    'satuan_innerbox'      => $satInnerbox
                 ];
             }
             if (!empty($insertDetails)) {
@@ -456,25 +615,45 @@ class M_Bundling extends CI_Model
             // Ambil juga histori assembly yang telah dibuat berdasarkan request ini
             $header['assemblies'] = $this->db->where('id_request', $id_request)->order_by('id_assembly', 'DESC')->get('tberp_bundling_assembly')->result_array();
 
-            // Hitung estimasi HPP per paket dan total modal dari rincian komponen
+            // Hitung estimasi HPP per paket dan total modal dari rincian komponen menggunakan metode LIFO (Last In, First Out)
             $estHppPerPaket = 0.0;
+            $estTotalModal = 0.0;
+            $qtyReq = (float)$header['qty_request'];
+
             foreach ($header['details'] as $idxDet => $det) {
-                $hpp = !empty($det['hpp_satuan']) && (float)$det['hpp_satuan'] > 0
-                    ? (float)$det['hpp_satuan']
-                    : (float)$this->get_item_average_hpp($det['kode_barang_komponen'], $header['id_gudang_asal'], $det['nama_barang_komponen']);
-                
-                $subtotalHpp = (float)$det['qty_per_paket'] * $hpp;
+                $kd = $det['kode_barang_komponen'];
+                $totalButuh = (float)$det['qty_total_kebutuhan'];
+
+                $lifo = $this->calculate_item_lifo_cost($kd, $totalButuh, $header['id_gudang_asal'], $det['nama_barang_komponen']);
+                $hpp = $lifo['hpp_satuan'];
+                $modalTotalItem = $lifo['total_modal'];
+                $subtotalHpp = ($qtyReq > 0) ? ($modalTotalItem / $qtyReq) : ((float)$det['qty_per_paket'] * $hpp);
+
                 $header['details'][$idxDet]['hpp_satuan'] = $hpp;
                 $header['details'][$idxDet]['subtotal_hpp'] = $subtotalHpp;
+                $header['details'][$idxDet]['total_modal_kebutuhan'] = $modalTotalItem;
+                $header['details'][$idxDet]['lifo_breakdown'] = $lifo['breakdown'];
+
                 $estHppPerPaket += $subtotalHpp;
+                $estTotalModal += $modalTotalItem;
             }
 
-            if (empty($header['estimasi_hpp_per_paket']) || (float)$header['estimasi_hpp_per_paket'] <= 0) {
-                $header['estimasi_hpp_per_paket'] = $estHppPerPaket;
+            $header['estimasi_hpp_bahan_per_paket'] = $estHppPerPaket;
+
+            // Parsing dan hitung biaya kemasan serta printilan dinamis
+            $header['kemasan_items'] = $this->parse_packaging_items($header);
+            $totalBiayaKemasanPerPaket = 0.0;
+            foreach ($header['kemasan_items'] as $kItem) {
+                $totalBiayaKemasanPerPaket += (float)($kItem['nominal'] ?? 0);
             }
-            if (empty($header['estimasi_total_modal']) || (float)$header['estimasi_total_modal'] <= 0) {
-                $header['estimasi_total_modal'] = (float)$header['qty_request'] * (float)$header['estimasi_hpp_per_paket'];
-            }
+            $totalBiayaKemasanKeseluruhan = $totalBiayaKemasanPerPaket * $qtyReq;
+
+            $header['total_biaya_kemasan_per_paket'] = $totalBiayaKemasanPerPaket;
+            $header['total_biaya_kemasan_keseluruhan'] = $totalBiayaKemasanKeseluruhan;
+
+            // Estimasi HPP Lengkap per 1 Paket = HPP Bahan Baku LIFO + Total Biaya Kemasan & Printilan
+            $header['estimasi_hpp_per_paket'] = $estHppPerPaket + $totalBiayaKemasanPerPaket;
+            $header['estimasi_total_modal'] = $estTotalModal + $totalBiayaKemasanKeseluruhan;
         }
         return $header;
     }
@@ -511,22 +690,83 @@ class M_Bundling extends CI_Model
         $idGudangAsal = !empty($data['id_gudang_asal']) ? (int)$data['id_gudang_asal'] : 2; // Gudang Induk default
         $idGudangTujuan = !empty($data['id_gudang_tujuan']) ? (int)$data['id_gudang_tujuan'] : 12; // Gudang Bundling default
 
+        $isInnerboxReq = !empty($data['is_innerbox']) ? 1 : 0;
+        $jmlInnerboxReq = $isInnerboxReq ? (float)($data['jumlah_innerbox'] ?? 1) : 0.000;
+        $totalInnerboxReq = $isInnerboxReq ? ($qtyRequest * $jmlInnerboxReq) : 0.000;
+        $satInnerboxReq = $isInnerboxReq ? (!empty($data['satuan_innerbox']) ? trim($data['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
+        $biayaInnerbox = (float)str_replace(',', '', $data['biaya_innerbox'] ?? 0);
+        $biayaOuterbox = (float)str_replace(',', '', $data['biaya_outerbox'] ?? 0);
+        $biayaKemasanLain = (float)str_replace(',', '', $data['biaya_kemasan_lain'] ?? 0);
+        $ketBiayaKemasan = !empty($data['keterangan_biaya_kemasan']) ? trim($data['keterangan_biaya_kemasan']) : null;
+
+        // Proses rincian item biaya kemasan dinamis
+        $rawKemasan = $data['kemasan_items'] ?? $data['rincian_biaya_kemasan'] ?? [];
+        if (is_string($rawKemasan)) {
+            $rawKemasan = json_decode($rawKemasan, true) ?: [];
+        }
+
+        $validKemasan = [];
+        $totalBiayaKemasanPerPaket = 0.0;
+        $summaryKemasan = [];
+
+        if (is_array($rawKemasan)) {
+            foreach ($rawKemasan as $k) {
+                $nm = trim($k['nama'] ?? '');
+                $nom = (float)str_replace(',', '', $k['nominal'] ?? 0);
+                if ($nm !== '' || $nom > 0) {
+                    if ($nm === '') $nm = 'Biaya Kemasan';
+                    $validKemasan[] = ['nama' => $nm, 'nominal' => $nom];
+                    $totalBiayaKemasanPerPaket += $nom;
+                    $summaryKemasan[] = $nm . ' (Rp ' . number_format($nom, 0, ',', '.') . ')';
+                }
+            }
+        }
+
+        // Fallback jika tidak ada kemasan_items tetapi ada input kolom kemasan lama
+        if (empty($validKemasan) && ($biayaInnerbox > 0 || $biayaOuterbox > 0 || $biayaKemasanLain > 0)) {
+            $biayaInnerboxPerPaket = $isInnerboxReq ? ($jmlInnerboxReq * $biayaInnerbox) : 0.0;
+            if ($biayaInnerboxPerPaket > 0) $validKemasan[] = ['nama' => 'Kardus Innerbox', 'nominal' => $biayaInnerboxPerPaket];
+            if ($biayaOuterbox > 0) $validKemasan[] = ['nama' => 'Kardus Outer (Master Box)', 'nominal' => $biayaOuterbox];
+            if ($biayaKemasanLain > 0) $validKemasan[] = ['nama' => !empty($ketBiayaKemasan) ? $ketBiayaKemasan : 'Printilan / Stiker Hologram', 'nominal' => $biayaKemasanLain];
+            $totalBiayaKemasanPerPaket = $biayaInnerboxPerPaket + $biayaOuterbox + $biayaKemasanLain;
+        }
+
+        $rincianKemasanJson = !empty($validKemasan) ? json_encode($validKemasan, JSON_UNESCAPED_UNICODE) : null;
+        if (!empty($summaryKemasan)) {
+            $ketBiayaKemasan = implode(', ', $summaryKemasan);
+        }
+
+        $totalBiayaKemasanKeseluruhan = $totalBiayaKemasanPerPaket * $qtyRequest;
+
         $header = [
-            'no_request'             => $noRequest,
-            'tanggal_request'        => !empty($data['tanggal_request']) ? $data['tanggal_request'] : date('Y-m-d'),
-            'kode_paket'             => $kodePaket,
-            'nama_paket'             => trim($data['nama_paket']),
-            'id_gudang_tujuan'       => $idGudangTujuan,
-            'id_gudang_asal'         => $idGudangAsal,
-            'qty_request'            => $qtyRequest,
-            'qty_realisasi'          => 0,
-            'satuan'                 => !empty($data['satuan']) ? $data['satuan'] : 'Box',
-            'estimasi_hpp_per_paket' => 0.00,
-            'estimasi_total_modal'   => 0.00,
-            'status'                 => 'MENUNGGU_PROSES',
-            'user_request'           => $user,
-            'keterangan'             => $data['keterangan'] ?? null,
-            'created_at'             => date('Y-m-d H:i:s')
+            'no_request'                      => $noRequest,
+            'tanggal_request'                 => !empty($data['tanggal_request']) ? $data['tanggal_request'] : date('Y-m-d'),
+            'kode_paket'                      => $kodePaket,
+            'nama_paket'                      => trim($data['nama_paket']),
+            'id_gudang_tujuan'                => $idGudangTujuan,
+            'id_gudang_asal'                  => $idGudangAsal,
+            'qty_request'                     => $qtyRequest,
+            'qty_realisasi'                   => 0,
+            'satuan'                          => !empty($data['satuan']) ? $data['satuan'] : 'Box',
+            'is_innerbox'                     => $isInnerboxReq,
+            'jumlah_innerbox'                 => $jmlInnerboxReq,
+            'total_innerbox'                  => $totalInnerboxReq,
+            'satuan_innerbox'                 => $satInnerboxReq,
+            'biaya_innerbox'                  => $biayaInnerbox,
+            'biaya_outerbox'                  => $biayaOuterbox,
+            'biaya_kemasan_lain'              => $biayaKemasanLain,
+            'keterangan_biaya_kemasan'        => $ketBiayaKemasan,
+            'rincian_biaya_kemasan'           => $rincianKemasanJson,
+            'total_biaya_kemasan_per_paket'   => $totalBiayaKemasanPerPaket,
+            'total_biaya_kemasan_keseluruhan' => $totalBiayaKemasanKeseluruhan,
+            'estimasi_hpp_bahan_per_paket'    => 0.00,
+            'estimasi_hpp_per_paket'          => 0.00,
+            'estimasi_total_modal'            => 0.00,
+            'status'                          => 'MENUNGGU_PROSES',
+            'user_request'                    => $user,
+            'keterangan'                      => $data['keterangan'] ?? null,
+            'created_at'                      => date('Y-m-d H:i:s')
         ];
         $this->db->insert('tberp_bundling_request', $header);
         $requestId = $this->db->insert_id();
@@ -537,21 +777,31 @@ class M_Bundling extends CI_Model
             $kdBrg = trim($d['kode_barang_komponen'] ?? '');
             if ($kdBrg === '') continue;
 
-            $isInnerbox = !empty($d['is_innerbox']) ? 1 : 0;
-            $qtyInnerbox = $isInnerbox ? (float)($d['qty_innerbox'] ?? 1) : 0.000;
-            $isiPerInnerbox = $isInnerbox ? (float)($d['isi_per_innerbox'] ?? 0) : 0.000;
-            $satuanInnerbox = $isInnerbox ? (!empty($d['satuan_innerbox']) ? trim($d['satuan_innerbox']) : 'Innerbox') : null;
-
-            $qtyPerPaket = (float)($d['qty_per_paket'] ?? 1);
-            if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
+            if ($isInnerboxReq) {
+                $qtyInnerbox = $jmlInnerboxReq;
+                $isiPerInnerbox = (float)($d['isi_per_innerbox'] ?? 0);
+                if ($isiPerInnerbox <= 0 && !empty($d['qty_per_paket'])) {
+                    $isiPerInnerbox = $qtyInnerbox > 0 ? ((float)$d['qty_per_paket'] / $qtyInnerbox) : (float)$d['qty_per_paket'];
+                }
                 $qtyPerPaket = $qtyInnerbox * $isiPerInnerbox;
+                $totalInnerboxKebutuhan = $qtyRequest * $qtyInnerbox;
+                $satuanInnerbox = $satInnerboxReq;
+            } else {
+                $qtyInnerbox = 0.000;
+                $isiPerInnerbox = 0.000;
+                $qtyPerPaket = (float)($d['qty_per_paket'] ?? 1);
+                $totalInnerboxKebutuhan = 0.000;
+                $satuanInnerbox = null;
             }
 
             $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis total fisik
-            $totalInnerbox = $isInnerbox ? ($qtyRequest * $qtyInnerbox) : 0.000; // Total box kemasan
 
-            $hppSatuan = (float)$this->get_item_average_hpp($kdBrg, $idGudangAsal, $d['nama_barang_komponen'] ?? '');
-            $subtotalHpp = $qtyPerPaket * $hppSatuan;
+            // Hitung HPP dan estimasi modal menggunakan metode LIFO (Last In First Out)
+            $lifo = $this->calculate_item_lifo_cost($kdBrg, $totalKebutuhan, $idGudangAsal, $d['nama_barang_komponen'] ?? '');
+            $hppSatuan = $lifo['hpp_satuan'];
+            $modalTotalBarang = $lifo['total_modal'];
+            $subtotalHpp = ($qtyRequest > 0) ? ($modalTotalBarang / $qtyRequest) : ($qtyPerPaket * $hppSatuan);
+
             $totalEstHppPaket += $subtotalHpp;
 
             $detailRows[] = [
@@ -562,11 +812,11 @@ class M_Bundling extends CI_Model
                 'qty_total_kebutuhan'      => $totalKebutuhan,
                 'qty_terpenuhi'            => 0,
                 'satuan'                   => $d['satuan'] ?? 'Pcs',
-                'is_innerbox'              => $isInnerbox,
+                'is_innerbox'              => $isInnerboxReq,
                 'qty_innerbox'             => $qtyInnerbox,
                 'isi_per_innerbox'         => $isiPerInnerbox,
                 'satuan_innerbox'          => $satuanInnerbox,
-                'total_innerbox_kebutuhan' => $totalInnerbox,
+                'total_innerbox_kebutuhan' => $totalInnerboxKebutuhan,
                 'hpp_satuan'               => $hppSatuan,
                 'subtotal_hpp'             => $subtotalHpp
             ];
@@ -579,10 +829,14 @@ class M_Bundling extends CI_Model
 
         $this->db->insert_batch('tberp_bundling_request_detail', $detailRows);
 
-        // Perbarui estimasi HPP per paket dan total modal pada header request
+        // Perbarui estimasi HPP lengkap per paket (Bahan Baku LIFO + Kemasan & Printilan)
+        $estimasiHppPerPaketLengkap = $totalEstHppPaket + $totalBiayaKemasanPerPaket;
+        $estimasiTotalModalLengkap = $estimasiHppPerPaketLengkap * $qtyRequest;
+
         $this->db->where('id_request', $requestId)->update('tberp_bundling_request', [
-            'estimasi_hpp_per_paket' => $totalEstHppPaket,
-            'estimasi_total_modal'   => $totalEstHppPaket * $qtyRequest
+            'estimasi_hpp_bahan_per_paket' => $totalEstHppPaket,
+            'estimasi_hpp_per_paket'       => $estimasiHppPerPaketLengkap,
+            'estimasi_total_modal'         => $estimasiTotalModalLengkap
         ]);
 
         if ($this->db->trans_status() === FALSE) {
@@ -596,6 +850,100 @@ class M_Bundling extends CI_Model
             'id_request' => $requestId,
             'no_request' => $noRequest,
             'msg'        => 'Request Paket Bundling ' . $noRequest . ' berhasil dibuat'
+        ];
+    }
+
+    /**
+     * Memperbarui biaya kemasan (innerbox, outerbox, hologram/printilan) pada request bundling
+     */
+    public function update_request_packaging_cost($id_request, $data)
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->db->where('id_request', $id_request)->get('tberp_bundling_request')->row_array();
+        if (!$req) {
+            return ['status' => false, 'msg' => 'Data request bundling tidak ditemukan'];
+        }
+
+        $qtyReq = (float)$req['qty_request'];
+        $isInnerbox = !empty($req['is_innerbox']) ? 1 : 0;
+        $jmlInnerbox = (float)($req['jumlah_innerbox'] ?? 0);
+
+        // Proses rincian item biaya kemasan dinamis
+        $rawKemasan = $data['kemasan_items'] ?? $data['items'] ?? $data['rincian_biaya_kemasan'] ?? [];
+        if (is_string($rawKemasan)) {
+            $rawKemasan = json_decode($rawKemasan, true) ?: [];
+        }
+
+        $validKemasan = [];
+        $totalBiayaKemasanPerPaket = 0.0;
+        $summaryKemasan = [];
+
+        if (is_array($rawKemasan)) {
+            foreach ($rawKemasan as $k) {
+                $nm = trim($k['nama'] ?? '');
+                $nom = (float)str_replace(',', '', $k['nominal'] ?? 0);
+                if ($nm !== '' || $nom > 0) {
+                    if ($nm === '') $nm = 'Biaya Kemasan';
+                    $validKemasan[] = ['nama' => $nm, 'nominal' => $nom];
+                    $totalBiayaKemasanPerPaket += $nom;
+                    $summaryKemasan[] = $nm . ' (Rp ' . number_format($nom, 0, ',', '.') . ')';
+                }
+            }
+        }
+
+        // Fallback jika tidak ada kemasan_items tetapi ada input kolom kemasan lama
+        $biayaInnerbox = (float)str_replace(',', '', $data['biaya_innerbox'] ?? 0);
+        $biayaOuterbox = (float)str_replace(',', '', $data['biaya_outerbox'] ?? 0);
+        $biayaKemasanLain = (float)str_replace(',', '', $data['biaya_kemasan_lain'] ?? 0);
+        $ketBiayaKemasan = isset($data['keterangan_biaya_kemasan']) ? trim($data['keterangan_biaya_kemasan']) : '';
+
+        if (empty($validKemasan) && ($biayaInnerbox > 0 || $biayaOuterbox > 0 || $biayaKemasanLain > 0)) {
+            $biayaInnerboxPerPaket = $isInnerbox ? ($jmlInnerbox * $biayaInnerbox) : 0.0;
+            if ($biayaInnerboxPerPaket > 0) $validKemasan[] = ['nama' => 'Kardus Innerbox', 'nominal' => $biayaInnerboxPerPaket];
+            if ($biayaOuterbox > 0) $validKemasan[] = ['nama' => 'Kardus Outer (Master Box)', 'nominal' => $biayaOuterbox];
+            if ($biayaKemasanLain > 0) $validKemasan[] = ['nama' => !empty($ketBiayaKemasan) ? $ketBiayaKemasan : 'Printilan / Stiker Hologram', 'nominal' => $biayaKemasanLain];
+            $totalBiayaKemasanPerPaket = $biayaInnerboxPerPaket + $biayaOuterbox + $biayaKemasanLain;
+        }
+
+        $rincianKemasanJson = !empty($validKemasan) ? json_encode($validKemasan, JSON_UNESCAPED_UNICODE) : null;
+        if (!empty($summaryKemasan)) {
+            $ketBiayaKemasan = implode(', ', $summaryKemasan);
+        }
+
+        $totalBiayaKemasanKeseluruhan = $totalBiayaKemasanPerPaket * $qtyReq;
+
+        // Ambil kalkulasi HPP bahan baku terkini (LIFO)
+        $reqFull = $this->get_request_by_id($id_request);
+        $estHppBahan = (float)($reqFull['estimasi_hpp_bahan_per_paket'] ?? 0);
+
+        $totalHppPerPaketLengkap = $estHppBahan + $totalBiayaKemasanPerPaket;
+        $totalModalKeseluruhan = $totalHppPerPaketLengkap * $qtyReq;
+
+        $updateData = [
+            'biaya_innerbox'                  => $biayaInnerbox,
+            'biaya_outerbox'                  => $biayaOuterbox,
+            'biaya_kemasan_lain'              => $biayaKemasanLain,
+            'keterangan_biaya_kemasan'        => $ketBiayaKemasan,
+            'rincian_biaya_kemasan'           => $rincianKemasanJson,
+            'total_biaya_kemasan_per_paket'   => $totalBiayaKemasanPerPaket,
+            'total_biaya_kemasan_keseluruhan' => $totalBiayaKemasanKeseluruhan,
+            'estimasi_hpp_bahan_per_paket'    => $estHppBahan,
+            'estimasi_hpp_per_paket'          => $totalHppPerPaketLengkap,
+            'estimasi_total_modal'            => $totalModalKeseluruhan
+        ];
+
+        $this->db->where('id_request', $id_request)->update('tberp_bundling_request', $updateData);
+
+        return [
+            'status' => true,
+            'msg'    => 'Biaya kemasan dan modal printilan berhasil diperbarui',
+            'data'   => array_merge($updateData, [
+                'kemasan_items'                     => !empty($validKemasan) ? $validKemasan : [['nama' => '', 'nominal' => 0]],
+                'estimasi_hpp_bahan_per_paket_fmt'  => number_format($estHppBahan, 2, ',', '.'),
+                'total_biaya_kemasan_per_paket_fmt' => number_format($totalBiayaKemasanPerPaket, 2, ',', '.'),
+                'estimasi_hpp_per_paket_fmt'        => number_format($totalHppPerPaketLengkap, 2, ',', '.'),
+                'estimasi_total_modal_fmt'          => number_format($totalModalKeseluruhan, 2, ',', '.')
+            ])
         ];
     }
 
@@ -646,12 +994,12 @@ class M_Bundling extends CI_Model
             $sisaKebutuhan = max(0, (float)$item['qty_total_kebutuhan'] - (float)$item['qty_terpenuhi']);
             $kekuranganDiBundling = max(0, $sisaKebutuhan - $stokBundling);
 
-            $hppSatuan = !empty($item['hpp_satuan']) && (float)$item['hpp_satuan'] > 0
-                ? (float)$item['hpp_satuan']
-                : (float)$this->get_item_average_hpp($kd, $gudangAsalId, $item['nama_barang_komponen']);
-
-            $subtotalHppPerPaket = (float)$item['qty_per_paket'] * $hppSatuan;
-            $totalModalKebutuhan = (float)$item['qty_total_kebutuhan'] * $hppSatuan;
+            // Hitung modal berdasarkan metode LIFO (Last In First Out)
+            $lifo = $this->calculate_item_lifo_cost($kd, (float)$item['qty_total_kebutuhan'], $gudangAsalId, $item['nama_barang_komponen']);
+            $hppSatuan = $lifo['hpp_satuan'];
+            $totalModalKebutuhan = $lifo['total_modal'];
+            $qtyReq = (float)$req['qty_request'];
+            $subtotalHppPerPaket = ($qtyReq > 0) ? ($totalModalKebutuhan / $qtyReq) : ((float)$item['qty_per_paket'] * $hppSatuan);
 
             $result[] = [
                 'kode_barang'              => $kd,
@@ -1542,6 +1890,169 @@ class M_Bundling extends CI_Model
         }
 
         return true;
+    }
+
+    /**
+     * Menghitung Biaya Pokok (HPP) Komponen berdasarkan metode LIFO (Last In, First Out)
+     * Mengambil alokasi kuantitas dari pembelian barang terakhir yang masuk (LPB terbaru / PO terbaru).
+     * 
+     * Contoh Kasus:
+     * Kebutuhan: 450 unit.
+     * Riwayat beli: Masuk tgl 01/08/2026 @ 5.000 (200 unit) & Masuk terakhir @ 6.000 (300 unit).
+     * LIFO mengambil:
+     * - 300 unit @ 6.000 = 1.800.000
+     * - 150 unit @ 5.000 =   750.000
+     * Total Modal: 2.550.000 (HPP LIFO per unit = 5.666,67).
+     */
+    public function calculate_item_lifo_cost($kd_barang, $qty_kebutuhan, $gudang_id = null, $nama_barang = '')
+    {
+        $kd_barang = trim((string)$kd_barang);
+        $qty_kebutuhan = max(0, (float)$qty_kebutuhan);
+        if ($kd_barang === '') {
+            return ['total_modal' => 0.0, 'hpp_satuan' => 0.0, 'breakdown' => []];
+        }
+
+        // 1. Ambil riwayat LPB (Laporan Penerimaan Barang) terurut dari yang TERAKHIR dibeli (LIFO)
+        $purchaseBatches = [];
+        if ($this->db->table_exists('tb_lpb_detail')) {
+            $this->db->select('ld.id_detail_lpb, ld.qty_diterima, ld.harga_satuan, ld.no_lot, l.nomor_lpb, l.tgl_sj, ld.input_at');
+            $this->db->from('tb_lpb_detail ld');
+            $this->db->join('tb_lpb l', 'l.id_lpb = ld.id_lpb', 'left');
+            $this->db->where('ld.kd_barang', $kd_barang);
+            $this->db->where('ld.qty_diterima >', 0);
+            $this->db->where('ld.harga_satuan >', 0);
+            $this->db->order_by('ld.id_detail_lpb', 'DESC');
+            $lpbs = $this->db->get()->result_array();
+
+            foreach ($lpbs as $lp) {
+                $purchaseBatches[] = [
+                    'dokumen' => $lp['nomor_lpb'] ?: 'LPB-' . $lp['id_detail_lpb'],
+                    'tanggal' => !empty($lp['tgl_sj']) ? $lp['tgl_sj'] : date('Y-m-d', strtotime($lp['input_at'])),
+                    'qty'     => (float)$lp['qty_diterima'],
+                    'harga'   => (float)$lp['harga_satuan'],
+                    'no_lot'  => $lp['no_lot']
+                ];
+            }
+        }
+
+        // 2. Jika riwayat LPB belum ada atau kurang, ambil dari tbpo_detail_po
+        if ($this->db->table_exists('tbpo_detail_po')) {
+            $this->db->select('id_det_po, no_po, kd_po, tgl_transaksi, qty, qty_kecil, hrg_satuan, harga_satuan_kecil_setelah_diskon, harga_satuan_exclude');
+            $this->db->from('tbpo_detail_po');
+            $this->db->where('kd_barang', $kd_barang);
+            $this->db->group_start()
+                ->where('hrg_satuan >', 0)
+                ->or_where('harga_satuan_kecil_setelah_diskon >', 0)
+            ->group_end();
+            $this->db->order_by('id_det_po', 'DESC');
+            $pos = $this->db->get()->result_array();
+
+            foreach ($pos as $po) {
+                $h = !empty($po['harga_satuan_kecil_setelah_diskon']) && (float)$po['harga_satuan_kecil_setelah_diskon'] > 0
+                    ? (float)$po['harga_satuan_kecil_setelah_diskon']
+                    : (!empty($po['harga_satuan_exclude']) && (float)$po['harga_satuan_exclude'] > 0
+                        ? (float)$po['harga_satuan_exclude']
+                        : (float)$po['hrg_satuan']);
+                $q = !empty($po['qty_kecil']) && (float)$po['qty_kecil'] > 0 ? (float)$po['qty_kecil'] : (float)$po['qty'];
+                if ($h > 0 && $q > 0) {
+                    $purchaseBatches[] = [
+                        'dokumen' => $po['no_po'] ?: $po['kd_po'] ?: 'PO-' . $po['id_det_po'],
+                        'tanggal' => $po['tgl_transaksi'],
+                        'qty'     => $q,
+                        'harga'   => $h,
+                        'no_lot'  => '-'
+                    ];
+                }
+            }
+        }
+
+        // 3. Fallback jika nama barang dicari (misal kode barang berbeda)
+        if (empty($purchaseBatches) && !empty($nama_barang)) {
+            $firstWord = explode(' ', trim($nama_barang))[0];
+            if ($this->db->table_exists('tb_lpb_detail') && $this->db->table_exists('tbpo_barang')) {
+                $matchLpb = $this->db->select('ld.id_detail_lpb, ld.qty_diterima, ld.harga_satuan, ld.no_lot, l.nomor_lpb, l.tgl_sj, ld.input_at')
+                    ->from('tb_lpb_detail ld')
+                    ->join('tb_lpb l', 'l.id_lpb = ld.id_lpb', 'left')
+                    ->join('tbpo_barang b', 'ld.kd_barang = b.kode_barang')
+                    ->like('b.nama_barang', $firstWord)
+                    ->where('ld.qty_diterima >', 0)
+                    ->where('ld.harga_satuan >', 0)
+                    ->order_by('ld.id_detail_lpb', 'DESC')
+                    ->get()
+                    ->result_array();
+                foreach ($matchLpb as $lp) {
+                    $purchaseBatches[] = [
+                        'dokumen' => $lp['nomor_lpb'] ?: 'LPB-' . $lp['id_detail_lpb'],
+                        'tanggal' => !empty($lp['tgl_sj']) ? $lp['tgl_sj'] : date('Y-m-d', strtotime($lp['input_at'])),
+                        'qty'     => (float)$lp['qty_diterima'],
+                        'harga'   => (float)$lp['harga_satuan'],
+                        'no_lot'  => $lp['no_lot']
+                    ];
+                }
+            }
+        }
+
+        // 4. Hitung alokasi LIFO
+        $sisaKebutuhan = $qty_kebutuhan > 0 ? $qty_kebutuhan : 1.0;
+        $totalModal = 0.0;
+        $lastPriceFound = 0.0;
+        $breakdown = [];
+
+        foreach ($purchaseBatches as $b) {
+            if ($sisaKebutuhan <= 0) break;
+            $bQty = (float)$b['qty'];
+            $bPrice = (float)$b['harga'];
+            if ($bQty <= 0 || $bPrice <= 0) continue;
+
+            $ambil = min($sisaKebutuhan, $bQty);
+            $sub = $ambil * $bPrice;
+
+            $totalModal += $sub;
+            $sisaKebutuhan -= $ambil;
+            $lastPriceFound = $bPrice;
+
+            $breakdown[] = [
+                'dokumen'  => $b['dokumen'],
+                'tanggal'  => $b['tanggal'],
+                'qty'      => $ambil,
+                'harga'    => $bPrice,
+                'subtotal' => $sub
+            ];
+        }
+
+        // Jika kebutuhan melebihi stok riwayat pembelian yang tercatat, sisa kebutuhan dihargai dengan harga terakhir
+        if ($sisaKebutuhan > 0) {
+            $fallbackPrice = ($lastPriceFound > 0) 
+                ? $lastPriceFound 
+                : (float)$this->get_item_average_hpp($kd_barang, $gudang_id, $nama_barang);
+
+            if ($fallbackPrice <= 0 && stripos($nama_barang, 'kaos') !== false) {
+                $fallbackPrice = 15000.00;
+            }
+
+            $sub = $sisaKebutuhan * $fallbackPrice;
+            $totalModal += $sub;
+            $lastPriceFound = $fallbackPrice;
+            $breakdown[] = [
+                'dokumen'  => 'HARGA_TERAKHIR',
+                'tanggal'  => date('Y-m-d'),
+                'qty'      => $sisaKebutuhan,
+                'harga'    => $fallbackPrice,
+                'subtotal' => $sub
+            ];
+        }
+
+        $hppSatuan = ($qty_kebutuhan > 0) ? ($totalModal / $qty_kebutuhan) : $lastPriceFound;
+
+        if ($qty_kebutuhan <= 0) {
+            $totalModal = 0.0;
+        }
+
+        return [
+            'total_modal' => $totalModal,
+            'hpp_satuan'  => $hppSatuan,
+            'breakdown'   => $breakdown
+        ];
     }
 
     /**

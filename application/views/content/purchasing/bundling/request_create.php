@@ -81,6 +81,60 @@
                                     </div>
                                 </div>
 
+                                <!-- Konfigurasi & Pratinjau Kemasan Innerbox Paket -->
+                                <input type="hidden" name="is_innerbox" id="req_is_innerbox" value="0">
+                                <input type="hidden" name="jumlah_innerbox" id="req_jumlah_innerbox" value="0">
+                                <input type="hidden" name="satuan_innerbox" id="req_satuan_innerbox" value="Innerbox">
+
+                                <div id="boxInfoKemasanReq" class="alert alert-warning border-0 p-3 small text-dark mb-3" style="display: none; border-radius: 8px;">
+                                    <div class="font-weight-bold mb-1">
+                                        <i class="fas fa-boxes text-warning mr-1"></i> Kemasan Paket: <strong><span id="labelJmlInboxReq">20</span> <span id="labelSatInboxReq">Innerbox</span></strong> / Paket
+                                    </div>
+                                    <div class="text-primary font-weight-bold" id="labelTotalInboxReq">
+                                        Total Kebutuhan Kemasan: <strong>0 Box</strong>
+                                    </div>
+                                </div>
+
+                                <!-- Panel Estimasi Biaya Kemasan & Printilan Dinamis (Repeater) -->
+                                <div class="card border border-primary-subtle mb-3" style="border-radius: 8px; background: #faf5ff; border-left: 4px solid #8b5cf6 !important;">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="small font-weight-bold text-dark m-0" style="color: #6d28d9 !important;">
+                                                <i class="fas fa-pallet mr-1"></i> Biaya Kemasan & Printilan (Opsional)
+                                            </label>
+                                            <button type="button" class="btn btn-xs btn-outline-primary font-weight-bold" id="btnAddReqKemasanRow">
+                                                <i class="fas fa-plus mr-1"></i> Tambah Biaya / Printilan
+                                            </button>
+                                        </div>
+
+                                        <div class="table-responsive mb-2">
+                                            <table class="table table-bordered table-sm mb-0 bg-white" id="tblReqKemasan">
+                                                <thead class="bg-light text-muted small text-uppercase">
+                                                    <tr>
+                                                        <th style="width: 58%;">Nama Kemasan / Printilan</th>
+                                                        <th style="width: 32%;" class="text-right">Biaya / Paket (Rp)</th>
+                                                        <th style="width: 10%; text-align: center;">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="reqKemasanBody">
+                                                    <!-- Baris dinamis via JS -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="p-2 rounded bg-white border mt-2 small">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">Kemasan / 1 Paket:</span>
+                                                <strong style="color: #6d28d9;" id="lbl_req_total_kemasan_1paket">Rp 0,00</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <span class="text-muted">Total Seluruh Request:</span>
+                                                <strong class="text-primary" id="lbl_req_total_kemasan_all">Rp 0,00</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="form-group mb-3">
                                     <label class="small font-weight-bold text-muted">Gudang Tujuan Perakitan</label>
                                     <select name="id_gudang_tujuan" class="form-control">
@@ -242,6 +296,7 @@ function checkEmptyRow() {
 
 $(document).ready(function() {
     checkEmptyRow();
+    renderReqKemasanItems([{nama: '', nominal: 0}]);
     recalculateTotals();
 
     // Event perubahan Qty Request
@@ -249,7 +304,29 @@ $(document).ready(function() {
         recalculateTotals();
     });
 
-    // Event Hapus Baris
+    // Event Tambah Baris Kemasan Dinamis
+    $('#btnAddReqKemasanRow').click(function() {
+        addReqKemasanRow('', 0);
+    });
+
+    // Event Hapus Baris Kemasan Dinamis
+    $(document).on('click', '.btn-del-req-kemasan', function() {
+        let totalRows = $('#reqKemasanBody .req-kemasan-row').length;
+        let $row = $(this).closest('.req-kemasan-row');
+        if (totalRows > 1) {
+            $row.remove();
+        } else {
+            $row.find('.inp-req-nama-kemasan').val('');
+            $row.find('.inp-req-nominal-kemasan').val(0);
+        }
+        recalculateTotals();
+    });
+
+    $(document).on('input change', '.inp-req-nominal-kemasan', function() {
+        recalculateTotals();
+    });
+
+    // Event Hapus Baris Komponen
     $(document).on('click', '.btn-del', function() {
         $(this).closest('tr').remove();
         checkEmptyRow();
@@ -331,6 +408,10 @@ $(document).ready(function() {
         if (!idFormula) {
             $('#nama_paket').val('');
             $('#kode_paket').val('');
+            $('#req_is_innerbox').val(0);
+            $('#req_jumlah_innerbox').val(0);
+            renderReqKemasanItems([{nama: '', nominal: 0}]);
+            $('#boxInfoKemasanReq').hide();
             $('#komponenList').empty();
             checkEmptyRow();
             recalculateTotals();
@@ -347,23 +428,52 @@ $(document).ready(function() {
             data: { id_formula: idFormula },
             dataType: 'json',
             success: function(res) {
-                if (res.status && res.data && res.data.details) {
+                if (res.status && res.data) {
+                    let f = res.data;
+                    let isInbox = (parseInt(f.is_innerbox) === 1 || f.is_innerbox === true);
+                    let jmlInbox = parseFloat(f.jumlah_innerbox) || 20;
+                    let satInbox = f.satuan_innerbox || 'Innerbox';
+
+                    $('#req_is_innerbox').val(isInbox ? 1 : 0);
+                    $('#req_jumlah_innerbox').val(isInbox ? jmlInbox : 0);
+                    $('#req_satuan_innerbox').val(satInbox);
+
+                    renderReqKemasanItems(f.kemasan_items || []);
+
+                    if (isInbox && jmlInbox > 0) {
+                        $('#labelJmlInboxReq').text(jmlInbox.toLocaleString('id-ID'));
+                        $('#labelSatInboxReq').text(satInbox);
+                        $('#boxInfoKemasanReq').show();
+                    } else {
+                        $('#boxInfoKemasanReq').hide();
+                    }
+
                     $('#komponenList').empty();
                     rowIndex = 0;
-                    res.data.details.forEach(function(d) {
-                        let html = renderRequestItemRow(
-                            rowIndex,
-                            d.kode_barang_komponen,
-                            d.nama_barang_komponen || d.kode_barang_komponen,
-                            d.satuan || 'Pcs',
-                            d.is_innerbox,
-                            d.qty_innerbox,
-                            d.isi_per_innerbox,
-                            parseFloat(d.qty_komponen)
-                        );
-                        $('#komponenList').append(html);
-                        rowIndex++;
-                    });
+                    if (f.details && f.details.length > 0) {
+                        f.details.forEach(function(d) {
+                            let isiInbox = parseFloat(d.isi_per_innerbox) || 0;
+                            let qtyKomponen = parseFloat(d.qty_komponen) || 1;
+                            if (isInbox && isiInbox <= 0 && jmlInbox > 0) {
+                                isiInbox = qtyKomponen / jmlInbox;
+                            } else if (!isInbox) {
+                                isiInbox = qtyKomponen;
+                            }
+
+                            let html = renderRequestItemRow(
+                                rowIndex,
+                                d.kode_barang_komponen,
+                                d.nama_barang_komponen || d.kode_barang_komponen,
+                                d.satuan || 'Pcs',
+                                isInbox,
+                                jmlInbox,
+                                isiInbox,
+                                qtyKomponen
+                            );
+                            $('#komponenList').append(html);
+                            rowIndex++;
+                        });
+                    }
                     checkEmptyRow();
                     recalculateTotals();
                 }
@@ -546,8 +656,85 @@ function renderRequestItemRow(rIndex, kd, nama, sat, isInbox, qtyInbox, isiInbox
     `;
 }
 
+// Helper Kemasan Dinamis Request
+let reqKemasanIndex = 0;
+function createReqKemasanRowHtml(index, nama, nominal) {
+    nama = nama || '';
+    nominal = (nominal !== undefined && nominal !== null && nominal !== '') ? nominal : 0;
+    return `
+        <tr class="req-kemasan-row" data-index="${index}">
+            <td>
+                <input type="text" name="kemasan_items[${index}][nama]" class="form-control form-control-sm inp-req-nama-kemasan font-weight-bold" placeholder="Contoh: Kardus Innerbox / Outer Box / Hologram" value="${escapeHtml(nama)}">
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
+                    <input type="number" step="any" min="0" name="kemasan_items[${index}][nominal]" class="form-control form-control-sm text-right font-weight-bold inp-req-nominal-kemasan" placeholder="0" value="${nominal}">
+                </div>
+            </td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-xs btn-outline-danger btn-del-req-kemasan" title="Hapus baris kemasan">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+function addReqKemasanRow(nama, nominal) {
+    let html = createReqKemasanRowHtml(reqKemasanIndex, nama, nominal);
+    $('#reqKemasanBody').append(html);
+    reqKemasanIndex++;
+    recalculateTotals();
+}
+
+function renderReqKemasanItems(items) {
+    $('#reqKemasanBody').empty();
+    reqKemasanIndex = 0;
+    let list = Array.isArray(items) && items.length > 0 ? items : [{nama: '', nominal: 0}];
+    list.forEach(function(it) {
+        addReqKemasanRow(it.nama, it.nominal);
+    });
+    recalculateTotals();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function recalculateTotals() {
     let qtyRequest = parseFloat($('#qty_request').val()) || 0;
+    let isReqInbox = parseInt($('#req_is_innerbox').val()) === 1;
+    let jmlReqInbox = parseFloat($('#req_jumlah_innerbox').val()) || 0;
+    let satReqInbox = $('#req_satuan_innerbox').val() || 'Innerbox';
+
+    if (isReqInbox && jmlReqInbox > 0) {
+        let totalInboxNeeded = qtyRequest * jmlReqInbox;
+        $('#labelTotalInboxReq').html(
+            `Total Kebutuhan Kemasan: <strong>${totalInboxNeeded.toLocaleString('id-ID')} ${satReqInbox}</strong> (${qtyRequest.toLocaleString('id-ID')} Paket × ${jmlReqInbox.toLocaleString('id-ID')} ${satReqInbox})`
+        );
+        $('#boxInfoKemasanReq').show();
+    } else {
+        $('#boxInfoKemasanReq').hide();
+    }
+
+    // Kalkulasi Biaya Kemasan Live Dinamis dari Repeater
+    let totalKemasan1Paket = 0;
+    $('#reqKemasanBody .req-kemasan-row').each(function() {
+        let nom = parseFloat($(this).find('.inp-req-nominal-kemasan').val()) || 0;
+        totalKemasan1Paket += nom;
+    });
+    let totalKemasanAll = totalKemasan1Paket * qtyRequest;
+
+    $('#lbl_req_total_kemasan_1paket').text('Rp ' + Number(totalKemasan1Paket).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    $('#lbl_req_total_kemasan_all').text('Rp ' + Number(totalKemasanAll).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
     $('#komponenList .item-row').each(function() {
         let isInbox = $(this).find('.chk-innerbox-req').is(':checked');
         let sat = $(this).find('.row-satuan').val() || 'Pcs';

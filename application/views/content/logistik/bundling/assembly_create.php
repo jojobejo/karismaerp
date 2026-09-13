@@ -26,6 +26,88 @@
 
     <section class="content">
         <div class="container-fluid">
+            <!-- Banner Penjelasan Hierarki Kemasan & Petunjuk Fisik Perakitan Gudang -->
+            <?php if (!empty($request['is_innerbox'])): ?>
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: linear-gradient(135deg, #f0f7ff 0%, #f4fbf7 100%); border-left: 5px solid #2563eb !important;">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mr-3 shadow-sm" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                                    <i class="fas fa-boxes"></i>
+                                </div>
+                                <div>
+                                    <h5 class="font-weight-bold text-dark mb-0">Petunjuk Pengepakan Fisik: Paket Innerbox Multi-Item</h5>
+                                    <small class="text-muted">Panduan cara pembungkusan untuk Petugas Perakitan Logistik Gudang</small>
+                                </div>
+                            </div>
+                            <span class="badge badge-primary px-3 py-2 font-weight-bold mt-2 mt-sm-0" style="font-size: 0.88rem; border-radius: 8px;">
+                                <i class="fas fa-layer-group mr-1"></i> 1 <?= htmlspecialchars($request['satuan']) ?> Master Box = <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
+                            </span>
+                        </div>
+
+                        <!-- 3 Kotak Alur Fisik -->
+                        <div class="row align-items-stretch">
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <div class="p-3 bg-white rounded shadow-sm h-100 border">
+                                    <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold mb-2">
+                                        <i class="fas fa-box-open mr-1"></i> 1. Isi Kardus Kecil (1 Innerbox)
+                                    </span>
+                                    <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                        Setiap 1 Innerbox Diisi Campuran:
+                                    </div>
+                                    <ul class="mb-0 pl-3 mt-2 small font-weight-bold text-secondary">
+                                        <?php foreach ($components as $itemInbox): ?>
+                                            <li class="mb-1">
+                                                <?= htmlspecialchars($itemInbox['nama_barang_komponen']) ?>: 
+                                                <span class="text-primary"><?= number_format($itemInbox['isi_per_innerbox'] ?: 1, 0) ?> <?= htmlspecialchars($itemInbox['satuan']) ?></span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <div class="p-3 bg-white rounded shadow-sm h-100 border">
+                                    <span class="badge badge-info px-2 py-1 font-weight-bold mb-2">
+                                        <i class="fas fa-box mr-1"></i> 2. Kardus Luar (1 Master Box)
+                                    </span>
+                                    <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                        Kardus Luar Memuat:
+                                    </div>
+                                    <div class="mt-2">
+                                        <h4 class="text-info font-weight-bold mb-0">
+                                            <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <small style="font-size: 0.9rem;">Kardus Kecil (Innerbox)</small>
+                                        </h4>
+                                        <small class="text-muted d-block mt-1">
+                                            Masukkan 20 kardus kecil yang sudah dibungkus ke dalam 1 kardus luar.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="p-3 bg-white rounded shadow-sm h-100 border">
+                                    <span class="badge badge-success px-2 py-1 font-weight-bold mb-2">
+                                        <i class="fas fa-bullseye mr-1"></i> 3. Status Perakitan Request
+                                    </span>
+                                    <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                                        Sisa Belum Dirakit:
+                                    </div>
+                                    <div class="mt-2">
+                                        <h4 class="text-danger font-weight-bold mb-0">
+                                            <?= number_format($sisa_request, 0, ',', '.') ?> <?= htmlspecialchars($request['satuan']) ?> <small class="text-muted" style="font-size: 0.85rem;">Master Box</small>
+                                        </h4>
+                                        <div class="small text-muted mt-1 font-weight-bold">
+                                            Setara: <span class="text-dark"><?= number_format((float)$sisa_request * (float)$request['jumlah_innerbox'], 0, ',', '.') ?> Kardus Kecil</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <form id="formAssembly" method="post" action="<?= site_url('logistik/bundling/save_assembly') ?>">
                 <input type="hidden" name="id_request" value="<?= $request['id_request'] ?>">
                 <input type="hidden" name="kode_paket" value="<?= htmlspecialchars($request['kode_paket']) ?>">
@@ -53,7 +135,14 @@
                                 <div class="form-group mb-3">
                                     <label class="small font-weight-bold text-muted">Produk Paket</label>
                                     <h5 class="font-weight-bold text-dark mb-0"><?= htmlspecialchars($request['nama_paket']) ?></h5>
-                                    <span class="badge badge-light border text-muted"><?= htmlspecialchars($request['kode_paket']) ?></span>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="badge badge-light border text-muted mr-2"><?= htmlspecialchars($request['kode_paket']) ?></span>
+                                        <?php if (!empty($request['is_innerbox'])): ?>
+                                            <span class="badge badge-primary px-2 py-1 font-weight-bold">
+                                                <i class="fas fa-boxes mr-1"></i> Innerbox: <?= number_format((float)$request['jumlah_innerbox'], 0) ?> Box / <?= htmlspecialchars($request['satuan']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
 
                                 <div class="row mb-3">
@@ -88,7 +177,12 @@
                                            id="qty_assembly" name="qty_assembly" 
                                            class="form-control form-control-lg font-weight-bold text-success" 
                                            value="<?= $sisa_request ?>" required>
-                                    <small class="text-muted">Mendukung pembuatan sebagian (parsial). Masukkan kuantitas yang siap dirakit sekarang.</small>
+                                    <small class="text-muted">Mendukung pembuatan sebagian (parsial). Masukkan kuantitas master box yang siap dirakit sekarang.</small>
+                                    <?php if (!empty($request['is_innerbox'])): ?>
+                                        <div id="assembly-innerbox-indicator" class="alert alert-info py-2 px-3 small font-weight-bold mt-2 mb-0" style="border-radius: 8px;">
+                                            <i class="fas fa-boxes mr-1"></i> Setara dengan perakitan <span id="text-innerbox-count" class="text-dark font-weight-bold"><?= number_format((float)$sisa_request * (float)$request['jumlah_innerbox'], 0, ',', '.') ?></span> kardus kecil (innerbox).
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
 
                                 <div class="form-group mb-3">
@@ -130,9 +224,13 @@
                                     <table class="table table-bordered mb-0" id="tableAssemblyItems" style="font-size: 0.92rem;">
                                         <thead style="background: #f1f5f9; color: #334155;">
                                             <tr>
-                                                <th style="width: 30%;">Komponen Barang</th>
-                                                <th style="width: 14%;" class="text-center">Isi / Paket</th>
-                                                <th style="width: 28%;">Pilih Batch Lot Gudang Induk</th>
+                                                <th style="width: 28%;">Komponen Barang</th>
+                                                <?php if (!empty($request['is_innerbox'])): ?>
+                                                    <th style="width: 18%;" class="text-center">Komposisi / Paket</th>
+                                                <?php else: ?>
+                                                    <th style="width: 14%;" class="text-center">Isi / Paket</th>
+                                                <?php endif; ?>
+                                                <th style="width: 26%;">Pilih Batch Lot Gudang Induk</th>
                                                 <th style="width: 14%;" class="text-center">Stok Gdg. Induk</th>
                                                 <th style="width: 14%;" class="text-center bg-danger text-white">Qty Terpakai</th>
                                             </tr>
@@ -153,13 +251,17 @@
                                                         <small class="text-muted">Kode: <?= htmlspecialchars($comp['kode_barang_komponen']) ?></small>
                                                     </td>
                                                     <td class="text-center">
-                                                        <div class="font-weight-bold text-dark">
-                                                            <?= number_format((float)$comp['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
-                                                        </div>
                                                         <?php if (!empty($comp['is_innerbox'])): ?>
-                                                            <span class="badge badge-warning text-dark font-weight-bold px-2 py-1 mt-1 d-inline-block" style="font-size: 0.78rem;" title="Kemasan Innerbox">
-                                                                <i class="fas fa-box mr-1"></i> <?= number_format($comp['qty_innerbox'], 0) ?> Box (@ <?= number_format($comp['isi_per_innerbox'], 0) ?> <?= htmlspecialchars($comp['satuan']) ?>)
-                                                            </span>
+                                                            <div class="font-weight-bold text-primary" style="font-size: 0.95rem;">
+                                                                <?= number_format((float)($comp['isi_per_innerbox'] ?: 1), 0) ?> <?= htmlspecialchars($comp['satuan']) ?> <small class="text-muted">/ innerbox</small>
+                                                            </div>
+                                                            <small class="text-muted font-weight-bold d-block mt-1">
+                                                                Total: <?= number_format((float)$comp['qty_per_paket'], 0) ?> <?= htmlspecialchars($comp['satuan']) ?> / Box
+                                                            </small>
+                                                        <?php else: ?>
+                                                            <div class="font-weight-bold text-dark">
+                                                                <?= number_format((float)$comp['qty_per_paket'], 2, ',', '.') ?> <?= htmlspecialchars($comp['satuan']) ?>
+                                                            </div>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
@@ -294,6 +396,12 @@ $(document).ready(function() {
 
 function recalcAssemblyQuantities() {
     let qtyAsm = parseFloat($('#qty_assembly').val()) || 0;
+    let jmlInboxPerPaket = <?= (float)($request['jumlah_innerbox'] ?? 0) ?>;
+    if (jmlInboxPerPaket > 0) {
+        let totalInboxAsm = qtyAsm * jmlInboxPerPaket;
+        $('#text-innerbox-count').text(totalInboxAsm.toLocaleString('id-ID'));
+    }
+
     $('.comp-row').each(function() {
         let isi = parseFloat($(this).data('isi')) || 1;
         let butuh = qtyAsm * isi;
@@ -304,7 +412,7 @@ function recalcAssemblyQuantities() {
         let badge = $(this).find('.box-pakai-badge');
         if (isInbox && qInbox > 0 && qtyAsm > 0) {
             let totalBox = qtyAsm * qInbox;
-            badge.html(`<span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.75rem;"><i class="fas fa-boxes mr-1"></i> ${totalBox.toLocaleString('id-ID')} Box</span>`).show();
+            badge.html(`<span class="badge badge-warning text-dark font-weight-bold" style="font-size: 0.75rem;"><i class="fas fa-boxes mr-1"></i> ${totalBox.toLocaleString('id-ID')} Kardus Kecil</span>`).show();
         } else {
             badge.hide();
         }

@@ -92,19 +92,23 @@ class C_BundlingRequest extends CI_Controller
                 $kodePaket = 'PKT-' . date('ymd') . '-' . substr(str_shuffle('0123456789ABCDEF'), 0, 4);
             }
 
+            $isInnerbox = !empty($post['is_innerbox']) ? 1 : 0;
+            $jumlahInnerbox = $isInnerbox ? (float)($post['jumlah_innerbox'] ?? 1) : 0.000;
+            $satuanInnerbox = $isInnerbox ? (!empty($post['satuan_innerbox']) ? trim($post['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
             $rawDetails = $post['komponen'] ?? [];
             $details = [];
             if (is_array($rawDetails)) {
                 foreach ($rawDetails as $item) {
                     if (!empty($item['kode_barang_komponen'])) {
-                        $isInnerbox = !empty($item['is_innerbox']) ? 1 : 0;
-                        $qtyInnerbox = $isInnerbox ? (float)($item['qty_innerbox'] ?? 1) : 0.000;
-                        $isiPerInnerbox = $isInnerbox ? (float)($item['isi_per_innerbox'] ?? 0) : 0.000;
-                        $satuanInnerbox = $isInnerbox ? (!empty($item['satuan_innerbox']) ? trim($item['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
-
-                        $qtyPerPaket = (float)($item['qty_per_paket'] ?? 1);
-                        if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
-                            $qtyPerPaket = $qtyInnerbox * $isiPerInnerbox;
+                        if ($isInnerbox) {
+                            $isiPerInnerbox = (float)($item['isi_per_innerbox'] ?? $item['qty_per_paket'] ?? 1);
+                            $qtyPerPaket = $jumlahInnerbox * $isiPerInnerbox;
+                            $qtyInnerbox = $jumlahInnerbox;
+                        } else {
+                            $isiPerInnerbox = 0.000;
+                            $qtyInnerbox = 0.000;
+                            $qtyPerPaket = (float)($item['qty_per_paket'] ?? 1);
                         }
 
                         if ($qtyPerPaket > 0) {
@@ -116,7 +120,7 @@ class C_BundlingRequest extends CI_Controller
                                 'is_innerbox'          => $isInnerbox,
                                 'qty_innerbox'         => $qtyInnerbox,
                                 'isi_per_innerbox'     => $isiPerInnerbox,
-                                'satuan_innerbox'      => $satuanInnerbox
+                                'satuan_innerbox'      => $isInnerbox ? $satuanInnerbox : null
                             ];
                         }
                     }
@@ -129,25 +133,46 @@ class C_BundlingRequest extends CI_Controller
                 return;
             }
 
+            $biayaInnerbox = (float)str_replace(',', '', $post['biaya_innerbox'] ?? 0);
+            $biayaOuterbox = (float)str_replace(',', '', $post['biaya_outerbox'] ?? 0);
+            $biayaKemasanLain = (float)str_replace(',', '', $post['biaya_kemasan_lain'] ?? 0);
+            $ketBiayaKemasan = trim($post['keterangan_biaya_kemasan'] ?? '');
+
             $header = [
-                'no_request'       => trim($post['no_request'] ?? ''),
-                'tanggal_request'  => !empty($post['tanggal_request']) ? $post['tanggal_request'] : date('Y-m-d'),
-                'kode_paket'       => $kodePaket,
-                'nama_paket'       => $namaPaket,
-                'id_gudang_tujuan' => !empty($post['id_gudang_tujuan']) ? (int)$post['id_gudang_tujuan'] : 12,
-                'id_gudang_asal'   => !empty($post['id_gudang_asal']) ? (int)$post['id_gudang_asal'] : 2,
-                'qty_request'      => (float)$post['qty_request'],
-                'satuan'           => !empty($post['satuan']) ? $post['satuan'] : 'Box',
-                'keterangan'       => $post['keterangan'] ?? ''
+                'no_request'               => trim($post['no_request'] ?? ''),
+                'tanggal_request'          => !empty($post['tanggal_request']) ? $post['tanggal_request'] : date('Y-m-d'),
+                'kode_paket'               => $kodePaket,
+                'nama_paket'               => $namaPaket,
+                'id_gudang_tujuan'         => !empty($post['id_gudang_tujuan']) ? (int)$post['id_gudang_tujuan'] : 12,
+                'id_gudang_asal'           => !empty($post['id_gudang_asal']) ? (int)$post['id_gudang_asal'] : 2,
+                'qty_request'              => (float)$post['qty_request'],
+                'satuan'                   => !empty($post['satuan']) ? $post['satuan'] : 'Box',
+                'is_innerbox'              => $isInnerbox,
+                'jumlah_innerbox'          => $jumlahInnerbox,
+                'satuan_innerbox'          => $satuanInnerbox,
+                'biaya_innerbox'           => $biayaInnerbox,
+                'biaya_outerbox'           => $biayaOuterbox,
+                'biaya_kemasan_lain'       => $biayaKemasanLain,
+                'keterangan_biaya_kemasan' => $ketBiayaKemasan,
+                'kemasan_items'            => $post['kemasan_items'] ?? [],
+                'keterangan'               => $post['keterangan'] ?? ''
             ];
 
             // Jika dicentang simpan sebagai formula baru
             if (!empty($post['simpan_sebagai_formula']) && $post['simpan_sebagai_formula'] == '1') {
                 $this->M_Bundling->save_formula([
-                    'kode_paket'   => $header['kode_paket'],
-                    'nama_paket'   => $header['nama_paket'],
-                    'satuan_paket' => $header['satuan'],
-                    'keterangan'   => 'Formula dari Request ' . ($header['no_request'] ?: 'Baru')
+                    'kode_paket'               => $header['kode_paket'],
+                    'nama_paket'               => $header['nama_paket'],
+                    'satuan_paket'             => $header['satuan'],
+                    'is_innerbox'              => $isInnerbox,
+                    'jumlah_innerbox'          => $jumlahInnerbox,
+                    'satuan_innerbox'          => $satuanInnerbox,
+                    'biaya_innerbox'           => $biayaInnerbox,
+                    'biaya_outerbox'           => $biayaOuterbox,
+                    'biaya_kemasan_lain'       => $biayaKemasanLain,
+                    'keterangan_biaya_kemasan' => $ketBiayaKemasan,
+                    'kemasan_items'            => $post['kemasan_items'] ?? [],
+                    'keterangan'               => 'Formula dari Request ' . ($header['no_request'] ?: 'Baru')
                 ], array_map(function($d) {
                     return [
                         'kode_barang_komponen' => $d['kode_barang_komponen'],
@@ -202,6 +227,40 @@ class C_BundlingRequest extends CI_Controller
         $this->output->set_content_type('application/json')->set_output(json_encode($res));
     }
 
+    /**
+     * Update biaya kemasan (innerbox, outerbox, hologram/printilan) via AJAX dari halaman detail
+     */
+    public function update_packaging_cost()
+    {
+        try {
+            $idRequest = (int)$this->input->post('id_request');
+            if ($idRequest <= 0) {
+                $this->output->set_content_type('application/json')->set_output(json_encode([
+                    'status' => false,
+                    'msg'    => 'ID Request tidak valid'
+                ]));
+                return;
+            }
+
+            $data = [
+                'kemasan_items'            => $this->input->post('kemasan_items'),
+                'biaya_innerbox'           => (float)str_replace(',', '', $this->input->post('biaya_innerbox') ?? 0),
+                'biaya_outerbox'           => (float)str_replace(',', '', $this->input->post('biaya_outerbox') ?? 0),
+                'biaya_kemasan_lain'       => (float)str_replace(',', '', $this->input->post('biaya_kemasan_lain') ?? 0),
+                'keterangan_biaya_kemasan' => trim($this->input->post('keterangan_biaya_kemasan') ?? '')
+            ];
+
+            $res = $this->M_Bundling->update_request_packaging_cost($idRequest, $data);
+            $this->output->set_content_type('application/json')->set_output(json_encode($res));
+        } catch (Throwable $e) {
+            log_message('error', 'Error update packaging cost: ' . $e->getMessage());
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'status' => false,
+                'msg'    => 'Gagal memperbarui biaya kemasan: ' . $e->getMessage()
+            ]));
+        }
+    }
+
     // =========================================================================
     // MASTER FORMULA BUNDLING
     // =========================================================================
@@ -228,12 +287,29 @@ class C_BundlingRequest extends CI_Controller
                 return;
             }
 
+            $isInnerbox = !empty($post['is_innerbox']) ? 1 : 0;
+            $jumlahInnerbox = $isInnerbox ? (float)($post['jumlah_innerbox'] ?? 1) : 0.000;
+            $satuanInnerbox = $isInnerbox ? (!empty($post['satuan_innerbox']) ? trim($post['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
+
+            $biayaInnerbox = (float)str_replace(',', '', $post['biaya_innerbox'] ?? 0);
+            $biayaOuterbox = (float)str_replace(',', '', $post['biaya_outerbox'] ?? 0);
+            $biayaKemasanLain = (float)str_replace(',', '', $post['biaya_kemasan_lain'] ?? 0);
+            $ketBiayaKemasan = trim($post['keterangan_biaya_kemasan'] ?? '');
+
             $data = [
-                'id_formula'   => !empty($post['id_formula']) ? (int)$post['id_formula'] : 0,
-                'kode_paket'   => trim($post['kode_paket']),
-                'nama_paket'   => trim($post['nama_paket']),
-                'satuan_paket' => !empty($post['satuan_paket']) ? $post['satuan_paket'] : 'Box',
-                'keterangan'   => $post['keterangan'] ?? ''
+                'id_formula'               => !empty($post['id_formula']) ? (int)$post['id_formula'] : 0,
+                'kode_paket'               => trim($post['kode_paket']),
+                'nama_paket'               => trim($post['nama_paket']),
+                'satuan_paket'             => !empty($post['satuan_paket']) ? $post['satuan_paket'] : 'Box',
+                'is_innerbox'              => $isInnerbox,
+                'jumlah_innerbox'          => $jumlahInnerbox,
+                'satuan_innerbox'          => $satuanInnerbox,
+                'biaya_innerbox'           => $biayaInnerbox,
+                'biaya_outerbox'           => $biayaOuterbox,
+                'biaya_kemasan_lain'       => $biayaKemasanLain,
+                'keterangan_biaya_kemasan' => $ketBiayaKemasan,
+                'kemasan_items'            => $post['kemasan_items'] ?? [],
+                'keterangan'               => $post['keterangan'] ?? ''
             ];
 
             $rawDetails = $post['komponen'] ?? [];
@@ -241,14 +317,14 @@ class C_BundlingRequest extends CI_Controller
             if (is_array($rawDetails)) {
                 foreach ($rawDetails as $item) {
                     if (!empty($item['kode_barang_komponen'])) {
-                        $isInnerbox = !empty($item['is_innerbox']) ? 1 : 0;
-                        $qtyInnerbox = $isInnerbox ? (float)($item['qty_innerbox'] ?? 1) : 0.000;
-                        $isiPerInnerbox = $isInnerbox ? (float)($item['isi_per_innerbox'] ?? 0) : 0.000;
-                        $satuanInnerbox = $isInnerbox ? (!empty($item['satuan_innerbox']) ? trim($item['satuan_innerbox']) : 'Innerbox') : 'Innerbox';
-
-                        $qtyKomponen = (float)($item['qty_komponen'] ?? 1);
-                        if ($isInnerbox && $qtyInnerbox > 0 && $isiPerInnerbox > 0) {
-                            $qtyKomponen = $qtyInnerbox * $isiPerInnerbox;
+                        if ($isInnerbox) {
+                            $isiPerInnerbox = (float)($item['isi_per_innerbox'] ?? $item['qty_komponen'] ?? 1);
+                            $qtyKomponen = $jumlahInnerbox * $isiPerInnerbox;
+                            $qtyInnerbox = $jumlahInnerbox;
+                        } else {
+                            $isiPerInnerbox = 0.000;
+                            $qtyInnerbox = 0.000;
+                            $qtyKomponen = (float)($item['qty_komponen'] ?? 1);
                         }
 
                         if ($qtyKomponen > 0) {
@@ -260,7 +336,7 @@ class C_BundlingRequest extends CI_Controller
                                 'is_innerbox'          => $isInnerbox,
                                 'qty_innerbox'         => $qtyInnerbox,
                                 'isi_per_innerbox'     => $isiPerInnerbox,
-                                'satuan_innerbox'      => $satuanInnerbox
+                                'satuan_innerbox'      => $isInnerbox ? $satuanInnerbox : null
                             ];
                         }
                     }
