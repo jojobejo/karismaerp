@@ -85,13 +85,13 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-group">
-                                            <label>Tanggal LPB</label>
+                                            <label>Tanggal LPB <span class="text-danger">*</span></label>
                                             <input type="date" class="form-control" name="tgl_lpb" value="<?= date('Y-m-d') ?>" required>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-group">
-                                            <label>Jenis LPB</label>
+                                            <label>Jenis LPB <span class="text-danger">*</span></label>
                                             <select class="form-control" name="jenis_lpb" required>
                                                 <?php foreach (($lpb_type_options ?? []) as $key => $option) : ?>
                                                     <option value="<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($option['label'] ?? $key) ?></option>
@@ -101,13 +101,29 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-group">
-                                            <label>Gudang</label>
+                                            <label>Gudang <span class="text-danger">*</span></label>
                                             <select class="form-control" name="gudang_id" required>
                                                 <option value="">Pilih Gudang</option>
                                                 <?php foreach (($list_gudang ?? []) as $gudang) : ?>
                                                     <option value="<?= htmlspecialchars($gudang['id_gudang']) ?>"><?= htmlspecialchars($gudang['nama_gudang']) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label><i class="fas fa-truck text-primary mr-1"></i> Supplier / Pemasok</label>
+                                            <select class="form-control select2" name="kd_suplier" id="kd_suplier_select" style="width: 100%;">
+                                                <option value="">-- Pilih Supplier (Opsional) --</option>
+                                                <?php foreach (($list_suplier ?? []) as $sup) : ?>
+                                                    <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" data-nama="<?= htmlspecialchars($sup['nama_suplier']) ?>">
+                                                        <?= htmlspecialchars($sup['kd_suplier']) ?> - <?= htmlspecialchars($sup['nama_suplier']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <input type="hidden" name="nama_suplier" id="nama_suplier_hidden" value="">
+                                            <small class="text-muted">Pilih supplier yang mengirimkan barang fisik ini</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
@@ -122,7 +138,8 @@
                                             <input type="text" class="form-control" name="no_invoice" placeholder="-">
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+
+                                    <div class="col-md-12">
                                         <div class="form-group">
                                             <label>Keterangan</label>
                                             <input type="text" class="form-control" name="keterangan" placeholder="Catatan input manual">
@@ -269,6 +286,21 @@
             var $activeRowTarget = null;
             var searchTimeout = null;
             var cachedResults = [];
+
+            // Inisialisasi Select2 Supplier
+            if ($.fn.select2) {
+                $('#kd_suplier_select').select2({
+                    theme: 'bootstrap4',
+                    width: '100%',
+                    placeholder: '-- Pilih Supplier (Opsional) --',
+                    allowClear: true
+                });
+            }
+
+            $('#kd_suplier_select').on('change', function() {
+                var selectedNama = $(this).find(':selected').data('nama') || '';
+                $('#nama_suplier_hidden').val(selectedNama);
+            });
 
             function showAlert(type, message) {
                 $('#lpbManualAlert')

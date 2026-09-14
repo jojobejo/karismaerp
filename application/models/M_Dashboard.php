@@ -90,8 +90,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Export Data Expired Date', 'export-stock', 'fas fa-file-export', 'cyan', 'Unduh data expired date untuk kebutuhan pelaporan dan audit.'),
                     $this->menu('Stockopname', 'admin/stockopname', 'fas fa-tasks', 'blue', 'Buka dashboard admin stockopname dan monitoring stok fisik.'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
-                    $this->menu('Realisasi Paket Bundling', 'logistik/bundling', 'fas fa-boxes', 'blue', 'Monitoring request, mutasi bahan, dan perakitan (assembly) paket bundling.'),
-                    $this->menu('Pembongkaran Bundling', 'logistik/bundling/disassembly', 'fas fa-box-open', 'orange', 'Pembongkaran paket bundling menjadi stok eceran bebas (unbundling).'),
+                    $this->menu('Realisasi Paket Bundling', 'logistik/bundling', 'fas fa-boxes', 'blue', 'Monitoring request, mutasi bahan, dan perakitan (assembly) paket bundling.')
                 ),
             ),
             'purchasing' => array(

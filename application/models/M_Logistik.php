@@ -4106,6 +4106,15 @@ FROM (
             $checkerGroup .= ",
                 h.checker_at";
         }
+        $manualRefSelect = $this->db->field_exists('manual_ref_no', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.manual_ref_no), ''), '') AS manual_ref_no"
+            : "'' AS manual_ref_no";
+        $sourceTypeSelect = $this->db->field_exists('source_type', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.source_type), ''), 'PO') AS source_type"
+            : "'PO' AS source_type";
+        $manualRefGroup = $this->db->field_exists('manual_ref_no', 'tb_lpb') ? ", h.manual_ref_no" : "";
+        $sourceTypeGroup = $this->db->field_exists('source_type', 'tb_lpb') ? ", h.source_type" : "";
+
         $sql = "SELECT
                 h.id_lpb,
                 h.kd_po,
@@ -4113,12 +4122,23 @@ FROM (
                 COALESCE(DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_lpb,
                 COALESCE(DATE_FORMAT(p.tgl_transaksi, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_po,
                 {$nomorLpbSelect},
+                {$manualRefSelect},
+                {$sourceTypeSelect},
+                CASE
+                    WHEN (UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR h.kd_po LIKE 'LPBM-%' " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "OR (h.manual_ref_no IS NOT NULL AND TRIM(h.manual_ref_no) <> '')" : "") . ")
+                    THEN 1
+                    ELSE 0
+                END AS is_manual_lpb,
                 {$jenisLpbSelect},
                 {$statusLpbSelect},
                 h.nosj,
                 h.tgl_sj,
-                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-') AS nama_suplier,
-                COALESCE(NULLIF(TRIM(p.kd_suplier), ''), '') AS kd_suplier,
+                CASE
+                    WHEN (UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR h.kd_po LIKE 'LPBM-%' " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "OR (h.manual_ref_no IS NOT NULL AND TRIM(h.manual_ref_no) <> '')" : "") . ")
+                    THEN COALESCE(NULLIF(TRIM(h.nama_suplier), ''), NULLIF(TRIM(sm.nama_suplier), ''), CONCAT('LPB MANUAL (', COALESCE(g.nama_gudang, 'Gudang Induk'), ')'))
+                    ELSE COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-')
+                END AS nama_suplier,
+                COALESCE(NULLIF(TRIM(p.kd_suplier), ''), NULLIF(TRIM(h.kd_suplier), ''), '') AS kd_suplier,
                 CASE
                     WHEN COALESCE(ds.total_detail, 0) <= 0 THEN 0
                     ELSE ROUND((COALESCE(ds.total_verified, 0) / ds.total_detail) * 100, 2)
@@ -4145,6 +4165,10 @@ FROM (
                 ON p.kd_po = h.kd_po
             LEFT JOIN tbpo_suplier s
                 ON s.kd_suplier = p.kd_suplier
+            LEFT JOIN tbpo_suplier sm
+                ON sm.kd_suplier = h.kd_suplier
+            LEFT JOIN tb_gudang g
+                ON g.id_gudang = h.gudang_id
             LEFT JOIN (
                 SELECT
                     id_lpb,
@@ -4170,7 +4194,19 @@ FROM (
 
         $params = [];
 
-        if (!$includeManual) {
+        if ($includeManual) {
+            $manualCond = "(
+                (UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR h.kd_po LIKE 'LPBM-%' " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "OR (h.manual_ref_no IS NOT NULL AND TRIM(h.manual_ref_no) <> '')" : "") . ")
+                AND COALESCE(h.status_lpb, 0) = 1
+            )";
+            $poCond = "(
+                UPPER(TRIM(COALESCE(h.source_type, ''))) != 'MANUAL'
+                AND h.kd_po NOT LIKE 'LPBM-%'
+                " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "AND (h.manual_ref_no IS NULL OR TRIM(h.manual_ref_no) = '')" : "") . "
+                " . ($requireDonePo ? "AND UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'" : "") . "
+            )";
+            $sql .= " AND ({$manualCond} OR {$poCond})";
+        } else {
             if ($this->db->field_exists('source_type', 'tb_lpb')) {
                 $sql .= " AND UPPER(TRIM(COALESCE(h.source_type, ''))) != 'MANUAL'";
             }
@@ -4178,15 +4214,7 @@ FROM (
             if ($this->db->field_exists('manual_ref_no', 'tb_lpb')) {
                 $sql .= " AND (h.manual_ref_no IS NULL OR TRIM(h.manual_ref_no) = '')";
             }
-        }
-
-        if ($requireDonePo) {
-            if ($includeManual) {
-                $sourceTypeExpr = $this->db->field_exists('source_type', 'tb_lpb')
-                    ? "UPPER(TRIM(COALESCE(h.source_type, ''))) = 'MANUAL' OR "
-                    : "";
-                $sql .= " AND ({$sourceTypeExpr}h.kd_po LIKE 'LPBM-%' OR UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE')";
-            } else {
+            if ($requireDonePo) {
                 $sql .= " AND UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
             }
         }
@@ -4220,6 +4248,7 @@ FROM (
                 h.tgl_sj,
                 s.nama_suplier,
                 p.kd_suplier,
+                g.nama_gudang,
                 ds.total_detail,
                 ds.total_verified,
                 ds.grand_total_lpb,
@@ -4233,6 +4262,8 @@ FROM (
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
                 {$checkerGroup}
+                {$manualRefGroup}
+                {$sourceTypeGroup}
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
         return $this->append_lpb_operational_alerts($this->db->query($sql, $params)->result_array());
@@ -4347,8 +4378,12 @@ FROM (
 
     /**
      * Mengambil daftar LPB Manual untuk tab LPB Manual
+     * 
+     * @param string|null $date1
+     * @param string|null $date2
+     * @param bool $onlyUnposted Jika true, hanya mengambil LPB Manual yang belum diposting (Draft / Unpost)
      */
-    public function get_lpb_manual_view($date1 = null, $date2 = null)
+    public function get_lpb_manual_view($date1 = null, $date2 = null, $onlyUnposted = false)
     {
         $nomorLpbSelect = $this->db->field_exists('nomor_lpb', 'tb_lpb')
             ? "COALESCE(NULLIF(h.nomor_lpb, ''), CONCAT('LPB-', h.id_lpb)) AS nomor_lpb"
@@ -4366,6 +4401,13 @@ FROM (
             ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-')"
             : "'-'";
 
+        $kdSuplierSelect = $this->db->field_exists('kd_suplier', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.kd_suplier), ''), '-')"
+            : "'-'";
+        $namaSuplierSelect = $this->db->field_exists('nama_suplier', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.nama_suplier), ''), COALESCE(sm.nama_suplier, '-'))"
+            : "COALESCE(sm.nama_suplier, '-')";
+
         $sql = "SELECT
                     h.id_lpb,
                     h.kd_po,
@@ -4375,6 +4417,8 @@ FROM (
                     {$manualRefSelect},
                     {$jenisLpbSelect},
                     {$statusLpbSelect},
+                    {$kdSuplierSelect} AS kd_suplier,
+                    {$namaSuplierSelect} AS nama_suplier,
                     h.nosj,
                     h.tgl_sj,
                     h.no_invoice,
@@ -4388,6 +4432,7 @@ FROM (
                     COALESCE(ds.total_verified, 0) AS total_verified,
                     h.input_at
                 FROM tb_lpb h
+                LEFT JOIN tbpo_suplier sm ON sm.kd_suplier = h.kd_suplier
                 LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
                 LEFT JOIN (
                     SELECT
@@ -4406,6 +4451,10 @@ FROM (
                     " . ($this->db->field_exists('manual_ref_no', 'tb_lpb') ? "OR (h.manual_ref_no IS NOT NULL AND TRIM(h.manual_ref_no) <> '')" : "") . "
                 )
         ";
+
+        if ($onlyUnposted) {
+            $sql .= " AND (h.status_lpb IS NULL OR h.status_lpb = 0)";
+        }
 
         $params = [];
         if (!empty($date1) && !empty($date2)) {
@@ -8030,6 +8079,28 @@ FROM (
                     ]
                 ]);
             }
+
+            if (!$this->db->field_exists('kd_suplier', 'tb_lpb')) {
+                $this->dbforge->add_column('tb_lpb', [
+                    'kd_suplier' => [
+                        'type' => 'VARCHAR',
+                        'constraint' => 50,
+                        'null' => TRUE,
+                        'after' => 'gudang_id'
+                    ]
+                ]);
+            }
+
+            if (!$this->db->field_exists('nama_suplier', 'tb_lpb')) {
+                $this->dbforge->add_column('tb_lpb', [
+                    'nama_suplier' => [
+                        'type' => 'VARCHAR',
+                        'constraint' => 255,
+                        'null' => TRUE,
+                        'after' => 'kd_suplier'
+                    ]
+                ]);
+            }
         }
 
         $this->db->query("
@@ -8220,6 +8291,12 @@ FROM (
         }
         if ($this->db->field_exists('manual_ref_no', 'tb_lpb')) {
             $headerInsert['manual_ref_no'] = $manualRef;
+        }
+        if ($this->db->field_exists('kd_suplier', 'tb_lpb') && !empty($header['kd_suplier'])) {
+            $headerInsert['kd_suplier'] = trim((string) $header['kd_suplier']);
+        }
+        if ($this->db->field_exists('nama_suplier', 'tb_lpb') && !empty($header['nama_suplier'])) {
+            $headerInsert['nama_suplier'] = trim((string) $header['nama_suplier']);
         }
         if ($this->db->field_exists('checker_name', 'tb_lpb')) {
             $headerInsert['checker_name'] = trim((string) ($header['checker_name'] ?? '')) ?: ($header['dilakukan_oleh'] ?? 'SYSTEM');

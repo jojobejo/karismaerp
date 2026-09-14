@@ -676,9 +676,9 @@ class C_Ics extends CI_Controller
             ? $this->M_Logistik->get_lpb($date1, $date2)
             : [];
         $data['lpb_purchasing'] = $showPurchasingPanel
-            ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2)
+            ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2, null, null, TRUE, TRUE)
             : [];
-        $data['lpb_manual']   = $this->M_Logistik->get_lpb_manual_view($date1, $date2);
+        $data['lpb_manual']   = $this->M_Logistik->get_lpb_manual_view($date1, $date2, TRUE);
         $data['active_tab']   = $this->input->get('tab') ?: '';
         $data['date1']      = $date1;
         $data['date2']      = $date2;
@@ -714,8 +714,8 @@ class C_Ics extends CI_Controller
         $data['hide_lpb_supplier_code'] = TRUE;
         $data['hide_lpb_last_input'] = TRUE;
         $data['lpb'] = $this->M_Logistik->get_lpb($date1, $date2);
-        $data['lpb_purchasing'] = $showPurchasingPanel ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2) : [];
-        $data['lpb_manual'] = $this->M_Logistik->get_lpb_manual_view($date1, $date2);
+        $data['lpb_purchasing'] = $showPurchasingPanel ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2, null, null, TRUE, TRUE) : [];
+        $data['lpb_manual'] = $this->M_Logistik->get_lpb_manual_view($date1, $date2, TRUE);
         $data['active_tab'] = $this->input->get('tab') ?: '';
         $data['date1'] = $date1;
         $data['date2'] = $date2;
@@ -954,6 +954,7 @@ class C_Ics extends CI_Controller
         $data['kd_suplier'] = $kd_suplier;
         $data['initial_id_lpb'] = $initial_id_lpb;
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
+        $data['is_admlpb_user'] = $this->is_admlpb_user();
         $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
@@ -980,6 +981,11 @@ class C_Ics extends CI_Controller
             ->select('id_gudang, nama_gudang')
             ->order_by('nama_gudang', 'ASC')
             ->get('tb_gudang')
+            ->result_array();
+        $data['list_suplier'] = $this->db
+            ->select('kd_suplier, nama_suplier')
+            ->order_by('nama_suplier', 'ASC')
+            ->get('tbpo_suplier')
             ->result_array();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $data['manual_ref'] = $this->M_Logistik->generate_lpb_manual_ref();
@@ -1028,11 +1034,22 @@ class C_Ics extends CI_Controller
 
         $isDraft = $this->is_admlpb_user();
 
+        $kdSuplier = trim((string) $this->input->post('kd_suplier', TRUE));
+        $namaSuplier = trim((string) $this->input->post('nama_suplier', TRUE));
+        if ($kdSuplier !== '' && $namaSuplier === '') {
+            $supRow = $this->db->select('nama_suplier')->where('kd_suplier', $kdSuplier)->get('tbpo_suplier')->row_array();
+            if (!empty($supRow['nama_suplier'])) {
+                $namaSuplier = trim($supRow['nama_suplier']);
+            }
+        }
+
         $payload = [
             'manual_ref_no' => trim((string) $this->input->post('manual_ref_no', TRUE)),
             'tgl_lpb' => trim((string) $this->input->post('tgl_lpb', TRUE)),
             'jenis_lpb' => trim((string) $this->input->post('jenis_lpb', TRUE)),
             'gudang_id' => trim((string) $this->input->post('gudang_id', TRUE)),
+            'kd_suplier' => $kdSuplier,
+            'nama_suplier' => $namaSuplier,
             'nosj' => trim((string) $this->input->post('nosj', TRUE)),
             'no_invoice' => trim((string) $this->input->post('no_invoice', TRUE)),
             'keterangan' => trim((string) $this->input->post('keterangan', TRUE)),
@@ -2862,6 +2879,15 @@ class C_Ics extends CI_Controller
 
     public function ajax_post_lpb()
     {
+        if ($this->is_admlpb_user()) {
+            $this->json_response([
+                'status'  => 'error',
+                'message' => 'Akses ditolak: Posting LPB merupakan wewenang Purchasing. Status rekam dari Logistik (ADMLPB) adalah Draft.',
+                'html'    => ''
+            ]);
+            return;
+        }
+
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
 
         if ($id_lpb <= 0) {

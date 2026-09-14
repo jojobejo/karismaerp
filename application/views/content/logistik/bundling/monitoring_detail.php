@@ -208,66 +208,13 @@
                 </div>
             <?php endif; ?>
 
-            <!-- Panel Kebutuhan Kemasan Fisik & Estimasi Biaya Kemasan -->
-            <?php 
-                $kItems = !empty($request['kemasan_items']) ? $request['kemasan_items'] : [];
-                $hasPackagingData = (float)($request['total_biaya_kemasan_per_paket'] ?? 0) > 0 || !empty($kItems);
-            ?>
-            <?php if ($hasPackagingData): ?>
-                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: #fff; border-left: 5px solid #8b5cf6 !important;">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
-                            <div>
-                                <h6 class="font-weight-bold text-dark mb-1">
-                                    <i class="fas fa-pallet mr-1" style="color: #8b5cf6;"></i> Kebutuhan Kemasan Fisik & Estimasi Modal Paket
-                                </h6>
-                                <small class="text-muted">Kemasan dan printilan yang perlu disiapkan oleh Tim Logistik untuk perakitan paket ini</small>
-                            </div>
-                            <div class="text-right mt-2 mt-sm-0">
-                                <span class="badge badge-light border font-weight-bold p-2" style="font-size: 0.9rem; color: #6d28d9;">
-                                    Estimasi HPP Paket: Rp <?= number_format((float)($request['estimasi_hpp_per_paket'] ?? 0), 2, ',', '.') ?> / <?= htmlspecialchars($request['satuan']) ?>
-                                </span>
-                            </div>
-                        </div>
-                        <hr class="my-2">
-                        <div class="row pt-1 small">
-                            <?php foreach ($kItems as $ki): 
-                                $nItem = trim($ki['nama'] ?? '');
-                                $vItem = (float)($ki['nominal'] ?? 0);
-                                if ($nItem === '' && $vItem <= 0) continue;
-                                $totItemVal = $vItem * (float)$request['qty_request'];
-                            ?>
-                                <div class="col-md-3 col-6 mb-2">
-                                    <span class="text-muted d-block"><?= htmlspecialchars($nItem) ?>:</span>
-                                    <strong>Rp <?= number_format($vItem, 2, ',', '.') ?> <small class="text-muted">/ paket</small></strong>
-                                    <span class="text-muted d-block">(Total: Rp <?= number_format($totItemVal, 2, ',', '.') ?>)</span>
-                                </div>
-                            <?php endforeach; ?>
-
-                            <div class="col-md-3 col-6 mb-2 bg-light p-2 rounded">
-                                <span class="text-muted d-block font-weight-bold">Total Kemasan & Printilan:</span>
-                                <strong style="color: #6d28d9; font-size: 0.95rem;">Rp <?= number_format((float)($request['total_biaya_kemasan_per_paket'] ?? 0), 2, ',', '.') ?> / paket</strong>
-                                <span class="text-muted d-block font-weight-bold">Total Seluruh Paket: Rp <?= number_format((float)($request['total_biaya_kemasan_keseluruhan'] ?? 0), 2, ',', '.') ?></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-
             <!-- Tabel Kebutuhan Komponen & Kesiapan Stok Fisik -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
-                    <div>
-                        <h6 class="font-weight-bold text-dark m-0">
-                            <i class="fas fa-clipboard-check text-primary mr-2"></i> Pengecekan Ketersediaan Stok Komponen
-                        </h6>
-                        <small class="text-muted">Komponen diambil langsung dari Gudang Induk saat perakitan. Setelah dirakit, draft penyesuaian akan otomatis masuk ke Bagian Accounting.</small>
-                    </div>
-                    <?php if ($sisa > 0): ?>
-                        <a href="<?= site_url('persediaan/penyesuaian_barang') ?>" target="_blank" class="btn btn-sm btn-outline-secondary font-weight-bold mt-2 mt-sm-0" title="Lakukan pemantauan dan posting jurnal penyesuaian persediaan di modul Penyesuaian Barang">
-                            <i class="fas fa-boxes mr-1"></i> Modul Penyesuaian Barang
-                        </a>
-                    <?php endif; ?>
+                <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
+                    <h6 class="font-weight-bold text-dark m-0">
+                        <i class="fas fa-clipboard-check text-primary mr-2"></i> Pengecekan Ketersediaan Stok Komponen
+                    </h6>
+                    <small class="text-muted">Komponen diambil langsung dari Gudang Induk saat perakitan paket bundling.</small>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -382,7 +329,6 @@
                                         <th class="py-3 text-center">Qty Dibuat</th>
                                         <th class="py-3">No. Lot Paket</th>
                                         <th class="py-3">Expired Date</th>
-                                        <th class="py-3 text-right">Nilai HPP</th>
                                         <th class="py-3">Draft Accounting</th>
                                         <th class="py-3">Petugas</th>
                                         <th class="py-3 text-center" style="width: 100px;">Aksi</th>
@@ -398,9 +344,6 @@
                                             </td>
                                             <td><span class="badge badge-light border font-weight-bold"><?= htmlspecialchars($asm['no_lot_paket']) ?></span></td>
                                             <td><?= $asm['expired_date_paket'] ? date('d/m/Y', strtotime($asm['expired_date_paket'])) : '-' ?></td>
-                                            <td class="text-right font-weight-bold text-dark">
-                                                Rp <?= number_format((float)$asm['hpp_per_paket'], 2, ',', '.') ?>
-                                            </td>
                                             <td>
                                                 <?php if (!empty($asm['no_penyesuaian'])): ?>
                                                     <a href="<?= site_url('persediaan/penyesuaian_barang/view/' . $asm['id_penyesuaian']) ?>" target="_blank" class="badge badge-warning text-dark px-2 py-1" title="Lihat di Menu Penyesuaian Barang Accounting">

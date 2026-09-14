@@ -148,9 +148,15 @@
                                 <span class="text-muted small font-weight-bold text-uppercase d-block">
                                     <i class="fas fa-box-open text-purple mr-1" style="color: #8b5cf6;"></i> Biaya Kemasan & Printilan
                                 </span>
-                                <button type="button" class="btn btn-xs btn-outline-primary" data-toggle="modal" data-target="#modalEditPackagingCost" title="Edit Biaya Kemasan & Printilan">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
+                                <?php if ($totalKemasanPerPaket > 0): ?>
+                                    <button type="button" class="btn btn-xs btn-outline-primary font-weight-bold" data-toggle="modal" data-target="#modalEditPackagingCost" title="Ubah Biaya Kemasan & Printilan">
+                                        <i class="fas fa-edit mr-1"></i> Edit
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-xs btn-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost" title="Input Biaya Kemasan & Printilan (Opsional)">
+                                        <i class="fas fa-plus mr-1"></i> Input Biaya
+                                    </button>
+                                <?php endif; ?>
                             </div>
                             <h4 class="font-weight-bold text-dark mb-0 mt-2" style="color: #6d28d9 !important;">
                                 Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?>
@@ -204,7 +210,7 @@
                             <small class="text-muted">(Dapat ditambah & disesuaikan tanpa batas sesuai kebutuhan fisik paket)</small>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost">
-                            <i class="fas fa-edit mr-1"></i> Input / Ubah Biaya Kemasan & Printilan
+                            <i class="fas fa-pallet mr-1"></i> Input / Ubah Biaya Kemasan & Printilan
                         </button>
                     </div>
 
@@ -246,8 +252,12 @@
 
                                 <?php if (!$hasValidItem): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-3">
-                                            <i class="fas fa-info-circle mr-1"></i> Belum ada rincian biaya kemasan & printilan. Klik tombol <strong>"Input / Ubah Biaya Kemasan & Printilan"</strong> di atas untuk menambahkan.
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="fas fa-box-open fa-2x mb-2 text-secondary d-block"></i>
+                                            Belum ada rincian biaya kemasan & printilan untuk request ini.<br>
+                                            <button type="button" class="btn btn-sm btn-primary mt-2 font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost">
+                                                <i class="fas fa-plus mr-1"></i> Input Biaya Kemasan & Printilan (Opsional)
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -369,7 +379,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+                        <table class="table table-hover align-middle mb-0 w-100" style="font-size: 0.90rem; width: 100%;">
                             <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
                                     <th class="py-3 px-3">Komponen Barang</th>
@@ -463,9 +473,10 @@
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
+                            <?php $colSpanFooter = !empty($request['is_innerbox']) ? 4 : 3; ?>
                             <tfoot style="background: #f8fafc; font-size: 0.90rem;">
                                 <tr>
-                                    <th class="py-2 px-3 text-muted" colspan="3">1. Subtotal HPP Bahan Baku (LIFO):</th>
+                                    <th class="py-2 px-3 text-muted" colspan="<?= $colSpanFooter ?>">1. Subtotal HPP Bahan Baku (LIFO):</th>
                                     <th class="py-2 text-right text-dark font-weight-bold">
                                         Rp <?= number_format($estHppBahan, 2, ',', '.') ?>
                                     </th>
@@ -478,7 +489,7 @@
                                     <th colspan="4"></th>
                                 </tr>
                                 <tr>
-                                    <th class="py-2 px-3 text-muted" colspan="3">2. Biaya Kemasan & Printilan (Inner, Outer, Stiker Hologram):</th>
+                                    <th class="py-2 px-3 text-muted" colspan="<?= $colSpanFooter ?>">2. Biaya Kemasan & Printilan (Inner, Outer, Stiker Hologram):</th>
                                     <th class="py-2 text-right font-weight-bold" style="color: #6d28d9;">
                                         + Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?>
                                     </th>
@@ -491,7 +502,7 @@
                                     <th colspan="4"></th>
                                 </tr>
                                 <tr style="background: #e6f4ea; border-top: 2px solid #059669;">
-                                    <th class="py-3 px-3 font-weight-bold text-success" colspan="3" style="font-size: 1rem;">
+                                    <th class="py-3 px-3 font-weight-bold text-success" colspan="<?= $colSpanFooter ?>" style="font-size: 1rem;">
                                         <i class="fas fa-check-circle mr-1"></i> Total Estimasi Modal / HPP per 1 Paket:
                                     </th>
                                     <th class="py-3 text-right text-success font-weight-bold" style="font-size: 1.1rem;">

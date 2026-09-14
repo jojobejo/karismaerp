@@ -561,6 +561,7 @@ $formatDate = function ($dateStr) {
                                                             $journalTitle = $hasActiveJournal
                                                                 ? 'Jurnal LPB POSTED: ' . (string) ($row['lpb_journal_sample'] ?? '-')
                                                                 : 'Belum ada jurnal LPB POSTED aktif';
+                                                            $isManualRow = (int) ($row['is_manual_lpb'] ?? 0) === 1;
                                                         ?>
                                                         <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
                                                             <td data-order="<?= htmlspecialchars($row['tgl_lpb'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_lpb'] ?? '')) ?></td>
@@ -568,9 +569,18 @@ $formatDate = function ($dateStr) {
                                                                 <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
                                                                     <?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?>
                                                                 </a>
+                                                                <?php if ($isManualRow) : ?>
+                                                                    <span class="badge badge-info ml-1" style="font-size: 10px;" title="LPB Manual diposting"><i class="fas fa-keyboard"></i> MANUAL</span>
+                                                                <?php endif; ?>
                                                             </td>
-                                                            <td data-order="<?= htmlspecialchars($row['tgl_po'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_po'] ?? '')) ?></td>
-                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                            <td data-order="<?= htmlspecialchars($row['tgl_po'] ?? '') ?>"><?= htmlspecialchars($isManualRow ? '-' : $formatDate($row['tgl_po'] ?? '')) ?></td>
+                                                            <td>
+                                                                <?php if ($isManualRow) : ?>
+                                                                    <span class="badge badge-light border text-monospace"><?= htmlspecialchars($row['manual_ref_no'] ?? $row['no_po'] ?? '-') ?></span>
+                                                                <?php else : ?>
+                                                                    <?= htmlspecialchars($row['no_po'] ?? '') ?>
+                                                                <?php endif; ?>
+                                                            </td>
                                                             <td data-order="<?= htmlspecialchars($row['tgl_sj'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_sj'] ?? '')) ?></td>
                                                             <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
@@ -625,17 +635,17 @@ $formatDate = function ($dateStr) {
                                     <?php endif; ?>
 
                                     <div class="<?= $manualPanelClass ?>" id="lpb-manual-panel" role="tabpanel" aria-labelledby="lpb-manual-tab">
+                                        <div class="alert alert-light border py-2 px-3 mb-3 d-flex align-items-center" style="font-size: 13px; border-radius: 8px; background: #f8fafc;">
+                                            <i class="fas fa-info-circle text-primary mr-2" style="font-size: 16px;"></i>
+                                            <span>Tab ini menampilkan antrean LPB Manual yang <strong>belum diposting</strong> (Draft / Unpost). LPB Manual yang telah diverifikasi &amp; diposting oleh Purchasing otomatis digabungkan ke tab <strong>Data LPB</strong>.</span>
+                                        </div>
                                         <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
                                             <div class="lpb-filter-toolbar" id="lpbManualStatusFilter">
-                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="draft">
-                                                    <i class="fas fa-clock mr-1"></i> Draft / Unpost
+                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">
+                                                    <i class="fas fa-clock mr-1"></i> Belum Diposting (Draft / Unpost)
                                                     <?php if ($unpostedManualCount > 0) : ?>
                                                         <span class="badge badge-warning text-dark ml-1"><?= $unpostedManualCount ?></span>
                                                     <?php endif; ?>
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="post">
-                                                    <i class="fas fa-check mr-1"></i> Post
                                                 </button>
                                             </div>
                                             <?php if ($canLpbManual) : ?>
@@ -647,16 +657,15 @@ $formatDate = function ($dateStr) {
                                             <?php endif; ?>
                                         </div>
                                         <div class="table-responsive">
-                                            <table class="table table-bordered table-hover" id="idtb_ics_lpb_manual" style="width:100%;">
+                                             <table class="table table-bordered table-hover" id="idtb_ics_lpb_manual" style="width:100%;">
                                                 <thead class="thead-dark text-center">
                                                     <tr>
                                                         <th>Tgl LPB</th>
                                                         <th>No. LPB</th>
                                                         <th>Ref Manual</th>
-                                                        <th>Gudang</th>
+                                                        <th>Suplier</th>
                                                         <th>No. SJ</th>
                                                         <th>Tgl SJ</th>
-                                                        <th>Checker / Petugas</th>
                                                         <th class="text-center">Total Item</th>
                                                         <th class="text-center">Total Qty</th>
                                                         <?php if ($canViewLpbNominal) : ?>
@@ -692,10 +701,9 @@ $formatDate = function ($dateStr) {
                                                                 </a>
                                                             </td>
                                                             <td><span class="badge badge-light border font-weight-bold"><?= htmlspecialchars($mRow['manual_ref_no'] ?? $mRow['kd_po'] ?? '-') ?></span></td>
-                                                            <td><?= htmlspecialchars($mRow['nama_gudang'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($mRow['nama_suplier'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($mRow['nosj'] ?? '-') ?></td>
                                                             <td data-order="<?= htmlspecialchars($mRow['tgl_sj'] ?? '') ?>"><?= htmlspecialchars($formatDate($mRow['tgl_sj'] ?? '')) ?></td>
-                                                            <td><?= htmlspecialchars($mRow['checker_name'] ?? '-') ?></td>
                                                             <td class="text-center font-weight-bold"><?= number_format((int) ($mRow['total_detail'] ?? 0)) ?></td>
                                                             <td class="text-center font-weight-bold text-success"><?= number_format((float) ($mRow['total_qty'] ?? 0), 2, ',', '.') ?></td>
                                                             <?php if ($canViewLpbNominal) : ?>
@@ -717,8 +725,8 @@ $formatDate = function ($dateStr) {
                                                         <?php endforeach; ?>
                                                     <?php else : ?>
                                                         <tr>
-                                                            <td colspan="<?= $canViewLpbNominal ? 13 : 12 ?>" class="text-center text-muted py-4">
-                                                                <i class="fas fa-inbox mr-1"></i> Belum ada data LPB Manual yang di-input.
+                                                            <td colspan="<?= $canViewLpbNominal ? 12 : 11 ?>" class="text-center text-muted py-4">
+                                                                <i class="fas fa-check-circle text-success mr-1"></i> Tidak ada antrean LPB Manual yang belum diposting. Semua LPB Manual yang telah diposting Purchasing dapat dilihat pada tab <strong>Data LPB</strong>.
                                                             </td>
                                                         </tr>
                                                     <?php endif; ?>

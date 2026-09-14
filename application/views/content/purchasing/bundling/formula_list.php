@@ -164,45 +164,6 @@
                         </div>
                     </div>
 
-                    <!-- Panel Biaya Kemasan & Modal Printilan Dinamis (Repeater) -->
-                    <div class="card border mb-3" style="border-radius: 8px; border-left: 4px solid #8b5cf6 !important; background: #faf5ff;">
-                        <div class="card-body p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="small font-weight-bold text-dark" style="color: #6d28d9 !important;">
-                                    <i class="fas fa-pallet mr-1"></i> Estimasi Biaya Kemasan & Printilan (Opsional)
-                                </span>
-                                <button type="button" class="btn btn-xs btn-outline-primary font-weight-bold" id="btnAddFormulaKemasanRow">
-                                    <i class="fas fa-plus mr-1"></i> Tambah Biaya / Printilan
-                                </button>
-                            </div>
-                            <div class="table-responsive mb-2">
-                                <table class="table table-bordered table-sm mb-0 bg-white" id="tblFormulaKemasan">
-                                    <thead class="bg-light text-muted small text-uppercase">
-                                        <tr>
-                                            <th style="width: 58%;">Nama Biaya Kemasan / Printilan</th>
-                                            <th style="width: 32%;" class="text-right">Biaya per 1 Paket (Rp)</th>
-                                            <th style="width: 10%; text-align: center;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="formulaKemasanBody">
-                                        <!-- Baris dinamis via JS -->
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="bg-light font-weight-bold">
-                                            <td class="text-right small text-muted text-uppercase align-middle">Total Kemasan / 1 Paket:</td>
-                                            <td class="text-right" style="color: #6d28d9; font-size: 0.95rem;" id="f_lbl_total_kemasan">
-                                                Rp 0,00
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                            <small class="text-muted d-block">
-                                <i class="fas fa-info-circle mr-1"></i> Masukkan biaya kardus innerbox, master outerbox, stiker hologram, lakban segel, dll per 1 paket. Sisakan 1 kolom atau tambah sesuai kebutuhan.
-                            </small>
-                        </div>
-                    </div>
 
                     <!-- Judul Komposisi & Tombol Tambah Barang -->
                     <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
@@ -330,7 +291,6 @@ $(document).ready(function() {
         $('#formulaItemsBody').empty();
         $('#modalFormulaTitle').html('<i class="fas fa-plus-circle mr-2"></i> Tambah Formula Paket Baru');
         updateInnerboxUIMode();
-        renderFormulaKemasanItems([{nama: '', nominal: 0}]);
         addFormulaRow('', '', 1, 'Pcs');
         $('#modalFormula').modal('show');
     });
@@ -350,7 +310,6 @@ $(document).ready(function() {
     $('#f_is_innerbox').on('change', function() {
         updateInnerboxUIMode();
         recalcAllFormulaRows();
-        recalcFormulaPackagingCost();
     });
 
     // Event input jumlah innerbox
@@ -367,26 +326,6 @@ $(document).ready(function() {
         recalcAllFormulaRows();
     });
 
-    // Event Biaya Kemasan Dinamis
-    $('#btnAddFormulaKemasanRow').click(function() {
-        addFormulaKemasanRow('', 0);
-    });
-
-    $(document).on('click', '.btn-del-formula-kemasan', function() {
-        let totalRows = $('#formulaKemasanBody .formula-kemasan-row').length;
-        let $row = $(this).closest('.formula-kemasan-row');
-        if (totalRows > 1) {
-            $row.remove();
-        } else {
-            $row.find('.inp-f-nama-kemasan').val('');
-            $row.find('.inp-f-nominal-kemasan').val(0);
-        }
-        recalcFormulaPackagingCost();
-    });
-
-    $(document).on('input change', '.inp-f-nominal-kemasan', function() {
-        recalcFormulaPackagingCost();
-    });
 
     // Event input isi dalam innerbox per baris
     $(document).on('input change', '.row-isi-inbox', function() {
@@ -481,7 +420,6 @@ $(document).ready(function() {
                     $('#f_label_satuan_innerbox').text(satInbox);
 
                     updateInnerboxUIMode();
-                    renderFormulaKemasanItems(f.kemasan_items || []);
                     $('#formulaItemsBody').empty();
 
                     if (f.details && f.details.length > 0) {
@@ -584,67 +522,6 @@ function updateInnerboxUIMode() {
     }
 }
 
-// Helper baris biaya kemasan dinamis pada formula
-let fKemasanIndex = 0;
-function createFormulaKemasanRowHtml(index, nama, nominal) {
-    nama = nama || '';
-    nominal = (nominal !== undefined && nominal !== null && nominal !== '') ? nominal : 0;
-    return `
-        <tr class="formula-kemasan-row" data-index="${index}">
-            <td>
-                <input type="text" name="kemasan_items[${index}][nama]" class="form-control form-control-sm inp-f-nama-kemasan font-weight-bold" placeholder="Contoh: Kardus Innerbox / Outer Box / Hologram" value="${escapeHtml(nama)}">
-            </td>
-            <td>
-                <div class="input-group input-group-sm">
-                    <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                    <input type="number" step="any" min="0" name="kemasan_items[${index}][nominal]" class="form-control form-control-sm text-right font-weight-bold inp-f-nominal-kemasan" placeholder="0" value="${nominal}">
-                </div>
-            </td>
-            <td class="text-center align-middle">
-                <button type="button" class="btn btn-xs btn-outline-danger btn-del-formula-kemasan" title="Hapus baris kemasan">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </td>
-        </tr>
-    `;
-}
-
-function addFormulaKemasanRow(nama, nominal) {
-    let html = createFormulaKemasanRowHtml(fKemasanIndex, nama, nominal);
-    $('#formulaKemasanBody').append(html);
-    fKemasanIndex++;
-    recalcFormulaPackagingCost();
-}
-
-function renderFormulaKemasanItems(items) {
-    $('#formulaKemasanBody').empty();
-    fKemasanIndex = 0;
-    let list = Array.isArray(items) && items.length > 0 ? items : [{nama: '', nominal: 0}];
-    list.forEach(function(it) {
-        addFormulaKemasanRow(it.nama, it.nominal);
-    });
-    recalcFormulaPackagingCost();
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-// Menghitung live total biaya kemasan pada modal formula
-function recalcFormulaPackagingCost() {
-    let totalKemasan = 0;
-    $('#formulaKemasanBody .formula-kemasan-row').each(function() {
-        let nom = parseFloat($(this).find('.inp-f-nominal-kemasan').val()) || 0;
-        totalKemasan += nom;
-    });
-    $('#f_lbl_total_kemasan').text('Rp ' + Number(totalKemasan).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-}
 
 // Menambahkan baris barang ke tabel formula
 function addFormulaRow(kd, nama, isiInbox, sat) {

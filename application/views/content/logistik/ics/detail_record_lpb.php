@@ -1,6 +1,7 @@
 <?php
 $lpbRecordViewMode = $lpb_record_view_mode ?? (!empty($is_admin_po) ? 'purchasing' : 'logistik');
 $showLpbListPanel = $lpbRecordViewMode === 'logistik';
+$isAdmlpbUser = !empty($is_admlpb_user);
 ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
@@ -554,9 +555,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                             <button type="button" class="btn btn-danger btn-sm btn-workflow-main" id="btnUnpostLpb">
                                                 <i class="fas fa-undo mr-1"></i> UNPOST
                                             </button>
+                                            <?php if (!$isAdmlpbUser) : ?>
                                             <button type="button" class="btn btn-success btn-sm btn-workflow-main" id="btnPostLpb">
                                                 <i class="fas fa-save mr-1"></i> Rekam
                                             </button>
+                                            <?php endif; ?>
+                                            <span class="badge badge-warning py-2 px-3 ml-2" id="lpbDraftInfoBadge" style="display:none;">
+                                                <i class="fas fa-info-circle mr-1"></i> Status: DRAFT (Menunggu posting oleh Purchasing)
+                                            </span>
                                         </div>
                                         <?php endif; ?>
                                         <div class="lpb-table-actions" id="lpbPurchasingVerifyActions" style="display:none;">
@@ -1057,6 +1063,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             var canManagePoInvoice = <?= !empty($is_admin_po) ? 'true' : 'false' ?>;
             var canViewLpbNominal = <?= !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal) ? 'true' : 'false' ?>;
             var showLpbListPanel = <?= $showLpbListPanel ? 'true' : 'false' ?>;
+            var isAdmlpbUser = <?= !empty($is_admlpb_user) ? 'true' : 'false' ?>;
             var showPrePoAdjustmentPanel = false;
             var allRows = [];
             var allInvoiceRows = [];
@@ -1141,8 +1148,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var code = parseInt(status, 10);
                 if (code === 0) {
                     return {
-                        label: 'UNPOST',
-                        badge: 'badge-warning'
+                        label: isAdmlpbUser ? 'DRAFT' : 'UNPOST',
+                        badge: isAdmlpbUser ? 'badge-secondary' : 'badge-warning'
                     };
                 }
 
@@ -1564,9 +1571,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             function renderDetailHeader(header) {
                 var html = '';
                 var nomorJenisLpb = (header.nomor_lpb || 'Nomor LPB belum dibuat') + ' / ' + (header.jenis_lpb || 'Jenis LPB belum ditentukan');
+                var stInfo = lpbStatusInfo(header.status_lpb);
                 var boxes = [{
                         label: 'Nomor / Jenis LPB',
                         value: nomorJenisLpb
+                    },
+                    {
+                        label: 'Status LPB',
+                        value: stInfo.label + (parseInt(header.status_lpb, 10) === 0 ? ' (Menunggu Purchasing)' : '')
                     },
                     {
                         label: 'Nomor SJ',
@@ -1659,7 +1671,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 $('#lpbPostActions').show();
                 $('#btnUnpostLpb').toggle(!isUnpost).prop('disabled', isChangingLpbStatus);
-                $('#btnPostLpb').toggle(isUnpost).prop('disabled', isChangingLpbStatus);
+                $('#btnPostLpb').toggle(isUnpost && !isAdmlpbUser).prop('disabled', isChangingLpbStatus);
+                $('#lpbDraftInfoBadge').toggle(isUnpost && isAdmlpbUser);
                 $('#btnUpdateLpbIdentity').toggle(isUnpost);
                 $('#btnUpdateLpbSj').toggle(isUnpost);
             }

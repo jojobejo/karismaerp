@@ -53,21 +53,6 @@
                         </div>
                     </div>
 
-                    <?php if (!empty($assembly['no_penyesuaian'])): ?>
-                        <div class="alert alert-warning border-0 p-3 mt-2 mb-3 d-flex justify-content-between align-items-center" style="border-radius: 8px; background-color: #fffbeb; border-left: 4px solid #f59e0b !important;">
-                            <div>
-                                <h6 class="font-weight-bold text-dark m-0">
-                                    <i class="fas fa-file-signature text-warning mr-2"></i> Terintegrasi dengan Dokumen Penyesuaian Barang (Accounting)
-                                </h6>
-                                <small class="text-muted">Draft transaksi penyesuaian persediaan telah otomatis diterbitkan untuk diverifikasi dan diposting oleh Bagian Accounting.</small>
-                            </div>
-                            <div>
-                                <a href="<?= site_url('persediaan/penyesuaian_barang/view/' . $assembly['id_penyesuaian']) ?>" target="_blank" class="btn btn-sm btn-warning font-weight-bold shadow-sm">
-                                    <i class="fas fa-external-link-alt mr-1"></i> Buka Draft #<?= htmlspecialchars($assembly['no_penyesuaian']) ?>
-                                </a>
-                            </div>
-                        </div>
-                    <?php endif; ?>
 
                     <div class="alert alert-success border-0 p-3 mt-2 mb-0" style="border-radius: 8px;">
                         <div class="d-flex justify-content-between align-items-center">

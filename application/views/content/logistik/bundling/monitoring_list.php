@@ -13,14 +13,11 @@
                     <h1 class="m-0 font-weight-bold" style="color: #0f172a; font-size: 1.6rem;">
                         <i class="fas fa-warehouse text-primary mr-2"></i> Monitoring & Realisasi Paket Bundling
                     </h1>
-                    <p class="text-muted mb-0 small">Pelaksanaan perakitan paket dan pembongkaran paket untuk penjualan eceran</p>
+                    <p class="text-muted mb-0 small">Pelaksanaan perakitan paket bundling (Assembly) dari permintaan Purchasing</p>
                 </div>
                 <div class="col-sm-6 text-right">
-                    <a href="<?= site_url('logistik/bundling/history') ?>" class="btn btn-outline-secondary font-weight-bold shadow-sm mr-2">
-                        <i class="fas fa-history mr-1"></i> Riwayat Transaksi
-                    </a>
-                    <a href="<?= site_url('logistik/bundling/disassembly') ?>" class="btn btn-warning font-weight-bold shadow-sm px-3 text-dark">
-                        <i class="fas fa-box-open mr-1"></i> Pembongkaran Paket (Eceran)
+                    <a href="<?= site_url('logistik/bundling/history') ?>" class="btn btn-outline-secondary font-weight-bold shadow-sm">
+                        <i class="fas fa-history mr-1"></i> Riwayat Perakitan
                     </a>
                 </div>
             </div>

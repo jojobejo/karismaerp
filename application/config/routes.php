@@ -1081,11 +1081,12 @@ $route['faktur_penjualan/update_qty/(:any)']       = 'admin/C_Transaksi/index';
 // =========================================================================
 
 // Purchasing - Request Paket Bundling
-$route['purchasing/bundling/request']               = 'purchasing/C_BundlingRequest/index';
-$route['purchasing/bundling/request/create']        = 'purchasing/C_BundlingRequest/create';
-$route['purchasing/bundling/request/save']          = 'purchasing/C_BundlingRequest/save';
-$route['purchasing/bundling/request/detail/(:num)'] = 'purchasing/C_BundlingRequest/detail/$1';
-$route['purchasing/bundling/request/cancel/(:num)'] = 'purchasing/C_BundlingRequest/cancel/$1';
+$route['purchasing/bundling/request']                       = 'purchasing/C_BundlingRequest/index';
+$route['purchasing/bundling/request/create']                = 'purchasing/C_BundlingRequest/create';
+$route['purchasing/bundling/request/save']                  = 'purchasing/C_BundlingRequest/save';
+$route['purchasing/bundling/request/detail/(:num)']         = 'purchasing/C_BundlingRequest/detail/$1';
+$route['purchasing/bundling/request/cancel/(:num)']         = 'purchasing/C_BundlingRequest/cancel/$1';
+$route['purchasing/bundling/request/update_packaging_cost'] = 'purchasing/C_BundlingRequest/update_packaging_cost';
 
 // Purchasing - Master Formula Paket Bundling
 $route['purchasing/bundling/formula']               = 'purchasing/C_BundlingRequest/formula';
@@ -1101,13 +1102,7 @@ $route['logistik/bundling/execute_mutasi']          = 'logistik/C_BundlingLogist
 $route['logistik/bundling/assembly/(:num)']         = 'logistik/C_BundlingLogistik/form_assembly/$1';
 $route['logistik/bundling/save_assembly']           = 'logistik/C_BundlingLogistik/save_assembly';
 
-// Logistik - Pembongkaran Paket (Disassembly / Unbundling Eceran)
-$route['logistik/bundling/disassembly']             = 'logistik/C_BundlingLogistik/disassembly';
-$route['logistik/bundling/save_disassembly']        = 'logistik/C_BundlingLogistik/save_disassembly';
-
 // Logistik - Riwayat & Bukti Transaksi
 $route['logistik/bundling/history']                 = 'logistik/C_BundlingLogistik/history';
 $route['logistik/bundling/assembly_detail/(:num)']  = 'logistik/C_BundlingLogistik/detail_assembly/$1';
-$route['logistik/bundling/disassembly_detail/(:num)']= 'logistik/C_BundlingLogistik/detail_disassembly/$1';
-$route['logistik/bundling/ajax_get_paket_stock_batch'] = 'logistik/C_BundlingLogistik/ajax_get_paket_stock_batch';
 

@@ -192,86 +192,6 @@ class C_BundlingLogistik extends CI_Controller
     }
 
     // =========================================================================
-    // PEMBONGKARAN PAKET (DISASSEMBLY / UNBUNDLING UNTUK ECERAN)
-    // =========================================================================
-
-    /**
-     * Halaman Form Pembongkaran Paket Bundling (Disassembly)
-     */
-    public function disassembly()
-    {
-        $data['page_title']      = 'Pembongkaran Paket Bundling (Unbundling Eceran)';
-        $data['no_disassembly']  = $this->M_Bundling->generate_disassembly_number();
-        $data['gudangs']         = $this->db->where('is_active', 1)->get('tb_gudang')->result_array();
-        $data['formulas']        = $this->M_Bundling->get_all_formulas();
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/bundling/disassembly_create.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
-    /**
-     * Eksekusi Pembongkaran Paket Bundling
-     */
-    public function save_disassembly()
-    {
-        $user = $this->session->userdata('nik') ?: $this->session->userdata('username') ?: 'LOGISTIK';
-        $post = $this->input->post();
-
-        $qtyDsb = (float)($post['qty_disassembly'] ?? 0);
-        if ($qtyDsb <= 0) {
-            $this->output->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'msg' => 'Qty paket yang dibongkar harus lebih dari 0']));
-            return;
-        }
-
-        if (empty($post['alasan'])) {
-            $this->output->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'msg' => 'Alasan pembongkaran wajib diisi']));
-            return;
-        }
-
-        $header = [
-            'tanggal'            => !empty($post['tanggal']) ? $post['tanggal'] : date('Y-m-d'),
-            'kode_paket'         => trim($post['kode_paket']),
-            'nama_paket'         => trim($post['nama_paket']),
-            'id_gudang'          => !empty($post['id_gudang']) ? (int)$post['id_gudang'] : 12,
-            'qty_disassembly'    => $qtyDsb,
-            'satuan'             => $post['satuan'] ?: 'Box',
-            'no_lot_paket'       => !empty($post['no_lot_paket']) ? trim($post['no_lot_paket']) : '-',
-            'expired_date_paket' => !empty($post['expired_date_paket']) ? $post['expired_date_paket'] : null,
-            'alasan'             => trim($post['alasan'])
-        ];
-
-        $rawComponents = $post['komponen'] ?? [];
-        $components = [];
-        if (is_array($rawComponents)) {
-            foreach ($rawComponents as $comp) {
-                $qtyKembali = (float)($comp['qty_kembali'] ?? 0);
-                if ($qtyKembali > 0 && !empty($comp['kode_barang'])) {
-                    $components[] = [
-                        'kode_barang'  => trim($comp['kode_barang']),
-                        'nama_barang'  => trim($comp['nama_barang'] ?? ''),
-                        'no_lot'       => trim($comp['no_lot'] ?? '-'),
-                        'expired_date' => !empty($comp['expired_date']) ? $comp['expired_date'] : null,
-                        'qty_kembali'  => $qtyKembali,
-                        'satuan'       => $comp['satuan'] ?? 'Pcs'
-                    ];
-                }
-            }
-        }
-
-        if (empty($components)) {
-            $this->output->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'msg' => 'Komponen hasil pembongkaran belum ditentukan']));
-            return;
-        }
-
-        $res = $this->M_Bundling->process_disassembly($header, $components, $user);
-        $this->output->set_content_type('application/json')->set_output(json_encode($res));
-    }
-
-    // =========================================================================
     // HISTORI & AUDIT TRAIL
     // =========================================================================
 
@@ -283,10 +203,9 @@ class C_BundlingLogistik extends CI_Controller
             'date_to'   => $this->input->get('date_to') ?: ''
         ];
 
-        $data['page_title']    = 'Riwayat Perakitan & Pembongkaran Bundling';
+        $data['page_title']    = 'Riwayat Perakitan Bundling';
         $data['filters']       = $filters;
         $data['assemblies']    = $this->M_Bundling->get_assembly_history($filters);
-        $data['disassemblies'] = $this->M_Bundling->get_disassembly_history($filters);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/bundling/history_list.php', $data);
@@ -305,37 +224,5 @@ class C_BundlingLogistik extends CI_Controller
         $this->load->view('content/logistik/bundling/assembly_detail.php', $data);
         $this->load->view('partial/main/footer.php');
     }
-
-    public function detail_disassembly($id)
-    {
-        $row = $this->M_Bundling->get_disassembly_by_id($id);
-        if (!$row) show_404();
-
-        $data['page_title']    = 'Bukti Pembongkaran Paket #' . $row['no_disassembly'];
-        $data['disassembly']   = $row;
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/bundling/disassembly_detail.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
-    // =========================================================================
-    // AJAX LOOKUPS
-    // =========================================================================
-
-    public function ajax_get_paket_stock_batch()
-    {
-        $kdPaket = $this->input->get('kode_paket');
-        $gudangId = (int)($this->input->get('id_gudang') ?: 12);
-
-        $batches = $this->M_Bundling->get_stock_batches_by_gudang($kdPaket, $gudangId);
-        $available = $this->M_Bundling->get_stock_available_by_gudang($kdPaket, $gudangId);
-
-        $this->output->set_content_type('application/json')
-            ->set_output(json_encode([
-                'status'    => true,
-                'available' => $available,
-                'batches'   => $batches
-            ]));
-    }
 }
+
