@@ -1086,6 +1086,7 @@ $route['purchasing/bundling/request/create']                = 'purchasing/C_Bund
 $route['purchasing/bundling/request/save']                  = 'purchasing/C_BundlingRequest/save';
 $route['purchasing/bundling/request/detail/(:num)']         = 'purchasing/C_BundlingRequest/detail/$1';
 $route['purchasing/bundling/request/cancel/(:num)']         = 'purchasing/C_BundlingRequest/cancel/$1';
+$route['purchasing/bundling/request/delete/(:num)']         = 'purchasing/C_BundlingRequest/delete/$1';
 $route['purchasing/bundling/request/update_packaging_cost'] = 'purchasing/C_BundlingRequest/update_packaging_cost';
 
 // Purchasing - Master Formula Paket Bundling

@@ -208,9 +208,10 @@ class C_BundlingRequest extends CI_Controller
             show_404();
         }
 
-        $data['page_title'] = 'Detail Request Bundling #' . $request['no_request'];
-        $data['request']    = $request;
-        $data['stock_status'] = $this->M_Bundling->get_component_stock_status($id_request);
+        $data['page_title']    = 'Detail Request Bundling #' . $request['no_request'];
+        $data['request']       = $request;
+        $data['stock_status']  = $this->M_Bundling->get_component_stock_status($id_request);
+        $data['package_tiers'] = $this->M_Bundling->calculate_package_tier_breakdown($id_request);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/purchasing/bundling/request_detail.php', $data);
@@ -224,6 +225,16 @@ class C_BundlingRequest extends CI_Controller
     {
         $user = $this->session->userdata('nik') ?: $this->session->userdata('username') ?: 'PURCHASING';
         $res = $this->M_Bundling->cancel_request($id_request, $user);
+        $this->output->set_content_type('application/json')->set_output(json_encode($res));
+    }
+
+    /**
+     * Hapus Request (Hanya untuk yang berstatus BATAL)
+     */
+    public function delete($id_request)
+    {
+        $user = $this->session->userdata('nik') ?: $this->session->userdata('username') ?: 'PURCHASING';
+        $res = $this->M_Bundling->delete_request($id_request, $user);
         $this->output->set_content_type('application/json')->set_output(json_encode($res));
     }
 

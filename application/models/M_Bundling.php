@@ -965,6 +965,35 @@ class M_Bundling extends CI_Model
         return ['status' => true, 'msg' => 'Request ' . $req['no_request'] . ' berhasil dibatalkan'];
     }
 
+    /**
+     * Menghapus permanen request bundling yang berstatus BATAL
+     */
+    public function delete_request($id_request, $user = '')
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->get_request_by_id($id_request);
+        if (!$req) {
+            return ['status' => false, 'msg' => 'Data request tidak ditemukan'];
+        }
+        if ($req['status'] !== 'BATAL') {
+            return ['status' => false, 'msg' => 'Hanya request dengan status BATAL yang dapat dihapus'];
+        }
+        if ((float)$req['qty_realisasi'] > 0) {
+            return ['status' => false, 'msg' => 'Request sudah pernah direalisasi, tidak dapat dihapus'];
+        }
+
+        $this->db->trans_start();
+        $this->db->where('id_request', $id_request)->delete('tberp_bundling_request_detail');
+        $this->db->where('id_request', $id_request)->delete('tberp_bundling_request');
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['status' => false, 'msg' => 'Gagal menghapus data request dari database'];
+        }
+
+        return ['status' => true, 'msg' => 'Request #' . $req['no_request'] . ' berhasil dihapus permanen'];
+    }
+
     // =========================================================================
     // 3. LOGISTIK: CEK KETERSEDIAAN STOK & MUTASI BAHAN GUDANG INDUK -> BUNDLING
     // =========================================================================
@@ -1019,10 +1048,180 @@ class M_Bundling extends CI_Model
                 'total_innerbox_kebutuhan' => (float)($item['total_innerbox_kebutuhan'] ?? 0),
                 'hpp_satuan'               => $hppSatuan,
                 'subtotal_hpp_per_paket'   => $subtotalHppPerPaket,
-                'total_modal_kebutuhan'    => $totalModalKebutuhan
+                'total_modal_kebutuhan'    => $totalModalKebutuhan,
+                'lifo_breakdown'           => $lifo['breakdown'] ?? []
             ];
         }
         return $result;
+    }
+
+    /**
+     * Menghitung simulasi variasi HPP per Box (Multi-Tier HPP) jika bahan baku
+     * berasal dari beberapa batch/lapisan harga beli yang berbeda (tidak di-average).
+     */
+    public function calculate_package_tier_breakdown($id_request)
+    {
+        $this->ensure_bundling_schema();
+        $req = $this->get_request_by_id($id_request);
+        if (!$req) {
+            return [
+                'tiers'        => [],
+                'is_multi_tier'=> false,
+                'min_hpp'      => 0.0,
+                'max_hpp'      => 0.0,
+                'avg_hpp'      => 0.0,
+                'total_modal'  => 0.0,
+                'total_box'    => 0
+            ];
+        }
+
+        $qtyRequest = (int)ceil((float)$req['qty_request']);
+        if ($qtyRequest <= 0) {
+            return [
+                'tiers'        => [],
+                'is_multi_tier'=> false,
+                'min_hpp'      => 0.0,
+                'max_hpp'      => 0.0,
+                'avg_hpp'      => 0.0,
+                'total_modal'  => 0.0,
+                'total_box'    => 0
+            ];
+        }
+
+        $totalKemasanPerPaket = (float)($req['total_biaya_kemasan_per_paket'] ?? 0);
+        $gudangAsalId = (int)$req['id_gudang_asal'];
+
+        // Siapkan antrean (queue) batch per komponen
+        $compQueues = [];
+        $compInfo = [];
+        foreach ($req['details'] as $item) {
+            $kd = $item['kode_barang_komponen'];
+            $compInfo[$kd] = [
+                'nama'          => $item['nama_barang_komponen'],
+                'qty_per_paket' => (float)$item['qty_per_paket'],
+                'satuan'        => $item['satuan']
+            ];
+
+            $lifo = $this->calculate_item_lifo_cost($kd, (float)$item['qty_total_kebutuhan'], $gudangAsalId, $item['nama_barang_komponen']);
+            $queue = [];
+            foreach ($lifo['breakdown'] as $b) {
+                $queue[] = [
+                    'dokumen'   => $b['dokumen'],
+                    'tanggal'   => $b['tanggal'],
+                    'qty_left'  => (float)$b['qty'],
+                    'harga'     => (float)$b['harga']
+                ];
+            }
+            $compQueues[$kd] = $queue;
+        }
+
+        // Simulasikan per 1 box dari box ke-1 sampai box ke-N
+        $boxCosts = [];
+        for ($boxNum = 1; $boxNum <= $qtyRequest; $boxNum++) {
+            $boxBahanCost = 0.0;
+            $boxCompDetails = [];
+
+            foreach ($compInfo as $kd => $cMeta) {
+                $needed = (float)$cMeta['qty_per_paket'];
+                $usedForComp = [];
+
+                if (isset($compQueues[$kd])) {
+                    for ($qIdx = 0; $qIdx < count($compQueues[$kd]); $qIdx++) {
+                        if ($needed <= 0) break;
+                        if ($compQueues[$kd][$qIdx]['qty_left'] <= 0) continue;
+
+                        $take = min($needed, $compQueues[$kd][$qIdx]['qty_left']);
+                        $price = (float)$compQueues[$kd][$qIdx]['harga'];
+                        $sub = $take * $price;
+
+                        $boxBahanCost += $sub;
+                        $compQueues[$kd][$qIdx]['qty_left'] -= $take;
+                        $needed -= $take;
+
+                        $usedForComp[] = [
+                            'qty'     => $take,
+                            'harga'   => $price,
+                            'dokumen' => $compQueues[$kd][$qIdx]['dokumen'],
+                            'subtotal'=> $sub
+                        ];
+                    }
+                }
+
+                $boxCompDetails[$kd] = [
+                    'nama'   => $cMeta['nama'],
+                    'satuan' => $cMeta['satuan'],
+                    'layers' => $usedForComp
+                ];
+            }
+
+            $boxTotalCost = $boxBahanCost + $totalKemasanPerPaket;
+            $boxCosts[$boxNum] = [
+                'box_num'       => $boxNum,
+                'hpp_bahan'     => $boxBahanCost,
+                'biaya_kemasan' => $totalKemasanPerPaket,
+                'total_hpp'     => $boxTotalCost,
+                'comp_details'  => $boxCompDetails
+            ];
+        }
+
+        // Kelompokkan box berturutan yang memiliki HPP sama menjadi tier
+        $tiers = [];
+        $currentTier = null;
+
+        foreach ($boxCosts as $bNum => $bData) {
+            $roundedTotalHpp = round($bData['total_hpp'], 2);
+            $roundedBahanHpp = round($bData['hpp_bahan'], 2);
+
+            if ($currentTier === null) {
+                $currentTier = [
+                    'from_box'      => $bNum,
+                    'to_box'        => $bNum,
+                    'qty_box'       => 1,
+                    'hpp_bahan'     => $roundedBahanHpp,
+                    'biaya_kemasan' => $bData['biaya_kemasan'],
+                    'total_hpp'     => $roundedTotalHpp,
+                    'comp_summary'  => $bData['comp_details']
+                ];
+            } elseif (abs($currentTier['total_hpp'] - $roundedTotalHpp) < 0.01) {
+                $currentTier['to_box'] = $bNum;
+                $currentTier['qty_box']++;
+            } else {
+                $currentTier['total_modal'] = $currentTier['qty_box'] * $currentTier['total_hpp'];
+                $tiers[] = $currentTier;
+
+                $currentTier = [
+                    'from_box'      => $bNum,
+                    'to_box'        => $bNum,
+                    'qty_box'       => 1,
+                    'hpp_bahan'     => $roundedBahanHpp,
+                    'biaya_kemasan' => $bData['biaya_kemasan'],
+                    'total_hpp'     => $roundedTotalHpp,
+                    'comp_summary'  => $bData['comp_details']
+                ];
+            }
+        }
+
+        if ($currentTier !== null) {
+            $currentTier['total_modal'] = $currentTier['qty_box'] * $currentTier['total_hpp'];
+            $tiers[] = $currentTier;
+        }
+
+        // Hitung statistik rentang HPP
+        $allHpp = array_column($tiers, 'total_hpp');
+        $minHpp = !empty($allHpp) ? min($allHpp) : 0.0;
+        $maxHpp = !empty($allHpp) ? max($allHpp) : 0.0;
+        $totalModal = array_sum(array_column($tiers, 'total_modal'));
+        $avgHpp = $qtyRequest > 0 ? ($totalModal / $qtyRequest) : 0.0;
+
+        return [
+            'tiers'         => $tiers,
+            'is_multi_tier' => count($tiers) > 1,
+            'min_hpp'       => $minHpp,
+            'max_hpp'       => $maxHpp,
+            'avg_hpp'       => $avgHpp,
+            'total_modal'   => $totalModal,
+            'total_box'     => $qtyRequest
+        ];
     }
 
     /**
@@ -2041,6 +2240,19 @@ class M_Bundling extends CI_Model
                 'subtotal' => $sub
             ];
         }
+
+        // Konsolidasi lapisan breakdown yang memiliki harga persis sama agar tidak terpecah
+        $consolidatedBreakdown = [];
+        foreach ($breakdown as $b) {
+            $lastCIdx = count($consolidatedBreakdown) - 1;
+            if ($lastCIdx >= 0 && abs((float)$consolidatedBreakdown[$lastCIdx]['harga'] - (float)$b['harga']) < 0.01) {
+                $consolidatedBreakdown[$lastCIdx]['qty'] += (float)$b['qty'];
+                $consolidatedBreakdown[$lastCIdx]['subtotal'] += (float)$b['subtotal'];
+            } else {
+                $consolidatedBreakdown[] = $b;
+            }
+        }
+        $breakdown = $consolidatedBreakdown;
 
         $hppSatuan = ($qty_kebutuhan > 0) ? ($totalModal / $qty_kebutuhan) : $lastPriceFound;
 

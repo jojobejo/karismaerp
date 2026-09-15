@@ -146,6 +146,11 @@
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     <?php endif; ?>
+                                                    <?php if ($r['status'] == 'BATAL'): ?>
+                                                        <button type="button" class="btn btn-outline-danger" onclick="deleteRequest(<?= $r['id_request'] ?>, '<?= htmlspecialchars($r['no_request']) ?>')" title="Hapus Permanen Request">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>
@@ -190,6 +195,37 @@ function cancelRequest(id, noReq) {
                 },
                 error: function() {
                     Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                }
+            });
+        }
+    });
+}
+
+function deleteRequest(id, noReq) {
+    Swal.fire({
+        title: 'Hapus Permanen Request?',
+        text: 'Apakah Anda yakin ingin menghapus data Request Bundling #' + noReq + ' yang telah dibatalkan ini? Data yang dihapus tidak dapat dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus Permanen!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '<?= site_url("purchasing/bundling/request/delete/") ?>' + id,
+                type: 'POST',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.status) {
+                        Swal.fire('Berhasil', res.msg, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Gagal', res.msg, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem saat menghapus data', 'error');
                 }
             });
         }

@@ -16,6 +16,16 @@
                     <p class="text-muted mb-0 small">Detail komposisi, kalkulasi kebutuhan komponen, dan progres realisasi Logistik</p>
                 </div>
                 <div class="col-sm-6 text-right">
+                    <?php if ($request['status'] == 'MENUNGGU_PROSES'): ?>
+                        <button type="button" class="btn btn-outline-danger font-weight-bold shadow-sm mr-2" onclick="cancelRequestDetail(<?= $request['id_request'] ?>, '<?= htmlspecialchars($request['no_request']) ?>')">
+                            <i class="fas fa-times mr-1"></i> Batalkan Request
+                        </button>
+                    <?php endif; ?>
+                    <?php if ($request['status'] == 'BATAL'): ?>
+                        <button type="button" class="btn btn-danger font-weight-bold shadow-sm mr-2" onclick="deleteRequestDetail(<?= $request['id_request'] ?>, '<?= htmlspecialchars($request['no_request']) ?>')">
+                            <i class="fas fa-trash-alt mr-1"></i> Hapus Request
+                        </button>
+                    <?php endif; ?>
                     <a href="<?= site_url('purchasing/bundling/request') ?>" class="btn btn-outline-secondary font-weight-bold shadow-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali
                     </a>
@@ -174,11 +184,21 @@
                             <span class="text-muted small font-weight-bold text-uppercase d-block text-success">
                                 <i class="fas fa-calculator text-success mr-1"></i> Estimasi Modal / HPP 1 Paket
                             </span>
-                            <h4 class="font-weight-bold text-success mb-0 mt-2">
-                                Rp <?= number_format($totalHpp1Paket, 2, ',', '.') ?>
-                                <small class="text-muted font-weight-normal" style="font-size: 0.8rem;">/ <?= htmlspecialchars($request['satuan']) ?></small>
-                            </h4>
-                            <small class="text-muted d-block mt-1">HPP Bahan Baku + Biaya Kemasan Lengkap</small>
+                            <?php if (!empty($package_tiers['is_multi_tier'])): ?>
+                                <h5 class="font-weight-bold text-success mb-0 mt-2">
+                                    Rp <?= number_format($package_tiers['min_hpp'], 2, ',', '.') ?> ~ <?= number_format($package_tiers['max_hpp'], 2, ',', '.') ?>
+                                </h5>
+                                <span class="badge badge-warning text-dark font-weight-bold mt-1" style="font-size: 0.75rem;">
+                                    <i class="fas fa-layer-group mr-1"></i> Bervariasi (<?= count($package_tiers['tiers']) ?> Tier HPP)
+                                </span>
+                                <small class="text-muted d-block mt-1">Rata-rata: Rp <?= number_format($package_tiers['avg_hpp'], 2, ',', '.') ?> / <?= htmlspecialchars($request['satuan']) ?></small>
+                            <?php else: ?>
+                                <h4 class="font-weight-bold text-success mb-0 mt-2">
+                                    Rp <?= number_format($totalHpp1Paket, 2, ',', '.') ?>
+                                    <small class="text-muted font-weight-normal" style="font-size: 0.8rem;">/ <?= htmlspecialchars($request['satuan']) ?></small>
+                                </h4>
+                                <small class="text-muted d-block mt-1">HPP Bahan Baku + Biaya Kemasan Lengkap</small>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -367,6 +387,92 @@
                 </div>
             <?php endif; ?>
 
+            <!-- Panel Variasi HPP per Box (Multi-Tier HPP Berdasarkan Lapisan Batch Riil) -->
+            <?php if (!empty($package_tiers['is_multi_tier'])): ?>
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; background: #ffffff; border-left: 5px solid #059669 !important; border: 1px solid #e2e8f0;">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-success px-3 py-2 mr-2 font-weight-bold" style="font-size: 0.95rem; border-radius: 8px;">
+                                    <i class="fas fa-layer-group mr-1"></i> <strong>Variasi HPP Modal per Box (Alokasi LIFO Bertingkat)</strong>
+                                </span>
+                                <small class="text-muted">Modal bahan baku bervariasi mengikuti harga riil batch pembelian komponen yang dikonsumsi (tidak di-average flat)</small>
+                            </div>
+                            <span class="badge badge-light border text-dark font-weight-bold px-2 py-1">
+                                <?= count($package_tiers['tiers']) ?> Kelompok HPP Berbeda
+                            </span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover mb-0" style="font-size: 0.90rem;">
+                                <thead style="background: #f8fafc; color: #334155;" class="text-uppercase small">
+                                    <tr>
+                                        <th class="text-center" style="width: 12%;">Kelompok Box</th>
+                                        <th class="text-center" style="width: 10%;">Jumlah Box</th>
+                                        <th>Rincian Batch Komponen yang Dipakai</th>
+                                        <th class="text-right" style="width: 15%;">HPP Bahan Baku</th>
+                                        <th class="text-right" style="width: 13%;">Biaya Kemasan</th>
+                                        <th class="text-right bg-light text-success font-weight-bold" style="width: 16%;">Total HPP / Box</th>
+                                        <th class="text-right bg-light text-primary font-weight-bold" style="width: 17%;">Subtotal Modal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($package_tiers['tiers'] as $tIdx => $tier): ?>
+                                        <tr>
+                                            <td class="text-center font-weight-bold text-dark">
+                                                Box #<?= $tier['from_box'] ?> - #<?= $tier['to_box'] ?>
+                                            </td>
+                                            <td class="text-center font-weight-bold text-primary">
+                                                <?= number_format($tier['qty_box'], 0) ?> <?= htmlspecialchars($request['satuan']) ?>
+                                            </td>
+                                            <td>
+                                                <?php foreach ($tier['comp_summary'] as $cKd => $cInf): ?>
+                                                    <div class="small mb-1">
+                                                        <strong><?= htmlspecialchars($cInf['nama']) ?>:</strong>
+                                                        <?php 
+                                                            $layerStrs = [];
+                                                            foreach ($cInf['layers'] as $l) {
+                                                                $layerStrs[] = number_format($l['qty'], 0) . ' ' . $cInf['satuan'] . ' @ Rp ' . number_format($l['harga'], 2, ',', '.') . ' <span class="text-muted">(' . htmlspecialchars($l['dokumen']) . ')</span>';
+                                                            }
+                                                            echo implode(' + ', $layerStrs);
+                                                        ?>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-dark">
+                                                Rp <?= number_format($tier['hpp_bahan'], 2, ',', '.') ?>
+                                            </td>
+                                            <td class="text-right text-muted">
+                                                Rp <?= number_format($tier['biaya_kemasan'], 2, ',', '.') ?>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-success bg-light" style="font-size: 0.95rem;">
+                                                Rp <?= number_format($tier['total_hpp'], 2, ',', '.') ?>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-primary bg-light" style="font-size: 0.95rem;">
+                                                Rp <?= number_format($tier['total_modal'], 2, ',', '.') ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                                <tfoot style="background: #f1f5f9; font-weight: bold;">
+                                    <tr>
+                                        <td colspan="2" class="text-center text-dark">
+                                            Total: <?= number_format($package_tiers['total_box'], 0) ?> <?= htmlspecialchars($request['satuan']) ?>
+                                        </td>
+                                        <td colspan="4" class="text-right text-uppercase small text-muted">
+                                            Total Modal Keseluruhan Permintaan (Rata-rata: Rp <?= number_format($package_tiers['avg_hpp'], 2, ',', '.') ?> / <?= htmlspecialchars($request['satuan']) ?>):
+                                        </td>
+                                        <td class="text-right text-primary" style="font-size: 1.05rem;">
+                                            Rp <?= number_format($package_tiers['total_modal'], 2, ',', '.') ?>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <!-- Tabel Komposisi & Total Kebutuhan Komponen beserta HPP Modal -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
                 <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
@@ -432,14 +538,67 @@
                                                 </div>
                                             </td>
                                         <?php endif; ?>
+                                        <?php
+                                            $distinctPrices = [];
+                                            if (!empty($stk['lifo_breakdown'])) {
+                                                foreach ($stk['lifo_breakdown'] as $lb) {
+                                                    $pKey = (string)round((float)$lb['harga'], 2);
+                                                    $distinctPrices[$pKey] = true;
+                                                }
+                                            }
+                                            $hasDiffPrices = count($distinctPrices) > 1;
+                                        ?>
                                         <td class="text-right">
-                                            <div class="font-weight-bold text-dark">
-                                                Rp <?= number_format((float)($stk['hpp_satuan'] ?? 0), 2, ',', '.') ?>
-                                            </div>
-                                            <span class="badge badge-light border text-primary font-weight-bold" style="font-size: 0.68rem;" title="Dihitung dari alokasi pembelian terakhir (LIFO)">LIFO</span>
+                                            <?php if ($hasDiffPrices): ?>
+                                                <div class="text-left" style="min-width: 185px;">
+                                                    <?php foreach ($stk['lifo_breakdown'] as $b): ?>
+                                                        <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom" style="font-size: 0.82rem;">
+                                                            <span class="badge badge-light border text-dark font-weight-bold mr-1">
+                                                                <?= number_format($b['qty'], 0, ',', '.') ?> <?= htmlspecialchars($stk['satuan']) ?>
+                                                            </span>
+                                                            <span class="font-weight-bold text-dark text-right">
+                                                                @ Rp <?= number_format($b['harga'], 2, ',', '.') ?>
+                                                            </span>
+                                                        </div>
+                                                        <div class="text-right text-muted mb-1" style="font-size: 0.70rem;">
+                                                            <?= htmlspecialchars($b['dokumen']) ?> (<?= date('d/m/Y', strtotime($b['tanggal'])) ?>)
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                    <div class="text-right text-muted small mt-1 font-italic">
+                                                        Rata-rata: Rp <?= number_format((float)($stk['hpp_satuan'] ?? 0), 2, ',', '.') ?>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="font-weight-bold text-dark">
+                                                    Rp <?= number_format((float)($stk['hpp_satuan'] ?? 0), 2, ',', '.') ?>
+                                                </div>
+                                                <span class="badge badge-light border text-primary font-weight-bold" style="font-size: 0.68rem;" title="Dihitung dari alokasi pembelian terakhir (LIFO)">LIFO</span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td class="text-right font-weight-bold text-success bg-light">
-                                            Rp <?= number_format((float)($stk['subtotal_hpp_per_paket'] ?? 0), 2, ',', '.') ?>
+                                        <td class="text-right bg-light">
+                                            <?php if ($hasDiffPrices && !empty($package_tiers['is_multi_tier'])): ?>
+                                                <div class="text-right" style="min-width: 150px;">
+                                                    <?php foreach ($package_tiers['tiers'] as $tr): ?>
+                                                        <?php 
+                                                            $cDetail = $tr['comp_summary'][$stk['kode_barang']] ?? null;
+                                                            if ($cDetail && !empty($cDetail['layers'])): 
+                                                                $layerCostInBox = array_sum(array_column($cDetail['layers'], 'subtotal'));
+                                                        ?>
+                                                            <div class="mb-1" style="font-size: 0.83rem;">
+                                                                <span class="badge badge-light border text-muted font-weight-bold"><?= $tr['qty_box'] ?> Box</span>:
+                                                                <strong class="text-success">Rp <?= number_format($layerCostInBox, 2, ',', '.') ?></strong>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    <?php endforeach; ?>
+                                                    <div class="small text-muted font-italic mt-1 border-top pt-1">
+                                                        Rata-rata: Rp <?= number_format((float)($stk['subtotal_hpp_per_paket'] ?? 0), 2, ',', '.') ?>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="font-weight-bold text-success" style="font-size: 0.95rem;">
+                                                    Rp <?= number_format((float)($stk['subtotal_hpp_per_paket'] ?? 0), 2, ',', '.') ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="text-center bg-light text-primary">
                                             <div class="font-weight-bold" style="font-size: 1.05rem;">
@@ -452,7 +611,22 @@
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-right font-weight-bold bg-light text-primary">
-                                            Rp <?= number_format((float)($stk['total_modal_kebutuhan'] ?? 0), 2, ',', '.') ?>
+                                            <?php if ($hasDiffPrices): ?>
+                                                <div class="text-right" style="min-width: 150px;">
+                                                    <?php foreach ($stk['lifo_breakdown'] as $b): ?>
+                                                        <div class="small text-muted mb-1">
+                                                            Rp <?= number_format($b['subtotal'], 2, ',', '.') ?>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                    <div class="font-weight-bold text-primary border-top pt-1 mt-1" style="font-size: 0.95rem;">
+                                                        Total: Rp <?= number_format((float)($stk['total_modal_kebutuhan'] ?? 0), 2, ',', '.') ?>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <div class="font-weight-bold text-primary" style="font-size: 0.95rem;">
+                                                    Rp <?= number_format((float)($stk['total_modal_kebutuhan'] ?? 0), 2, ',', '.') ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="text-center font-weight-bold text-success">
                                             <?= number_format($stk['qty_terpenuhi'], 2, ',', '.') ?>
@@ -489,7 +663,7 @@
                                     <th colspan="4"></th>
                                 </tr>
                                 <tr>
-                                    <th class="py-2 px-3 text-muted" colspan="<?= $colSpanFooter ?>">2. Biaya Kemasan & Printilan (Inner, Outer, Stiker Hologram):</th>
+                                    <th class="py-2 px-3 text-muted" colspan="<?= $colSpanFooter ?>">2. Biaya Kemasan & Printilan:</th>
                                     <th class="py-2 text-right font-weight-bold" style="color: #6d28d9;">
                                         + Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?>
                                     </th>
@@ -808,4 +982,68 @@ $(document).ready(function() {
         });
     });
 });
+
+function cancelRequestDetail(id, noReq) {
+    Swal.fire({
+        title: 'Batalkan Request?',
+        text: 'Apakah Anda yakin ingin membatalkan Request Bundling #' + noReq + '?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Batalkan!',
+        cancelButtonText: 'Tutup'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '<?= site_url("purchasing/bundling/request/cancel/") ?>' + id,
+                type: 'POST',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.status) {
+                        Swal.fire('Berhasil', res.msg, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Gagal', res.msg, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                }
+            });
+        }
+    });
+}
+
+function deleteRequestDetail(id, noReq) {
+    Swal.fire({
+        title: 'Hapus Permanen Request?',
+        text: 'Apakah Anda yakin ingin menghapus data Request Bundling #' + noReq + ' yang telah dibatalkan ini? Data yang dihapus tidak dapat dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus Permanen!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '<?= site_url("purchasing/bundling/request/delete/") ?>' + id,
+                type: 'POST',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.status) {
+                        Swal.fire('Berhasil', res.msg, 'success').then(() => {
+                            window.location.href = '<?= site_url("purchasing/bundling/request") ?>';
+                        });
+                    } else {
+                        Swal.fire('Gagal', res.msg, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Terjadi kesalahan sistem saat menghapus data', 'error');
+                }
+            });
+        }
+    });
+}
 </script>
