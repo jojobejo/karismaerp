@@ -2036,22 +2036,30 @@ class Accounting_service
         }
 
         $accountGroup = strtoupper(trim((string)$accountGroup));
-        if ($accountGroup === 'A') {
-            $this->CI->db->group_start();
-            $this->CI->db->like('a.nama_akun', 'A ', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'A-', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'A/', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'A.', 'after');
-            $this->CI->db->or_like('a.kode_akun', 'A', 'after');
-            $this->CI->db->group_end();
-        } elseif ($accountGroup === 'Q') {
-            $this->CI->db->group_start();
-            $this->CI->db->like('a.nama_akun', 'Q ', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'Q-', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'Q/', 'after');
-            $this->CI->db->or_like('a.nama_akun', 'Q.', 'after');
-            $this->CI->db->or_like('a.kode_akun', 'Q', 'after');
-            $this->CI->db->group_end();
+        if ($accountGroup === 'A' || $accountGroup === 'Q') {
+            $prefixLike = $accountGroup === 'Q'
+                ? "(a_sub.nama_akun LIKE 'Q %' OR a_sub.nama_akun LIKE 'Q-%' OR a_sub.nama_akun LIKE 'Q/%' OR a_sub.nama_akun LIKE 'Q.%' OR a_sub.kode_akun LIKE 'Q%')"
+                : "(a_sub.nama_akun LIKE 'A %' OR a_sub.nama_akun LIKE 'A-%' OR a_sub.nama_akun LIKE 'A/%' OR a_sub.nama_akun LIKE 'A.%' OR a_sub.kode_akun LIKE 'A%')";
+
+            $this->CI->db->where("(
+                j.id_jurnal IN (
+                    SELECT DISTINCT d_sub.id_jurnal
+                    FROM tbkeu_jurnal_detail d_sub
+                    JOIN tbkeu_akun a_sub ON a_sub.id_akun = d_sub.id_akun
+                    WHERE {$prefixLike}
+                )
+                OR (
+                    j.source_no IS NOT NULL AND j.source_no != '' AND
+                    CONCAT(j.source_module, '|', j.source_type, '|', j.source_no) IN (
+                        SELECT DISTINCT CONCAT(j_src.source_module, '|', j_src.source_type, '|', j_src.source_no)
+                        FROM tbkeu_jurnal j_src
+                        JOIN tbkeu_jurnal_detail d_sub ON d_sub.id_jurnal = j_src.id_jurnal
+                        JOIN tbkeu_akun a_sub ON a_sub.id_akun = d_sub.id_akun
+                        WHERE {$prefixLike}
+                          AND j_src.source_no IS NOT NULL AND j_src.source_no != ''
+                    )
+                )
+            )", null, false);
         }
 
         $this->CI->db->group_by('a.id_akun');

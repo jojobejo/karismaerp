@@ -1409,7 +1409,7 @@ class C_Keuangan extends CI_Controller
             : $this->prepare_balance_sheet($rows, $incomeRows);
 
         if ($accountGroup !== 'ALL') {
-            $prepared['audit_notes'][] = 'Filter aktif: Menampilkan data kelompok akun ' . $accountGroup . ' saja.';
+            $prepared['audit_notes'][] = 'Filter aktif: Menampilkan data transaksi dan akun terkait kelompok ' . $accountGroup . ' (termasuk piutang, persediaan, dan hutang terkait transaksi kelompok ini).';
         }
 
         $data['page_title'] = $type === 'laba_rugi' ? 'KARISMA - LABA RUGI' : 'KARISMA - NERACA';

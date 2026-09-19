@@ -7,7 +7,7 @@ $schemaReady = !empty($schema_ready);
 $dateFrom = isset($date_from) ? $date_from : date('Y-m-01');
 $dateTo = isset($date_to) ? $date_to : date('Y-m-d');
 $accountGroup = isset($account_group) && in_array(strtoupper($account_group), ['A', 'Q', 'ALL'], true) ? strtoupper($account_group) : 'ALL';
-$groupLabel = $accountGroup === 'A' ? 'Akun A' : ($accountGroup === 'Q' ? 'Akun Q' : 'Semua Akun');
+$groupLabel = $accountGroup === 'A' ? 'Transaksi & Akun A' : ($accountGroup === 'Q' ? 'Transaksi & Akun Q' : 'Semua Akun (Gabungan)');
 $money = function ($value) {
     $number = (float)$value;
     $formatted = number_format(abs($number), 2, ',', '.');
@@ -112,8 +112,8 @@ $money = function ($value) {
                                         <label for="account_group"><i class="fas fa-layer-group text-primary mr-1"></i> Pilih Kelompok Akun</label>
                                         <select class="form-control" id="account_group" name="account_group">
                                             <option value="ALL" <?= $accountGroup === 'ALL' ? 'selected' : '' ?>>Semua Akun (Gabungan)</option>
-                                            <option value="Q" <?= $accountGroup === 'Q' ? 'selected' : '' ?>>Akun Q</option>
-                                            <option value="A" <?= $accountGroup === 'A' ? 'selected' : '' ?>>Akun A</option>
+                                            <option value="Q" <?= $accountGroup === 'Q' ? 'selected' : '' ?>>Transaksi & Akun Q</option>
+                                            <option value="A" <?= $accountGroup === 'A' ? 'selected' : '' ?>>Transaksi & Akun A</option>
                                         </select>
                                     </div>
                                     <div>
