@@ -215,15 +215,13 @@
                                     <th class="text-center">Total SO</th>
                                     <th class="text-center">Sudah Faktur</th>
                                     <th class="text-center">Belum Faktur</th>
-                                    <th class="text-right">Qty Siap Faktur</th>
-                                    <th class="text-right">Tidak Terkirim</th>
                                     <th class="text-center no-sort" style="min-width:86px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($route_summary)): ?>
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
+                                        <td colspan="5" class="text-center text-muted py-4">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                             Tidak ada rute dengan Sales Order siap faktur.
                                         </td>
@@ -255,12 +253,6 @@
                                             </td>
                                             <td class="text-center <?= (int)$row['total_belum_faktur'] > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
                                                 <?= number_format((int)$row['total_belum_faktur']) ?>
-                                            </td>
-                                            <td class="text-right font-weight-bold text-success">
-                                                <?= number_format((float)($row['total_qty_siap_faktur'] ?? 0), 2) ?>
-                                            </td>
-                                            <td class="text-right <?= (float)($row['total_qty_tidak_terkirim'] ?? 0) > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
-                                                <?= number_format((float)($row['total_qty_tidak_terkirim'] ?? 0), 2) ?>
                                             </td>
                                             <td class="text-center">
                                                 <a href="<?= base_url('sales_order/admin_sc?' . http_build_query($rute_query)) ?>"
@@ -321,8 +313,6 @@
                                     <th>Customer</th>
                                     <th>Sales</th>
                                     <th class="text-center">Item</th>
-                                    <th class="text-right">Qty Siap Faktur</th>
-                                    <th class="text-right">Tidak Terkirim</th>
                                     <th class="text-center">Status</th>
                                     <th class="text-center no-sort" style="min-width:56px;">Aksi</th>
                                 </tr>
@@ -330,7 +320,7 @@
                             <tbody>
                                 <?php if (empty($so_list)): ?>
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-4">
+                                        <td colspan="7" class="text-center text-muted py-4">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                             Tidak ada Sales Order siap faktur pada rute ini.
                                         </td>
@@ -363,12 +353,6 @@
                                             <td class="text-center">
                                                 <?= number_format((int)($row['jumlah_item_siap_faktur'] ?? 0)) ?> /
                                                 <?= number_format((int)($row['jumlah_item'] ?? 0)) ?>
-                                            </td>
-                                            <td class="text-right font-weight-bold text-success">
-                                                <?= number_format((float)($row['total_qty_siap_faktur'] ?? 0), 2) ?>
-                                            </td>
-                                            <td class="text-right <?= (float)($row['total_qty_tidak_terkirim'] ?? 0) > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
-                                                <?= number_format((float)($row['total_qty_tidak_terkirim'] ?? 0), 2) ?>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge badge-info px-2 py-1">Siap Faktur</span>

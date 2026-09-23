@@ -2,9 +2,33 @@
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
 $is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true);
-$back_url = base_url('sales_order/detail_faktur/' . $faktur['id_faktur']);
+$back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur');
 ?>
-<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
+<style>
+    /* Reset gaya tabel agar solid standar (TIDAK SEPERTI CARD / SALES ORDER) */
+    table.table, 
+    .table-responsive table.table {
+        border-collapse: collapse !important;
+        border-spacing: 0 !important;
+    }
+    table.table tbody tr, 
+    table.table tfoot tr {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    table.table tbody td, 
+    table.table thead th,
+    table.table tfoot td {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,.04) !important;
+        box-shadow: none !important;
+    }
+</style>
+<body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -28,9 +52,8 @@ $back_url = base_url('sales_order/detail_faktur/' . $faktur['id_faktur']);
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                            <li class="breadcrumb-item"><a href="<?= $back_url ?>">Faktur <?= htmlspecialchars($faktur['no_faktur']) ?></a></li>
-                            <li class="breadcrumb-item active">Pecah Faktur</li>
+                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order/pecah_faktur') ?>">Pecah Faktur</a></li>
+                            <li class="breadcrumb-item active"><?= htmlspecialchars($faktur['no_faktur']) ?></li>
                         </ol>
                     </div>
                 </div>
@@ -162,13 +185,33 @@ $back_url = base_url('sales_order/detail_faktur/' . $faktur['id_faktur']);
             </div>
             <div class="card-body p-3">
                 <div class="form-group mb-3">
-                    <label class="text-dark font-weight-bold">Pilih Customer <span class="text-danger">*</span></label>
+                    <label class="text-dark font-weight-bold d-flex justify-content-between align-items-center">
+                        <span>Pilih Customer Penerima <span class="text-danger">*</span></span>
+                        <?php if (!empty($is_customer_acak)): ?>
+                            <span class="badge badge-success px-2 py-1" style="font-size: 11px;">
+                                <i class="fas fa-lock mr-1"></i> Khusus Kios: <?= htmlspecialchars($kios_induk_nama) ?>
+                            </span>
+                        <?php endif; ?>
+                    </label>
                     <select class="form-control select-customer" required>
-                        <option value="">-- Pilih Customer --</option>
-                        <?php foreach ($customers as $c): ?>
-                            <option value="<?= htmlspecialchars($c['kd_customer']) ?>">
-                                <?= htmlspecialchars($c['nama_customer']) ?> <?= !empty($c['nama_kios']) ? '('.htmlspecialchars($c['nama_kios']).')' : '' ?> [<?= htmlspecialchars($c['kd_customer']) ?>]
-                            </option>
+                        <option value="">-- Pilih Customer Penerima (<?= count($customers) ?> Kontak Tersedia) --</option>
+                        <?php foreach ($customers as $c_idx => $c): ?>
+                            <?php 
+                            $nominal_riwayat = (float)($c['total_nominal_pecah'] ?? 0);
+                            $faktur_riwayat  = (int)($c['total_faktur_pecah'] ?? 0);
+                            $badge_info = ($nominal_riwayat <= 0 && $faktur_riwayat <= 0)
+                                ? 'Belum Ada Riwayat (Prioritas ' . ($c_idx + 1) . ')'
+                                : 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (' . $faktur_riwayat . ' Faktur)';
+                            ?>
+                            <?php if (!empty($is_customer_acak)): ?>
+                                <option value="<?= htmlspecialchars($c['kd_customer']) ?>">
+                                    [<?= htmlspecialchars($c['kd_customer']) ?>] <?= htmlspecialchars($c['kontak_person']) ?> (<?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kota']) ? ' - '.$c['kota'] : '' ?>) - [<?= $badge_info ?>]
+                                </option>
+                            <?php else: ?>
+                                <option value="<?= htmlspecialchars($c['kd_customer']) ?>">
+                                    <?= htmlspecialchars($c['nama_customer']) ?> <?= !empty($c['nama_kios']) ? '('.htmlspecialchars($c['nama_kios']).')' : '' ?> [<?= htmlspecialchars($c['kd_customer']) ?>]
+                                </option>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -178,12 +221,17 @@ $back_url = base_url('sales_order/detail_faktur/' . $faktur['id_faktur']);
                         <thead class="thead-light">
                             <tr>
                                 <th>Barang</th>
-                                <th class="text-center" width="20%">Qty Induk</th>
-                                <th class="text-center" width="30%">Qty Alokasi (pcs)</th>
+                                <th class="text-center" width="18%">Qty Induk</th>
+                                <th class="text-right" width="28%">Harga (Disc 20%)</th>
+                                <th class="text-center" width="24%">Qty Alokasi (pcs)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($details as $d): ?>
+                                <?php 
+                                $hrg_asli = (float)($d['hrg_satuan'] ?? 0);
+                                $hrg_disc = round($hrg_asli * 0.8, 2);
+                                ?>
                                 <tr data-item-id="<?= $d['id'] ?>">
                                     <td class="align-middle">
                                         <strong><?= htmlspecialchars($d['nama_barang']) ?></strong>
@@ -191,6 +239,11 @@ $back_url = base_url('sales_order/detail_faktur/' . $faktur['id_faktur']);
                                     </td>
                                     <td class="text-center align-middle font-weight-bold text-muted">
                                         <?= (float)$d['qty'] ?> pcs
+                                    </td>
+                                    <td class="text-right align-middle">
+                                        <span class="text-success font-weight-bold">Rp <?= number_format($hrg_disc, 0, ',', '.') ?></span>
+                                        <br><small class="text-muted" style="text-decoration: line-through; font-size: 10px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                        <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-20%</span>
                                     </td>
                                     <td class="text-center">
                                         <input type="number" 
@@ -230,6 +283,26 @@ $(document).ready(function () {
         }
     }
 
+    var availableCustomers = <?= json_encode($customers) ?>;
+
+    function getNextAvailableCustomerSingle() {
+        var selectedKodes = {};
+        $('#splitsContainer .select-customer').each(function() {
+            var val = $(this).val();
+            if (val) {
+                selectedKodes[val] = true;
+            }
+        });
+
+        for (var i = 0; i < availableCustomers.length; i++) {
+            var c = availableCustomers[i];
+            if (!selectedKodes[c.kd_customer]) {
+                return c;
+            }
+        }
+        return availableCustomers.length > 0 ? availableCustomers[0] : null;
+    }
+
     // Tambah baris split
     $('#btnAddSplit').on('click', function() {
         splitCount++;
@@ -242,8 +315,28 @@ $(document).ready(function () {
             $(this).attr('name', 'splits[' + splitCount + '][items][' + itemId + ']');
         });
 
+        // Otomatis pilih customer berikutnya yang belum terpakai
+        var nextCust = getNextAvailableCustomerSingle();
+        if (nextCust) {
+            clone.find('.select-customer').val(nextCust.kd_customer);
+        }
+
         clone.find('.split-index').text(splitCount);
         $('#splitsContainer').append(clone);
+
+        // Inisialisasi Select2 Searchable pada baris pecahan baru
+        if ($.fn.select2) {
+            clone.find('.select-customer').select2({
+                theme: 'bootstrap4',
+                width: '100%',
+                placeholder: '-- Cari & Pilih Customer Penerima --',
+                language: {
+                    noResults: function() {
+                        return "Tidak ada customer ditemukan";
+                    }
+                }
+            });
+        }
         
         recalculateAllocations();
         $('#btnSubmitSplit').prop('disabled', false);

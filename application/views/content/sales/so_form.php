@@ -122,9 +122,20 @@
                                             ?>
                                             <input type="hidden" name="customer_plafon" id="customer_plafon"
                                                 value="<?= escAttr($plafon_awal) ?>">
-                                            <button type="button" id="btn-refresh-plafon" class="btn btn-outline-info btn-sm mt-2">
-                                                <i class="fas fa-sync-alt mr-1"></i> Update Data Customer
-                                            </button>
+                                            <div class="d-flex align-items-center flex-wrap mt-2" style="gap: 12px;">
+                                                <button type="button" id="btn-refresh-plafon" class="btn btn-outline-info btn-sm">
+                                                    <i class="fas fa-sync-alt mr-1"></i> Update Data Customer
+                                                </button>
+                                                <div id="customer_info_simple" class="d-flex align-items-center flex-wrap" style="display:none; gap: 10px; font-size: 13px;">
+                                                    <span id="customer_plafon_display" class="font-weight-bold text-dark">
+                                                        Plafon : <span class="text-muted">-</span>
+                                                    </span>
+                                                    <span class="text-muted font-weight-bold">|</span>
+                                                    <span id="customer_piutang_display" class="font-weight-bold text-dark">
+                                                        Piutang : <span class="text-muted">-</span>
+                                                    </span>
+                                                </div>
+                                            </div>
                                             <div id="customer_validation" class="text-danger small mt-1" style="display:none">
                                                 <i class="fas fa-exclamation-circle"></i> Pilih customer terlebih dahulu.
                                             </div>
@@ -391,7 +402,11 @@
                     <table class="table table-sm mb-0" id="tbl-customer-pick">
                         <thead>
                             <tr>
-                                <th style="width:40%">Customer</th><th style="width:25%">Nama Kios</th><th style="width:15%">KD Rute</th><th style="width:20%">Plafon</th>
+                                <th style="width:32%">Customer</th>
+                                <th style="width:20%">Nama Kios</th>
+                                <th style="width:13%">KD Rute</th>
+                                <th style="width:17%">Plafon</th>
+                                <th style="width:18%">Status Piutang</th>
                             </tr>
                         </thead>
                         <tbody id="customer-body"></tbody>
@@ -1035,7 +1050,7 @@ function renderCustomers(q) {
     }) : CUSTOMERS;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
-            '<tr><td colspan="4" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
+            '<tr><td colspan="5" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
         return;
     }
     var html = '';
@@ -1045,7 +1060,29 @@ function renderCustomers(q) {
             return part.charAt(0);
         }).join('').toUpperCase() || '?';
         var unpaidFlag = c.has_unpaid_1000 ? '1' : '0';
-        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'" data-plafon="'+esc(c.plafon_aktif||'')+'" data-unpaid="'+unpaidFlag+'"'
+        var hasPiutang = !!c.has_piutang;
+        var totalPiutang = parseFloat(c.total_piutang || 0);
+        var totalFaktur = parseInt(c.total_faktur_piutang || 0);
+
+        var piutangHtml = '';
+        if (hasPiutang && totalPiutang > 0) {
+            piutangHtml = '<span class="badge badge-danger text-white px-2 py-1 font-weight-bold" style="font-size:11px;" title="Memiliki piutang belum lunas">'
+                        + '<i class="fas fa-exclamation-circle mr-1"></i> ' + formatRupiah(totalPiutang) + ' (' + totalFaktur + ' Faktur)'
+                        + '</span>';
+        } else {
+            piutangHtml = '<span class="badge badge-success text-white px-2 py-1 font-weight-bold" style="font-size:11px;">'
+                        + '<i class="fas fa-check mr-1"></i> Lunas'
+                        + '</span>';
+        }
+
+        html += '<tr class="tr-pick-customer" tabindex="0"'
+              + ' data-kd="'+esc(c.kd_customer)+'"'
+              + ' data-nama="'+esc(c.nama_customer)+'"'
+              + ' data-plafon="'+esc(c.plafon_aktif||'')+'"'
+              + ' data-unpaid="'+unpaidFlag+'"'
+              + ' data-has-piutang="'+(hasPiutang ? '1' : '0')+'"'
+              + ' data-piutang="'+totalPiutang+'"'
+              + ' data-faktur-count="'+totalFaktur+'"'
               + ' title="Klik untuk memilih">'
               + '<td><div class="d-flex align-items-center">'
               + '<span class="customer-avatar">'+esc(initials)+'</span>'
@@ -1055,6 +1092,7 @@ function renderCustomers(q) {
               + '<td><span class="customer-kios-pill">'+esc(c.nama_kios||'-')+'</span></td>'
               + '<td><span class="customer-route-pill">'+esc(c.kd_rute||'-')+'</span></td>'
               + '<td><span class="customer-route-pill '+esc(plafonColorClass(c.plafon_aktif))+'">'+esc(formatRupiah(c.plafon_aktif))+'</span></td>'
+              + '<td>' + piutangHtml + '</td>'
               + '</tr>';
     });
     document.getElementById('customer-body').innerHTML = html;
@@ -1089,7 +1127,41 @@ function updateSelectedCustomerPlafon(kdCustomer, plafonValue) {
         plafonValue = found ? found.plafon_aktif : '';
     }
 
-    el.innerHTML = 'Plafon: <strong class="' + esc(plafonColorClass(plafonValue)) + '">' + esc(formatRupiah(plafonValue)) + '</strong>';
+    el.innerHTML = 'Plafon : <strong class="' + esc(plafonColorClass(plafonValue)) + '">' + esc(formatRupiah(plafonValue)) + '</strong>';
+}
+
+function updateCustomerPiutangView(kdCustomer, hasPiutang, totalPiutang) {
+    var $info = $('#customer_info_simple');
+    var elP = document.getElementById('customer_piutang_display');
+
+    if (!kdCustomer) {
+        if ($info.length) $info.hide();
+        return;
+    }
+
+    if ($info.length) $info.show();
+
+    // Cari dari data CUSTOMERS jika parameter tidak disertakan
+    if (hasPiutang === undefined || totalPiutang === undefined) {
+        var custObj = CUSTOMERS.find(function(c) {
+            return String(c.kd_customer || '') === String(kdCustomer || '');
+        });
+        if (custObj) {
+            hasPiutang   = !!custObj.has_piutang;
+            totalPiutang = parseFloat(custObj.total_piutang || 0);
+        } else {
+            hasPiutang   = false;
+            totalPiutang = 0;
+        }
+    }
+
+    if (elP) {
+        if (hasPiutang && totalPiutang > 0) {
+            elP.innerHTML = 'Piutang : <strong class="text-danger">' + esc(formatRupiah(totalPiutang)) + '</strong>';
+        } else {
+            elP.innerHTML = 'Piutang : <strong class="text-success">Rp 0</strong>';
+        }
+    }
 }
 
 function focusTableRow(selector, current, step) {
@@ -1138,6 +1210,12 @@ function chooseCustomerRow(tr) {
     document.getElementById('customer_display').value = tr.dataset.nama;
     document.getElementById('customer_plafon').value  = tr.dataset.plafon || '';
     updateSelectedCustomerPlafon(tr.dataset.kd, tr.dataset.plafon);
+    updateCustomerPiutangView(
+        tr.dataset.kd,
+        tr.dataset.hasPiutang === '1',
+        parseFloat(tr.dataset.piutang || 0),
+        parseInt(tr.dataset.fakturCount || 0)
+    );
     document.getElementById('customer_validation').style.display = 'none';
     applyPlafonRestriction(tr.dataset.plafon || '');
     if (parsePlafonNumber(tr.dataset.plafon) === 1000) {
@@ -1472,6 +1550,14 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         if (elG) elG.dataset.prevVal='';
         tambahBaris({});
         hitungGrand(); hitungTK();
+    }
+
+    // Inisialisasi status customer dan piutang jika sudah terpilih (misal Edit SO)
+    var initialKdCustomer = document.getElementById('customer_id') ? document.getElementById('customer_id').value : '';
+    if (initialKdCustomer) {
+        var initialPlafon = document.getElementById('customer_plafon') ? document.getElementById('customer_plafon').value : '';
+        updateSelectedCustomerPlafon(initialKdCustomer, initialPlafon);
+        updateCustomerPiutangView(initialKdCustomer);
     }
 })();
 </script>

@@ -3,15 +3,13 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 04 Sep 2026 pada 09.05
+-- Waktu pembuatan: 23 Sep 2026 pada 08.48
 -- Versi server: 8.0.30
 -- Versi PHP: 7.4.33
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-SET FOREIGN_KEY_CHECKS = 0;
-SET UNIQUE_CHECKS = 0;
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -994,6 +992,90 @@ CREATE TABLE `tbar_sp_archive` (
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `tbar_ss`
+--
+
+CREATE TABLE `tbar_ss` (
+  `id` int NOT NULL,
+  `id_ss_archive` int NOT NULL,
+  `id_user` int NOT NULL,
+  `id_poinss_ref` int DEFAULT NULL,
+  `poin_ss` varchar(255) NOT NULL,
+  `tipe_ss` enum('umum','teknis') NOT NULL DEFAULT 'umum'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tbar_ss`
+--
+
+INSERT INTO `tbar_ss` (`id`, `id_ss_archive`, `id_user`, `id_poinss_ref`, `poin_ss`, `tipe_ss`) VALUES
+(7, 2, 29, 6, 'Leadership', 'umum'),
+(8, 2, 29, 7, 'Komunikasi', 'umum'),
+(9, 3, 29, 6, 'Leadership', 'umum'),
+(10, 3, 29, 7, 'Komunikasi', 'umum');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbar_sspoin`
+--
+
+CREATE TABLE `tbar_sspoin` (
+  `id` int NOT NULL,
+  `id_tbar_ss` int NOT NULL,
+  `id_user` int NOT NULL,
+  `id_sspoin_ref` int DEFAULT NULL,
+  `poinss` text NOT NULL,
+  `nilai1` text,
+  `nilai2` text,
+  `nilai3` text,
+  `nilai4` text,
+  `nilaiss` decimal(5,2) NOT NULL DEFAULT '0.00',
+  `deskripsi` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tbar_sspoin`
+--
+
+INSERT INTO `tbar_sspoin` (`id`, `id_tbar_ss`, `id_user`, `id_sspoin_ref`, `poinss`, `nilai1`, `nilai2`, `nilai3`, `nilai4`, `nilaiss`, `deskripsi`) VALUES
+(10, 7, 29, 6, 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 'Belum mampu', 'Cukup mampu', 'Mampu', 'Sangat mampu', 3.50, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.'),
+(11, 7, 29, 7, 'Mampu memimpin dengan data', 'Belum menggunakan data', 'Kadang menggunakan data', 'Sering menggunakan data', 'Konsisten memimpin berbasis data', 3.00, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.'),
+(12, 8, 29, 8, 'Mampu menyampaikan ide dengan jelas', 'Belum jelas', 'Cukup jelas', 'Jelas', 'Sangat jelas dan terstruktur', 3.40, 'okiok'),
+(13, 9, 29, 6, 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 'Belum mampu', 'Cukup mampu', 'Mampu', 'Sangat mampu', 3.50, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.'),
+(14, 9, 29, 7, 'Mampu memimpin dengan data', 'Belum menggunakan data', 'Kadang menggunakan data', 'Sering menggunakan data', 'Konsisten memimpin berbasis data', 3.00, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.'),
+(15, 10, 29, 8, 'Mampu menyampaikan ide dengan jelas', 'Belum jelas', 'Cukup jelas', 'Jelas', 'Sangat jelas dan terstruktur', 3.40, 'okiok');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbar_ss_archive`
+--
+
+CREATE TABLE `tbar_ss_archive` (
+  `id_ss_archive` int NOT NULL,
+  `bulan` varchar(10) NOT NULL,
+  `id_user` int NOT NULL,
+  `rata_rata_umum` decimal(5,2) DEFAULT '0.00',
+  `rata_rata_teknis` decimal(5,2) DEFAULT '0.00',
+  `rata_rata_total` decimal(5,2) DEFAULT '0.00',
+  `status` tinyint(1) DEFAULT '1',
+  `verified_by` int DEFAULT NULL,
+  `verified_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `keterangan` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tbar_ss_archive`
+--
+
+INSERT INTO `tbar_ss_archive` (`id_ss_archive`, `bulan`, `id_user`, `rata_rata_umum`, `rata_rata_teknis`, `rata_rata_total`, `status`, `verified_by`, `verified_at`, `keterangan`) VALUES
+(2, '09/2026', 29, 3.30, 0.00, 3.30, 1, 24, '2026-09-18 14:01:56', 'oke'),
+(3, '08/2026', 29, 3.30, 0.00, 3.30, 1, 24, '2026-09-18 14:10:48', '');
+
+-- --------------------------------------------------------
+
+--
 -- Struktur dari tabel `tbar_whats`
 --
 
@@ -1060,6 +1142,261 @@ INSERT INTO `tbar_whats` (`id_what`, `id_user`, `id_kpi`, `tipe_what`, `p_what`,
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `tberp_bundling_assembly`
+--
+
+CREATE TABLE `tberp_bundling_assembly` (
+  `id_assembly` int NOT NULL,
+  `no_assembly` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `id_request` int DEFAULT NULL,
+  `id_gudang_asal` int DEFAULT '2',
+  `no_request` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `tanggal` date NOT NULL,
+  `kode_paket` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_paket` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `id_gudang` int NOT NULL,
+  `id_penyesuaian` bigint DEFAULT NULL,
+  `no_penyesuaian` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `qty_assembly` decimal(15,3) NOT NULL,
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Box',
+  `no_lot_paket` varchar(100) COLLATE utf8mb4_general_ci DEFAULT '-',
+  `expired_date_paket` date DEFAULT NULL,
+  `total_nilai_hpp` decimal(18,2) DEFAULT '0.00',
+  `hpp_per_paket` decimal(18,2) DEFAULT '0.00',
+  `user_input` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `keterangan` text COLLATE utf8mb4_general_ci,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_assembly`
+--
+
+INSERT INTO `tberp_bundling_assembly` (`id_assembly`, `no_assembly`, `id_request`, `id_gudang_asal`, `no_request`, `tanggal`, `kode_paket`, `nama_paket`, `id_gudang`, `id_penyesuaian`, `no_penyesuaian`, `qty_assembly`, `satuan`, `no_lot_paket`, `expired_date_paket`, `total_nilai_hpp`, `hpp_per_paket`, `user_input`, `keterangan`, `created_at`) VALUES
+(1, 'ASM-20260917-0001', 3, 2, 'RPB-20260917-0001', '2026-09-17', 'JTU01', 'Paket Jitu 20 x1 Box', 12, 12, 'APB170926-01', 5.000, 'Box', 'LOT-PKT-260917-285', '1000-09-11', 14396396.40, 2879279.28, 'QIUK11111', '', '2026-09-17 10:24:08');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_assembly_detail`
+--
+
+CREATE TABLE `tberp_bundling_assembly_detail` (
+  `id_asm_detail` int NOT NULL,
+  `id_assembly` int NOT NULL,
+  `kode_barang_komponen` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_barang_komponen` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `no_lot` varchar(100) COLLATE utf8mb4_general_ci DEFAULT '-',
+  `expired_date` date DEFAULT NULL,
+  `qty_digunakan` decimal(15,3) NOT NULL,
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Pcs',
+  `is_innerbox` tinyint(1) NOT NULL DEFAULT '0',
+  `qty_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `isi_per_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `hpp_satuan` decimal(18,2) DEFAULT '0.00',
+  `total_hpp` decimal(18,2) DEFAULT '0.00'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_assembly_detail`
+--
+
+INSERT INTO `tberp_bundling_assembly_detail` (`id_asm_detail`, `id_assembly`, `kode_barang_komponen`, `nama_barang_komponen`, `no_lot`, `expired_date`, `qty_digunakan`, `satuan`, `is_innerbox`, `qty_innerbox`, `isi_per_innerbox`, `hpp_satuan`, `total_hpp`) VALUES
+(1, 1, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 100.000, 'Pcs', 1, 20.000, 1.000, 63963.96, 6396396.40),
+(2, 1, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '33212', '2026-12-31', 100.000, 'Pcs', 1, 20.000, 1.000, 65000.00, 6500000.00),
+(3, 1, 'ZZKAOS28', 'Kaos Jialing', '1111', '1000-09-11', 100.000, 'Pcs', 1, 20.000, 1.000, 15000.00, 1500000.00);
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_disassembly`
+--
+
+CREATE TABLE `tberp_bundling_disassembly` (
+  `id_disassembly` int NOT NULL,
+  `no_disassembly` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `tanggal` date NOT NULL,
+  `kode_paket` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_paket` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `id_gudang` int NOT NULL,
+  `qty_disassembly` decimal(15,3) NOT NULL,
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Box',
+  `no_lot_paket` varchar(100) COLLATE utf8mb4_general_ci DEFAULT '-',
+  `expired_date_paket` date DEFAULT NULL,
+  `total_nilai_hpp` decimal(18,2) DEFAULT '0.00',
+  `alasan` text COLLATE utf8mb4_general_ci NOT NULL,
+  `user_input` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_disassembly_detail`
+--
+
+CREATE TABLE `tberp_bundling_disassembly_detail` (
+  `id_dsb_detail` int NOT NULL,
+  `id_disassembly` int NOT NULL,
+  `kode_barang_komponen` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_barang_komponen` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `no_lot` varchar(100) COLLATE utf8mb4_general_ci DEFAULT '-',
+  `expired_date` date DEFAULT NULL,
+  `qty_kembali` decimal(15,3) NOT NULL,
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Pcs',
+  `hpp_satuan` decimal(18,2) DEFAULT '0.00',
+  `total_hpp` decimal(18,2) DEFAULT '0.00'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_formula`
+--
+
+CREATE TABLE `tberp_bundling_formula` (
+  `id_formula` int NOT NULL,
+  `kode_paket` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_paket` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `satuan_paket` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Box',
+  `is_innerbox` tinyint(1) NOT NULL DEFAULT '0',
+  `jumlah_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `satuan_innerbox` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Innerbox',
+  `biaya_innerbox` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `biaya_outerbox` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `biaya_kemasan_lain` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `keterangan_biaya_kemasan` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `rincian_biaya_kemasan` text COLLATE utf8mb4_general_ci,
+  `keterangan` text COLLATE utf8mb4_general_ci,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_formula`
+--
+
+INSERT INTO `tberp_bundling_formula` (`id_formula`, `kode_paket`, `nama_paket`, `satuan_paket`, `is_innerbox`, `jumlah_innerbox`, `satuan_innerbox`, `biaya_innerbox`, `biaya_outerbox`, `biaya_kemasan_lain`, `keterangan_biaya_kemasan`, `rincian_biaya_kemasan`, `keterangan`, `is_active`, `created_at`, `updated_at`) VALUES
+(3, 'JTU01', 'Paket Jitu 20 x1 Box', 'Box', 1, 20.000, 'Innerbox', 0.00, 0.00, 0.00, NULL, NULL, 'Formula dari Request RPB-20260917-0001', 1, '2026-09-14 10:17:41', '2026-09-17 10:21:32'),
+(4, '45454', 'Paket Gahar', 'Box', 1, 20.000, 'Innerbox', 0.00, 0.00, 0.00, NULL, NULL, '', 1, '2026-09-17 10:18:32', '2026-09-17 10:18:32');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_formula_detail`
+--
+
+CREATE TABLE `tberp_bundling_formula_detail` (
+  `id_detail` int NOT NULL,
+  `id_formula` int NOT NULL,
+  `kode_barang_komponen` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_barang_komponen` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `qty_komponen` decimal(15,3) NOT NULL DEFAULT '1.000',
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Pcs',
+  `is_innerbox` tinyint(1) NOT NULL DEFAULT '0',
+  `qty_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `isi_per_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `satuan_innerbox` varchar(30) COLLATE utf8mb4_general_ci DEFAULT 'Innerbox'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_formula_detail`
+--
+
+INSERT INTO `tberp_bundling_formula_detail` (`id_detail`, `id_formula`, `kode_barang_komponen`, `nama_barang_komponen`, `qty_komponen`, `satuan`, `is_innerbox`, `qty_innerbox`, `isi_per_innerbox`, `satuan_innerbox`) VALUES
+(31, 4, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox'),
+(32, 4, 'ZZUMBU05', 'Umbul-umbul Elazaro', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox'),
+(33, 4, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox'),
+(34, 3, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox'),
+(35, 3, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox'),
+(36, 3, 'ZZKAOS28', 'Kaos Jialing', 20.000, 'Pcs', 1, 20.000, 1.000, 'Innerbox');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_request`
+--
+
+CREATE TABLE `tberp_bundling_request` (
+  `id_request` int NOT NULL,
+  `no_request` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `tanggal_request` date NOT NULL,
+  `kode_paket` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_paket` varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `id_gudang_tujuan` int NOT NULL,
+  `id_gudang_asal` int NOT NULL DEFAULT '2',
+  `qty_request` decimal(15,3) NOT NULL,
+  `qty_realisasi` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Box',
+  `is_innerbox` tinyint(1) NOT NULL DEFAULT '0',
+  `jumlah_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `total_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `satuan_innerbox` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Innerbox',
+  `biaya_innerbox` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `biaya_outerbox` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `biaya_kemasan_lain` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `keterangan_biaya_kemasan` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `rincian_biaya_kemasan` text COLLATE utf8mb4_general_ci,
+  `total_biaya_kemasan_per_paket` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `total_biaya_kemasan_keseluruhan` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `estimasi_hpp_bahan_per_paket` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `estimasi_hpp_per_paket` decimal(18,2) DEFAULT '0.00',
+  `estimasi_total_modal` decimal(18,2) DEFAULT '0.00',
+  `status` enum('MENUNGGU_PROSES','PROSES_SEBAGIAN','SELESAI','BATAL') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'MENUNGGU_PROSES',
+  `user_request` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `keterangan` text COLLATE utf8mb4_general_ci,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_request`
+--
+
+INSERT INTO `tberp_bundling_request` (`id_request`, `no_request`, `tanggal_request`, `kode_paket`, `nama_paket`, `id_gudang_tujuan`, `id_gudang_asal`, `qty_request`, `qty_realisasi`, `satuan`, `is_innerbox`, `jumlah_innerbox`, `total_innerbox`, `satuan_innerbox`, `biaya_innerbox`, `biaya_outerbox`, `biaya_kemasan_lain`, `keterangan_biaya_kemasan`, `rincian_biaya_kemasan`, `total_biaya_kemasan_per_paket`, `total_biaya_kemasan_keseluruhan`, `estimasi_hpp_bahan_per_paket`, `estimasi_hpp_per_paket`, `estimasi_total_modal`, `status`, `user_request`, `keterangan`, `created_at`, `updated_at`) VALUES
+(2, 'RPB-20260915-0002', '2026-09-15', 'JTU01', 'Paket Jitu 20 x1 Box', 12, 2, 25.000, 0.000, 'Box', 1, 20.000, 500.000, 'Innerbox', 0.00, 0.00, 0.00, 'Inerbox (Rp 100.000), outerbox (Rp 20.000), stiker hologram (Rp 20.000)', '[{\"nama\":\"Inerbox\",\"nominal\":100000},{\"nama\":\"outerbox\",\"nominal\":20000},{\"nama\":\"stiker hologram\",\"nominal\":20000}]', 140000.00, 3500000.00, 3045765.77, 3185765.77, 79644144.16, 'MENUNGGU_PROSES', 'QIUK11111', '', '2026-09-15 10:35:58', '2026-09-15 13:26:31'),
+(3, 'RPB-20260917-0001', '2026-09-17', 'JTU01', 'Paket Jitu 20 x1 Box', 12, 2, 100.000, 5.000, 'Box', 1, 20.000, 2000.000, 'Innerbox', 0.00, 0.00, 0.00, 'Inerbox (Rp 10.000), outerbox (Rp 2.000), stiker hologram (Rp 5.000)', '[{\"nama\":\"Inerbox\",\"nominal\":10000},{\"nama\":\"outerbox\",\"nominal\":2000},{\"nama\":\"stiker hologram\",\"nominal\":5000}]', 17000.00, 1700000.00, 3076982.02, 3093982.02, 309398202.40, 'PROSES_SEBAGIAN', 'QIUK11111', '', '2026-09-17 10:21:32', '2026-09-22 15:43:43');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tberp_bundling_request_detail`
+--
+
+CREATE TABLE `tberp_bundling_request_detail` (
+  `id_req_detail` int NOT NULL,
+  `id_request` int NOT NULL,
+  `kode_barang_komponen` varchar(25) COLLATE utf8mb4_general_ci NOT NULL,
+  `nama_barang_komponen` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `qty_per_paket` decimal(15,3) NOT NULL DEFAULT '1.000',
+  `qty_total_kebutuhan` decimal(15,3) NOT NULL,
+  `qty_terpenuhi` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `hpp_satuan` decimal(18,2) DEFAULT '0.00',
+  `subtotal_hpp` decimal(18,2) DEFAULT '0.00',
+  `satuan` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Pcs',
+  `is_innerbox` tinyint(1) NOT NULL DEFAULT '0',
+  `qty_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `isi_per_innerbox` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `satuan_innerbox` varchar(30) COLLATE utf8mb4_general_ci DEFAULT 'Innerbox',
+  `total_innerbox_kebutuhan` decimal(15,3) NOT NULL DEFAULT '0.000'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tberp_bundling_request_detail`
+--
+
+INSERT INTO `tberp_bundling_request_detail` (`id_req_detail`, `id_request`, `kode_barang_komponen`, `nama_barang_komponen`, `qty_per_paket`, `qty_total_kebutuhan`, `qty_terpenuhi`, `hpp_satuan`, `subtotal_hpp`, `satuan`, `is_innerbox`, `qty_innerbox`, `isi_per_innerbox`, `satuan_innerbox`, `total_innerbox_kebutuhan`) VALUES
+(4, 2, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 20.000, 500.000, 0.000, 63963.96, 1279279.28, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 500.000),
+(5, 2, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 20.000, 500.000, 0.000, 73324.32, 1466486.49, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 500.000),
+(6, 2, 'ZZKAOS28', 'Kaos Jialing', 20.000, 500.000, 0.000, 15000.00, 300000.00, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 500.000),
+(7, 3, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 20.000, 2000.000, 100.000, 63963.96, 1279279.28, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 2000.000),
+(8, 3, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 20.000, 2000.000, 100.000, 74885.14, 1497702.74, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 2000.000),
+(9, 3, 'ZZKAOS28', 'Kaos Jialing', 20.000, 2000.000, 100.000, 15000.00, 300000.00, 'Pcs', 1, 20.000, 1.000, 'Innerbox', 2000.000);
+
+-- --------------------------------------------------------
+
+--
 -- Struktur dari tabel `tberp_stock_batch`
 --
 
@@ -1080,13 +1417,23 @@ CREATE TABLE `tberp_stock_batch` (
 --
 
 INSERT INTO `tberp_stock_batch` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `expired_date`, `qty_on_hand`, `qty_reserved`, `created_at`, `update_at`) VALUES
-(1, 'QCHAM04', '2', '11231', '2027-01-01', 140.000, 0.000, '2026-09-04 08:34:11', '2026-09-04 08:34:11'),
-(2, 'QPUPU16', '2', '1123514', '2027-02-01', 25.000, 0.000, '2026-09-04 08:34:11', '2026-09-04 09:45:24'),
-(3, 'QROUN011', '2', '112233', '2027-02-01', 5832.000, 0.000, '2026-09-04 08:34:11', '2026-09-04 09:45:24'),
-(4, 'QSPON081', '2', '336655', '2027-02-01', 1000.000, 0.000, '2026-09-04 08:34:11', '2026-09-04 08:34:11'),
-(5, 'QTOMA06', '2', '556633', '2027-02-01', 60.000, 0.000, '2026-09-04 08:42:23', '2026-09-04 09:44:52'),
-(6, 'QPADI45', '2', '00212', '2027-02-01', 1990.000, 0.000, '2026-09-04 09:17:53', '2026-09-04 13:46:43'),
-(7, 'QPUPU16', '2', '1123514', '2026-08-06', 1.000, 0.000, '2026-09-04 13:16:12', '2026-09-04 13:16:12');
+(1, 'QPUPU16', '2', '101011', '2028-01-21', 26.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:36:44'),
+(2, 'QCHAM04', '2', '101012', '2027-08-21', 0.000, 0.000, '2026-08-21 14:09:38', '2026-09-23 13:42:15'),
+(3, 'QSPON081', '2', '101013', '2030-04-21', 893.000, 0.000, '2026-08-21 14:09:38', '2026-09-23 13:42:15'),
+(4, 'QROUN011', '2', '101015', '2028-04-21', 5064.000, 0.000, '2026-08-21 14:09:38', '2026-09-23 13:42:15'),
+(5, 'QTOMA06', '2', '101019', '2027-06-21', 24.000, 0.000, '2026-08-21 14:10:19', '2026-09-11 13:39:34'),
+(6, 'QPADI45', '2', '1010101', '2027-11-21', 1800.000, 0.000, '2026-08-21 14:12:10', '2026-09-23 12:25:51'),
+(8, 'QTOMA06', '5', '221133', '2027-01-01', 1.000, 0.000, '2026-09-11 10:58:51', '2026-09-11 10:58:51'),
+(9, 'QROUN011', '5', '223424', '2027-01-11', 11.000, 0.000, '2026-09-11 11:00:06', '2026-09-11 11:00:06'),
+(10, 'ZZUMBU05', '2', '0', '1000-01-01', 40.000, 0.000, '2026-09-11 14:15:23', '2026-09-11 14:24:07'),
+(11, 'QTOMA06', '2', '256984ADF', '2028-01-01', 20.000, 0.000, '2026-09-11 14:59:56', '2026-09-11 14:59:56'),
+(12, 'ZZKAOS28', '2', '1111', '1000-09-11', 150.000, 0.000, '2026-09-11 15:14:39', '2026-09-17 10:24:08'),
+(14, 'QPADI45', '10', '1242524', '2027-01-01', 10.000, 0.000, '2026-09-12 11:17:28', '2026-09-12 11:17:28'),
+(15, 'QPADI45', '2', '0454554', '2027-01-01', 90.000, 0.000, '2026-09-12 11:18:38', '2026-09-12 11:18:38'),
+(17, 'QPADI45', '10', '1121404', '2027-01-01', 10.000, 0.000, '2026-09-14 14:28:06', '2026-09-14 14:28:06'),
+(18, 'QPADI45', '2', '2236', '2027-01-01', 10.000, 0.000, '2026-09-14 14:30:18', '2026-09-14 14:30:18'),
+(19, 'QSPON081', '2', '33212', '2026-12-31', 0.000, 0.000, '2026-09-15 10:14:47', '2026-09-17 10:24:08'),
+(20, 'JTU01', '12', 'LOT-PKT-260917-285', '1000-09-11', 5.000, 0.000, '2026-09-17 10:24:08', '2026-09-17 10:24:08');
 
 -- --------------------------------------------------------
 
@@ -1112,34 +1459,61 @@ CREATE TABLE `tberp_stock_ledger` (
 --
 
 INSERT INTO `tberp_stock_ledger` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `expired_date`, `qty`, `tipe`, `ref_no`, `ref_type`, `created_at`) VALUES
-(1, 'QCHAM04', '2', '11231', '2027-01-01', 140.000, 'IN', 'SKPO040926PUPUK030001', 'PO_RECEIVED', '2026-09-04 08:34:11'),
-(2, 'QPUPU16', '2', '1123514', '2027-02-01', 50.000, 'IN', 'SKPO040926PUPUK030001', 'PO_RECEIVED', '2026-09-04 08:34:11'),
-(3, 'QROUN011', '2', '112233', '2027-02-01', 6000.000, 'IN', 'SKPO040926PUPUK030001', 'PO_RECEIVED', '2026-09-04 08:34:11'),
-(4, 'QSPON081', '2', '336655', '2027-02-01', 1000.000, 'IN', 'SKPO040926PUPUK030001', 'PO_RECEIVED', '2026-09-04 08:34:11'),
-(5, 'QTOMA06', '2', '556633', '2027-02-01', 70.000, 'IN', 'SKPO040926SYNGE020002', 'PO_RECEIVED', '2026-09-04 08:42:23'),
-(6, 'QPADI45', '2', '00212', '2027-02-01', 2500.000, 'IN', 'SKPO040926SYNGE020002', 'PO_RECEIVED', '2026-09-04 09:17:53'),
-(7, 'QPUPU16', '2', '1123514', '2027-02-01', 25.000, 'RESERVE', 'SO/040926/0001', 'SALES_ORDER', '2026-09-04 09:21:25'),
-(8, 'QROUN011', '2', '112233', '2027-02-01', 168.000, 'RESERVE', 'SO/040926/0001', 'SALES_ORDER', '2026-09-04 09:21:25'),
-(9, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'RESERVE', 'SO/040926/0002', 'SALES_ORDER', '2026-09-04 09:34:39'),
-(10, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'RESERVE', 'SO/040926/0002', 'SALES_ORDER', '2026-09-04 09:34:39'),
-(11, 'QPADI45', '2', '00212', '2027-02-01', 500.000, 'RESERVE', 'SO/040926/0002', 'SALES_ORDER', '2026-09-04 09:34:39'),
-(12, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:38:44'),
-(13, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:38:44'),
-(14, 'QPADI45', '2', '00212', '2027-02-01', 500.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:38:44'),
-(15, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'IN', 'SO/040926/0002', 'REPOST_FAKTUR', '2026-09-04 09:44:09'),
-(16, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'RESERVE', 'SO/040926/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-04 09:44:09'),
-(17, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'IN', 'SO/040926/0002', 'REPOST_FAKTUR', '2026-09-04 09:44:09'),
-(18, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'RESERVE', 'SO/040926/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-04 09:44:09'),
-(19, 'QPADI45', '2', '00212', '2027-02-01', 500.000, 'IN', 'SO/040926/0002', 'REPOST_FAKTUR', '2026-09-04 09:44:09'),
-(20, 'QPADI45', '2', '00212', '2027-02-01', 500.000, 'RESERVE', 'SO/040926/0002', 'REPOST_FAKTUR_RESERVE', '2026-09-04 09:44:09'),
-(21, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:44:52'),
-(22, 'QTOMA06', '2', '556633', '2027-02-01', 5.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:44:52'),
-(23, 'QPADI45', '2', '00212', '2027-02-01', 500.000, 'OUT', 'SO/040926/0002', 'FAKTUR PENJUALAN', '2026-09-04 09:44:52'),
-(24, 'QPUPU16', '2', '1123514', '2027-02-01', 25.000, 'OUT', 'SO/040926/0001', 'FAKTUR PENJUALAN', '2026-09-04 09:45:24'),
-(25, 'QROUN011', '2', '112233', '2027-02-01', 168.000, 'OUT', 'SO/040926/0001', 'FAKTUR PENJUALAN', '2026-09-04 09:45:24'),
-(26, 'QPUPU16', '2', '1123514', '2026-08-06', 1.000, 'RJUAL', 'RP/040926/0001', 'RETUR_PENJUALAN', '2026-09-04 13:16:12'),
-(27, 'QPADI45', '2', '00212', '2027-02-01', 10.000, 'RESERVE', 'SO-LBY/040926/0001', 'SALES_ORDER_LOBY', '2026-09-04 13:46:37'),
-(28, 'QPADI45', '2', '00212', '2027-02-01', 10.000, 'OUT', 'SO-LBY/040926/0001', 'FAKTUR PENJUALAN LOBY', '2026-09-04 13:46:43');
+(1, 'QPUPU16', '2', '101011', '2028-01-21', 50.000, 'IN', 'SKPO210826PUPUK030001', 'PO_RECEIVED', '2026-08-21 14:09:38'),
+(2, 'QCHAM04', '2', '101012', '2027-08-21', 140.000, 'IN', 'SKPO210826PUPUK030001', 'PO_RECEIVED', '2026-08-21 14:09:38'),
+(3, 'QSPON081', '2', '101013', '2030-04-21', 1000.000, 'IN', 'SKPO210826PUPUK030001', 'PO_RECEIVED', '2026-08-21 14:09:38'),
+(4, 'QROUN011', '2', '101015', '2028-04-21', 6000.000, 'IN', 'SKPO210826PUPUK030001', 'PO_RECEIVED', '2026-08-21 14:09:38'),
+(5, 'QTOMA06', '2', '101019', '2027-06-21', 70.000, 'IN', 'SKPO210826SYNGE020002', 'PO_RECEIVED', '2026-08-21 14:10:19'),
+(6, 'QPADI45', '2', '1010101', '2027-11-21', 2500.000, 'IN', 'SKPO210826SYNGE020002', 'PO_RECEIVED', '2026-08-21 14:12:10'),
+(7, 'QPUPU16', '2', '101011', '2028-01-21', 25.000, 'RESERVE', 'SO/210826/0001', 'SALES_ORDER', '2026-08-21 14:16:36'),
+(8, 'QROUN011', '2', '101015', '2028-04-21', 168.000, 'RESERVE', 'SO/210826/0001', 'SALES_ORDER', '2026-08-21 14:16:36'),
+(9, 'QTOMA06', '2', '101019', '2027-06-21', 5.000, 'RESERVE', 'SO/210826/0002', 'SALES_ORDER', '2026-08-21 14:18:30'),
+(10, 'QTOMA06', '2', '101019', '2027-06-21', 5.000, 'RESERVE', 'SO/210826/0002', 'SALES_ORDER', '2026-08-21 14:18:30'),
+(11, 'QPADI45', '2', '1010101', '2027-11-21', 500.000, 'RESERVE', 'SO/210826/0002', 'SALES_ORDER', '2026-08-21 14:18:30'),
+(12, 'QTOMA06', '2', '101019', '2027-06-21', 5.000, 'OUT', 'SO/210826/0002', 'FAKTUR PENJUALAN', '2026-08-21 14:20:48'),
+(13, 'QTOMA06', '2', '101019', '2027-06-21', 5.000, 'OUT', 'SO/210826/0002', 'FAKTUR PENJUALAN', '2026-08-21 14:20:48'),
+(14, 'QPADI45', '2', '1010101', '2027-11-21', 500.000, 'OUT', 'SO/210826/0002', 'FAKTUR PENJUALAN', '2026-08-21 14:20:48'),
+(15, 'QPUPU16', '2', '101011', '2028-01-21', 25.000, 'OUT', 'SO/210826/0001', 'FAKTUR PENJUALAN', '2026-08-21 14:21:09'),
+(16, 'QROUN011', '2', '101015', '2028-04-21', 168.000, 'OUT', 'SO/210826/0001', 'FAKTUR PENJUALAN', '2026-08-21 14:21:09'),
+(17, 'QTOMA06', '2', '101019', '2027-06-21', 35.000, 'RBELI', 'RBELI-20260821-0001', 'RETUR_PEMBELIAN', '2026-08-21 14:30:25'),
+(27, 'QPUPU16', '2', '101011', '2028-01-21', 1.000, 'RJUAL', 'RP/210826/0001', 'RETUR_PENJUALAN', '2026-08-21 14:36:44'),
+(28, 'QTOMA06', '5', '221133', '2027-01-01', 1.000, 'RJUAL', 'RP/110926/0001', 'RETUR_PENJUALAN', '2026-09-11 10:58:51'),
+(29, 'QROUN011', '5', '223424', '2027-01-11', 11.000, 'RJUAL', 'RPR/110926/0001', 'RETUR_PENJUALAN', '2026-09-11 11:00:06'),
+(30, 'QROUN011', '2', '101015', '2028-04-21', 11.000, 'RESERVE', 'SO/110926/0001', 'SALES_ORDER', '2026-09-11 13:31:45'),
+(31, 'QTOMA06', '2', '101019', '2027-06-21', 1.000, 'RESERVE', 'SO/110926/0002', 'SALES_ORDER', '2026-09-11 13:36:30'),
+(32, 'QTOMA06', '2', '101019', '2027-06-21', 1.000, 'OUT', 'SO/110926/0002', 'FAKTUR PENJUALAN', '2026-09-11 13:39:34'),
+(33, 'QROUN011', '2', '101015', '2028-04-21', 11.000, 'OUT', 'SO/110926/0001', 'FAKTUR PENJUALAN', '2026-09-11 13:40:24'),
+(34, 'ZZUMBU05', '2', '0', '1000-01-01', 50.000, 'IN', 'LPBM2609110001', 'LPB_MANUAL', '2026-09-11 14:15:23'),
+(36, 'ZZUMBU05', '2', '0', '1000-01-01', 10.000, 'ADJOUT', 'APB110926-01', 'PENYESUAIAN', '2026-09-11 14:24:07'),
+(37, 'QTOMA06', '2', '256984ADF', '2028-01-01', 20.000, 'IN', 'LPBM2609110002', 'LPB_MANUAL', '2026-09-11 14:59:56'),
+(38, 'ZZKAOS28', '2', '1111', '1000-09-11', 250.000, 'IN', 'LPBM2609110003', 'LPB_MANUAL', '2026-09-11 15:14:39'),
+(43, 'QPADI45', '10', '1242524', '2027-01-01', 10.000, 'IN', 'LPBM2609120001', 'LPB_MANUAL', '2026-09-12 11:17:28'),
+(44, 'QPADI45', '2', '0454554', '2027-01-01', 90.000, 'IN', 'LPBM2609120002', 'LPB_MANUAL', '2026-09-12 11:18:38'),
+(49, 'QPADI45', '10', '1121404', '2027-01-01', 10.000, 'IN', 'LPBM2609140001', 'LPB_MANUAL', '2026-09-14 14:28:06'),
+(50, 'QPADI45', '2', '2236', '2027-01-01', 10.000, 'IN', 'LPBM2609140002', 'LPB_MANUAL', '2026-09-14 14:30:18'),
+(51, 'QSPON081', '2', '33212', '2026-12-31', 100.000, 'IN', 'LPBM2609150001', 'LPB_MANUAL', '2026-09-15 10:14:47'),
+(53, 'QROUN011', '2', '101015', '2028-04-21', 100.000, 'OUT', 'ASM-20260917-0001', 'ASSEMBLY_KOMPONEN', '2026-09-17 10:24:08'),
+(54, 'QSPON081', '2', '33212', '2026-12-31', 100.000, 'OUT', 'ASM-20260917-0001', 'ASSEMBLY_KOMPONEN', '2026-09-17 10:24:08'),
+(55, 'ZZKAOS28', '2', '1111', '1000-09-11', 100.000, 'OUT', 'ASM-20260917-0001', 'ASSEMBLY_KOMPONEN', '2026-09-17 10:24:08'),
+(56, 'JTU01', '12', 'LOT-PKT-260917-285', '1000-09-11', 5.000, 'IN', 'ASM-20260917-0001', 'ASSEMBLY_PAKET', '2026-09-17 10:24:08'),
+(57, 'QPADI45', '2', '1010101', '2027-11-21', 100.000, 'RESERVE', 'SO/220926/0001', 'SALES_ORDER', '2026-09-22 10:25:07'),
+(58, 'QROUN011', '2', '101015', '2028-04-21', 100.000, 'RESERVE', 'SO/220926/0002', 'SALES_ORDER', '2026-09-22 10:26:04'),
+(59, 'QPADI45', '2', '1010101', '2027-11-21', 100.000, 'OUT', 'SO/220926/0001', 'FAKTUR PENJUALAN', '2026-09-22 11:00:40'),
+(60, 'QROUN011', '2', '101015', '2028-04-21', 100.000, 'OUT', 'SO/220926/0002', 'FAKTUR PENJUALAN', '2026-09-22 11:00:48'),
+(61, 'QSPON081', '2', '101013', '2030-04-21', 50.000, 'RESERVE', 'SO/230926/0001', 'SALES_ORDER', '2026-09-23 11:52:24'),
+(62, 'QSPON081', '2', '101013', '2030-04-21', 50.000, 'RESERVE', 'SO/230926/0002', 'SALES_ORDER', '2026-09-23 12:17:18'),
+(63, 'QPADI45', '2', '1010101', '2027-11-21', 100.000, 'RESERVE', 'SO/230926/0003', 'SALES_ORDER', '2026-09-23 12:19:47'),
+(64, 'QROUN011', '2', '101015', '2028-04-21', 300.000, 'RESERVE', 'SO/230926/0004', 'SALES_ORDER', '2026-09-23 12:21:20'),
+(65, 'QSPON081', '2', '101013', '2030-04-21', 50.000, 'OUT', 'SO/230926/0001', 'FAKTUR PENJUALAN', '2026-09-23 12:25:28'),
+(66, 'QSPON081', '2', '101013', '2030-04-21', 50.000, 'OUT', 'SO/230926/0002', 'FAKTUR PENJUALAN', '2026-09-23 12:25:35'),
+(67, 'QPADI45', '2', '1010101', '2027-11-21', 100.000, 'OUT', 'SO/230926/0003', 'FAKTUR PENJUALAN', '2026-09-23 12:25:51'),
+(68, 'QROUN011', '2', '101015', '2028-04-21', 300.000, 'OUT', 'SO/230926/0004', 'FAKTUR PENJUALAN', '2026-09-23 12:25:58'),
+(69, 'QROUN011', '2', '101015', '2028-04-21', 257.000, 'RESERVE', 'SO/230926/0005', 'SALES_ORDER', '2026-09-23 13:38:42'),
+(70, 'QSPON081', '2', '101013', '2030-04-21', 7.000, 'RESERVE', 'SO/230926/0005', 'SALES_ORDER', '2026-09-23 13:38:42'),
+(71, 'QCHAM04', '2', '101012', '2027-08-21', 140.000, 'RESERVE', 'SO/230926/0005', 'SALES_ORDER', '2026-09-23 13:38:42'),
+(72, 'QROUN011', '2', '101015', '2028-04-21', 257.000, 'OUT', 'SO/230926/0005', 'FAKTUR PENJUALAN', '2026-09-23 13:42:15'),
+(73, 'QSPON081', '2', '101013', '2030-04-21', 7.000, 'OUT', 'SO/230926/0005', 'FAKTUR PENJUALAN', '2026-09-23 13:42:15'),
+(74, 'QCHAM04', '2', '101012', '2027-08-21', 140.000, 'OUT', 'SO/230926/0005', 'FAKTUR PENJUALAN', '2026-09-23 13:42:15');
 
 -- --------------------------------------------------------
 
@@ -1846,9 +2220,7 @@ INSERT INTO `tbkeu_akun` (`id_akun`, `kode_akun`, `nama_akun`, `id_klasifikasi`,
 (592, '93011', 'Q Biaya Operasional Kebun Bibit Percobaan', 9, 90, 3, 'DEBIT', 'POSTING', 'NONE', 1, 1, 1, NULL, '2026-07-15 14:28:47', NULL, '2026-07-23 15:10:13'),
 (593, '12148', 'A CIMB 9100', 1, 60, 3, 'DEBIT', 'POSTING', 'BANK', 1, 1, 1, NULL, '2026-07-15 14:28:47', NULL, '2026-07-23 15:10:12'),
 (594, '13023', 'Q Piutang Non Dagang - MIA', 1, 61, 3, 'DEBIT', 'POSTING', 'PIUTANG', 1, 1, 1, NULL, '2026-07-15 14:28:47', NULL, '2026-07-23 15:10:12'),
-(595, '21026', 'Q Hutang Non Dagang - MIA', 2, 73, 3, 'KREDIT', 'POSTING', 'NONE', 1, 1, 1, NULL, '2026-07-15 14:28:47', NULL, '2026-07-23 15:10:12'),
-(1093, '11111', 'Q Kas Ayat Silang', 1, NULL, 1, 'DEBIT', 'POSTING', 'KAS', 1, 1, 1, 205, '2026-08-27 10:11:44', 205, '2026-09-04 13:03:51'),
-(1094, '22222', 'A Kas Ayat Silang', 1, NULL, 1, 'DEBIT', 'POSTING', 'KAS', 0, 1, 1, 205, '2026-08-27 10:18:02', 205, '2026-08-27 10:18:02');
+(595, '21026', 'Q Hutang Non Dagang - MIA', 2, 73, 3, 'KREDIT', 'POSTING', 'NONE', 1, 1, 1, NULL, '2026-07-15 14:28:47', NULL, '2026-07-23 15:10:12');
 
 -- --------------------------------------------------------
 
@@ -2467,8 +2839,8 @@ CREATE TABLE `tbkeu_jurnal` (
   `source_no` varchar(100) DEFAULT NULL,
   `posting_event` varchar(50) DEFAULT NULL,
   `status` enum('DRAFT','POSTED','REVERSED','VOID') NOT NULL DEFAULT 'DRAFT',
-  `total_debit` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `total_kredit` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `total_debit` decimal(19,4) NOT NULL DEFAULT '0.0000',
+  `total_kredit` decimal(19,4) NOT NULL DEFAULT '0.0000',
   `reversal_of_journal_id` bigint UNSIGNED DEFAULT NULL,
   `idempotency_key` varchar(255) DEFAULT NULL,
   `created_by` bigint DEFAULT NULL,
@@ -2490,21 +2862,42 @@ CREATE TABLE `tbkeu_jurnal` (
 --
 
 INSERT INTO `tbkeu_jurnal` (`id_jurnal`, `nomor_jurnal`, `id_jenis_jurnal`, `tanggal_transaksi`, `id_periode`, `keterangan`, `source_module`, `source_type`, `source_id`, `source_no`, `posting_event`, `status`, `total_debit`, `total_kredit`, `reversal_of_journal_id`, `idempotency_key`, `created_by`, `created_at`, `updated_by`, `updated_at`, `posted_by`, `posted_at`, `reversed_by`, `reversed_at`, `voided_by`, `voided_at`, `void_reason`, `lock_version`) VALUES
-(1, 'PJ-202608-00005', 11, '2026-08-03', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '1', '2600001', 'GOODS_RECEIPT', 'POSTED', 540000000.23470, 540000000.23470, NULL, 'GOODS_RECEIPT-LPB-1', 205, '2026-09-04 08:34:11', 205, '2026-09-04 08:34:11', 205, '2026-09-04 08:34:11', NULL, NULL, NULL, NULL, NULL, 0),
-(2, 'PJ-202608-00006', 11, '2026-08-13', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '2', '2600001B', 'GOODS_RECEIPT', 'POSTED', 2450000.00000, 2450000.00000, NULL, 'GOODS_RECEIPT-LPB-2', 205, '2026-09-04 08:42:23', 205, '2026-09-04 08:42:23', 205, '2026-09-04 08:42:23', NULL, NULL, NULL, NULL, NULL, 0),
-(3, 'PJ-202608-00007', 11, '2026-08-12', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '3', '2600002B', 'GOODS_RECEIPT', 'POSTED', 237500000.00000, 237500000.00000, NULL, 'GOODS_RECEIPT-LPB-3', 205, '2026-09-04 09:17:53', 205, '2026-09-04 09:17:53', 205, '2026-09-04 09:17:53', NULL, NULL, NULL, NULL, NULL, 0),
-(6, 'SJ-010926-0003', 10, '2026-09-01', 26, 'Penjualan, Manunggal Agro Sentosa,PT', 'SALES', 'FAKTUR_PENJUALAN', 'DINV0409260002', 'DINV0409260002', 'SALES_INVOICE', 'POSTED', 52725000.00000, 52725000.00000, NULL, 'SALES_INVOICE-FAKTUR-DINV0409260002', 213, '2026-09-04 09:44:52', 213, '2026-09-04 09:44:52', 213, '2026-09-04 09:44:52', NULL, NULL, NULL, NULL, NULL, 0),
-(7, 'SJ-010926-0004', 10, '2026-09-01', 26, 'Penyesuaian persediaan, untuk SJ-010926-0004', 'SALES', 'FAKTUR_PENJUALAN', 'DINV0409260002', 'DINV0409260002', 'GOODS_ISSUE', 'POSTED', 47850000.00000, 47850000.00000, NULL, 'GOODS_ISSUE-FAKTUR-DINV0409260002', 213, '2026-09-04 09:44:52', 213, '2026-09-04 09:44:52', 213, '2026-09-04 09:44:52', NULL, NULL, NULL, NULL, NULL, 0),
-(8, 'SJ-060826-0001', 10, '2026-08-06', 26, 'Penjualan, Rizky Jaya, CV', 'SALES', 'FAKTUR_PENJUALAN', 'DINV0409260003', 'DINV0409260003', 'SALES_INVOICE', 'POSTED', 14690000.00000, 14690000.00000, NULL, 'SALES_INVOICE-FAKTUR-DINV0409260003', 213, '2026-09-04 09:45:24', 213, '2026-09-04 09:45:24', 213, '2026-09-04 09:45:24', NULL, NULL, NULL, NULL, NULL, 0),
-(9, 'SJ-060826-0002', 10, '2026-08-06', 26, 'Penyesuaian persediaan, untuk SJ-060826-0002', 'SALES', 'FAKTUR_PENJUALAN', 'DINV0409260003', 'DINV0409260003', 'GOODS_ISSUE', 'POSTED', 10746981988.03500, 10746981988.03500, NULL, 'GOODS_ISSUE-FAKTUR-DINV0409260003', 213, '2026-09-04 09:45:24', 213, '2026-09-04 09:45:24', 213, '2026-09-04 09:45:24', NULL, NULL, NULL, NULL, NULL, 0),
-(10, 'MR-04092600001', 17, '2026-08-25', NULL, 'Penerimaan dari Rizky Jaya, CV via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '1', 'DINV0409260003', NULL, 'POSTED', 10000000.00000, 10000000.00000, NULL, NULL, 211, '2026-09-04 11:04:21', NULL, '2026-09-04 11:04:21', 211, '2026-09-04 11:04:21', NULL, NULL, NULL, NULL, NULL, 0),
-(11, 'MR-04092600002', 17, '2026-08-29', NULL, 'Penerimaan dari Rizky Jaya, CV via Q Kas Ayat Silang', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '3', 'DINV0409260003', NULL, 'POSTED', 425000.00000, 425000.00000, NULL, NULL, 211, '2026-09-04 13:00:46', NULL, '2026-09-04 13:00:46', 211, '2026-09-04 13:00:46', NULL, NULL, NULL, NULL, NULL, 0),
-(12, 'GJ-04092600001', 1, '2026-09-04', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-04092600001', 'GJ-04092600001', 'MANUAL_JOURNAL', 'POSTED', 500000.00000, 500000.00000, NULL, NULL, 205, '2026-09-04 13:04:00', 205, '2026-09-04 13:04:00', 205, '2026-09-04 13:04:00', NULL, NULL, NULL, NULL, NULL, 1),
-(13, 'RJP-04092600001', NULL, '2026-09-30', NULL, 'Retur Penjualan RP/040926/0001 (Customer: Rizky Jaya, CV)', 'SALES', 'RETUR_PENJUALAN', '1', 'RP/040926/0001', NULL, 'POSTED', 91441.44140, 91441.44140, NULL, NULL, 222, '2026-09-04 13:17:01', NULL, '2026-09-04 13:17:01', 222, '2026-09-04 13:17:01', NULL, NULL, NULL, NULL, NULL, 0),
-(14, 'SJ-040926-0003', 10, '2026-09-04', 26, 'Penjualan, Karisma Indoagro Universa', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV0409260001', 'LBYINV0409260001', 'SALES_INVOICE', 'POSTED', 950000.00000, 950000.00000, NULL, 'SALES_INVOICE-FAKTUR-LBYINV0409260001', 205, '2026-09-04 13:46:43', 205, '2026-09-04 13:46:43', 205, '2026-09-04 13:46:43', NULL, NULL, NULL, NULL, NULL, 0),
-(15, 'SJ-040926-0004', 10, '2026-09-04', 26, 'Penyesuaian persediaan, untuk SJ-040926-0004', 'SALES', 'FAKTUR_PENJUALAN', 'LBYINV0409260001', 'LBYINV0409260001', 'GOODS_ISSUE', 'POSTED', 950000.00000, 950000.00000, NULL, 'GOODS_ISSUE-FAKTUR-LBYINV0409260001', 205, '2026-09-04 13:46:43', 205, '2026-09-04 13:46:43', 205, '2026-09-04 13:46:43', NULL, NULL, NULL, NULL, NULL, 0),
-(16, 'GJ-04092600002', 1, '2026-09-04', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-04092600002', 'GJ-04092600002', 'MANUAL_JOURNAL', 'POSTED', 100000.00000, 100000.00000, NULL, NULL, 205, '2026-09-04 14:01:07', 205, '2026-09-04 14:01:07', 205, '2026-09-04 14:01:07', NULL, NULL, NULL, NULL, NULL, 1),
-(17, 'GJ-14082600001', 1, '2026-08-14', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-14082600001', 'GJ-14082600001', 'MANUAL_JOURNAL', 'POSTED', 100000.00000, 100000.00000, NULL, NULL, 205, '2026-09-04 14:02:22', 205, '2026-09-04 14:02:22', 205, '2026-09-04 14:02:22', NULL, NULL, NULL, NULL, NULL, 1);
+(1, 'PJ-202608-00001', 11, '2026-08-03', 26, 'Pembelian, Pupuk Karya Polowijo, PT', 'LOGISTIK', 'LPB_FINAL', '1', '2600001', 'GOODS_RECEIPT', 'POSTED', 540000000.2347, 540000000.2347, NULL, 'GOODS_RECEIPT-LPB-1', 207, '2026-08-21 14:09:38', 207, '2026-08-21 14:09:38', 207, '2026-08-21 14:09:38', NULL, NULL, NULL, NULL, NULL, 0),
+(3, 'PJ-202608-00003', 11, '2026-08-15', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '3', '2600002B', 'GOODS_RECEIPT', 'POSTED', 237500000.0000, 237500000.0000, NULL, 'GOODS_RECEIPT-LPB-3', 207, '2026-08-21 14:12:10', 207, '2026-08-21 14:12:10', 207, '2026-08-21 14:12:10', NULL, NULL, NULL, NULL, NULL, 0),
+(8, 'GJ-21082600001', 1, '2026-08-21', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600001', 'GJ-21082600001', 'MANUAL_JOURNAL', 'POSTED', 100000.0000, 100000.0000, NULL, NULL, 205, '2026-08-21 14:22:28', 205, '2026-08-21 14:22:28', 205, '2026-08-21 14:22:28', NULL, NULL, NULL, NULL, NULL, 1),
+(9, 'MR-21082600001', 17, '2026-08-25', NULL, 'Penerimaan dari Rizky Jaya, CV via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '1', 'DINV2108260002', NULL, 'POSTED', 10000000.0000, 10000000.0000, NULL, NULL, 211, '2026-08-21 14:24:00', NULL, '2026-08-21 14:24:00', 211, '2026-08-21 14:24:00', NULL, NULL, NULL, NULL, NULL, 0),
+(10, 'MR-21082600002', 17, '2026-08-28', NULL, 'Penerimaan dari Rizky Jaya, CV via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '2', 'DINV2108260002', NULL, 'POSTED', 1690000.0000, 1690000.0000, NULL, NULL, 211, '2026-08-21 14:26:23', NULL, '2026-08-21 14:26:23', 211, '2026-08-21 14:26:23', NULL, NULL, NULL, NULL, NULL, 0),
+(11, 'KM-21082600001', 30, '2026-08-21', NULL, 'Penerimaan dari Rizky Jaya, CV via Q Kas', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '3', 'DINV2108260002', NULL, 'POSTED', 425000.0000, 425000.0000, NULL, NULL, 211, '2026-08-21 14:27:19', NULL, '2026-08-21 14:27:19', 211, '2026-08-21 14:27:19', NULL, NULL, NULL, NULL, NULL, 0),
+(12, 'GJ-21082600002', 1, '2026-08-21', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600002', 'GJ-21082600002', 'MANUAL_JOURNAL', 'POSTED', 500000.0000, 500000.0000, NULL, NULL, 205, '2026-08-21 14:28:35', 205, '2026-08-21 14:28:35', 205, '2026-08-21 14:28:35', NULL, NULL, NULL, NULL, NULL, 1),
+(13, 'PJ-202608-00004', 11, '2026-08-26', 26, 'Retur pembelian RBELI-20260821-0001', 'LOGISTIK', 'RETUR_PEMBELIAN', '1', 'RBELI-20260821-0001', 'PURCHASE_RETURN', 'POSTED', 1225000.0000, 1225000.0000, NULL, 'PURCHASE_RETURN-1', 0, '2026-08-21 14:30:25', 0, '2026-08-21 14:30:25', 0, '2026-08-21 14:30:25', NULL, NULL, NULL, NULL, NULL, 0),
+(16, 'B250000001', 2, '2026-08-21', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00001', 'BYS-202608-00001', 'SUPPLIER_PAYMENT', 'POSTED', 100000000.0000, 100000000.0000, NULL, 'SUPPLIER_PAYMENT-BYS-202608-00001', 205, '2026-08-21 14:46:03', 205, '2026-08-21 14:46:03', 205, '2026-08-21 14:46:03', NULL, NULL, NULL, NULL, NULL, 0),
+(17, 'B250000002', 2, '2026-10-05', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202610-00001', 'BYS-202610-00001', 'SUPPLIER_PAYMENT', 'POSTED', 20000000.0000, 20000000.0000, NULL, 'SUPPLIER_PAYMENT-BYS-202610-00001', 205, '2026-08-21 14:47:25', 205, '2026-08-21 14:47:25', 205, '2026-08-21 14:47:25', NULL, NULL, NULL, NULL, NULL, 0),
+(18, 'GJ-21082600003', 1, '2026-09-05', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600003', 'GJ-21082600003', 'MANUAL_JOURNAL', 'POSTED', 23529412.0000, 23529412.0000, NULL, NULL, 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', NULL, NULL, NULL, NULL, NULL, 1),
+(28, 'RJP-22082600001', NULL, '2026-08-21', NULL, 'Retur Penjualan RP/210826/0001 (Customer: Rizky Jaya, CV)', 'SALES', 'RETUR_PENJUALAN', '1', 'RP/210826/0001', NULL, 'POSTED', 91441.4400, 91441.4400, NULL, NULL, 222, '2026-08-21 14:39:02', NULL, '2026-08-22 10:35:17', 222, '2026-08-21 14:39:02', NULL, NULL, NULL, NULL, NULL, 0),
+(33, 'SJ-270926-0001', 10, '2026-09-27', 26, 'Penjualan, Manunggal Agro Sentosa,PT', 'SALES', 'FAKTUR_PENJUALAN', 'DINV1109260001', 'DINV1109260001', 'SALES_INVOICE', 'POSTED', 45000.0000, 45000.0000, NULL, 'SALES_INVOICE-FAKTUR-DINV1109260001', 213, '2026-09-11 13:39:34', 213, '2026-09-11 13:39:34', 213, '2026-09-11 13:39:34', NULL, NULL, NULL, NULL, NULL, 0),
+(34, 'SJ-270926-0002', 10, '2026-09-27', 26, 'Penyesuaian persediaan, untuk SJ-270926-0002', 'SALES', 'FAKTUR_PENJUALAN', 'DINV1109260001', 'DINV1109260001', 'GOODS_ISSUE', 'POSTED', 35000.0000, 35000.0000, NULL, 'GOODS_ISSUE-FAKTUR-DINV1109260001', 213, '2026-09-11 13:39:34', 213, '2026-09-11 13:39:34', 213, '2026-09-11 13:39:34', NULL, NULL, NULL, NULL, NULL, 0),
+(35, 'MR-11092600001', 17, '2026-09-11', NULL, 'Penerimaan dari Manunggal Agro Sentosa,PT via Q BCA 1588', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '4', 'DINV2108260001', NULL, 'POSTED', 180000.0000, 180000.0000, NULL, NULL, 211, '2026-09-11 13:42:42', NULL, '2026-09-11 13:42:42', 211, '2026-09-11 13:42:42', NULL, NULL, NULL, NULL, NULL, 0),
+(37, 'APB110926-01', 12, '2026-10-17', 26, 'Penyesuaian Persediaan MIA', 'PERSEDIAAN', 'PENYESUAIAN_BARANG', '9', 'APB110926-01', 'STOCK_ADJUSTMENT', 'POSTED', 10.0000, 10.0000, NULL, 'STOCK_ADJUSTMENT-9-APB110926-01', 205, '2026-09-11 14:24:07', 205, '2026-09-11 14:24:07', 205, '2026-09-11 14:24:07', NULL, NULL, NULL, NULL, NULL, 0),
+(38, 'SJ-140826-0001', 10, '2026-08-14', 26, 'Penjualan, Rizky Jaya, CV', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2108260002', 'DINV2108260002', 'SALES_INVOICE', 'POSTED', 14690000.0000, 14690000.0000, NULL, 'SALES_INVOICE-FAKTUR-DINV2108260002', 205, '2026-09-11 14:48:09', 205, '2026-09-11 14:48:09', 205, '2026-09-11 14:48:09', NULL, NULL, NULL, NULL, NULL, 0),
+(39, 'SJ-140826-0002', 10, '2026-08-14', 26, 'Penyesuaian persediaan, untuk SJ-140826-0002', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2108260002', 'DINV2108260002', 'GOODS_ISSUE', 'POSTED', 11781981.2800, 11781981.2800, NULL, 'GOODS_ISSUE-FAKTUR-DINV2108260002', 205, '2026-09-11 14:48:09', 205, '2026-09-11 14:48:09', 205, '2026-09-11 14:48:09', NULL, NULL, NULL, NULL, NULL, 0),
+(40, 'SJ-150826-0001', 10, '2026-08-15', 26, 'Penjualan, Manunggal Agro Sentosa,PT', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2108260001', 'DINV2108260001', 'SALES_INVOICE', 'POSTED', 52680000.0000, 52680000.0000, NULL, 'SALES_INVOICE-FAKTUR-DINV2108260001', 205, '2026-09-11 14:48:18', 205, '2026-09-11 14:48:18', 205, '2026-09-11 14:48:18', NULL, NULL, NULL, NULL, NULL, 0),
+(41, 'SJ-150826-0002', 10, '2026-08-15', 26, 'Penyesuaian persediaan, untuk SJ-150826-0002', 'SALES', 'FAKTUR_PENJUALAN', 'DINV2108260001', 'DINV2108260001', 'GOODS_ISSUE', 'POSTED', 47640000.0000, 47640000.0000, NULL, 'GOODS_ISSUE-FAKTUR-DINV2108260001', 205, '2026-09-11 14:48:18', 205, '2026-09-11 14:48:18', 205, '2026-09-11 14:48:18', NULL, NULL, NULL, NULL, NULL, 0),
+(44, 'PJ-202608-00007', 11, '2026-08-13', 26, 'Pembelian,  PT.Syngenta Seed', 'LOGISTIK', 'LPB_FINAL', '2', '2600001B', 'GOODS_RECEIPT', 'POSTED', 2800000.0000, 2800000.0000, NULL, 'GOODS_RECEIPT-LPB-2', 205, '2026-09-11 15:03:00', 205, '2026-09-11 15:03:00', 205, '2026-09-11 15:03:00', NULL, NULL, NULL, NULL, NULL, 0),
+(45, 'PJ-202608-00008', 11, '2026-08-17', 26, 'Pembelian, Supplier', 'LOGISTIK', 'LPB_FINAL', '5', '2600003B', 'GOODS_RECEIPT', 'POSTED', 1000000.0000, 1000000.0000, NULL, 'GOODS_RECEIPT-LPB-5', 205, '2026-09-12 08:22:42', 205, '2026-09-12 08:22:42', 205, '2026-09-12 08:22:42', NULL, NULL, NULL, NULL, NULL, 0),
+(46, 'PJ-202609-00001', 11, '2026-09-12', 26, 'Pembelian, Supplier', 'LOGISTIK', 'LPB_FINAL', '8', '2600005B', 'GOODS_RECEIPT', 'POSTED', 8550000.0000, 8550000.0000, NULL, 'GOODS_RECEIPT-LPB-8', 205, '2026-09-12 11:20:06', 205, '2026-09-12 11:20:06', 205, '2026-09-12 11:20:06', NULL, NULL, NULL, NULL, NULL, 0),
+(47, 'PJ-202609-00002', 11, '2026-09-14', 26, 'Pembelian, Supplier', 'LOGISTIK', 'LPB_FINAL', '10', '2600002', 'GOODS_RECEIPT', 'POSTED', 450000.0000, 450000.0000, NULL, 'GOODS_RECEIPT-LPB-10', 205, '2026-09-14 14:59:59', 205, '2026-09-14 14:59:59', 205, '2026-09-14 14:59:59', NULL, NULL, NULL, NULL, NULL, 0),
+(48, 'PJ-202609-00003', 11, '2026-09-15', 26, 'Pembelian, Supplier', 'LOGISTIK', 'LPB_FINAL', '11', '2600003', 'GOODS_RECEIPT', 'POSTED', 7215000.0000, 7215000.0000, NULL, 'GOODS_RECEIPT-LPB-11', 205, '2026-09-15 10:16:21', 205, '2026-09-15 10:16:21', 205, '2026-09-15 10:16:21', NULL, NULL, NULL, NULL, NULL, 0),
+(49, 'APB170926-01', 12, '2026-09-17', 26, 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 'PERSEDIAAN', 'PENYESUAIAN_BARANG', '12', 'APB170926-01', 'STOCK_ADJUSTMENT', 'POSTED', 15342342.3500, 15342342.3500, NULL, 'STOCK_ADJUSTMENT-12-APB170926-01', 205, '2026-09-17 10:27:38', 205, '2026-09-17 10:27:38', 205, '2026-09-17 10:27:38', NULL, NULL, NULL, NULL, NULL, 0),
+(54, 'SJ-230926-0001', 10, '2026-09-23', 26, 'Penjualan, Agin', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260001', 'ZINV2309260001', 'SALES_INVOICE', 'POSTED', 20000000.0000, 20000000.0000, NULL, 'SALES_INVOICE-FAKTUR-ZINV2309260001', 213, '2026-09-23 12:25:28', 213, '2026-09-23 12:25:28', 213, '2026-09-23 12:25:28', NULL, NULL, NULL, NULL, NULL, 0),
+(55, 'SJ-230926-0002', 10, '2026-09-23', 26, 'Penyesuaian persediaan, untuk SJ-230926-0002', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260001', 'ZINV2309260001', 'GOODS_ISSUE', 'POSTED', 3250000.0000, 3250000.0000, NULL, 'GOODS_ISSUE-FAKTUR-ZINV2309260001', 213, '2026-09-23 12:25:28', 213, '2026-09-23 12:25:28', 213, '2026-09-23 12:25:28', NULL, NULL, NULL, NULL, NULL, 0),
+(56, 'SJ-230926-0003', 10, '2026-09-23', 26, 'Penjualan, Nor Cahyo Hadi Kusumo', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260002', 'ZINV2309260002', 'SALES_INVOICE', 'POSTED', 20000000.0000, 20000000.0000, NULL, 'SALES_INVOICE-FAKTUR-ZINV2309260002', 213, '2026-09-23 12:25:35', 213, '2026-09-23 12:25:35', 213, '2026-09-23 12:25:35', NULL, NULL, NULL, NULL, NULL, 0),
+(57, 'SJ-230926-0004', 10, '2026-09-23', 26, 'Penyesuaian persediaan, untuk SJ-230926-0004', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260002', 'ZINV2309260002', 'GOODS_ISSUE', 'POSTED', 3250000.0000, 3250000.0000, NULL, 'GOODS_ISSUE-FAKTUR-ZINV2309260002', 213, '2026-09-23 12:25:35', 213, '2026-09-23 12:25:35', 213, '2026-09-23 12:25:35', NULL, NULL, NULL, NULL, NULL, 0),
+(58, 'SJ-230926-0005', 10, '2026-09-23', 26, 'Penjualan, Syaiful Anam', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260003', 'ZINV2309260003', 'SALES_INVOICE', 'POSTED', 80000000.0000, 80000000.0000, NULL, 'SALES_INVOICE-FAKTUR-ZINV2309260003', 213, '2026-09-23 12:25:51', 213, '2026-09-23 12:25:51', 213, '2026-09-23 12:25:51', NULL, NULL, NULL, NULL, NULL, 0),
+(59, 'SJ-230926-0006', 10, '2026-09-23', 26, 'Penyesuaian persediaan, untuk SJ-230926-0006', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260003', 'ZINV2309260003', 'GOODS_ISSUE', 'POSTED', 4500000.0000, 4500000.0000, NULL, 'GOODS_ISSUE-FAKTUR-ZINV2309260003', 213, '2026-09-23 12:25:51', 213, '2026-09-23 12:25:51', 213, '2026-09-23 12:25:51', NULL, NULL, NULL, NULL, NULL, 0),
+(60, 'SJ-230926-0007', 10, '2026-09-23', 26, 'Penjualan, Hanifian Ahmad Musyaffa', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260004', 'ZINV2309260004', 'SALES_INVOICE', 'POSTED', 120000000.0000, 120000000.0000, NULL, 'SALES_INVOICE-FAKTUR-ZINV2309260004', 213, '2026-09-23 12:25:58', 213, '2026-09-23 12:25:58', 213, '2026-09-23 12:25:58', NULL, NULL, NULL, NULL, NULL, 0),
+(61, 'SJ-230926-0008', 10, '2026-09-23', 26, 'Penyesuaian persediaan, untuk SJ-230926-0008', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260004', 'ZINV2309260004', 'GOODS_ISSUE', 'POSTED', 19189189200.0000, 19189189200.0000, NULL, 'GOODS_ISSUE-FAKTUR-ZINV2309260004', 213, '2026-09-23 12:25:58', 213, '2026-09-23 12:25:58', 213, '2026-09-23 12:25:58', NULL, NULL, NULL, NULL, NULL, 0),
+(64, 'SJ-230926-0011', 10, '2026-09-23', 26, 'Penjualan, Hanifian Ahmad Musyaffa', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260005', 'ZINV2309260005', 'SALES_INVOICE', 'POSTED', 47995000.0000, 47995000.0000, NULL, 'SALES_INVOICE-FAKTUR-ZINV2309260005', 205, '2026-09-23 14:35:39', 205, '2026-09-23 14:35:39', 205, '2026-09-23 14:35:39', NULL, NULL, NULL, NULL, NULL, 0),
+(65, 'SJ-230926-0012', 10, '2026-09-23', 26, 'Penyesuaian persediaan, untuk SJ-230926-0012', 'SALES', 'FAKTUR_PENJUALAN', 'ZINV2309260005', 'ZINV2309260005', 'GOODS_ISSUE', 'POSTED', 16464418973.2000, 16464418973.2000, NULL, 'GOODS_ISSUE-FAKTUR-ZINV2309260005', 205, '2026-09-23 14:35:39', 205, '2026-09-23 14:35:39', 205, '2026-09-23 14:35:39', NULL, NULL, NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -2518,8 +2911,8 @@ CREATE TABLE `tbkeu_jurnal_detail` (
   `nomor_baris` smallint UNSIGNED NOT NULL,
   `id_akun` bigint UNSIGNED NOT NULL,
   `keterangan` varchar(500) DEFAULT NULL,
-  `debit` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `kredit` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `debit` decimal(19,4) NOT NULL DEFAULT '0.0000',
+  `kredit` decimal(19,4) NOT NULL DEFAULT '0.0000',
   `id_customer` bigint DEFAULT NULL,
   `id_supplier` bigint DEFAULT NULL,
   `id_barang` bigint DEFAULT NULL,
@@ -2536,42 +2929,92 @@ CREATE TABLE `tbkeu_jurnal_detail` (
 --
 
 INSERT INTO `tbkeu_jurnal_detail` (`id_jurnal_detail`, `id_jurnal`, `nomor_baris`, `id_akun`, `keterangan`, `debit`, `kredit`, `id_customer`, `id_supplier`, `id_barang`, `id_gudang`, `id_departemen`, `tanggal_jatuh_tempo`, `nomor_dokumen`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 102, 'Persediaan # 1', 486486486.69800, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-09-04 08:34:11', '2026-09-04 08:34:11'),
-(2, 1, 2, 211, 'Q PPN M Ymh Diterima', 53513513.53670, 0.00000, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-09-04 08:34:11', '2026-09-04 08:34:11'),
-(3, 1, 3, 462, 'Hutang Usaha', 0.00000, 540000000.23470, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-09-04 08:34:11', '2026-09-04 08:34:11'),
-(4, 2, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 2450000.00000, 0.00000, NULL, 185, NULL, 2, NULL, NULL, '2600001B', '2026-09-04 08:42:23', '2026-09-04 08:42:23'),
-(5, 2, 2, 462, 'Hutang Usaha', 0.00000, 2450000.00000, NULL, 185, NULL, 2, NULL, NULL, '2600001B', '2026-09-04 08:42:23', '2026-09-04 08:42:23'),
-(6, 3, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 237500000.00000, 0.00000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-09-04 09:17:53', '2026-09-04 09:17:53'),
-(7, 3, 2, 462, 'Hutang Usaha', 0.00000, 237500000.00000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-09-04 09:17:53', '2026-09-04 09:17:53'),
-(12, 6, 1, 461, 'Penjualan, Manunggal Agro Sentosa,PT - Piutang', 52725000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-31', 'DINV0409260002', '2026-09-04 09:44:52', '2026-09-04 09:44:52'),
-(13, 6, 2, 308, 'Penjualan, Manunggal Agro Sentosa,PT - Pendapatan', 0.00000, 52725000.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-31', 'DINV0409260002', '2026-09-04 09:44:52', '2026-09-04 09:44:52'),
-(14, 7, 1, 321, 'Penyesuaian persediaan, untuk SJ-010926-0004 - HPP', 47850000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-31', 'DINV0409260002', '2026-09-04 09:44:52', '2026-09-04 09:44:52'),
-(15, 7, 2, 224, 'Penyesuaian persediaan, untuk SJ-010926-0004 - Persediaan', 0.00000, 47850000.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-31', 'DINV0409260002', '2026-09-04 09:44:52', '2026-09-04 09:44:52'),
-(16, 8, 1, 461, 'Penjualan, Rizky Jaya, CV - Piutang', 14690000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV0409260003', '2026-09-04 09:45:24', '2026-09-04 09:45:24'),
-(17, 8, 2, 307, 'Penjualan, Rizky Jaya, CV - Pendapatan', 0.00000, 13234234.23423, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV0409260003', '2026-09-04 09:45:24', '2026-09-04 09:45:24'),
-(18, 8, 3, 280, 'Penjualan, Rizky Jaya, CV - PPN Keluaran', 0.00000, 1455765.76577, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV0409260003', '2026-09-04 09:45:24', '2026-09-04 09:45:24'),
-(19, 9, 1, 160, 'Penyesuaian persediaan, untuk SJ-060826-0002 - HPP', 10746981988.03500, 0.00000, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV0409260003', '2026-09-04 09:45:24', '2026-09-04 09:45:24'),
-(20, 9, 2, 102, 'Penyesuaian persediaan, untuk SJ-060826-0002 - Persediaan', 0.00000, 10746981988.03500, NULL, NULL, NULL, NULL, NULL, '2026-10-05', 'DINV0409260003', '2026-09-04 09:45:24', '2026-09-04 09:45:24'),
-(21, 10, 1, 190, 'Penerimaan Q BCA 1588', 10000000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 11:04:21', '2026-09-04 11:04:21'),
-(22, 10, 2, 461, 'Piutang Usaha Faktur DINV0409260003', 0.00000, 10000000.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 11:04:21', '2026-09-04 11:04:21'),
-(23, 11, 1, 1093, 'Penerimaan Q Kas Ayat Silang', 425000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:00:46', '2026-09-04 13:00:46'),
-(24, 11, 2, 461, 'Piutang Usaha Faktur DINV0409260003', 0.00000, 425000.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:00:46', '2026-09-04 13:00:46'),
-(25, 12, 1, 354, 'Jurnal Umum', 500000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-04092600001', '2026-09-04 13:04:00', '2026-09-04 13:04:00'),
-(26, 12, 2, 272, 'Jurnal Umum', 0.00000, 75000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-04092600001', '2026-09-04 13:04:00', '2026-09-04 13:04:00'),
-(27, 12, 3, 1093, 'Jurnal Umum', 0.00000, 425000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-04092600001', '2026-09-04 13:04:00', '2026-09-04 13:04:00'),
-(28, 13, 1, 310, 'Retur Penjualan (Q Retur Penjualan BKP) - RP/040926/0001', 45045.04505, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:17:01', '2026-09-04 13:17:01'),
-(29, 13, 2, 280, 'PPN Retur RP/040926/0001', 4954.95495, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:17:01', '2026-09-04 13:17:01'),
-(30, 13, 3, 279, 'Hutang Retur RP/040926/0001', 0.00000, 50000.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:17:01', '2026-09-04 13:17:01'),
-(31, 13, 4, 102, 'Reversal Persediaan Retur (Persediaan # 1) - RP/040926/0001', 41441.44140, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:17:01', '2026-09-04 13:17:01'),
-(32, 13, 5, 160, 'Reversal HPP Retur (Harga Pokok Penjualan # 1) - RP/040926/0001', 0.00000, 41441.44140, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-04 13:17:01', '2026-09-04 13:17:01'),
-(33, 14, 1, 461, 'Penjualan, Karisma Indoagro Universa - Piutang', 950000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0409260001', '2026-09-04 13:46:43', '2026-09-04 13:46:43'),
-(34, 14, 2, 308, 'Penjualan, Karisma Indoagro Universa - Pendapatan', 0.00000, 950000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0409260001', '2026-09-04 13:46:43', '2026-09-04 13:46:43'),
-(35, 15, 1, 321, 'Penyesuaian persediaan, untuk SJ-040926-0004 - HPP', 950000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0409260001', '2026-09-04 13:46:43', '2026-09-04 13:46:43'),
-(36, 15, 2, 224, 'Penyesuaian persediaan, untuk SJ-040926-0004 - Persediaan', 0.00000, 950000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'LBYINV0409260001', '2026-09-04 13:46:43', '2026-09-04 13:46:43'),
-(37, 16, 1, 453, 'Jurnal Umum', 100000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-04092600002', '2026-09-04 14:01:07', '2026-09-04 14:01:07'),
-(38, 16, 2, 95, 'Jurnal Umum', 0.00000, 100000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-04092600002', '2026-09-04 14:01:07', '2026-09-04 14:01:07'),
-(39, 17, 1, 453, 'Jurnal Umum', 100000.00000, 0.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-14082600001', '2026-09-04 14:02:22', '2026-09-04 14:02:22'),
-(40, 17, 2, 95, 'Jurnal Umum', 0.00000, 100000.00000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-14082600001', '2026-09-04 14:02:22', '2026-09-04 14:02:22');
+(1, 1, 1, 102, 'Persediaan # 1', 486486486.6980, 0.0000, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-08-21 14:09:38', '2026-08-21 14:09:38'),
+(2, 1, 2, 211, 'Q PPN M Ymh Diterima', 53513513.5367, 0.0000, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-08-21 14:09:38', '2026-08-21 14:09:38'),
+(3, 1, 3, 462, 'Hutang Usaha', 0.0000, 540000000.2347, NULL, 276, NULL, 2, NULL, NULL, '2600001', '2026-08-21 14:09:38', '2026-08-21 14:09:38'),
+(6, 3, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 237500000.0000, 0.0000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-08-21 14:12:10', '2026-08-21 14:12:10'),
+(7, 3, 2, 462, 'Hutang Usaha', 0.0000, 237500000.0000, NULL, 185, NULL, 2, NULL, NULL, '2600002B', '2026-08-21 14:12:10', '2026-08-21 14:12:10'),
+(17, 8, 1, 453, 'Jurnal Umum', 100000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600001', '2026-08-21 14:22:28', '2026-08-21 14:22:28'),
+(18, 8, 2, 95, 'Jurnal Umum', 0.0000, 100000.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600001', '2026-08-21 14:22:28', '2026-08-21 14:22:28'),
+(19, 9, 1, 190, 'Penerimaan Q BCA 1588', 10000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:24:00', '2026-08-21 14:24:00'),
+(20, 9, 2, 461, 'Piutang Usaha Faktur DINV2108260002', 0.0000, 10000000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:24:00', '2026-08-21 14:24:00'),
+(21, 10, 1, 190, 'Penerimaan Q BCA 1588', 1690000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:26:23', '2026-08-21 14:26:23'),
+(22, 10, 2, 461, 'Piutang Usaha Faktur DINV2108260002', 0.0000, 1690000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:26:23', '2026-08-21 14:26:23'),
+(23, 11, 1, 95, 'Penerimaan Q Kas', 425000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:27:19', '2026-08-21 14:27:19'),
+(24, 11, 2, 461, 'Piutang Usaha Faktur DINV2108260002', 0.0000, 425000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:27:19', '2026-08-21 14:27:19'),
+(25, 12, 1, 354, 'Jurnal Umum', 500000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600002', '2026-08-21 14:28:35', '2026-08-21 14:28:35'),
+(26, 12, 2, 272, 'Jurnal Umum', 0.0000, 75000.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600002', '2026-08-21 14:28:35', '2026-08-21 14:28:35'),
+(27, 12, 3, 461, 'Jurnal Umum', 0.0000, 425000.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600002', '2026-08-21 14:28:35', '2026-08-21 14:28:35'),
+(28, 13, 1, 207, 'RBELI-PH-BKPS - Piutang Non Dagang Retur Pembelian Belum Dipotong', 1225000.0000, 0.0000, NULL, 185, NULL, 2, NULL, NULL, 'RBELI-20260821-0001', '2026-08-21 14:30:25', '2026-08-21 14:30:25'),
+(29, 13, 2, 224, 'RBELI-PH-BKPS - Persediaan Brg Dagangan BKPS', 0.0000, 1225000.0000, NULL, 185, NULL, 2, NULL, NULL, 'RBELI-20260821-0001', '2026-08-21 14:30:25', '2026-08-21 14:30:25'),
+(34, 16, 1, 190, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.0000, 100000000.0000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202608-00001', '2026-08-21 14:46:03', '2026-08-21 14:46:03'),
+(35, 16, 2, 462, 'Pembayaran supplier Pupuk Karya Polowijo, PT - 2600001', 100000000.0000, 0.0000, NULL, 276, NULL, NULL, NULL, NULL, '2600001', '2026-08-21 14:46:03', '2026-08-21 14:46:03'),
+(36, 17, 1, 95, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.0000, 20000000.0000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202610-00001', '2026-08-21 14:47:25', '2026-08-21 14:47:25'),
+(37, 17, 2, 462, 'Pembayaran supplier Pupuk Karya Polowijo, PT - 2600001', 20000000.0000, 0.0000, NULL, 276, NULL, NULL, NULL, NULL, '2600001', '2026-08-21 14:47:25', '2026-08-21 14:47:25'),
+(38, 18, 1, 462, 'Jurnal Umum', 20000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
+(39, 18, 2, 489, 'Jurnal Umum', 3529412.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
+(40, 18, 3, 182, 'Jurnal Umum', 0.0000, 23529412.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
+(53, 28, 1, 310, 'Retur Penjualan (Q Retur Penjualan BKP) - RP/210826/0001', 45045.0500, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(54, 28, 2, 280, 'PPN Retur RP/210826/0001', 4954.9500, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(55, 28, 3, 279, 'Hutang Retur RP/210826/0001', 0.0000, 50000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(56, 28, 4, 102, 'Reversal Persediaan Retur (Persediaan # 1) - RP/210826/0001', 41441.4400, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(57, 28, 5, 160, 'Reversal HPP Retur (Harga Pokok Penjualan # 1) - RP/210826/0001', 0.0000, 41441.4400, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(66, 33, 1, 461, 'Penjualan, Manunggal Agro Sentosa,PT - Piutang', 45000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-27', 'DINV1109260001', '2026-09-11 13:39:34', '2026-09-11 13:39:34'),
+(67, 33, 2, 308, 'Penjualan, Manunggal Agro Sentosa,PT - Pendapatan', 0.0000, 45000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-27', 'DINV1109260001', '2026-09-11 13:39:34', '2026-09-11 13:39:34'),
+(68, 34, 1, 321, 'Penyesuaian persediaan, untuk SJ-270926-0002 - HPP', 35000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-27', 'DINV1109260001', '2026-09-11 13:39:34', '2026-09-11 13:39:34'),
+(69, 34, 2, 224, 'Penyesuaian persediaan, untuk SJ-270926-0002 - Persediaan', 0.0000, 35000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-27', 'DINV1109260001', '2026-09-11 13:39:34', '2026-09-11 13:39:34'),
+(70, 35, 1, 190, 'Penerimaan Q BCA 1588', 178000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-11 13:42:42', '2026-09-11 13:42:42'),
+(71, 35, 2, 318, 'Potongan Penjualan Faktur DINV2108260001', 2000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-11 13:42:42', '2026-09-11 13:42:42'),
+(72, 35, 3, 461, 'Piutang Usaha Faktur DINV2108260001', 0.0000, 180000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-11 13:42:42', '2026-09-11 13:42:42'),
+(75, 37, 1, 360, 'Penyesuaian Persediaan MIA', 10.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB110926-01', '2026-09-11 14:24:07', '2026-09-11 14:24:07'),
+(76, 37, 2, 226, 'Penyesuaian Persediaan MIA', 0.0000, 10.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB110926-01', '2026-09-11 14:24:07', '2026-09-11 14:24:07'),
+(77, 38, 1, 461, 'Penjualan, Rizky Jaya, CV - Piutang', 14690000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-05', 'DINV2108260002', '2026-09-11 14:48:09', '2026-09-11 14:48:09'),
+(78, 38, 2, 307, 'Penjualan, Rizky Jaya, CV - Pendapatan', 0.0000, 13234234.2342, NULL, NULL, NULL, NULL, NULL, '2026-09-05', 'DINV2108260002', '2026-09-11 14:48:09', '2026-09-11 14:48:09'),
+(79, 38, 3, 280, 'Penjualan, Rizky Jaya, CV - PPN Keluaran', 0.0000, 1455765.7658, NULL, NULL, NULL, NULL, NULL, '2026-09-05', 'DINV2108260002', '2026-09-11 14:48:09', '2026-09-11 14:48:09'),
+(80, 39, 1, 160, 'Penyesuaian persediaan, untuk SJ-140826-0002 - HPP', 11781981.2800, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-05', 'DINV2108260002', '2026-09-11 14:48:09', '2026-09-11 14:48:09'),
+(81, 39, 2, 102, 'Penyesuaian persediaan, untuk SJ-140826-0002 - Persediaan', 0.0000, 11781981.2800, NULL, NULL, NULL, NULL, NULL, '2026-09-05', 'DINV2108260002', '2026-09-11 14:48:09', '2026-09-11 14:48:09'),
+(82, 40, 1, 461, 'Penjualan, Manunggal Agro Sentosa,PT - Piutang', 52680000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-30', 'DINV2108260001', '2026-09-11 14:48:18', '2026-09-11 14:48:18'),
+(83, 40, 2, 308, 'Penjualan, Manunggal Agro Sentosa,PT - Pendapatan', 0.0000, 52680000.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-30', 'DINV2108260001', '2026-09-11 14:48:18', '2026-09-11 14:48:18'),
+(84, 41, 1, 321, 'Penyesuaian persediaan, untuk SJ-150826-0002 - HPP', 47640000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-30', 'DINV2108260001', '2026-09-11 14:48:18', '2026-09-11 14:48:18'),
+(85, 41, 2, 224, 'Penyesuaian persediaan, untuk SJ-150826-0002 - Persediaan', 0.0000, 47640000.0000, NULL, NULL, NULL, NULL, NULL, '2026-09-30', 'DINV2108260001', '2026-09-11 14:48:18', '2026-09-11 14:48:18'),
+(90, 44, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 2800000.0000, 0.0000, NULL, 185, NULL, 2, NULL, NULL, '2600001B', '2026-09-11 15:03:00', '2026-09-11 15:03:00'),
+(91, 44, 2, 462, 'Hutang Usaha', 0.0000, 2800000.0000, NULL, 185, NULL, 2, NULL, NULL, '2600001B', '2026-09-11 15:03:00', '2026-09-11 15:03:00'),
+(92, 45, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 1000000.0000, 0.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600003B', '2026-09-12 08:22:42', '2026-09-12 08:22:42'),
+(93, 45, 2, 462, 'Hutang Usaha', 0.0000, 1000000.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600003B', '2026-09-12 08:22:42', '2026-09-12 08:22:42'),
+(94, 46, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 8550000.0000, 0.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600005B', '2026-09-12 11:20:06', '2026-09-12 11:20:06'),
+(95, 46, 2, 462, 'Hutang Usaha', 0.0000, 8550000.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600005B', '2026-09-12 11:20:06', '2026-09-12 11:20:06'),
+(96, 47, 1, 224, 'Q Persediaan Brg Dagangan BKPS', 450000.0000, 0.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600002', '2026-09-14 14:59:59', '2026-09-14 14:59:59'),
+(97, 47, 2, 462, 'Hutang Usaha', 0.0000, 450000.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600002', '2026-09-14 14:59:59', '2026-09-14 14:59:59'),
+(98, 48, 1, 102, 'Persediaan # 1', 6500000.0000, 0.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600003', '2026-09-15 10:16:21', '2026-09-15 10:16:21'),
+(99, 48, 2, 211, 'Q PPN M Ymh Diterima', 715000.0000, 0.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600003', '2026-09-15 10:16:21', '2026-09-15 10:16:21'),
+(100, 48, 3, 462, 'Hutang Usaha', 0.0000, 7215000.0000, NULL, NULL, NULL, 2, NULL, NULL, '2600003', '2026-09-15 10:16:21', '2026-09-15 10:16:21'),
+(101, 49, 1, 102, 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 15342342.3500, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB170926-01', '2026-09-17 10:27:38', '2026-09-17 10:27:38'),
+(102, 49, 2, 225, 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 0.0000, 13842342.3500, NULL, NULL, NULL, NULL, NULL, NULL, 'APB170926-01', '2026-09-17 10:27:38', '2026-09-17 10:27:38'),
+(103, 49, 3, 226, 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 0.0000, 1500000.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB170926-01', '2026-09-17 10:27:38', '2026-09-17 10:27:38'),
+(113, 54, 1, 461, 'Penjualan, Agin - Piutang', 20000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260001', '2026-09-23 12:25:28', '2026-09-23 12:25:28'),
+(114, 54, 2, 307, 'Penjualan, Agin - Pendapatan', 0.0000, 18018018.0180, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260001', '2026-09-23 12:25:28', '2026-09-23 12:25:28'),
+(115, 54, 3, 280, 'Penjualan, Agin - PPN Keluaran', 0.0000, 1981981.9820, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260001', '2026-09-23 12:25:28', '2026-09-23 12:25:28'),
+(116, 55, 1, 160, 'Penyesuaian persediaan, untuk SJ-230926-0002 - HPP', 3250000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260001', '2026-09-23 12:25:28', '2026-09-23 12:25:28'),
+(117, 55, 2, 102, 'Penyesuaian persediaan, untuk SJ-230926-0002 - Persediaan', 0.0000, 3250000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260001', '2026-09-23 12:25:28', '2026-09-23 12:25:28'),
+(118, 56, 1, 461, 'Penjualan, Nor Cahyo Hadi Kusumo - Piutang', 20000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260002', '2026-09-23 12:25:35', '2026-09-23 12:25:35'),
+(119, 56, 2, 307, 'Penjualan, Nor Cahyo Hadi Kusumo - Pendapatan', 0.0000, 18018018.0180, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260002', '2026-09-23 12:25:35', '2026-09-23 12:25:35'),
+(120, 56, 3, 280, 'Penjualan, Nor Cahyo Hadi Kusumo - PPN Keluaran', 0.0000, 1981981.9820, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260002', '2026-09-23 12:25:35', '2026-09-23 12:25:35'),
+(121, 57, 1, 160, 'Penyesuaian persediaan, untuk SJ-230926-0004 - HPP', 3250000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260002', '2026-09-23 12:25:35', '2026-09-23 12:25:35'),
+(122, 57, 2, 102, 'Penyesuaian persediaan, untuk SJ-230926-0004 - Persediaan', 0.0000, 3250000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260002', '2026-09-23 12:25:35', '2026-09-23 12:25:35'),
+(123, 58, 1, 461, 'Penjualan, Syaiful Anam - Piutang', 80000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260003', '2026-09-23 12:25:51', '2026-09-23 12:25:51'),
+(124, 58, 2, 308, 'Penjualan, Syaiful Anam - Pendapatan', 0.0000, 80000000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260003', '2026-09-23 12:25:51', '2026-09-23 12:25:51'),
+(125, 59, 1, 321, 'Penyesuaian persediaan, untuk SJ-230926-0006 - HPP', 4500000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260003', '2026-09-23 12:25:51', '2026-09-23 12:25:51'),
+(126, 59, 2, 224, 'Penyesuaian persediaan, untuk SJ-230926-0006 - Persediaan', 0.0000, 4500000.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260003', '2026-09-23 12:25:51', '2026-09-23 12:25:51'),
+(127, 60, 1, 461, 'Penjualan, Hanifian Ahmad Musyaffa - Piutang', 120000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260004', '2026-09-23 12:25:58', '2026-09-23 12:25:58'),
+(128, 60, 2, 307, 'Penjualan, Hanifian Ahmad Musyaffa - Pendapatan', 0.0000, 108108108.1081, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260004', '2026-09-23 12:25:58', '2026-09-23 12:25:58'),
+(129, 60, 3, 280, 'Penjualan, Hanifian Ahmad Musyaffa - PPN Keluaran', 0.0000, 11891891.8919, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260004', '2026-09-23 12:25:58', '2026-09-23 12:25:58'),
+(130, 61, 1, 160, 'Penyesuaian persediaan, untuk SJ-230926-0008 - HPP', 19189189200.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260004', '2026-09-23 12:25:58', '2026-09-23 12:25:58'),
+(131, 61, 2, 102, 'Penyesuaian persediaan, untuk SJ-230926-0008 - Persediaan', 0.0000, 19189189200.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260004', '2026-09-23 12:25:58', '2026-09-23 12:25:58'),
+(137, 64, 1, 461, 'Penjualan, Hanifian Ahmad Musyaffa - Piutang', 47995000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260005', '2026-09-23 14:35:39', '2026-09-23 14:35:39'),
+(138, 64, 2, 307, 'Penjualan, Hanifian Ahmad Musyaffa - Pendapatan', 0.0000, 43238738.7387, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260005', '2026-09-23 14:35:39', '2026-09-23 14:35:39'),
+(139, 64, 3, 280, 'Penjualan, Hanifian Ahmad Musyaffa - PPN Keluaran', 0.0000, 4756261.2613, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260005', '2026-09-23 14:35:39', '2026-09-23 14:35:39'),
+(140, 65, 1, 160, 'Penyesuaian persediaan, untuk SJ-230926-0012 - HPP', 16464418973.2000, 0.0000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260005', '2026-09-23 14:35:39', '2026-09-23 14:35:39'),
+(141, 65, 2, 102, 'Penyesuaian persediaan, untuk SJ-230926-0012 - Persediaan', 0.0000, 16464418973.2000, NULL, NULL, NULL, NULL, NULL, '2026-10-23', 'ZINV2309260005', '2026-09-23 14:35:39', '2026-09-23 14:35:39');
 
 -- --------------------------------------------------------
 
@@ -2593,21 +3036,40 @@ CREATE TABLE `tbkeu_jurnal_log` (
 --
 
 INSERT INTO `tbkeu_jurnal_log` (`id_log`, `id_jurnal`, `action`, `message`, `created_by`, `created_at`) VALUES
-(1, 1, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', 205, '2026-09-04 08:34:11'),
-(2, 2, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 205, '2026-09-04 08:42:23'),
-(3, 3, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 205, '2026-09-04 09:17:53'),
-(6, 6, 'POSTED', 'Penjualan, Manunggal Agro Sentosa,PT', 213, '2026-09-04 09:44:52'),
-(7, 7, 'POSTED', 'Penyesuaian persediaan, untuk SJ-010926-0004', 213, '2026-09-04 09:44:52'),
-(8, 8, 'POSTED', 'Penjualan, Rizky Jaya, CV', 213, '2026-09-04 09:45:24'),
-(9, 9, 'POSTED', 'Penyesuaian persediaan, untuk SJ-060826-0002', 213, '2026-09-04 09:45:24'),
-(10, 12, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-09-04 13:04:00'),
-(11, 12, 'POSTED', 'Posting manual jurnal', 205, '2026-09-04 13:04:00'),
-(12, 14, 'POSTED', 'Penjualan, Karisma Indoagro Universa', 205, '2026-09-04 13:46:43'),
-(13, 15, 'POSTED', 'Penyesuaian persediaan, untuk SJ-040926-0004', 205, '2026-09-04 13:46:43'),
-(14, 16, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-09-04 14:01:07'),
-(15, 16, 'POSTED', 'Posting manual jurnal', 205, '2026-09-04 14:01:07'),
-(16, 17, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-09-04 14:02:22'),
-(17, 17, 'POSTED', 'Posting manual jurnal', 205, '2026-09-04 14:02:22');
+(1, 1, 'POSTED', 'Pembelian, Pupuk Karya Polowijo, PT', 207, '2026-08-21 14:09:38'),
+(3, 3, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 207, '2026-08-21 14:12:10'),
+(8, 8, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-21 14:22:28'),
+(9, 8, 'POSTED', 'Posting manual jurnal', 205, '2026-08-21 14:22:28'),
+(10, 12, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-21 14:28:35'),
+(11, 12, 'POSTED', 'Posting manual jurnal', 205, '2026-08-21 14:28:35'),
+(12, 13, 'POSTED', 'Retur pembelian RBELI-20260821-0001', 0, '2026-08-21 14:30:25'),
+(14, 16, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:46:03'),
+(15, 17, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:47:25'),
+(16, 18, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-21 14:50:55'),
+(17, 18, 'POSTED', 'Posting manual jurnal', 205, '2026-08-21 14:50:55'),
+(28, 33, 'POSTED', 'Penjualan, Manunggal Agro Sentosa,PT', 213, '2026-09-11 13:39:34'),
+(29, 34, 'POSTED', 'Penyesuaian persediaan, untuk SJ-270926-0002', 213, '2026-09-11 13:39:34'),
+(31, 37, 'POSTED', 'Penyesuaian Persediaan MIA', 205, '2026-09-11 14:24:07'),
+(32, 38, 'POSTED', 'Penjualan, Rizky Jaya, CV', 205, '2026-09-11 14:48:09'),
+(33, 39, 'POSTED', 'Penyesuaian persediaan, untuk SJ-140826-0002', 205, '2026-09-11 14:48:09'),
+(34, 40, 'POSTED', 'Penjualan, Manunggal Agro Sentosa,PT', 205, '2026-09-11 14:48:18'),
+(35, 41, 'POSTED', 'Penyesuaian persediaan, untuk SJ-150826-0002', 205, '2026-09-11 14:48:18'),
+(38, 44, 'POSTED', 'Pembelian,  PT.Syngenta Seed', 205, '2026-09-11 15:03:00'),
+(39, 45, 'POSTED', 'Pembelian, Supplier', 205, '2026-09-12 08:22:42'),
+(40, 46, 'POSTED', 'Pembelian, Supplier', 205, '2026-09-12 11:20:06'),
+(41, 47, 'POSTED', 'Pembelian, Supplier', 205, '2026-09-14 14:59:59'),
+(42, 48, 'POSTED', 'Pembelian, Supplier', 205, '2026-09-15 10:16:21'),
+(43, 49, 'POSTED', 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 205, '2026-09-17 10:27:38'),
+(48, 54, 'POSTED', 'Penjualan, Agin', 213, '2026-09-23 12:25:28'),
+(49, 55, 'POSTED', 'Penyesuaian persediaan, untuk SJ-230926-0002', 213, '2026-09-23 12:25:28'),
+(50, 56, 'POSTED', 'Penjualan, Nor Cahyo Hadi Kusumo', 213, '2026-09-23 12:25:35'),
+(51, 57, 'POSTED', 'Penyesuaian persediaan, untuk SJ-230926-0004', 213, '2026-09-23 12:25:35'),
+(52, 58, 'POSTED', 'Penjualan, Syaiful Anam', 213, '2026-09-23 12:25:51'),
+(53, 59, 'POSTED', 'Penyesuaian persediaan, untuk SJ-230926-0006', 213, '2026-09-23 12:25:51'),
+(54, 60, 'POSTED', 'Penjualan, Hanifian Ahmad Musyaffa', 213, '2026-09-23 12:25:58'),
+(55, 61, 'POSTED', 'Penyesuaian persediaan, untuk SJ-230926-0008', 213, '2026-09-23 12:25:58'),
+(58, 64, 'POSTED', 'Penjualan, Hanifian Ahmad Musyaffa', 205, '2026-09-23 14:35:39'),
+(59, 65, 'POSTED', 'Penyesuaian persediaan, untuk SJ-230926-0012', 205, '2026-09-23 14:35:39');
 
 -- --------------------------------------------------------
 
@@ -2988,13 +3450,16 @@ CREATE TABLE `tbkeu_nomor_dokumen` (
 --
 
 INSERT INTO `tbkeu_nomor_dokumen` (`id_nomor`, `kode_jenis_jurnal`, `periode_yyyymm`, `last_number`, `updated_at`) VALUES
-(1, 'PJ', '202608', 7, '2026-09-04 09:17:53'),
-(4, 'SJ', '260801', 2, '2026-08-24 09:42:10'),
-(6, 'SJ', '260901', 4, '2026-09-04 09:44:52'),
-(8, 'SJ', '260812', 2, '2026-08-24 09:44:43'),
-(11, 'AUTO', 'ALL', 2, '2026-08-24 10:57:03'),
-(16, 'SJ', '260904', 4, '2026-09-04 13:46:43'),
-(20, 'SJ', '260806', 2, '2026-09-04 09:45:24');
+(1, 'PJ', '202608', 8, '2026-09-12 08:22:42'),
+(4, 'SJ', '260801', 4, '2026-09-11 13:25:24'),
+(6, 'SJ', '260806', 2, '2026-08-21 14:21:09'),
+(9, 'AUTO', 'ALL', 2, '2026-08-21 14:47:25'),
+(15, 'SJ', '260927', 2, '2026-09-11 13:39:34'),
+(17, 'SJ', '260814', 2, '2026-09-11 14:48:09'),
+(19, 'SJ', '260815', 2, '2026-09-11 14:48:18'),
+(25, 'PJ', '202609', 3, '2026-09-15 10:16:21'),
+(28, 'SJ', '260922', 4, '2026-09-22 11:00:48'),
+(32, 'SJ', '260923', 12, '2026-09-23 14:35:39');
 
 -- --------------------------------------------------------
 
@@ -3025,6 +3490,14 @@ CREATE TABLE `tbkeu_pembayaran` (
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `tbkeu_pembayaran`
+--
+
+INSERT INTO `tbkeu_pembayaran` (`id_pembayaran`, `payment_type`, `nomor_pembayaran`, `tanggal_pembayaran`, `source_module`, `source_type`, `source_id`, `source_no`, `id_customer`, `id_supplier`, `amount`, `allocated_amount`, `unapplied_amount`, `status`, `id_jurnal`, `keterangan`, `created_by`, `created_at`, `updated_by`, `updated_at`) VALUES
+(1, 'SUPPLIER_PAYMENT', 'BYS-202608-00001', '2026-08-21', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00001', 'BYS-202608-00001', NULL, 276, 100000000.0000, 100000000.0000, 0.0000, 'POSTED', 16, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:46:03', NULL, '2026-08-21 14:46:03'),
+(2, 'SUPPLIER_PAYMENT', 'BYS-202610-00001', '2026-10-05', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202610-00001', 'BYS-202610-00001', NULL, 276, 20000000.0000, 20000000.0000, 0.0000, 'POSTED', 17, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:47:25', NULL, '2026-08-21 14:47:25');
+
 -- --------------------------------------------------------
 
 --
@@ -3043,6 +3516,14 @@ CREATE TABLE `tbkeu_pembayaran_alokasi` (
   `keterangan` varchar(500) DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tbkeu_pembayaran_alokasi`
+--
+
+INSERT INTO `tbkeu_pembayaran_alokasi` (`id_alokasi`, `id_pembayaran`, `nomor_baris`, `invoice_source_module`, `invoice_source_type`, `invoice_source_id`, `invoice_no`, `amount_allocated`, `keterangan`, `created_at`) VALUES
+(1, 1, 1, 'LOGISTIK', 'LPB_FINAL', '1', '2600001', 100000000.0000, 'triall', '2026-08-21 14:46:03'),
+(2, 2, 1, 'LOGISTIK', 'LPB_FINAL', '1', '2600001', 20000000.0000, 'trial', '2026-08-21 14:47:25');
 
 -- --------------------------------------------------------
 
@@ -3082,9 +3563,10 @@ CREATE TABLE `tbkeu_pembayaran_faktur` (
 --
 
 INSERT INTO `tbkeu_pembayaran_faktur` (`id_pembayaran`, `id_faktur`, `no_faktur`, `tanggal_pembayaran`, `jumlah_pembayaran`, `jumlah_diskon`, `metode_pembayaran`, `cara_pembayaran`, `tanggal_bg_cair`, `no_bg`, `nama_bank`, `status_bg`, `status_kasir`, `kasir_approved_by`, `kasir_approved_at`, `status`, `unpost_by`, `unpost_at`, `unpost_reason`, `bg_cair_by`, `bg_cair_at`, `keterangan`, `create_by`, `create_at`) VALUES
-(1, 3, 'DINV0409260003', '2026-08-25', 10000000.00, 0.00, 'Q BCA 1588', 'tempo', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'deva', '2026-09-04 11:04:21'),
-(2, 3, 'DINV0409260003', '2026-09-04', 1690000.00, 0.00, 'Q BCA 1588', 'bg', '2026-09-25', '710873', 'BCA', 'pending', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'deva', '2026-09-04 12:59:27'),
-(3, 3, 'DINV0409260003', '2026-08-29', 425000.00, 0.00, 'Q Kas Ayat Silang', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'deva', '2026-09-04 13:00:46');
+(1, 2, 'DINV2108260002', '2026-08-25', 10000000.00, 0.00, 'Q BCA 1588', 'cash', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, 'trial', 'deva', '2026-08-21 14:24:00'),
+(2, 2, 'DINV2108260002', '2026-08-28', 1690000.00, 0.00, 'Q BCA 1588', 'bg', '2026-09-25', '710873', 'BCA', 'cair', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, 'deva', '2026-08-21 14:26:23', 'oke', 'deva', '2026-08-21 14:25:23'),
+(3, 2, 'DINV2108260002', '2026-08-21', 425000.00, 0.00, 'Q Kas', 'bg', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, 'oke trial', 'deva', '2026-08-21 14:27:19'),
+(4, 1, 'DINV2108260001', '2026-09-11', 178000.00, 2000.00, 'Q BCA 1588', 'cash', NULL, NULL, NULL, 'not_bg', 'valid', NULL, NULL, 'POSTED', NULL, NULL, NULL, NULL, NULL, NULL, 'deva', '2026-09-11 13:42:42');
 
 -- --------------------------------------------------------
 
@@ -3107,6 +3589,14 @@ CREATE TABLE `tbkeu_penyesuaian_barang` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
+--
+-- Dumping data untuk tabel `tbkeu_penyesuaian_barang`
+--
+
+INSERT INTO `tbkeu_penyesuaian_barang` (`id_penyesuaian`, `no_referensi`, `tanggal`, `keterangan`, `id_gudang_dari`, `id_gudang_ke`, `total_nilai`, `status`, `id_jurnal`, `created_by`, `created_at`, `updated_at`) VALUES
+(9, 'APB110926-01', '2026-10-17', 'Penyesuaian Persediaan MIA', 2, 2, 10.00, 'POSTED', 37, 205, '2026-09-11 14:23:43', '2026-09-11 14:24:07'),
+(12, 'APB170926-01', '2026-09-17', 'Perakitan Paket Bundling Paket Jitu 20 x1 Box (5 Box) Ref #ASM-20260917-0001', 2, 12, 15342342.35, 'POSTED', 49, 205, '2026-09-17 10:24:08', '2026-09-17 10:27:38');
+
 -- --------------------------------------------------------
 
 --
@@ -3126,6 +3616,17 @@ CREATE TABLE `tbkeu_penyesuaian_barang_detail` (
   `id_akun` bigint UNSIGNED DEFAULT NULL,
   `nomor_baris` int DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+--
+-- Dumping data untuk tabel `tbkeu_penyesuaian_barang_detail`
+--
+
+INSERT INTO `tbkeu_penyesuaian_barang_detail` (`id_detail`, `id_penyesuaian`, `kd_barang`, `nm_barang`, `jumlah`, `satuan`, `no_lot`, `expired_date`, `lot_data`, `id_akun`, `nomor_baris`) VALUES
+(14, 9, 'ZZUMBU05', 'Umbul-umbul Elazaro', -10.000, 'Pcs', '', '1000-01-01', '[{\"no_lot\":\"0\",\"expired_date\":\"1000-01-01\",\"jumlah\":-10,\"satuan\":\"Pcs\"}]', 360, 1),
+(27, 12, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', -100.000, 'Pcs', '101015', '2028-04-21', '[{\"no_lot\":\"101015\",\"expired_date\":\"2028-04-21\",\"jumlah\":-100,\"satuan\":\"Pcs\"}]', 225, 1),
+(28, 12, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', -100.000, 'Pcs', '33212', '2026-12-31', '[{\"no_lot\":\"33212\",\"expired_date\":\"2026-12-31\",\"jumlah\":-100,\"satuan\":\"Pcs\"}]', 225, 2),
+(29, 12, 'ZZKAOS28', 'Kaos Jialing', -100.000, 'Pcs', '1111', '1000-09-11', '[{\"no_lot\":\"1111\",\"expired_date\":\"1000-09-11\",\"jumlah\":-100,\"satuan\":\"Pcs\"}]', 226, 3),
+(30, 12, 'JTU01', 'Paket Jitu 20 x1 Box', 5.000, 'Box', 'LOT-PKT-260917-285', '1000-09-11', '[{\"no_lot\":\"LOT-PKT-260917-285\",\"expired_date\":\"1000-09-11\",\"jumlah\":5,\"satuan\":\"Box\"}]', 102, 4);
 
 -- --------------------------------------------------------
 
@@ -3208,6 +3709,13 @@ CREATE TABLE `tbkeu_posting_exception` (
   `resolved_at` datetime DEFAULT NULL,
   `resolution_note` varchar(500) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tbkeu_posting_exception`
+--
+
+INSERT INTO `tbkeu_posting_exception` (`id_exception`, `source_module`, `source_type`, `source_id`, `source_no`, `posting_event`, `error_code`, `error_message`, `payload_json`, `status`, `retry_count`, `occurrence_count`, `last_occurred_at`, `last_retry_at`, `id_jurnal`, `created_at`, `resolved_by`, `resolved_at`, `resolution_note`) VALUES
+(1, 'LOGISTIK', 'LPB_FINAL', '7', '2600004B', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Lengkapi harga dari PO/detail LPB sebelum retry.', '{\"tanggal_transaksi\":\"2026-09-12\",\"journal_type\":\"PJ\",\"keterangan\":\"Pembelian, Supplier\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"7\",\"source_no\":\"2600004B\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-7\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"10\",\"id_supplier\":0,\"id_gudang\":10,\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-09-12 11:19:28', NULL, NULL, '2026-09-12 11:19:28', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -4189,7 +4697,7 @@ CREATE TABLE `tbkmt_operasional` (
   `indekost` decimal(15,2) DEFAULT '0.00',
   `sewa_kendaraan` decimal(15,2) DEFAULT '0.00',
   `lain_lain` decimal(15,2) DEFAULT '0.00',
-  `total_biaya` decimal(15,2) GENERATED ALWAYS AS ((((((((((((((`hotel` + `per_diem`) + `entertainment`) + `communication`) + `atk`) + `gasoline`) + `sparepart_service`) + `retribusi_toll_parkir`) + `transportasi`) + `pos_paket`) + `tambah_angin`) + `tambal_ban`) + `indekost`) + `lain_lain`)) STORED,
+  `total_biaya` decimal(15,2) GENERATED ALWAYS AS (((((((((((((((ifnull(`hotel`,0) + ifnull(`per_diem`,0)) + ifnull(`entertainment`,0)) + ifnull(`communication`,0)) + ifnull(`atk`,0)) + ifnull(`gasoline`,0)) + ifnull(`sparepart_service`,0)) + ifnull(`retribusi_toll_parkir`,0)) + ifnull(`transportasi`,0)) + ifnull(`pos_paket`,0)) + ifnull(`tambah_angin`,0)) + ifnull(`tambal_ban`,0)) + ifnull(`indekost`,0)) + ifnull(`sewa_kendaraan`,0)) + ifnull(`lain_lain`,0))) STORED,
   `status_verifikasi` tinyint(1) NOT NULL DEFAULT '0',
   `verified_by` int DEFAULT NULL,
   `verified_at` datetime DEFAULT NULL,
@@ -12440,7 +12948,10 @@ INSERT INTO `tbpo_barang` (`id_barang`, `kode_barang`, `kd_suplier`, `nama_baran
 (7959, 'QPUPU160', 'MENTA01', 'Pupuk MagneWish Powder 10 kg', '', '', '', '', '', '', '', 0, 0, 0, 0.00, 0.000000, 1.00, 1.00, 0, '', '', '', '', '', '', 'T', 'F', 'T', 'T', 'T', 'T', 'F', 'F', '51030', '41032', '14030', '51032', '64030', '41034'),
 (7960, 'QCHAM04', 'PUPUK03', 'Champion 77 WP 14 X 1 kg', '', '', '', '', '', '', '', 1, 1, 1, 0.00, 0.000000, 1.00, 1.00, 0, '', '2', '', '', '', '', 'T', 'F', 'T', 'T', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014'),
 (7961, 'QSPON081', 'PUPUK03', 'Spontas 450 SL 10 X 1 ltr', '', '', '', '', '', '', '', 10, 1, 1, 0.00, 0.000000, 10.00, 1000.00, 0, '', '2', '', '', '', '', 'T', 'F', 'T', 'T', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014'),
-(7962, 'QROUN011', 'PUPUK03', 'Round Up 486 SL 12 X 1 ltr', '', '', '', '', '', '', '', 12, 1, 1, 0.00, 0.000000, 12.00, 1000.00, 0, '', '2', '', '', '', '', 'T', 'F', 'T', 'T', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014');
+(7962, 'QROUN011', 'PUPUK03', 'Round Up 486 SL 12 X 1 ltr', '', '', '', '', '', '', '', 12, 1, 1, 0.00, 0.000000, 12.00, 1000.00, 0, '', '2', '', '', '', '', 'T', 'F', 'T', 'T', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014'),
+(7965, '112234', 'BUNDLING', 'Paket Jitu 20 x1 Box', NULL, NULL, NULL, NULL, NULL, NULL, 'Box', 0, 0, 0, 0.00, 0.000000, 1.00, 1.00, 0, '', NULL, NULL, NULL, NULL, NULL, 'T', 'T', 'T', 'F', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014'),
+(7966, 'JTU01', 'BUNDLING', 'Paket Jitu 20 x1 Box', NULL, NULL, NULL, NULL, NULL, NULL, 'Box', 0, 0, 0, 0.00, 0.000000, 1.00, 1.00, 0, '', NULL, NULL, NULL, NULL, NULL, 'T', 'T', 'T', 'F', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014'),
+(7967, '45454', 'BUNDLING', 'Paket Gahar', NULL, NULL, NULL, NULL, NULL, NULL, 'Box', 0, 0, 0, 0.00, 0.000000, 1.00, 1.00, 0, '', NULL, NULL, NULL, NULL, NULL, 'T', 'T', 'T', 'F', 'T', 'T', 'F', 'F', '51010', '41011', '14010', '51013', '64010', '41014');
 
 -- --------------------------------------------------------
 
@@ -12463,6 +12974,8 @@ CREATE TABLE `tbpo_barang_akun` (
 --
 
 INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('112234', '41011', '14010', '51010', '41014', '51013', '64010'),
+('45454', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('AABAC01', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('AABAC02', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('AABAC03', '41032', '14030', '51030', '41034', '51032', '64030'),
@@ -13225,10 +13738,10 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('ADKPR02', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ADKPR03', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ADKST01', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ADKZO01', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ADKZO02', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ADKZO03', '41032', '14030', '51030', '41034', '51032', '64030');
+('ADKZO01', '41032', '14030', '51030', '41034', '51032', '64030');
 INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('ADKZO02', '41032', '14030', '51030', '41034', '51032', '64030'),
+('ADKZO03', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ADKZO04', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ADMA-01', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ADMA-02', '41032', '14030', '51030', '41034', '51032', '64030'),
@@ -13991,10 +14504,10 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('AMANO03', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('AMANU01', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('AMANU02', '41032', '14030', '51030', '41034', '51032', '64030'),
-('AMANZ01', '41032', '14030', '51030', '41034', '51032', '64030'),
-('AMANZ02', '41032', '14030', '51030', '41034', '51032', '64030'),
-('AMANZ04', '41011', '14010', '51010', '41014', '51013', '64010');
+('AMANZ01', '41032', '14030', '51030', '41034', '51032', '64030');
 INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('AMANZ02', '41032', '14030', '51030', '41034', '51032', '64030'),
+('AMANZ04', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('AMARB01', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('AMARS01', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('AMARS02', '41032', '14030', '51030', '41034', '51032', '64030'),
@@ -14757,10 +15270,10 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('ARG0101', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ARG0102', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ARG0201', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ARG0202', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ARG0301', '41032', '14030', '51030', '41034', '51032', '64030'),
-('ARG0501', '41032', '14030', '51030', '41034', '51032', '64030');
+('ARG0202', '41032', '14030', '51030', '41034', '51032', '64030');
 INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('ARG0301', '41032', '14030', '51030', '41034', '51032', '64030'),
+('ARG0501', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ARG0502', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ARG0601', '41032', '14030', '51030', '41034', '51032', '64030'),
 ('ARHIZ01', '41032', '14030', '51030', '41034', '51032', '64030'),
@@ -15524,10 +16037,10 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('CGEMA03', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CGEMA04', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CGEMA05', '41011', '14010', '51010', '41014', '51013', '64010'),
-('CGEMA06', '41011', '14010', '51010', '41014', '51013', '64010'),
-('CGEMA07', '41011', '14010', '51010', '41014', '51013', '64010'),
-('CGLIF01', '41011', '14010', '51010', '41014', '51013', '64010');
+('CGEMA06', '41011', '14010', '51010', '41014', '51013', '64010');
 INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('CGEMA07', '41011', '14010', '51010', '41014', '51013', '64010'),
+('CGLIF01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CGLIF02', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CGLIF03', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CGLIF04', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -15711,6 +16224,7 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('CVIAR01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CVIAR02', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('CWISA01', '41011', '14010', '51010', '41014', '51013', '64010'),
+('JTU01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QABAC01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QABAC02', '41011', '14010', '51010', '41011', '51013', '64010'),
 ('QABAC03', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -16290,11 +16804,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('QBORA04', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBORA05', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBORO01', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QBOX01', '41011', '14010', '51010', '41014', '51013', '64010'),
+('QBOX01', '41011', '14010', '51010', '41014', '51013', '64010');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('QBOXQVT01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBOXQVT02', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QBRAP01', '41011', '14010', '51010', '41014', '51013', '64010');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('QBRAP01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBRAP02', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBRAP03', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QBRAP04', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -17056,11 +17570,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('QGOLD12', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD13', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD14', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QGOLD15', '41011', '14010', '51010', '41014', '51013', '64010'),
+('QGOLD15', '41011', '14010', '51010', '41014', '51013', '64010');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('QGOLD16', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD17', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QGOLD18', '41011', '14010', '51010', '41014', '51013', '64010');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('QGOLD18', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD19', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD20', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QGOLD21', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -17822,11 +18336,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('QMONE01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QMONE02', '41011', '14010', '51010', '41011', '51013', '64010'),
 ('QMONE03', '41011', '14010', '51010', '41011', '51013', '64010'),
-('QMONE04', '41011', '14010', '51010', '41011', '51013', '64010'),
+('QMONE04', '41011', '14010', '51010', '41011', '51013', '64010');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('QMONE05', '41011', '14010', '51010', '41011', '51013', '64010'),
 ('QMONE06', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QMONE07', '41011', '14010', '51010', '41014', '51013', '64010');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('QMONE07', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QMONE08', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QMONK01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QMONK02', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -18588,11 +19102,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('QPROM06', '41011', '14010', '51010', '41011', '51013', '64010'),
 ('QPROM07', '41011', '14010', '51010', '41011', '51013', '64010'),
 ('QPROM08', '41011', '14010', '51010', '41011', '51013', '64010'),
-('QPROM09', '41011', '14010', '51010', '41014', '51013', '64010'),
+('QPROM09', '41011', '14010', '51010', '41014', '51013', '64010');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('QPROM10', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QPROM11', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QPROM12', '41011', '14010', '51010', '41014', '51013', '64010');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('QPROM12', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QPROM13', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QPROM14', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QPROM15', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -19355,11 +19869,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('QTIMU28', '41012', '14011', '51011', '41015', '51013', '64010'),
 ('QTIMU29', '41012', '14011', '51011', '41015', '51013', '64010'),
 ('QTIMU30', '41012', '14011', '51011', '41015', '51013', '64010'),
-('QTIMU31', '41012', '14011', '51011', '41015', '51013', '64010'),
+('QTIMU31', '41012', '14011', '51011', '41015', '51013', '64010');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('QTIMU32', '41012', '14011', '51011', '41015', '51013', '64010'),
 ('QTIMU33', '41011', '14010', '51010', '41014', '51013', '64010'),
-('QTIMU34', '41011', '14010', '51010', '41014', '51013', '64010');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('QTIMU34', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QTIMU35', '41012', '14011', '51011', '41015', '51013', '64010'),
 ('QTINK01', '41011', '14010', '51010', '41014', '51013', '64010'),
 ('QTINK02', '41011', '14010', '51010', '41014', '51013', '64010'),
@@ -20111,11 +20625,11 @@ INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun
 ('ZZKULK14', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZKULK15', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZKULK16', '41036', '14031', '51031', '41034', '51032', '64030'),
-('ZZKULK17', '41036', '14031', '51031', '41034', '51032', '64030'),
+('ZZKULK17', '41036', '14031', '51031', '41034', '51032', '64030');
+INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
 ('ZZKULK21', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZKULKA01', '41036', '14031', '51031', '41034', '51032', '64030'),
-('ZZKUNC01', '41036', '14031', '51031', '41034', '51032', '64030');
-INSERT INTO `tbpo_barang_akun` (`kode_barang`, `kode_akun_penjualan`, `kode_akun_persediaan`, `kode_akun_harga_pokok`, `kode_akun_retur_penjualan`, `kode_akun_pengiriman_beli`, `kode_akun_pengiriman_jual`) VALUES
+('ZZKUNC01', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZLAPT01', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZLAPT02', '41036', '14031', '51031', '41034', '51032', '64030'),
 ('ZZLAPT03', '41036', '14031', '51031', '41034', '51032', '64030'),
@@ -21447,12 +21961,13 @@ CREATE TABLE `tbpo_detail_po` (
 --
 
 INSERT INTO `tbpo_detail_po` (`id_det_po`, `kd_po`, `no_po`, `tgl_transaksi`, `kd_suplier`, `kd_barang`, `nama_barang`, `satuan`, `qty`, `isi`, `kemasan`, `qty_kecil`, `hrg_satuan`, `harga_satuan_exclude`, `harga_satuan_kecil`, `harga_satuan_kecil_exclude`, `hrg_diskon`, `hrg_total`, `hrg_total_diskon`, `id_diskon_merk`, `satuan_diskon`, `nominal_diskon`, `diskon_satuan_kecil`, `harga_satuan_kecil_setelah_diskon`, `total_harga_setelah_diskon`, `is_bonus`, `keterangan_bonus`, `keterangan_harga_ppn`, `kd_user`, `create_at`) VALUES
-(1, 'SKPO040926PUPUK030001', 'Q001/KIU/IX/2026', '2026-08-01', 'PUPUK03', 'QCHAM04', 'Champion 77 WP 14 X 1 kg', 'Pack', 140, 1.00, 1.00, 140.0000, 200000, 180180.1802, 200000.0000, 180180.1802, 180180.1802, 28000000, 25225225.228, NULL, NULL, 0.00, 0.00, 180180.18, 25225225.23, 0, '', 'include', 'KEU01', '2026-09-04 01:27:12'),
-(2, 'SKPO040926PUPUK030001', 'Q001/KIU/IX/2026', '2026-08-01', 'PUPUK03', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Pack', 50, 1.00, 1.00, 50.0000, 46000, 41441.4414, 46000.0000, 41441.4414, 41441.4414, 2300000, 2072072.07, NULL, NULL, 0.00, 0.00, 41441.44, 2072072.07, 0, '', 'include', 'KEU01', '2026-09-04 01:27:12'),
-(3, 'SKPO040926PUPUK030001', 'Q001/KIU/IX/2026', '2026-08-01', 'PUPUK03', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 'Pack', 6000, 12.00, 1000.00, 6000.0000, 71000, 63963.9640, 71000.0000, 63963.9640, 63963.964, 426000000, 383783784, NULL, NULL, 0.00, 0.00, 63963.96, 383783784.00, 0, '', 'include', 'KEU01', '2026-09-04 01:27:12'),
-(4, 'SKPO040926PUPUK030001', 'Q001/KIU/IX/2026', '2026-08-01', 'PUPUK03', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 'Pack', 1000, 10.00, 1000.00, 1000.0000, 83700, 75405.4054, 83700.0000, 75405.4054, 75405.4054, 83700000, 75405405.4, NULL, NULL, 0.00, 0.00, 75405.41, 75405405.40, 0, '', 'include', 'KEU01', '2026-09-04 01:27:12'),
-(5, 'SKPO040926SYNGE020002', 'Q001/KIU/IX/2026A', '2026-08-12', 'SYNGE02', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 'Pack', 70, 450.00, 5.00, 70.0000, 35000, 35000.0000, 35000.0000, 35000.0000, 35000, 2450000, 2450000, NULL, NULL, 0.00, 0.00, 35000.00, 2450000.00, 0, '', 'exclude', 'KEU01', '2026-09-04 01:26:37'),
-(6, 'SKPO040926SYNGE020002', 'Q001/KIU/IX/2026A', '2026-08-12', 'SYNGE02', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 'Pack', 2500, 1.00, 1.00, 2500.0000, 95000, 95000.0000, 95000.0000, 95000.0000, 95000, 237500000, 237500000, NULL, NULL, 0.00, 0.00, 95000.00, 237500000.00, 0, '', 'exclude', 'KEU01', '2026-09-04 01:26:37');
+(1, 'SKPO210826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Pack', 50, 1.00, 1.00, 50.0000, 46000, 41441.4414, 46000.0000, 41441.4414, 41441.4414, 2300000, 2072072.07, NULL, NULL, 0.00, 0.00, 41441.44, 2072072.07, 0, '', 'include', 'KEU01', '2026-08-21 07:06:49'),
+(2, 'SKPO210826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QCHAM04', 'Champion 77 WP 14 X 1 kg', 'Pack', 140, 1.00, 1.00, 140.0000, 200000, 180180.1802, 200000.0000, 180180.1802, 180180.1802, 28000000, 25225225.228, NULL, NULL, 0.00, 0.00, 180180.18, 25225225.23, 0, '', 'include', 'KEU01', '2026-08-21 07:06:49'),
+(3, 'SKPO210826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 'Btl', 1000, 10.00, 1000.00, 1000.0000, 83700, 75405.4054, 83700.0000, 75405.4054, 75405.4054, 83700000, 75405405.4, NULL, NULL, 0.00, 0.00, 75405.41, 75405405.40, 0, '', 'include', 'KEU01', '2026-08-21 07:06:49'),
+(4, 'SKPO210826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 'Btl', 6000, 12.00, 1000.00, 6000.0000, 71000, 63963.9640, 71000.0000, 63963.9640, 63963.964, 426000000, 383783784, NULL, NULL, 0.00, 0.00, 63963.96, 383783784.00, 0, '', 'include', 'KEU01', '2026-08-21 07:06:49'),
+(5, 'SKPO210826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 'Pack', 70, 450.00, 5.00, 70.0000, 35000, 35000.0000, 35000.0000, 35000.0000, 35000, 2450000, 2450000, NULL, NULL, 0.00, 0.00, 35000.00, 2450000.00, 0, '', 'exclude', 'KEU01', '2026-08-21 07:06:34'),
+(6, 'SKPO210826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 'Pack', 2500, 1.00, 1.00, 2500.0000, 95000, 95000.0000, 95000.0000, 95000.0000, 95000, 237500000, 237500000, NULL, NULL, 0.00, 0.00, 95000.00, 237500000.00, 0, '', 'exclude', 'KEU01', '2026-08-21 07:06:34'),
+(8, 'SKPO120926SYNGE020002', 'Q003/KIU/IX/2026', '2026-10-12', 'SYNGE02', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 'Pack', 35, 450.00, 5.00, 35.0000, 35000, 35000.0000, 35000.0000, 35000.0000, 35000, 1225000, 1225000, NULL, NULL, 0.00, 0.00, 35000.00, 1225000.00, 0, '', 'exclude', 'KEU01', '2026-09-12 03:45:05');
 
 -- --------------------------------------------------------
 
@@ -21601,11 +22116,11 @@ CREATE TABLE `tbpo_formula_result` (
   `id_po_detail` int DEFAULT NULL,
   `id_formula` int NOT NULL,
   `input_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-  `formula_expression` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `formula_expression` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `result_value` decimal(20,6) NOT NULL,
-  `result_label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `result_unit` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_by` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `result_label` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `result_unit` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_by` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -21759,6 +22274,13 @@ CREATE TABLE `tbpo_note_barang` (
   `create_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `tbpo_note_barang`
+--
+
+INSERT INTO `tbpo_note_barang` (`id_nt_barang`, `kd_po`, `kd_suplier`, `isi_note`, `color_box`, `create_at`) VALUES
+(1, 'SKPO120926SYNGE020002', 'SYNGE02', 'po dari barang retur', '', '2026-09-12 03:45:05');
+
 -- --------------------------------------------------------
 
 --
@@ -21782,12 +22304,16 @@ CREATE TABLE `tbpo_note_direktur` (
 --
 
 INSERT INTO `tbpo_note_direktur` (`id_note`, `kd_po`, `isi_note`, `kd_user`, `nama_user`, `note_for`, `update_status`, `create_at`, `log_create`) VALUES
-(1, 'SKPO040926PUPUK030001', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-09-04 08:24:44', '2026-09-04 01:24:44'),
-(2, 'SKPO040926SYNGE020002', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-09-04 08:26:37', '2026-09-04 01:26:37'),
-(3, 'SKPO040926SYNGE020002', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-09-04 01:27:11'),
-(4, 'SKPO040926PUPUK030001', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-09-04 01:27:13'),
-(5, 'SKPO040926SYNGE020002', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-09-04 01:27:48'),
-(6, 'SKPO040926PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-09-04 01:28:17');
+(1, 'SKPO210826PUPUK030001', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-21 14:05:11', '2026-08-21 07:05:11'),
+(2, 'SKPO210826SYNGE020002', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-08-21 14:06:34', '2026-08-21 07:06:34'),
+(3, 'SKPO210826SYNGE020002', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-21 07:06:51'),
+(4, 'SKPO210826PUPUK030001', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-08-21 07:06:53'),
+(5, 'SKPO210826SYNGE020002', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-21 07:07:24'),
+(6, 'SKPO210826PUPUK030001', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-08-21 07:07:28'),
+(7, 'SKPO120926SYNGE020001', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-09-12 08:28:43', '2026-09-12 01:28:43'),
+(8, 'SKPO120926SYNGE020002', 'Purchase Order Baru', 'KEU01', 'Supriyanto', 1, 1, '2026-09-12 10:45:04', '2026-09-12 03:45:04'),
+(9, 'SKPO120926SYNGE020002', 'PO ACCEPT', 'KIUDIREKTUR01', 'Agoes Santoso', 1, 1, '', '2026-09-12 03:46:04'),
+(10, 'SKPO120926SYNGE020002', 'PO - DONE', 'KEU01', 'Supriyanto', 1, 1, '', '2026-09-12 03:46:50');
 
 -- --------------------------------------------------------
 
@@ -21853,8 +22379,10 @@ CREATE TABLE `tbpo_po` (
 --
 
 INSERT INTO `tbpo_po` (`id_po`, `kd_po`, `no_po`, `tgl_transaksi`, `kd_suplier`, `jml_item`, `total_harga`, `total_harga_diskon`, `keterangan_harga_ppn`, `total_harga_include`, `total_harga_exlude`, `total_harga_diskon_include`, `total_harga_diskon_exlude`, `status`, `tax`, `hrg_pajak`, `tmpo_pembayaran`, `gdg_pengiriman`, `acc_with`, `kd_printout_note`, `create_at`, `tgl_perubahan_po`, `top`) VALUES
-(1, 'SKPO040926PUPUK030001', 'Q001/KIU/IX/2026', '2026-08-01', 'PUPUK03', 4, 486486486.698, 486486486.698, 'include', 540000000, 486486486.698, 540000000.23478, 486486486.698, 'DONE', 0, 0, 30, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-09-04 01:28:17', NULL, 0),
-(2, 'SKPO040926SYNGE020002', 'Q001/KIU/IX/2026A', '2026-08-12', 'SYNGE02', 2, 239950000, 239950000, 'exclude', 266344500, 239950000, 266344500, 239950000, 'DONE', 11, 26394500, 60, 'jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-09-04 01:27:48', NULL, 0);
+(1, 'SKPO210826PUPUK030001', 'Q001/KIU/VIII/2026', '2026-08-01', 'PUPUK03', 4, 486486486.698, 486486486.698, 'include', 540000000, 486486486.698, 540000000.23478, 486486486.698, 'DONE', 0, 0, 30, 'Jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-21 07:07:28', NULL, 0),
+(2, 'SKPO210826SYNGE020002', 'Q001/KIU/VIII/2026A', '2026-08-12', 'SYNGE02', 2, 239950000, 239950000, 'exclude', 266344500, 239950000, 266344500, 239950000, 'DONE', 11, 26394500, 30, 'Jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-08-21 07:07:24', NULL, 0),
+(3, 'SKPO120926SYNGE020001', 'Q002/KIU/IX/2026', '2026-09-14', 'SYNGE02', 1, 0, 0, '', 0, 0, 0, 0, 'ON PROGRESS', 11, 0, 30, 'jember', '', '', '2026-09-12 01:30:51', NULL, 0),
+(4, 'SKPO120926SYNGE020002', 'Q003/KIU/IX/2026', '2026-10-12', 'SYNGE02', 1, 1225000, 1225000, 'exclude', 1359750, 1225000, 1359750, 1225000, 'DONE', 11, 134750, 30, 'Jember', 'KIUDIREKTUR01', 'KDNT2410230001', '2026-09-12 03:46:50', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -22525,6 +23053,13 @@ CREATE TABLE `tbpo_tracking_po` (
   `createat` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `tbpo_tracking_po`
+--
+
+INSERT INTO `tbpo_tracking_po` (`id_po_tracking`, `kd_po`, `status`, `createat`) VALUES
+(1, 'SKPO120926SYNGE020001', 'Hapus detail PO: Tomat Saviro 18 X 25 X 5 gr | User: KEU01 - Supriyanto | Data Lama: {\"id_det_po\":\"7\",\"kd_po\":\"SKPO120926SYNGE020001\",\"no_po\":\"Q002/KIU/IX/2026\",\"tgl_transaksi\":\"2026-09-14\",\"kd_suplier\":\"SYNGE02\",\"kd_barang\":\"QTOMA06\",\"nama_barang\":\"Tomat Saviro 18 X 25 X 5 gr\",\"satuan\":\"Pack\",\"qty\":\"35\",\"isi\":\"450.00\",\"kemasan\":\"5.00\",\"qty_kecil\":\"35.0000\",\"hrg_satuan\":\"35000\",\"harga_satuan_exclude\":\"35000.0000\",\"harga_satuan_kecil\":\"35000.0000\",\"harga_satuan_kecil_exclude\":\"35000.0000\",\"hrg_diskon\":\"35000\",\"hrg_total\":\"1225000\",\"hrg_total_diskon\":\"1225000\",\"id_diskon_merk\":null,\"satuan_diskon\":null,\"nominal_diskon\":\"0.00\",\"diskon_satuan_kecil\":\"0.00\",\"harga_satuan_kecil_setelah_diskon\":\"35000.00\",\"total_harga_setelah_diskon\":\"1225000.00\",\"is_bonus\":\"0\",\"keterangan_bonus\":\"\",\"keterangan_harga_ppn\":\"exclude\",\"kd_user\":\"KEU01\",\"create_at\":\"2026-09-12 08:28:43\",\"merk_barang\":\"Tomat Saviro\"}', '2026-09-12 01:30:51');
+
 -- --------------------------------------------------------
 
 --
@@ -22739,10 +23274,26 @@ CREATE TABLE `tbrp_activity_log` (
 --
 
 INSERT INTO `tbrp_activity_log` (`id_log`, `no_referensi`, `tipe_referensi`, `aksi`, `status_awal`, `status_akhir`, `catatan`, `user_by`, `created_at`) VALUES
-(1, 'SPR/040926/0001', 'spr', 'create_submit', NULL, 'diajukan', '', 'Reni', '2026-09-04 13:07:41'),
-(2, 'SPR/040926/0001', 'spr', 'logistik_process', 'disetujui_kadep', 'selesai', 'Retur Penjualan dibuat: RP/040926/0001', 'Admin LPB2', '2026-09-04 13:16:12'),
-(3, 'RP/040926/0001', 'retur', 'retur_create', NULL, 'menunggu_verifikasi', '', 'Admin LPB2', '2026-09-04 13:16:12'),
-(4, 'RP/040926/0001', 'retur', 'retur_approve_dirut', 'retur_menunggu_dirut', 'selesai', '', 'Direktur Utama', '2026-09-04 13:17:01');
+(1, 'SPR/210826/0001', 'spr', 'create_submit', NULL, 'diajukan', '', 'Reni', '2026-08-21 14:34:34'),
+(2, 'SPR/210826/0001', 'spr', 'logistik_process', 'disetujui_kadep', 'selesai', 'Retur Penjualan dibuat: RP/210826/0001', 'Admin LPB2', '2026-08-21 14:36:44'),
+(3, 'RP/210826/0001', 'retur', 'retur_create', NULL, 'menunggu_verifikasi', '', 'Admin LPB2', '2026-08-21 14:36:44'),
+(4, 'RP/210826/0001', 'retur', 'retur_approve_dirut', 'retur_menunggu_dirut', 'selesai', '', 'Direktur Utama', '2026-08-21 14:39:02'),
+(5, 'SPR/110926/0001', 'spr', 'create_submit', NULL, 'diajukan', '', 'Reni', '2026-09-11 10:50:35'),
+(6, 'SPR/110926/0002', 'spr', 'create_submit', NULL, 'diajukan', '', 'Reni', '2026-09-11 10:55:17'),
+(7, 'SPR/110926/0001', 'spr', 'logistik_process', 'disetujui_kadep', 'selesai', 'Retur Penjualan dibuat: RP/110926/0001', 'Admin LPB2', '2026-09-11 10:58:51'),
+(8, 'RP/110926/0001', 'retur', 'retur_create', NULL, 'menunggu_verifikasi', 'barang kemasan rusak', 'Admin LPB2', '2026-09-11 10:58:51'),
+(9, 'SPR/110926/0002', 'spr', 'logistik_process', 'disetujui_kadep', 'selesai', 'Retur Penjualan dibuat: RPR/110926/0001', 'Admin LPB2', '2026-09-11 11:00:06'),
+(10, 'RPR/110926/0001', 'retur', 'retur_create', NULL, 'menunggu_verifikasi', 'barang kemasan rusak', 'Admin LPB2', '2026-09-11 11:00:06'),
+(11, 'RPR/110926/0001', 'retur', 'retur_verify', 'menunggu_verifikasi', 'retur_menunggu_mngacc', '', 'dewi', '2026-09-11 11:03:46'),
+(12, 'RP/110926/0001', 'retur', 'retur_verify', 'menunggu_verifikasi', 'retur_menunggu_mngacc', 'revisi', 'dewi', '2026-09-11 11:04:31'),
+(13, 'RPR/110926/0001', 'retur', 'retur_approve_dirut', 'retur_menunggu_dirut', 'selesai', '', 'Direktur Utama', '2026-09-11 11:08:06'),
+(14, 'RP/110926/0001', 'retur', 'retur_approve_dirut', 'retur_menunggu_dirut', 'selesai', '', 'Direktur Utama', '2026-09-11 11:08:22'),
+(15, 'SPR/120926/0001', 'spr', 'create_submit', NULL, 'diajukan', '', 'admin', '2026-09-12 14:11:25'),
+(16, 'SPR/120926/0001', 'spr', 'koor_verify', 'diajukan', 'diverifikasi_koor', '', 'evi', '2026-09-12 14:14:29'),
+(17, 'SPR/120926/0001', 'spr', 'admretur_check', 'diverifikasi_koor', 'dicek_admretur', '', 'Admin Penjualan', '2026-09-12 14:45:47'),
+(18, 'SPR/120926/0001', 'spr', 'kadep_reject', 'dicek_admretur', 'ditolak', 'belum oke', 'kadepsc', '2026-09-15 13:52:45'),
+(19, 'SPR/150926/0001', 'spr', 'create_submit', NULL, 'diajukan', '', 'Reni', '2026-09-15 14:00:22'),
+(20, 'SPR/150926/0001', 'spr', 'edit', 'diajukan', 'diajukan', '', 'Reni', '2026-09-17 09:10:15');
 
 -- --------------------------------------------------------
 
@@ -22770,7 +23321,9 @@ CREATE TABLE `tbrp_retur_penjualan_detail` (
 --
 
 INSERT INTO `tbrp_retur_penjualan_detail` (`id_retur_detail`, `id_retur`, `id_spr_detail`, `no_urut`, `kd_barang`, `nama_barang`, `satuan`, `no_faktur`, `no_batch`, `expired_date`, `qty_retur`, `harga_satuan`) VALUES
-(1, 1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Zak', 'DINV0409260003', '1123514', '2026-08-06', 1.000, 50000.00);
+(1, 1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Zak', 'DINV2108260002', '101011', '2028-01-21', 1.000, 50000.00),
+(2, 2, 2, 1, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 'Pack', '1111', '221133', '2027-01-01', 1.000, 45000.00),
+(3, 3, 3, 1, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '', '22222', '223424', '2027-01-11', 11.000, 80000.00);
 
 -- --------------------------------------------------------
 
@@ -22843,7 +23396,9 @@ CREATE TABLE `tbrp_retur_penjualan_header` (
 --
 
 INSERT INTO `tbrp_retur_penjualan_header` (`id_retur`, `no_retur`, `tipe_retur`, `total_nilai_retur`, `sisa_saldo_retur`, `id_spr`, `no_spr`, `gudang_id`, `tanggal_retur`, `kd_customer`, `nama_customer`, `alamat`, `nama_sales`, `catatan_logistik`, `status_retur`, `is_revisi`, `admretur_by_retur`, `admretur_at_retur`, `catatan_admretur`, `collection_by`, `collection_at`, `catatan_collection`, `no_faktur_potong`, `create_by_retur`, `create_at_retur`, `update_by_retur`, `update_at_retur`, `kasir_by`, `kasir_at`, `catatan_kasir`, `kadepub_by_retur`, `kadepub_at_retur`, `catatan_kadepub_retur`, `mngacc_by_retur`, `mngacc_at_retur`, `catatan_mngacc_retur`, `koorsc_by_retur`, `koorsc_at_retur`, `catatan_koorsc_retur`, `mngse_by_retur`, `mngse_at_retur`, `catatan_mngse_retur`, `kadepsc_by_retur`, `kadepsc_at_retur`, `catatan_kadepsc_retur`, `dirop_by_retur`, `dirop_at_retur`, `catatan_dirop_retur`, `dirut_by_retur`, `dirut_at_retur`, `catatan_dirut_retur`, `mngsc_by_retur`, `mngsc_at_retur`, `catatan_mngsc_retur`, `admin_stock_at_retur`, `admin_stock_by_retur`, `catatan_admin_stock`) VALUES
-(1, 'RP/040926/0001', 'biasa', 50000.00, 50000.00, 1, 'SPR/040926/0001', 2, '2026-09-30', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'selesai', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-04 13:16:12', 'Direktur Utama', '2026-09-04 13:17:01', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Direktur Utama', '2026-09-04 13:17:01', '', NULL, NULL, NULL, NULL, NULL, NULL);
+(1, 'RP/210826/0001', 'biasa', 50000.00, 50000.00, 1, 'SPR/210826/0001', 2, '2026-08-21', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'selesai', 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-08-21 14:36:44', 'Direktur Utama', '2026-08-21 14:39:02', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Direktur Utama', '2026-08-21 14:39:02', '', NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 'RP/110926/0001', 'biasa', 45000.00, 0.00, 2, 'SPR/110926/0001', 5, '2026-09-24', 'TANI59', 'Manunggal Agro Sentosa,PT', 'Jl. Kalimantan No.216, Balung Lor, Balung', 'Ariyani', 'barang kemasan rusak', 'selesai', 1, 'dewi', '2026-09-11 11:04:31', 'revisi', NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-11 10:58:51', 'Direktur Utama', '2026-09-11 11:08:22', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Direktur Utama', '2026-09-11 11:08:22', '', NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'RPR/110926/0001', 'replace', 880000.00, 0.00, 3, 'SPR/110926/0002', 5, '2026-10-01', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', 'barang kemasan rusak', 'selesai', 0, 'dewi', '2026-09-11 11:03:46', '', NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-11 11:00:06', 'Direktur Utama', '2026-09-11 11:08:06', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Direktur Utama', '2026-09-11 11:08:06', '', NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -22879,7 +23434,11 @@ CREATE TABLE `tbrp_spr_detail` (
 --
 
 INSERT INTO `tbrp_spr_detail` (`id_spr_detail`, `id_spr`, `no_urut`, `kd_barang`, `nama_barang`, `no_faktur`, `no_batch`, `expired_date`, `harga`, `qty`, `alasan_brg_bermasalah`, `alasan_brg_bermasalah_opt`, `alasan_expired`, `alasan_expired_opt`, `alasan_tidak_laku`, `alasan_tes_market`, `alasan_bad_debt`, `alasan_harga_tidak_sesuai`, `alasan_spr_intern`, `alasan_lainlain`) VALUES
-(1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'DINV0409260003', '1123514', '2026-08-06', 50000.00, 1.000, 1, 'not_replace', 0, '', 0, 0, 0, 0, 0, '');
+(1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'DINV2108260002', '101011', '2028-01-21', 50000.00, 1.000, 1, 'not_replace', 0, '', 0, 0, 0, 0, 0, ''),
+(2, 2, 1, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '1111', '221133', '2027-01-01', 45000.00, 1.000, 1, 'replace', 0, '', 0, 0, 0, 0, 0, ''),
+(3, 3, 1, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '22222', '223424', '2027-01-11', 80000.00, 11.000, 1, 'replace', 0, '', 0, 0, 0, 0, 0, ''),
+(4, 4, 1, 'AABAC01', 'Abacel 18 EC 10 X 1 ltr', '111', '111', '2026-11-20', 111111.00, 1.000, 1, 'not_replace', 0, '', 0, 0, 0, 0, 0, ''),
+(6, 5, 1, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '11210', '1341321', '2027-01-01', 50000.00, 1.000, 1, '', 0, '', 0, 0, 0, 0, 0, '');
 
 -- --------------------------------------------------------
 
@@ -22931,7 +23490,11 @@ CREATE TABLE `tbrp_spr_header` (
 --
 
 INSERT INTO `tbrp_spr_header` (`id_spr`, `no_spr`, `tipe_retur`, `is_jagung`, `tanggal`, `kd_customer`, `nama_customer`, `alamat`, `nama_sales`, `catatan`, `status`, `mngsc_by`, `mngsc_at`, `mngsc_catatan`, `kadepub_by`, `kadepub_at`, `kadepub_catatan`, `admretur_by`, `admretur_at`, `admretur_catatan`, `kadep_sc_by`, `kadep_sc_at`, `kadep_sc_catatan`, `logistik_by`, `logistik_at`, `logistik_catatan`, `create_by`, `create_at`, `update_by`, `update_at`, `admin_stock_at`, `admin_stock_by`, `admin_stock_catatan`, `koor_sc_at`, `koor_sc_by`, `koor_sc_catatan`) VALUES
-(1, 'SPR/040926/0001', 'biasa', 0, '2026-08-30', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'selesai', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-04 13:16:12', 'Retur Penjualan dibuat: RP/040926/0001', 'Reni', '2026-09-04 13:07:41', 'Admin LPB2', '2026-09-04 13:16:12', NULL, NULL, NULL, NULL, NULL, NULL);
+(1, 'SPR/210826/0001', 'biasa', 0, '2026-08-21', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'selesai', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-08-21 14:36:44', 'Retur Penjualan dibuat: RP/210826/0001', 'Reni', '2026-08-21 14:34:34', 'Admin LPB2', '2026-08-21 14:36:44', NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 'SPR/110926/0001', 'biasa', 0, '2026-09-11', 'TANI59', 'Manunggal Agro Sentosa,PT', 'Jl. Kalimantan No.216, Balung Lor, Balung', 'Ariyani', '', 'selesai', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-11 10:58:51', 'Retur Penjualan dibuat: RP/110926/0001', 'Reni', '2026-09-11 10:50:35', 'Admin LPB2', '2026-09-11 10:58:51', NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 'SPR/110926/0002', 'replace', 0, '2026-09-11', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'selesai', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Admin LPB2', '2026-09-11 11:00:06', 'Retur Penjualan dibuat: RPR/110926/0001', 'Reni', '2026-09-11 10:55:17', 'Admin LPB2', '2026-09-11 11:00:06', NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 'SPR/120926/0001', 'biasa', 0, '2026-09-12', 'DEWI02', 'A A Made Agung Maharatni', 'Denpasar', 'Zakia', '', 'ditolak', 'evi', '2026-09-12 14:14:29', '', NULL, NULL, NULL, 'Admin Penjualan', '2026-09-12 14:45:47', '', 'kadepsc', '2026-09-15 13:52:45', 'belum oke', NULL, NULL, NULL, 'admin', '2026-09-12 14:11:25', 'kadepsc', '2026-09-15 13:52:45', NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 'SPR/150926/0001', 'biasa', 0, '2026-09-15', 'RIZK05', 'Rizky Jaya, CV', 'Jl. Lawu Perum Green Residence FR 5', 'Reni', '', 'diajukan', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Reni', '2026-09-15 14:00:22', 'Reni', '2026-09-17 09:10:15', NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -24770,17 +25333,71 @@ CREATE TABLE `tbso_activity_log` (
 --
 
 INSERT INTO `tbso_activity_log` (`id`, `no_so`, `no_faktur`, `aksi`, `keterangan`, `detail_produk`, `dilakukan_oleh`, `ip_address`, `created_at`) VALUES
-(1, 'SO/040926/0001', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Rizky Jaya, CV. Total item: 2', 'Pupuk MagneWish Powder 10 kg | Box: 0 | Ecer: 25 pcs | Total: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 168 pcs | Total: 168 pcs', 'Reni', '127.0.0.1', '2026-09-04 09:21:25'),
-(2, 'SO/040926/0001', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Pupuk MagneWish Powder 10 kg | Box: 0.000 | Ecer: 25.000 pcs | Total: 25.000 pcs\nRound Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 168.000 pcs | Total: 168.000 pcs', 'Reni', '127.0.0.1', '2026-09-04 09:21:30'),
-(3, 'SO/040926/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MD-1 ke MD-1 melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-04 09:31:35'),
-(4, 'SO/040926/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MD-1.', NULL, 'Reni', '127.0.0.1', '2026-09-04 09:31:39'),
-(5, 'SO/040926/0002', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Manunggal Agro Sentosa,PT. Total item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0 | Ecer: 5 pcs | Total: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Box: 0 | Ecer: 5 pcs | Total: 5 pcs\nPadi NK 2133 20 X 1 kg | Box: 0 | Ecer: 500 pcs | Total: 500 pcs', 'Ariyani', '127.0.0.1', '2026-09-04 09:34:39'),
-(6, 'SO/040926/0002', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0.000 | Ecer: 5.000 pcs | Total: 5.000 pcs\nTomat Saviro 18 X 25 X 5 gr | Box: 0.000 | Ecer: 5.000 pcs | Total: 5.000 pcs\nPadi NK 2133 20 X 1 kg | Box: 0.000 | Ecer: 500.000 pcs | Total: 500.000 pcs', 'Ariyani', '127.0.0.1', '2026-09-04 09:35:18'),
-(7, 'SO/040926/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari JLS ke JLS melalui bulk update.', NULL, 'Ariyani', '127.0.0.1', '2026-09-04 09:36:23'),
-(8, 'SO/040926/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute JLS.', NULL, 'Ariyani', '127.0.0.1', '2026-09-04 09:36:27'),
-(9, 'SO/040926/0002', 'DINV0409260001', 'BUAT_FAKTUR', 'Faktur Penjualan DINV0409260001 dibuat dari SO SO/040926/0002. Item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:38:44'),
-(10, 'SO/040926/0002', 'DINV0409260002', 'BUAT_FAKTUR', 'Faktur Penjualan DINV0409260002 dibuat dari SO SO/040926/0002. Item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:44:52'),
-(11, 'SO/040926/0001', 'DINV0409260003', 'BUAT_FAKTUR', 'Faktur Penjualan DINV0409260003 dibuat dari SO SO/040926/0001. Item: 2', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:45:24');
+(1, 'SO/210826/0001', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Rizky Jaya, CV. Total item: 2', 'Pupuk MagneWish Powder 10 kg | Box: 0 | Ecer: 25 pcs | Total: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 168 pcs | Total: 168 pcs', 'Reni', '127.0.0.1', '2026-08-21 14:16:36'),
+(2, 'SO/210826/0001', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Pupuk MagneWish Powder 10 kg | Box: 0.000 | Ecer: 25.000 pcs | Total: 25.000 pcs\nRound Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 168.000 pcs | Total: 168.000 pcs', 'Reni', '127.0.0.1', '2026-08-21 14:16:40'),
+(3, 'SO/210826/0002', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Manunggal Agro Sentosa,PT. Total item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0 | Ecer: 5 pcs | Total: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Box: 0 | Ecer: 5 pcs | Total: 5 pcs\nPadi NK 2133 20 X 1 kg | Box: 0 | Ecer: 500 pcs | Total: 500 pcs', 'Ariyani', '127.0.0.1', '2026-08-21 14:18:30'),
+(4, 'SO/210826/0002', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0.000 | Ecer: 5.000 pcs | Total: 5.000 pcs\nTomat Saviro 18 X 25 X 5 gr | Box: 0.000 | Ecer: 5.000 pcs | Total: 5.000 pcs\nPadi NK 2133 20 X 1 kg | Box: 0.000 | Ecer: 500.000 pcs | Total: 500.000 pcs', 'Ariyani', '127.0.0.1', '2026-08-21 14:18:33'),
+(5, 'SO/210826/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari JLS ke JLS melalui bulk update.', NULL, 'Ariyani', '127.0.0.1', '2026-08-21 14:18:45'),
+(6, 'SO/210826/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute JLS.', NULL, 'Ariyani', '127.0.0.1', '2026-08-21 14:18:47'),
+(7, 'SO/210826/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MD-1 ke MD-1 melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-08-21 14:19:04'),
+(8, 'SO/210826/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MD-1.', NULL, 'Reni', '127.0.0.1', '2026-08-21 14:19:06'),
+(9, 'SO/210826/0002', 'DINV2108260001', 'BUAT_FAKTUR', 'Faktur Penjualan DINV2108260001 dibuat dari SO SO/210826/0002. Item: 3', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-08-21 14:20:48'),
+(10, 'SO/210826/0001', 'DINV2108260002', 'BUAT_FAKTUR', 'Faktur Penjualan DINV2108260002 dibuat dari SO SO/210826/0001. Item: 2', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '127.0.0.1', '2026-08-21 14:21:09'),
+(11, 'SO/110926/0001', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Rizky Jaya, CV. Total item: 1', 'Round Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 11 pcs | Total: 11 pcs', 'Reni', '127.0.0.1', '2026-09-11 13:31:45'),
+(12, 'SO/110926/0001', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Round Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 11.000 pcs | Total: 11.000 pcs', 'Reni', '127.0.0.1', '2026-09-11 13:31:48'),
+(13, 'SO/110926/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MD-1 ke MD-1 melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-11 13:34:32'),
+(14, 'SO/110926/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MD-1.', NULL, 'Reni', '127.0.0.1', '2026-09-11 13:34:34'),
+(15, 'SO/110926/0002', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Manunggal Agro Sentosa,PT. Total item: 1', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0 | Ecer: 1 pcs | Total: 1 pcs', 'Ariyani', '127.0.0.1', '2026-09-11 13:36:30'),
+(16, 'SO/110926/0002', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Tomat Saviro 18 X 25 X 5 gr | Box: 0.000 | Ecer: 1.000 pcs | Total: 1.000 pcs', 'Ariyani', '127.0.0.1', '2026-09-11 13:36:33'),
+(17, 'SO/110926/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari JLS ke JLS melalui bulk update.', NULL, 'Ariyani', '127.0.0.1', '2026-09-11 13:36:46'),
+(18, 'SO/110926/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute JLS.', NULL, 'Ariyani', '127.0.0.1', '2026-09-11 13:36:52'),
+(19, 'SO/110926/0002', 'DINV1109260001', 'BUAT_FAKTUR', 'Faktur Penjualan DINV1109260001 dibuat dari SO SO/110926/0002. Item: 1', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 1 pcs', 'Admin SC', '127.0.0.1', '2026-09-11 13:39:34'),
+(20, 'SO/110926/0001', 'DINV1109260002', 'BUAT_FAKTUR', 'Faktur Penjualan DINV1109260002 dibuat dari SO SO/110926/0001. Item: 1', 'Round Up 486 SL 12 X 1 ltr | Qty: 11 pcs', 'Admin SC', '127.0.0.1', '2026-09-11 13:40:24'),
+(21, 'SO/220926/0001', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Agung Basuki Rachmat. Total item: 1', 'Padi NK 2133 20 X 1 kg | Box: 100 | Ecer: 0 pcs | Total: 100 pcs', 'Reni', '127.0.0.1', '2026-09-22 10:25:07'),
+(22, 'SO/220926/0001', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Padi NK 2133 20 X 1 kg | Box: 100.000 | Ecer: 0.000 pcs | Total: 100.000 pcs', 'Reni', '127.0.0.1', '2026-09-22 10:25:11'),
+(23, 'SO/220926/0002', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Agrikultur Gelora N, PT. Total item: 1', 'Round Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 100 pcs | Total: 100 pcs', 'Reni', '127.0.0.1', '2026-09-22 10:26:04'),
+(24, 'SO/220926/0002', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Round Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 100.000 pcs | Total: 100.000 pcs', 'Reni', '127.0.0.1', '2026-09-22 10:26:07'),
+(25, 'SO/220926/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MLG ke MLG melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:26:34'),
+(26, 'SO/220926/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MLG ke MLG melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:26:34'),
+(27, 'SO/220926/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MLG.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:26:42'),
+(28, 'SO/220926/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MLG.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:26:42'),
+(29, 'SO/220926/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MLG ke MLG melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:31:06'),
+(30, 'SO/220926/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MLG ke MLG melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:31:06'),
+(31, 'SO/220926/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MLG.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:31:11'),
+(32, 'SO/220926/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MLG.', NULL, 'Reni', '127.0.0.1', '2026-09-22 10:31:11'),
+(33, 'SO/220926/0001', 'ZINV2209260001', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2209260001 dibuat dari SO SO/220926/0001. Item: 1', 'Padi NK 2133 20 X 1 kg | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-22 11:00:40'),
+(34, 'SO/220926/0002', 'ZINV2209260002', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2209260002 dibuat dari SO SO/220926/0002. Item: 1', 'Round Up 486 SL 12 X 1 ltr | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-22 11:00:48'),
+(35, 'SO/230926/0001', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Agin. Total item: 1', 'Spontas 450 SL 10 X 1 ltr | Box: 0 | Ecer: 50 pcs | Total: 50 pcs', 'Ariyani', '127.0.0.1', '2026-09-23 11:52:24'),
+(36, 'SO/230926/0001', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Spontas 450 SL 10 X 1 ltr | Box: 0.000 | Ecer: 50.000 pcs | Total: 50.000 pcs', 'Ariyani', '127.0.0.1', '2026-09-23 11:52:27'),
+(37, 'SO/230926/0002', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Nor Cahyo Hadi Kusumo. Total item: 1', 'Spontas 450 SL 10 X 1 ltr | Box: 0 | Ecer: 50 pcs | Total: 50 pcs', 'Ariyani', '127.0.0.1', '2026-09-23 12:17:18'),
+(38, 'SO/230926/0002', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Spontas 450 SL 10 X 1 ltr | Box: 0.000 | Ecer: 50.000 pcs | Total: 50.000 pcs', 'Ariyani', '127.0.0.1', '2026-09-23 12:17:21'),
+(39, 'SO/230926/0002', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari PRB ke PRB melalui bulk update.', NULL, 'Ariyani', '127.0.0.1', '2026-09-23 12:18:04'),
+(40, 'SO/230926/0001', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari LMJ ke PRB melalui bulk update.', NULL, 'Ariyani', '127.0.0.1', '2026-09-23 12:18:04'),
+(41, 'SO/230926/0002', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute PRB.', NULL, 'Ariyani', '127.0.0.1', '2026-09-23 12:18:07'),
+(42, 'SO/230926/0001', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute PRB.', NULL, 'Ariyani', '127.0.0.1', '2026-09-23 12:18:07'),
+(43, 'SO/230926/0003', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Syaiful Anam. Total item: 1', 'Padi NK 2133 20 X 1 kg | Box: 0 | Ecer: 100 pcs | Total: 100 pcs', 'Reni', '127.0.0.1', '2026-09-23 12:19:47'),
+(44, 'SO/230926/0003', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Padi NK 2133 20 X 1 kg | Box: 0.000 | Ecer: 100.000 pcs | Total: 100.000 pcs', 'Reni', '127.0.0.1', '2026-09-23 12:19:53'),
+(45, 'SO/230926/0004', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Hanifian Ahmad Musyaffa. Total item: 1', 'Round Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 300 pcs | Total: 300 pcs', 'Reni', '127.0.0.1', '2026-09-23 12:21:20'),
+(46, 'SO/230926/0004', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Round Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 300.000 pcs | Total: 300.000 pcs', 'Reni', '127.0.0.1', '2026-09-23 12:21:24'),
+(47, 'SO/230926/0004', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MD-2 ke MD-2 melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-23 12:22:20'),
+(48, 'SO/230926/0003', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari P-2 ke MD-2 melalui bulk update.', NULL, 'Reni', '127.0.0.1', '2026-09-23 12:22:20'),
+(49, 'SO/230926/0004', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MD-2.', NULL, 'Reni', '127.0.0.1', '2026-09-23 12:22:24'),
+(50, 'SO/230926/0003', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute MD-2.', NULL, 'Reni', '127.0.0.1', '2026-09-23 12:22:24'),
+(51, 'SO/230926/0001', 'ZINV2309260001', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2309260001 dibuat dari SO SO/230926/0001. Item: 1', 'Spontas 450 SL 10 X 1 ltr | Qty: 50 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:28'),
+(52, 'SO/230926/0002', 'ZINV2309260002', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2309260002 dibuat dari SO SO/230926/0002. Item: 1', 'Spontas 450 SL 10 X 1 ltr | Qty: 50 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:35'),
+(53, 'SO/230926/0003', 'ZINV2309260003', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2309260003 dibuat dari SO SO/230926/0003. Item: 1', 'Padi NK 2133 20 X 1 kg | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:51'),
+(54, 'SO/230926/0004', 'ZINV2309260004', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2309260004 dibuat dari SO SO/230926/0004. Item: 1', 'Round Up 486 SL 12 X 1 ltr | Qty: 300 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:58'),
+(55, 'SO/230926/0003', 'HINV2309260001', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260001 dibuat untuk customer Sarminah (Sahala/Syaiful) (KHO01AC) dari Faktur Z: ZINV2309260003', 'Item:\nPadi NK 2133 20 X 1 kg (25 Pack @ Rp 800.000)', 'admin', '10.10.10.68', '2026-09-23 13:30:41'),
+(56, 'SO/230926/0003', 'HINV2309260002', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260002 dibuat untuk customer Yatmo (Sahala/Syaiful) (SAHA100AC) dari Faktur Z: ZINV2309260003', 'Item:\nPadi NK 2133 20 X 1 kg (25 Pack @ Rp 800.000)', 'admin', '10.10.10.68', '2026-09-23 13:30:41'),
+(57, 'SO/230926/0003', 'HINV2309260003', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260003 dibuat untuk customer Musa (Sahala/Syaiful) (SAHA101AC) dari Faktur Z: ZINV2309260003', 'Item:\nPadi NK 2133 20 X 1 kg (25 Pack @ Rp 800.000)', 'admin', '10.10.10.68', '2026-09-23 13:30:41'),
+(58, 'SO/230926/0003', 'HINV2309260004', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260004 dibuat untuk customer Gunawi (Sahala/Syaiful) (SAHA102AC) dari Faktur Z: ZINV2309260003', 'Item:\nPadi NK 2133 20 X 1 kg (25 Pack @ Rp 800.000)', 'admin', '10.10.10.68', '2026-09-23 13:30:41'),
+(59, 'SO/230926/0005', NULL, 'CREATE_SO', 'SO baru dibuat. Customer: Hanifian Ahmad Musyaffa. Total item: 3', 'Round Up 486 SL 12 X 1 ltr | Box: 0 | Ecer: 257 pcs | Total: 257 pcs\nSpontas 450 SL 10 X 1 ltr | Box: 0 | Ecer: 7 pcs | Total: 7 pcs\nChampion 77 WP 14 X 1 kg | Box: 0 | Ecer: 140 pcs | Total: 140 pcs', 'Reni', '10.10.10.68', '2026-09-23 13:38:42'),
+(60, 'SO/230926/0005', NULL, 'REKAM_SO', 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.', 'Round Up 486 SL 12 X 1 ltr | Box: 0.000 | Ecer: 257.000 pcs | Total: 257.000 pcs\nSpontas 450 SL 10 X 1 ltr | Box: 0.000 | Ecer: 7.000 pcs | Total: 7.000 pcs\nChampion 77 WP 14 X 1 kg | Box: 0.000 | Ecer: 140.000 pcs | Total: 140.000 pcs', 'Reni', '10.10.10.68', '2026-09-23 13:38:48'),
+(61, 'SO/230926/0005', NULL, 'UPDATE_SO_RUTE', 'Rute SO diubah dari MD-2 ke JBR melalui bulk update.', NULL, 'Reni', '10.10.10.68', '2026-09-23 13:38:59'),
+(62, 'SO/230926/0005', NULL, 'SO_SIAP_LOADING', 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute JBR.', NULL, 'Reni', '10.10.10.68', '2026-09-23 13:39:02'),
+(63, 'SO/230926/0005', 'ZINV2309260005', 'BUAT_FAKTUR', 'Faktur Penjualan ZINV2309260005 dibuat dari SO SO/230926/0005. Item: 3', 'Round Up 486 SL 12 X 1 ltr | Qty: 257 pcs\nSpontas 450 SL 10 X 1 ltr | Qty: 7 pcs\nChampion 77 WP 14 X 1 kg | Qty: 140 pcs', 'Admin SC', '10.10.10.68', '2026-09-23 13:42:15'),
+(64, 'SO/230926/0005', 'HINV2309260005', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260005 dibuat untuk customer Dwi Ratnawati (Agro Makmur Sentosa) (AGRO01AC) dari Faktur Z: ZINV2309260005', 'Item:\nRound Up 486 SL 12 X 1 ltr (129  @ Rp 80.000)\nSpontas 450 SL 10 X 1 ltr (4  @ Rp 148.000)\nChampion 77 WP 14 X 1 kg (70  @ Rp 120.000)', 'admin', '10.10.10.68', '2026-09-23 14:59:56'),
+(65, 'SO/230926/0005', 'HINV2309260006', 'BUAT_FAKTUR_PECAHAN_H_BATCH', 'Faktur pecahan massal HINV2309260006 dibuat untuk customer Eko Wahyu Wulandari (Agro Makmur Sentosa) (AGRO02AC) dari Faktur Z: ZINV2309260005', 'Item:\nRound Up 486 SL 12 X 1 ltr (128  @ Rp 80.000)\nSpontas 450 SL 10 X 1 ltr (3  @ Rp 148.000)\nChampion 77 WP 14 X 1 kg (70  @ Rp 120.000)', 'admin', '10.10.10.68', '2026-09-23 14:59:56');
 
 -- --------------------------------------------------------
 
@@ -24840,8 +25457,8 @@ CREATE TABLE `tbso_faktur_detail` (
   `qty_satuan` decimal(15,3) NOT NULL DEFAULT '0.000',
   `isi_per_box` int NOT NULL DEFAULT '1',
   `satuan` varchar(20) DEFAULT NULL,
-  `hrg_satuan` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `hrg_pokok` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `hrg_satuan` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `hrg_pokok` decimal(18,2) NOT NULL DEFAULT '0.00',
   `disc` decimal(5,2) NOT NULL DEFAULT '0.00',
   `pajak` decimal(5,2) NOT NULL DEFAULT '0.00',
   `subtotal_before_disc` decimal(15,2) NOT NULL DEFAULT '0.00',
@@ -24859,12 +25476,20 @@ CREATE TABLE `tbso_faktur_detail` (
 --
 
 INSERT INTO `tbso_faktur_detail` (`id`, `id_faktur`, `no_faktur`, `id_so`, `id_so_detail`, `kd_barang`, `nama_barang`, `no_lot`, `expired_date`, `qty`, `qty_box`, `qty_satuan`, `isi_per_box`, `satuan`, `hrg_satuan`, `hrg_pokok`, `disc`, `pajak`, `subtotal_before_disc`, `subtotal_after_disc`, `total_harga`, `berat_gram`, `kubikasi_m3`, `gudang_id`, `create_by`, `create_at`) VALUES
-(4, 2, 'DINV0409260002', 2, 3, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '556633', '2027-02-01', 5.000, 0.000, 5.000, 450, 'Pack', 45000.00000, 35000.00000, 0.00, 0.00, 225000.00, 225000.00, 225000.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-09-04 09:44:52'),
-(5, 2, 'DINV0409260002', 2, 4, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '556633', '2027-02-01', 5.000, 0.000, 5.000, 450, 'Pack', 45000.00000, 35000.00000, 100.00, 0.00, 225000.00, 0.00, 0.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-09-04 09:44:52'),
-(6, 2, 'DINV0409260002', 2, 5, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '00212', '2027-02-01', 500.000, 500.000, 0.000, 1, 'Pack', 105000.00000, 95000.00000, 0.00, 0.00, 52500000.00, 52500000.00, 52500000.00, 1025.0000, 0.002734, '2', 'Admin SC', '2026-09-04 09:44:52'),
-(7, 3, 'DINV0409260003', 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', '1123514', '2027-02-01', 25.000, 25.000, 0.000, 1, 'Zak', 50000.00000, 41441.44140, 0.00, 11.00, 1250000.00, 1250000.00, 1250000.00, 10200.0000, 0.002678, '2', 'Admin SC', '2026-09-04 09:45:24'),
-(8, 3, 'DINV0409260003', 1, 2, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '112233', '2027-02-01', 168.000, 14.000, 0.000, 12, '', 80000.00000, 63963964.00000, 0.00, 11.00, 13440000.00, 13440000.00, 13440000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-04 09:45:24'),
-(9, 4, 'LBYINV0409260001', 3, 6, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '00212', '2027-02-01', 10.000, 10.000, 0.000, 1, 'Pack', 95000.00000, 95000.00000, 0.00, 0.00, 950000.00, 950000.00, 950000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-04 13:46:43');
+(1, 1, 'DINV2108260001', 2, 3, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '101019', '2027-06-21', 4.000, 0.000, 5.000, 450, 'Pack', 45000.00, 35000.00, 0.00, 0.00, 180000.00, 180000.00, 180000.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-08-21 14:20:48'),
+(2, 1, 'DINV2108260001', 2, 4, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '101019', '2027-06-21', 5.000, 0.000, 5.000, 450, 'Pack', 45000.00, 35000.00, 100.00, 0.00, 225000.00, 0.00, 0.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-08-21 14:20:48'),
+(3, 1, 'DINV2108260001', 2, 5, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 500.000, 500.000, 0.000, 1, 'Pack', 105000.00, 95000.00, 0.00, 0.00, 52500000.00, 52500000.00, 52500000.00, 1025.0000, 0.002734, '2', 'Admin SC', '2026-08-21 14:20:48'),
+(4, 2, 'DINV2108260002', 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', '101011', '2028-01-21', 25.000, 25.000, 0.000, 1, 'Zak', 50000.00, 41441.44, 0.00, 11.00, 1250000.00, 1250000.00, 1250000.00, 10200.0000, 0.002678, '2', 'Admin SC', '2026-08-21 14:21:09'),
+(5, 2, 'DINV2108260002', 1, 2, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 168.000, 14.000, 0.000, 12, '', 80000.00, 63963.96, 0.00, 11.00, 13440000.00, 13440000.00, 13440000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-08-21 14:21:09'),
+(9, 5, 'DINV1109260001', 4, 7, 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', '101019', '2027-06-21', 1.000, 0.000, 1.000, 450, 'Pack', 45000.00, 35000.00, 0.00, 0.00, 45000.00, 45000.00, 45000.00, 575.0000, 0.001220, '2', 'Admin SC', '2026-09-11 13:39:34'),
+(10, 6, 'DINV1109260002', 3, 6, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 11.000, 0.000, 11.000, 12, '', 80000.00, 63963964.00, 100.00, 11.00, 880000.00, 0.00, 0.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-11 13:40:24'),
+(13, 9, 'ZINV2309260001', 7, 10, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '101013', '2030-04-21', 50.000, 5.000, 0.000, 10, '', 400000.00, 65000.00, 0.00, 11.00, 20000000.00, 20000000.00, 20000000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 12:25:28'),
+(14, 10, 'ZINV2309260002', 8, 11, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '101013', '2030-04-21', 50.000, 5.000, 0.000, 10, '', 400000.00, 65000.00, 0.00, 11.00, 20000000.00, 20000000.00, 20000000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 12:25:35'),
+(15, 11, 'ZINV2309260003', 9, 12, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 100.000, 100.000, 0.000, 1, 'Pack', 800000.00, 45000.00, 0.00, 0.00, 80000000.00, 80000000.00, 80000000.00, 1025.0000, 0.002734, '2', 'Admin SC', '2026-09-23 12:25:51'),
+(16, 12, 'ZINV2309260004', 10, 13, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 300.000, 25.000, 0.000, 12, '', 400000.00, 63963964.00, 0.00, 11.00, 120000000.00, 120000000.00, 120000000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 12:25:58'),
+(17, 13, 'ZINV2309260005', 11, 14, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 257.000, 21.000, 5.000, 12, '', 100000.00, 63963964.00, 0.00, 11.00, 25700000.00, 25700000.00, 25700000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 13:42:15'),
+(18, 13, 'ZINV2309260005', 11, 15, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '101013', '2030-04-21', 7.000, 0.000, 7.000, 10, '', 185000.00, 65000.00, 0.00, 11.00, 1295000.00, 1295000.00, 1295000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 13:42:15'),
+(19, 13, 'ZINV2309260005', 11, 16, 'QCHAM04', 'Champion 77 WP 14 X 1 kg', '101012', '2027-08-21', 140.000, 140.000, 0.000, 1, '', 150000.00, 180180.18, 0.00, 11.00, 21000000.00, 21000000.00, 21000000.00, 0.0000, 0.000000, '2', 'Admin SC', '2026-09-23 13:42:15');
 
 -- --------------------------------------------------------
 
@@ -24887,9 +25512,15 @@ CREATE TABLE `tbso_faktur_jurnal` (
 --
 
 INSERT INTO `tbso_faktur_jurnal` (`id`, `id_faktur`, `no_faktur`, `piutang_dagang`, `penjualan`, `ppn_keluar`, `created_at`) VALUES
-(2, 2, 'DINV0409260002', 52725000.00, 52725000.00, 0.00, '2026-09-04 09:44:52'),
-(3, 3, 'DINV0409260003', 14690000.00, 13234234.00, 1455766.00, '2026-09-04 09:45:24'),
-(4, 4, 'LBYINV0409260001', 950000.00, 950000.00, 0.00, '2026-09-04 13:46:43');
+(3, 5, 'DINV1109260001', 45000.00, 45000.00, 0.00, '2026-09-11 13:39:34'),
+(4, 6, 'DINV1109260002', 0.00, 0.00, 0.00, '2026-09-11 13:40:24'),
+(5, 2, 'DINV2108260002', 14690000.00, 13234234.23, 1455765.77, '2026-09-11 14:48:09'),
+(6, 1, 'DINV2108260001', 52680000.00, 52680000.00, 0.00, '2026-09-11 14:48:18'),
+(9, 9, 'ZINV2309260001', 20000000.00, 18018018.00, 1981982.00, '2026-09-23 12:25:28'),
+(10, 10, 'ZINV2309260002', 20000000.00, 18018018.00, 1981982.00, '2026-09-23 12:25:35'),
+(11, 11, 'ZINV2309260003', 80000000.00, 80000000.00, 0.00, '2026-09-23 12:25:51'),
+(12, 12, 'ZINV2309260004', 120000000.00, 108108108.00, 11891892.00, '2026-09-23 12:25:58'),
+(14, 13, 'ZINV2309260005', 47995000.00, 43238738.74, 4756261.26, '2026-09-23 14:35:39');
 
 -- --------------------------------------------------------
 
@@ -24915,10 +25546,29 @@ CREATE TABLE `tbso_faktur_log` (
 --
 
 INSERT INTO `tbso_faktur_log` (`id`, `no_so`, `no_faktur`, `id_faktur`, `aksi`, `keterangan`, `detail_produk`, `dilakukan_oleh`, `ip_address`, `created_at`) VALUES
-(1, 'SO/040926/0002', 'DINV0409260001', 1, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV0409260001 dari SO SO/040926/0002 (3 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:38:44'),
-(2, 'SO/040926/0002', 'DINV0409260001', 1, 'REPOST_ITEM', 'Admin SC merepost 3 item faktur kembali ke SO.', NULL, 'admsc', '127.0.0.1', '2026-09-04 09:44:09'),
-(3, 'SO/040926/0002', 'DINV0409260002', 2, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV0409260002 dari SO SO/040926/0002 (3 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:44:52'),
-(4, 'SO/040926/0001', 'DINV0409260003', 3, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV0409260003 dari SO SO/040926/0001 (2 item).', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '127.0.0.1', '2026-09-04 09:45:24');
+(1, 'SO/210826/0002', 'DINV2108260001', 1, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV2108260001 dari SO SO/210826/0002 (3 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nTomat Saviro 18 X 25 X 5 gr | Qty: 5 pcs\nPadi NK 2133 20 X 1 kg | Qty: 500 pcs', 'Admin SC', '127.0.0.1', '2026-08-21 14:20:48'),
+(2, 'SO/210826/0001', 'DINV2108260002', 2, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV2108260002 dari SO SO/210826/0001 (2 item).', 'Pupuk MagneWish Powder 10 kg | Qty: 25 pcs\nRound Up 486 SL 12 X 1 ltr | Qty: 168 pcs', 'Admin SC', '127.0.0.1', '2026-08-21 14:21:09'),
+(3, 'SO/210826/0002', 'DINV2108260001', 1, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2108260001', '[{\"id_faktur_detail\":\"1\",\"qty\":\"4\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"180000\"},{\"id_faktur_detail\":\"2\",\"qty\":\"5\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"100\",\"diskon_rp\":\"225000\",\"total_harga\":\"0\"},{\"id_faktur_detail\":\"3\",\"qty\":\"500\",\"harga_satuan\":\"105000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"52500000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-11 13:25:24'),
+(4, 'SO/110926/0002', 'DINV1109260001', 5, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV1109260001 dari SO SO/110926/0002 (1 item).', 'Tomat Saviro 18 X 25 X 5 gr | Qty: 1 pcs', 'Admin SC', '127.0.0.1', '2026-09-11 13:39:34'),
+(5, 'SO/110926/0001', 'DINV1109260002', 6, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan DINV1109260002 dari SO SO/110926/0001 (1 item).', 'Round Up 486 SL 12 X 1 ltr | Qty: 11 pcs', 'Admin SC', '127.0.0.1', '2026-09-11 13:40:24'),
+(6, 'SO/210826/0001', 'DINV2108260002', 2, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '10.10.10.68', '2026-09-11 14:47:51'),
+(7, 'SO/210826/0002', 'DINV2108260001', 1, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '10.10.10.68', '2026-09-11 14:47:56'),
+(8, 'SO/210826/0001', 'DINV2108260002', 2, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2108260002', '[{\"id_faktur_detail\":\"4\",\"qty\":\"25\",\"harga_satuan\":\"50000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"1250000\"},{\"id_faktur_detail\":\"5\",\"qty\":\"168\",\"harga_satuan\":\"80000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"13440000\"}]', 'admin (admin)', '10.10.10.68', '2026-09-11 14:48:09'),
+(9, 'SO/210826/0002', 'DINV2108260001', 1, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: DINV2108260001', '[{\"id_faktur_detail\":\"1\",\"qty\":\"4\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"180000\"},{\"id_faktur_detail\":\"2\",\"qty\":\"5\",\"harga_satuan\":\"45000\",\"diskon_persen\":\"100\",\"diskon_rp\":\"225000\",\"total_harga\":\"0\"},{\"id_faktur_detail\":\"3\",\"qty\":\"500\",\"harga_satuan\":\"105000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"52500000\"}]', 'admin (admin)', '10.10.10.68', '2026-09-11 14:48:18'),
+(10, 'SO/220926/0001', 'ZINV2209260001', 7, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2209260001 dari SO SO/220926/0001 (1 item).', 'Padi NK 2133 20 X 1 kg | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-22 11:00:40'),
+(11, 'SO/220926/0002', 'ZINV2209260002', 8, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2209260002 dari SO SO/220926/0002 (1 item).', 'Round Up 486 SL 12 X 1 ltr | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-22 11:00:48'),
+(12, 'SO/220926/0002', 'ZINV2209260002', 8, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-23 12:24:38'),
+(13, 'SO/220926/0001', 'ZINV2209260001', 7, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '127.0.0.1', '2026-09-23 12:24:41'),
+(14, 'SO/220926/0002', 'ZINV2209260002', 8, 'DELETE_FAKTUR', 'Hapus Faktur Penjualan & Pembersihan Jurnal via Modul Transaksi. Alasan: tidak di perlukan', NULL, 'admin (admin)', '127.0.0.1', '2026-09-23 12:24:53'),
+(15, 'SO/220926/0001', 'ZINV2209260001', 7, 'DELETE_FAKTUR', 'Hapus Faktur Penjualan & Pembersihan Jurnal via Modul Transaksi. Alasan: tidak di perlukan', NULL, 'admin (admin)', '127.0.0.1', '2026-09-23 12:25:02'),
+(16, 'SO/230926/0001', 'ZINV2309260001', 9, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2309260001 dari SO SO/230926/0001 (1 item).', 'Spontas 450 SL 10 X 1 ltr | Qty: 50 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:28'),
+(17, 'SO/230926/0002', 'ZINV2309260002', 10, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2309260002 dari SO SO/230926/0002 (1 item).', 'Spontas 450 SL 10 X 1 ltr | Qty: 50 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:35'),
+(18, 'SO/230926/0003', 'ZINV2309260003', 11, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2309260003 dari SO SO/230926/0003 (1 item).', 'Padi NK 2133 20 X 1 kg | Qty: 100 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:51'),
+(19, 'SO/230926/0004', 'ZINV2309260004', 12, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2309260004 dari SO SO/230926/0004 (1 item).', 'Round Up 486 SL 12 X 1 ltr | Qty: 300 pcs', 'Admin SC', '127.0.0.1', '2026-09-23 12:25:58'),
+(20, 'SO/230926/0005', 'ZINV2309260005', 13, 'BUAT_FAKTUR', 'Admin SC membuat Faktur Penjualan ZINV2309260005 dari SO SO/230926/0005 (3 item).', 'Round Up 486 SL 12 X 1 ltr | Qty: 257 pcs\nSpontas 450 SL 10 X 1 ltr | Qty: 7 pcs\nChampion 77 WP 14 X 1 kg | Qty: 140 pcs', 'Admin SC', '10.10.10.68', '2026-09-23 13:42:15'),
+(21, 'SO/230926/0005', 'ZINV2309260005', 13, 'UNPOST_FAKTUR', 'Unpost Faktur Penjualan — Jurnal dibersihkan, status dikembalikan ke Draft untuk diposting ulang.', NULL, 'admin (admin)', '10.10.10.68', '2026-09-23 13:51:00'),
+(22, 'SO/230926/0005', 'ZINV2309260005', 13, 'RESTORE_HARGA_ASLI', 'Mengembalikan harga Faktur Z ke nominal asli sebelum diskon 20% (Total: Rp 47.995.000). Diskon 20% akan diterapkan saat dipecah menjadi Faktur H.', 'Round Up @ Rp 100.000 (Rp 25.700.000)\nSpontas @ Rp 185.000 (Rp 1.295.000)\nChampion @ Rp 150.000 (Rp 21.000.000)', 'admin', NULL, '2026-09-23 14:34:11'),
+(23, 'SO/230926/0005', 'ZINV2309260005', 13, 'EDIT_FAKTUR', 'Revisi Qty & Nilai Faktur via Modul Transaksi. Catatan: Faktur Penjualan: ZINV2309260005', '[{\"id_faktur_detail\":\"17\",\"qty\":\"257\",\"harga_satuan\":\"100000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"25700000\"},{\"id_faktur_detail\":\"18\",\"qty\":\"7\",\"harga_satuan\":\"185000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"1295000\"},{\"id_faktur_detail\":\"19\",\"qty\":\"140\",\"harga_satuan\":\"150000\",\"diskon_persen\":\"0\",\"diskon_rp\":\"0\",\"total_harga\":\"21000000\"}]', 'admin (admin)', '127.0.0.1', '2026-09-23 14:35:39');
 
 -- --------------------------------------------------------
 
@@ -24939,7 +25589,7 @@ CREATE TABLE `tbso_faktur_penjualan` (
   `total_tonase` decimal(15,3) NOT NULL DEFAULT '0.000',
   `total_kubikasi` decimal(15,5) NOT NULL DEFAULT '0.00000',
   `catatan` text,
-  `status` enum('draft','confirmed','proses_do','selesai','selesai_do','cancelled') NOT NULL DEFAULT 'confirmed',
+  `status` enum('draft','confirmed','proses_do','selesai','selesai_do','cancelled') NOT NULL DEFAULT 'confirmed' COMMENT 'draft | confirmed | proses_do | selesai | cancelled',
   `so_source` varchar(20) NOT NULL DEFAULT 'SALES',
   `create_by` varchar(50) DEFAULT NULL,
   `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24959,10 +25609,113 @@ CREATE TABLE `tbso_faktur_penjualan` (
 --
 
 INSERT INTO `tbso_faktur_penjualan` (`id_faktur`, `no_faktur`, `id_so`, `no_so`, `kd_customer`, `customer_name`, `gudang_id`, `tanggal_faktur`, `tanggal_selesai_do`, `total_tonase`, `total_kubikasi`, `catatan`, `status`, `so_source`, `create_by`, `create_at`, `update_by`, `update_at`, `tanggal_jatuh_tempo`, `salesman`, `cara_pembayaran`, `jtempo`, `tempo`, `parent_id_faktur`, `is_split_parent`) VALUES
-(1, 'DINV0409260001', 2, 'SO/040926/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-09-04', NULL, 0.518, 1.37920, '', 'cancelled', 'SALES', 'Admin SC', '2026-09-04 09:38:44', 'admsc', '2026-09-04 09:44:09', '2026-09-04', 'Ariyani', 'tempo', 0, 0, NULL, 0),
-(2, 'DINV0409260002', 2, 'SO/040926/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-09-01', NULL, 0.518, 1.37920, '', 'selesai', 'SALES', 'Admin SC', '2026-09-04 09:44:52', 'Admin SC', '2026-09-04 09:44:52', '2026-10-31', 'Ariyani', 'tempo', 60, 60, NULL, 0),
-(3, 'DINV0409260003', 1, 'SO/040926/0001', 'RIZK05', 'Rizky Jaya, CV', '2', '2026-08-06', NULL, 0.255, 0.06695, '', 'selesai', 'SALES', 'Admin SC', '2026-09-04 09:45:24', 'Admin SC', '2026-09-04 12:59:27', '2026-10-05', 'Reni', 'bg', 60, 60, NULL, 0),
-(4, 'LBYINV0409260001', 3, 'SO-LBY/040926/0001', 'KARI09', 'Karisma Indoagro Universa', '2', '2026-09-04', '2026-09-04', 0.010, 0.02734, 'Penjualan Langsung Loby (CASH)', 'selesai', 'LOBY', 'admin', '2026-09-04 13:46:43', NULL, NULL, NULL, NULL, 'cash', 0, 0, NULL, 0);
+(1, 'DINV2108260001', 2, 'SO/210826/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-08-15', NULL, 0.518, 1.37798, 'Faktur Penjualan: DINV2108260001', 'selesai', 'SALES', 'Admin SC', '2026-08-21 14:20:48', '205', '2026-09-11 14:48:18', '2026-09-30', 'Ariyani', 'cash', 60, 60, NULL, 0),
+(2, 'DINV2108260002', 1, 'SO/210826/0001', 'RIZK05', 'Rizky Jaya, CV', '2', '2026-08-14', NULL, 0.255, 0.06695, 'Faktur Penjualan: DINV2108260002', 'selesai', 'SALES', 'Admin SC', '2026-08-21 14:21:09', '205', '2026-09-11 14:48:09', '2026-09-05', 'Reni', 'bg', 30, 30, NULL, 0),
+(5, 'DINV1109260001', 4, 'SO/110926/0002', 'TANI59', 'Manunggal Agro Sentosa,PT', '2', '2026-09-27', NULL, 0.001, 0.00122, '', 'selesai', 'SALES', 'Admin SC', '2026-09-11 13:39:34', 'Admin SC', '2026-09-11 13:39:34', '2026-10-27', 'Ariyani', 'tempo', 30, 30, NULL, 0),
+(6, 'DINV1109260002', 3, 'SO/110926/0001', 'RIZK05', 'Rizky Jaya, CV', '2', '2026-10-05', NULL, 0.000, 0.00000, '', 'selesai', 'SALES', 'Admin SC', '2026-09-11 13:40:24', 'Admin SC', '2026-09-11 13:40:24', '2026-11-04', 'Reni', 'tempo', 30, 30, NULL, 0),
+(9, 'ZINV2309260001', 7, 'SO/230926/0001', 'SUMB48', 'Agin', '2', '2026-09-23', NULL, 0.000, 0.00000, '', 'selesai', 'SALES', 'Admin SC', '2026-09-23 12:25:28', 'admlog', '2026-09-23 13:41:22', '2026-10-23', 'Ariyani', 'tempo', 30, 30, NULL, 0),
+(10, 'ZINV2309260002', 8, 'SO/230926/0002', 'IBUT03', 'Nor Cahyo Hadi Kusumo', '2', '2026-09-23', NULL, 0.000, 0.00000, '', 'selesai', 'SALES', 'Admin SC', '2026-09-23 12:25:35', 'admlog', '2026-09-23 13:41:22', '2026-10-23', 'Ariyani', 'cash', 30, 30, NULL, 0),
+(11, 'ZINV2309260003', 9, 'SO/230926/0003', 'SAHA12', 'Syaiful Anam', '2', '2026-09-23', NULL, 0.103, 0.27340, '', 'selesai', 'SALES', 'Admin SC', '2026-09-23 12:25:51', 'admlog', '2026-09-23 13:41:17', '2026-10-23', 'Reni', 'cash', 30, 30, NULL, 1),
+(12, 'ZINV2309260004', 10, 'SO/230926/0004', 'AGRO76', 'Hanifian Ahmad Musyaffa', '2', '2026-09-23', NULL, 0.000, 0.00000, '', 'selesai', 'SALES', 'Admin SC', '2026-09-23 12:25:58', 'admlog', '2026-09-23 13:41:17', '2026-10-23', 'Reni', 'cash', 30, 30, NULL, 0),
+(13, 'ZINV2309260005', 11, 'SO/230926/0005', 'AGRO76', 'Hanifian Ahmad Musyaffa', '2', '2026-09-23', NULL, 0.000, 0.00000, 'Faktur Penjualan: ZINV2309260005', 'selesai', 'SALES', 'Admin SC', '2026-09-23 13:42:15', 'admin', '2026-09-23 14:59:56', '2026-10-23', 'Reni', 'cash', 30, 30, NULL, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbso_faktur_z_pecah`
+--
+
+CREATE TABLE `tbso_faktur_z_pecah` (
+  `id_pecah` int NOT NULL,
+  `no_faktur` varchar(50) NOT NULL COMMENT 'Kode Faktur pecahan diawali H',
+  `parent_id_faktur` int NOT NULL COMMENT 'ID Faktur Z Induk',
+  `parent_no_faktur` varchar(50) NOT NULL COMMENT 'No Faktur Z Induk',
+  `id_so` int NOT NULL,
+  `no_so` varchar(50) NOT NULL,
+  `kd_customer` varchar(50) NOT NULL COMMENT 'Customer Penerima Pecahan',
+  `customer_name` varchar(255) NOT NULL,
+  `gudang_id` varchar(50) DEFAULT NULL,
+  `tanggal_faktur` date NOT NULL,
+  `tanggal_jatuh_tempo` date DEFAULT NULL,
+  `salesman` varchar(100) DEFAULT NULL,
+  `cara_pembayaran` varchar(20) DEFAULT NULL,
+  `jtempo` int DEFAULT '0',
+  `tempo` int DEFAULT '0',
+  `catatan` text,
+  `status` varchar(20) NOT NULL DEFAULT 'confirmed',
+  `total_tonase` decimal(12,4) DEFAULT '0.0000',
+  `total_kubikasi` decimal(12,6) DEFAULT '0.000000',
+  `create_by` varchar(100) NOT NULL,
+  `create_at` datetime NOT NULL,
+  `update_by` varchar(100) DEFAULT NULL,
+  `update_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+--
+-- Dumping data untuk tabel `tbso_faktur_z_pecah`
+--
+
+INSERT INTO `tbso_faktur_z_pecah` (`id_pecah`, `no_faktur`, `parent_id_faktur`, `parent_no_faktur`, `id_so`, `no_so`, `kd_customer`, `customer_name`, `gudang_id`, `tanggal_faktur`, `tanggal_jatuh_tempo`, `salesman`, `cara_pembayaran`, `jtempo`, `tempo`, `catatan`, `status`, `total_tonase`, `total_kubikasi`, `create_by`, `create_at`, `update_by`, `update_at`) VALUES
+(2, 'HINV2309260001', 11, 'ZINV2309260003', 9, 'SO/230926/0003', 'KHO01AC', 'Sarminah (Sahala/Syaiful)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260003\n', 'confirmed', 0.0256, 0.068350, 'admin', '2026-09-23 13:30:41', NULL, NULL),
+(3, 'HINV2309260002', 11, 'ZINV2309260003', 9, 'SO/230926/0003', 'SAHA100AC', 'Yatmo (Sahala/Syaiful)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260003\n', 'confirmed', 0.0256, 0.068350, 'admin', '2026-09-23 13:30:41', NULL, NULL),
+(4, 'HINV2309260003', 11, 'ZINV2309260003', 9, 'SO/230926/0003', 'SAHA101AC', 'Musa (Sahala/Syaiful)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260003\n', 'confirmed', 0.0256, 0.068350, 'admin', '2026-09-23 13:30:41', NULL, NULL),
+(5, 'HINV2309260004', 11, 'ZINV2309260003', 9, 'SO/230926/0003', 'SAHA102AC', 'Gunawi (Sahala/Syaiful)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260003\n', 'confirmed', 0.0256, 0.068350, 'admin', '2026-09-23 13:30:41', NULL, NULL),
+(6, 'HINV2309260005', 13, 'ZINV2309260005', 11, 'SO/230926/0005', 'AGRO01AC', 'Dwi Ratnawati (Agro Makmur Sentosa)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260005\n', 'confirmed', 0.0000, 0.000000, 'admin', '2026-09-23 14:59:56', NULL, NULL),
+(7, 'HINV2309260006', 13, 'ZINV2309260005', 11, 'SO/230926/0005', 'AGRO02AC', 'Eko Wahyu Wulandari (Agro Makmur Sentosa)', '2', '2026-09-23', '2026-10-23', 'Reni', 'cash', 30, 30, 'Pecahan Massal dari Faktur Z: ZINV2309260005\n', 'confirmed', 0.0000, 0.000000, 'admin', '2026-09-23 14:59:56', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbso_faktur_z_pecah_detail`
+--
+
+CREATE TABLE `tbso_faktur_z_pecah_detail` (
+  `id` int NOT NULL,
+  `id_pecah` int NOT NULL COMMENT 'Relasi ke tbso_faktur_z_pecah.id_pecah',
+  `no_faktur` varchar(50) NOT NULL COMMENT 'Kode Faktur pecahan H',
+  `parent_id_faktur` int NOT NULL,
+  `parent_no_faktur` varchar(50) NOT NULL,
+  `id_faktur_detail_parent` int DEFAULT NULL COMMENT 'ID baris tbso_faktur_detail induk',
+  `id_so` int NOT NULL,
+  `id_so_detail` int NOT NULL,
+  `kd_barang` varchar(50) NOT NULL,
+  `nama_barang` varchar(255) NOT NULL,
+  `no_lot` varchar(50) DEFAULT NULL,
+  `expired_date` date DEFAULT NULL,
+  `qty` decimal(15,3) NOT NULL DEFAULT '0.000',
+  `qty_box` decimal(15,3) DEFAULT '0.000',
+  `qty_satuan` decimal(15,3) DEFAULT '0.000',
+  `isi_per_box` int DEFAULT '1',
+  `satuan` varchar(20) DEFAULT NULL,
+  `hrg_satuan` decimal(18,2) DEFAULT '0.00',
+  `hrg_pokok` decimal(18,2) DEFAULT '0.00',
+  `disc` decimal(5,2) DEFAULT '0.00',
+  `pajak` decimal(5,2) DEFAULT '0.00',
+  `subtotal_before_disc` decimal(15,2) DEFAULT '0.00',
+  `subtotal_after_disc` decimal(15,2) DEFAULT '0.00',
+  `total_harga` decimal(18,2) DEFAULT '0.00',
+  `berat_gram` decimal(12,4) DEFAULT '0.0000',
+  `kubikasi_m3` decimal(12,6) DEFAULT '0.000000',
+  `gudang_id` varchar(50) DEFAULT NULL,
+  `create_by` varchar(100) NOT NULL,
+  `create_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+--
+-- Dumping data untuk tabel `tbso_faktur_z_pecah_detail`
+--
+
+INSERT INTO `tbso_faktur_z_pecah_detail` (`id`, `id_pecah`, `no_faktur`, `parent_id_faktur`, `parent_no_faktur`, `id_faktur_detail_parent`, `id_so`, `id_so_detail`, `kd_barang`, `nama_barang`, `no_lot`, `expired_date`, `qty`, `qty_box`, `qty_satuan`, `isi_per_box`, `satuan`, `hrg_satuan`, `hrg_pokok`, `disc`, `pajak`, `subtotal_before_disc`, `subtotal_after_disc`, `total_harga`, `berat_gram`, `kubikasi_m3`, `gudang_id`, `create_by`, `create_at`) VALUES
+(2, 2, 'HINV2309260001', 11, 'ZINV2309260003', 15, 9, 12, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 25.000, 25.000, 0.000, 1, 'Pack', 800000.00, 45000.00, 0.00, 0.00, 20000000.00, 20000000.00, 20000000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-23 13:30:41'),
+(3, 3, 'HINV2309260002', 11, 'ZINV2309260003', 15, 9, 12, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 25.000, 25.000, 0.000, 1, 'Pack', 800000.00, 45000.00, 0.00, 0.00, 20000000.00, 20000000.00, 20000000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-23 13:30:41'),
+(4, 4, 'HINV2309260003', 11, 'ZINV2309260003', 15, 9, 12, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 25.000, 25.000, 0.000, 1, 'Pack', 800000.00, 45000.00, 0.00, 0.00, 20000000.00, 20000000.00, 20000000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-23 13:30:41'),
+(5, 5, 'HINV2309260004', 11, 'ZINV2309260003', 15, 9, 12, 'QPADI45', 'Padi NK 2133 20 X 1 kg', '1010101', '2027-11-21', 25.000, 25.000, 0.000, 1, 'Pack', 800000.00, 45000.00, 0.00, 0.00, 20000000.00, 20000000.00, 20000000.00, 1025.0000, 0.002734, '2', 'admin', '2026-09-23 13:30:41'),
+(6, 6, 'HINV2309260005', 13, 'ZINV2309260005', 17, 11, 14, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 129.000, 10.000, 9.000, 12, '', 80000.00, 63963964.00, 0.00, 11.00, 10320000.00, 10320000.00, 10320000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56'),
+(7, 6, 'HINV2309260005', 13, 'ZINV2309260005', 18, 11, 15, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '101013', '2030-04-21', 4.000, 0.000, 4.000, 10, '', 148000.00, 65000.00, 0.00, 11.00, 592000.00, 592000.00, 592000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56'),
+(8, 6, 'HINV2309260005', 13, 'ZINV2309260005', 19, 11, 16, 'QCHAM04', 'Champion 77 WP 14 X 1 kg', '101012', '2027-08-21', 70.000, 70.000, 0.000, 1, '', 120000.00, 180180.18, 0.00, 11.00, 8400000.00, 8400000.00, 8400000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56'),
+(9, 7, 'HINV2309260006', 13, 'ZINV2309260005', 17, 11, 14, 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', '101015', '2028-04-21', 128.000, 10.000, 8.000, 12, '', 80000.00, 63963964.00, 0.00, 11.00, 10240000.00, 10240000.00, 10240000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56'),
+(10, 7, 'HINV2309260006', 13, 'ZINV2309260005', 18, 11, 15, 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', '101013', '2030-04-21', 3.000, 0.000, 3.000, 10, '', 148000.00, 65000.00, 0.00, 11.00, 444000.00, 444000.00, 444000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56'),
+(11, 7, 'HINV2309260006', 13, 'ZINV2309260005', 19, 11, 16, 'QCHAM04', 'Champion 77 WP 14 X 1 kg', '101012', '2027-08-21', 70.000, 70.000, 0.000, 1, '', 120000.00, 180180.18, 0.00, 11.00, 8400000.00, 8400000.00, 8400000.00, 0.0000, 0.000000, '2', 'admin', '2026-09-23 14:59:56');
 
 -- --------------------------------------------------------
 
@@ -25006,9 +25759,17 @@ CREATE TABLE `tbso_sales_order` (
 --
 
 INSERT INTO `tbso_sales_order` (`id_so`, `no_so`, `tanggal_transaksi`, `kd_customer`, `kd_rute`, `loading_tgl_pengiriman`, `loading_jenis_pengiriman`, `loading_driver`, `loading_nolambung`, `loading_urutan`, `customer_name`, `gudang_id`, `jumlah_item`, `total_tonase`, `total_kubikasi`, `batas_tonase`, `batas_kubikasi`, `status`, `so_source`, `catatan`, `cara_pembayaran`, `is_faktur_z`, `create_by`, `create_at`, `update_by`, `update_at`, `approve_by`, `no_faktur`) VALUES
-(1, 'SO/040926/0001', '2026-08-06', 'RIZK05', 'MD-1', '2026-08-06', 'expedisi_kantor', 'QIU2205037', '14', 0, 'Rizky Jaya, CV', '2', 2, 0.255, 0.06695, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Reni', '2026-09-04 09:21:25', 'admlog', '2026-09-04 09:45:24', NULL, NULL),
-(2, 'SO/040926/0002', '2026-09-01', 'TANI59', 'JLS', '2026-09-01', 'expedisi_kantor', 'QIU2303045', '17', 0, 'Manunggal Agro Sentosa,PT', '2', 3, 0.518, 1.37920, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Ariyani', '2026-09-04 09:34:39', 'admlog', '2026-09-04 09:44:52', NULL, NULL),
-(3, 'SO-LBY/040926/0001', '2026-09-05', 'KARI09', NULL, NULL, 'expedisi_kantor', NULL, NULL, 0, 'Karisma Indoagro Universa', '2', 1, 0.010, 0.02734, 7.000, 9.00000, 'completed', 'LOBY', 'barang untuk berkebun di karisma', 'cash', 0, 'admin', '2026-09-04 13:46:37', 'admin', '2026-09-04 13:46:43', NULL, NULL);
+(1, 'SO/210826/0001', '2026-08-06', 'RIZK05', 'MD-1', '2026-08-06', 'expedisi_kantor', 'QIU1804261', '12', 0, 'Rizky Jaya, CV', '2', 2, 0.255, 0.06695, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 0, 'Reni', '2026-08-21 14:16:36', 'admlog', '2026-08-21 14:21:09', NULL, NULL),
+(2, 'SO/210826/0002', '2026-09-01', 'TANI59', 'JLS', '2026-09-01', 'expedisi_kantor', 'QIU2303045', '13', 0, 'Manunggal Agro Sentosa,PT', '2', 3, 0.518, 1.37920, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 0, 'Ariyani', '2026-08-21 14:18:30', 'admlog', '2026-08-21 14:20:48', NULL, NULL),
+(3, 'SO/110926/0001', '2026-09-11', 'RIZK05', 'MD-1', '2026-10-01', 'expedisi_kantor', 'QIU2205037', '10', 0, 'Rizky Jaya, CV', '2', 1, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Reni', '2026-09-11 13:31:45', 'admlog', '2026-09-11 13:40:24', NULL, NULL),
+(4, 'SO/110926/0002', '2026-09-11', 'TANI59', 'JLS', '2026-09-27', 'expedisi_kantor', 'QIU2303045', '12', 0, 'Manunggal Agro Sentosa,PT', '2', 1, 0.001, 0.00122, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 0, 'Ariyani', '2026-09-11 13:36:30', 'admlog', '2026-09-11 13:39:34', NULL, NULL),
+(5, 'SO/220926/0001', '2026-09-22', 'KARY26', 'MLG', '2026-09-18', 'expedisi_kantor', 'QIU1605130', '14', 0, 'Agung Basuki Rachmat', '2', 1, 0.103, 0.27340, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Reni', '2026-09-22 10:25:07', 'admlog', '2026-09-22 11:00:40', NULL, NULL),
+(6, 'SO/220926/0002', '2026-09-22', 'AGRI09', 'MLG', '2026-09-18', 'expedisi_kantor', 'QIU1605130', '14', 0, 'Agrikultur Gelora N, PT', '2', 1, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Reni', '2026-09-22 10:26:04', 'admlog', '2026-09-22 11:00:48', NULL, NULL),
+(7, 'SO/230926/0001', '2026-09-23', 'SUMB48', 'PRB', '2026-09-23', 'expedisi_kantor', 'QIU2508293', '10', 0, 'Agin', '2', 1, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'tempo', 1, 'Ariyani', '2026-09-23 11:52:24', 'admlog', '2026-09-23 12:25:28', NULL, NULL),
+(8, 'SO/230926/0002', '2026-09-23', 'IBUT03', 'PRB', '2026-09-23', 'expedisi_kantor', 'QIU2508293', '10', 0, 'Nor Cahyo Hadi Kusumo', '2', 1, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Ariyani', '2026-09-23 12:17:18', 'admlog', '2026-09-23 12:25:35', NULL, NULL),
+(9, 'SO/230926/0003', '2026-09-23', 'SAHA12', 'MD-2', '2026-09-23', 'expedisi_kantor', 'QIU1804261', '22', 0, 'Syaiful Anam', '2', 1, 0.103, 0.27340, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Reni', '2026-09-23 12:19:47', 'admlog', '2026-09-23 12:25:51', NULL, NULL),
+(10, 'SO/230926/0004', '2026-09-23', 'AGRO76', 'MD-2', '2026-09-23', 'expedisi_kantor', 'QIU1804261', '22', 0, 'Hanifian Ahmad Musyaffa', '2', 1, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Reni', '2026-09-23 12:21:20', 'admlog', '2026-09-23 12:25:58', NULL, NULL),
+(11, 'SO/230926/0005', '2026-09-23', 'AGRO76', 'JBR', '2026-09-23', 'expedisi_kantor', 'QIU2207039', '12', 0, 'Hanifian Ahmad Musyaffa', '2', 3, 0.000, 0.00000, 7.000, 9.00000, 'completed', 'SALES', '', 'cash', 1, 'Reni', '2026-09-23 13:38:42', 'admlog', '2026-09-23 13:42:15', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -25034,8 +25795,8 @@ CREATE TABLE `tbso_sales_order_detail` (
   `disc` decimal(5,2) NOT NULL DEFAULT '0.00',
   `subtotal_before_disc` decimal(15,2) NOT NULL DEFAULT '0.00',
   `subtotal_after_disc` decimal(15,2) NOT NULL DEFAULT '0.00',
-  `hrg_satuan` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `hrg_pokok` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `hrg_satuan` decimal(18,2) NOT NULL,
+  `hrg_pokok` decimal(18,2) NOT NULL DEFAULT '0.00',
   `total_harga` decimal(18,2) NOT NULL,
   `berat_gram` decimal(12,4) NOT NULL DEFAULT '0.0000',
   `kubikasi_m3` decimal(12,6) NOT NULL DEFAULT '0.000000',
@@ -25063,12 +25824,22 @@ CREATE TABLE `tbso_sales_order_detail` (
 --
 
 INSERT INTO `tbso_sales_order_detail` (`id`, `id_so`, `no_so`, `produk_id`, `kd_barang`, `nama_barang`, `qty`, `qty_box`, `qty_satuan`, `isi_per_box`, `satuan`, `expired_date`, `no_lot`, `pajak`, `disc`, `subtotal_before_disc`, `subtotal_after_disc`, `hrg_satuan`, `hrg_pokok`, `total_harga`, `berat_gram`, `kubikasi_m3`, `kode_akun`, `create_at`, `create_by`, `qty_faktur`, `qty_siap_faktur`, `qty_tidak_terkirim`, `verifikasi_loading_status`, `verifikasi_loading_note`, `verifikasi_loading_by`, `verifikasi_loading_at`, `checker_loaded`, `qty_outstanding`, `approve_by`, `is_nego`, `no_faktur`, `qty_delivered`, `ref_no`) VALUES
-(1, 1, 'SO/040926/0001', '', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25.000, 0.000, 25.000, 1, 'Zak', '2027-02-01', '1123514', 11.00, 0.00, 1250000.00, 1250000.00, 50000.00000, 41441.44140, 1250000.00, 10200.0000, 0.002678, NULL, '2026-09-04 09:21:25', 'Reni', 25, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-04 09:37:34', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(2, 1, 'SO/040926/0001', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168.000, 0.000, 168.000, 12, '', '2027-02-01', '112233', 11.00, 0.00, 13440000.00, 13440000.00, 80000.00000, 63963964.00000, 13440000.00, 0.0000, 0.000000, NULL, '2026-09-04 09:21:25', 'Reni', 168, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-04 09:37:34', 1, 0, NULL, 0, NULL, 0.000, NULL),
-(3, 2, 'SO/040926/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-02-01', '556633', 0.00, 0.00, 225000.00, 225000.00, 45000.00000, 35000.00000, 225000.00, 575.0000, 0.001220, NULL, '2026-09-04 09:34:39', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-04 09:37:43', 0, 0, NULL, 0, NULL, 0.000, NULL),
-(4, 2, 'SO/040926/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-02-01', '556633', 0.00, 100.00, 225000.00, 0.00, 45000.00000, 35000.00000, 0.00, 575.0000, 0.001220, NULL, '2026-09-04 09:34:39', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-04 09:37:43', 0, 0, NULL, 0, NULL, 0.000, NULL),
-(5, 2, 'SO/040926/0002', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500.000, 0.000, 500.000, 1, 'Pack', '2027-02-01', '00212', 0.00, 0.00, 52500000.00, 52500000.00, 105000.00000, 95000.00000, 52500000.00, 1025.0000, 0.002734, NULL, '2026-09-04 09:34:39', 'Ariyani', 500, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-04 09:37:43', 0, 0, NULL, 0, NULL, 0.000, NULL),
-(6, 3, 'SO-LBY/040926/0001', 'QPADI45', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 10.000, 10.000, 0.000, 1, 'Pack', '2027-02-01', '00212', 0.00, 0.00, 950000.00, 950000.00, 95000.00000, 95000.00000, 950000.00, 1025.0000, 0.002734, NULL, '2026-09-04 13:46:37', 'admin', 10, 10.000, 0.000, 'pending', NULL, NULL, NULL, 0, 0, NULL, 0, NULL, 0.000, NULL);
+(1, 1, 'SO/210826/0001', '', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25.000, 0.000, 25.000, 1, 'Zak', '2028-01-21', '101011', 11.00, 0.00, 1250000.00, 1250000.00, 50000.00, 41441.44, 1250000.00, 10200.0000, 0.002678, NULL, '2026-08-21 14:16:36', 'Reni', 25, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-21 14:20:12', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(2, 1, 'SO/210826/0001', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168.000, 0.000, 168.000, 12, '', '2028-04-21', '101015', 11.00, 0.00, 13440000.00, 13440000.00, 80000.00, 63963.96, 13440000.00, 0.0000, 0.000000, NULL, '2026-08-21 14:16:36', 'Reni', 168, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-21 14:20:12', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(3, 2, 'SO/210826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-06-21', '101019', 0.00, 0.00, 225000.00, 225000.00, 45000.00, 35000.00, 225000.00, 575.0000, 0.001220, NULL, '2026-08-21 14:18:30', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-21 14:20:23', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(4, 2, 'SO/210826/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5.000, 0.000, 5.000, 450, 'Pack', '2027-06-21', '101019', 0.00, 100.00, 225000.00, 0.00, 45000.00, 35000.00, 0.00, 575.0000, 0.001220, NULL, '2026-08-21 14:18:30', 'Ariyani', 5, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-21 14:20:23', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(5, 2, 'SO/210826/0002', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500.000, 0.000, 500.000, 1, 'Pack', '2027-11-21', '1010101', 0.00, 0.00, 52500000.00, 52500000.00, 105000.00, 95000.00, 52500000.00, 1025.0000, 0.002734, NULL, '2026-08-21 14:18:30', 'Ariyani', 500, NULL, 0.000, 'verified', NULL, 'admlog', '2026-08-21 14:20:23', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(6, 3, 'SO/110926/0001', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 11.000, 0.000, 11.000, 12, '', '2028-04-21', '101015', 11.00, 100.00, 880000.00, 0.00, 80000.00, 63963964.00, 0.00, 0.0000, 0.000000, NULL, '2026-09-11 13:31:45', 'Reni', 11, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-11 13:38:08', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(7, 4, 'SO/110926/0002', '', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 1.000, 0.000, 1.000, 450, 'Pack', '2027-06-21', '101019', 0.00, 0.00, 45000.00, 45000.00, 45000.00, 35000.00, 45000.00, 575.0000, 0.001220, NULL, '2026-09-11 13:36:30', 'Ariyani', 1, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-11 13:37:46', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(8, 5, 'SO/220926/0001', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 100.000, 100.000, 0.000, 1, 'Pack', '2027-11-21', '1010101', 0.00, 0.00, 100000000.00, 100000000.00, 1000000.00, 45000.00, 100000000.00, 1025.0000, 0.002734, NULL, '2026-09-22 10:25:07', 'Reni', 100, NULL, 0.000, 'verified', 'a', 'admlog', '2026-09-22 10:31:36', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(9, 6, 'SO/220926/0002', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 100.000, 0.000, 100.000, 12, '', '2028-04-21', '101015', 11.00, 0.00, 100000000.00, 100000000.00, 1000000.00, 63963964.00, 100000000.00, 0.0000, 0.000000, NULL, '2026-09-22 10:26:04', 'Reni', 100, NULL, 0.000, 'verified', 'a', 'admlog', '2026-09-22 10:31:36', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(10, 7, 'SO/230926/0001', '', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 50.000, 0.000, 50.000, 10, '', '2030-04-21', '101013', 11.00, 0.00, 20000000.00, 20000000.00, 400000.00, 65000.00, 20000000.00, 0.0000, 0.000000, NULL, '2026-09-23 11:52:24', 'Ariyani', 50, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 12:22:56', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(11, 8, 'SO/230926/0002', '', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 50.000, 0.000, 50.000, 10, '', '2030-04-21', '101013', 11.00, 0.00, 20000000.00, 20000000.00, 400000.00, 65000.00, 20000000.00, 0.0000, 0.000000, NULL, '2026-09-23 12:17:18', 'Ariyani', 50, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 12:22:56', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(12, 9, 'SO/230926/0003', '', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 100.000, 0.000, 100.000, 1, 'Pack', '2027-11-21', '1010101', 0.00, 0.00, 80000000.00, 80000000.00, 800000.00, 45000.00, 80000000.00, 1025.0000, 0.002734, NULL, '2026-09-23 12:19:47', 'Reni', 100, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 12:22:46', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(13, 10, 'SO/230926/0004', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 300.000, 0.000, 300.000, 12, '', '2028-04-21', '101015', 11.00, 0.00, 120000000.00, 120000000.00, 400000.00, 63963964.00, 120000000.00, 0.0000, 0.000000, NULL, '2026-09-23 12:21:20', 'Reni', 300, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 12:22:46', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(14, 11, 'SO/230926/0005', '', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 257.000, 0.000, 257.000, 12, '', '2028-04-21', '101015', 11.00, 0.00, 25700000.00, 25700000.00, 100000.00, 63963964.00, 25700000.00, 0.0000, 0.000000, NULL, '2026-09-23 13:38:42', 'Reni', 257, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 13:40:10', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(15, 11, 'SO/230926/0005', '', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 7.000, 0.000, 7.000, 10, '', '2030-04-21', '101013', 11.00, 0.00, 1295000.00, 1295000.00, 185000.00, 65000.00, 1295000.00, 0.0000, 0.000000, NULL, '2026-09-23 13:38:42', 'Reni', 7, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 13:40:10', 1, 0, NULL, 0, NULL, 0.000, NULL),
+(16, 11, 'SO/230926/0005', '', 'QCHAM04', 'Champion 77 WP 14 X 1 kg', 140.000, 0.000, 140.000, 1, '', '2027-08-21', '101012', 11.00, 0.00, 21000000.00, 21000000.00, 150000.00, 180180.18, 21000000.00, 0.0000, 0.000000, NULL, '2026-09-23 13:38:42', 'Reni', 140, NULL, 0.000, 'verified', NULL, 'admlog', '2026-09-23 13:40:10', 1, 0, NULL, 0, NULL, 0.000, NULL);
 
 -- --------------------------------------------------------
 
@@ -25089,27 +25860,6 @@ CREATE TABLE `tbso_so_approval` (
   `note` varchar(500) DEFAULT NULL,
   `act_by` varchar(100) DEFAULT NULL,
   `act_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
--- Struktur dari tabel `tbso_stock_reservation`
---
-
-CREATE TABLE `tbso_stock_reservation` (
-  `id` bigint UNSIGNED NOT NULL,
-  `no_faktur` varchar(30) NOT NULL,
-  `no_so` varchar(30) DEFAULT NULL,
-  `id_so_detail` int DEFAULT NULL,
-  `kd_barang` varchar(50) NOT NULL,
-  `exp_date` varchar(10) DEFAULT NULL,
-  `no_lot` varchar(50) DEFAULT NULL,
-  `gudang_id` varchar(30) NOT NULL,
-  `qty_reserved` decimal(15,3) NOT NULL DEFAULT '0.000',
-  `status` enum('active','released') NOT NULL DEFAULT 'active',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -56720,7 +57470,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (223, 'AGRI06', 'Agri Bina Cipta, CV', 'Faris', 'Agri Bina Cipta, CV/Vicky', 1000000000.00, '2026-07-02 10:20:00', 'Jl. KF Tandean', '081 262 112 51', NULL, 'Tebing Tinggi', 'SBY', '-', '-'),
 (224, 'AGRI07', 'Ikbal Febri Mubarok', 'Yuyun', 'Agri Tani/Ikbal Febri', 1000.00, '2026-07-02 10:20:00', 'Dusun Ledok RT.002/RW.002', '082 312 302 504', NULL, 'Jember', 'JBR', '-', '-'),
 (225, 'AGRI08', 'Agriculture C.I.', 'Yuyun', 'Agriculture Construction Indonesia', 1000.00, '2026-07-02 10:20:00', 'Jl. Siliwangi, Lawanggintung', '', NULL, 'Bogor', 'SBY', '-', '-'),
-(226, 'AGRI09', 'Agrikultur Gelora N, PT', 'Reni', 'Agrikultur Gelora Nusantara, PT/Eric', 500000000.00, '2026-07-02 10:20:00', 'Jalan Panglima Sudirman D10/57 RT.005/RW.001', '081 234 230 876', NULL, 'Malang', 'MLG', '-', '-'),
+(226, 'AGRI09', 'Agrikultur Gelora N, PT', 'Reni', 'Agrikultur Gelora Nusantara, PT/Eric', 400000000.00, '2026-07-02 10:20:00', 'Jalan Panglima Sudirman D10/57 RT.005/RW.001', '081 234 230 876', NULL, 'Malang', 'MLG', '-', '-'),
 (227, 'AGRI10', 'Mistarohati', 'Yuyun', 'Agri Sentra-Ajung Limbung Sari', 1000.00, '2026-07-02 10:20:00', 'Jl. Mahakam Dusun Karang Anom RT.002/RW.010', '0857 4660 5404', NULL, 'Jember', 'JLS', '-', '-'),
 (228, 'AGRO01', 'Akenan', 'Reni', 'Agro Prakoso/Aknan', 135000000.00, '2026-07-02 10:20:00', 'Ds. Madureso RT.002/RW.002 Kel. Madureso Kec. Dawarblandong', '081 334 346 939', NULL, 'Mojokerto', 'SBY', '-', '-'),
 (229, 'AGRO02', 'Demi Ardhy Nugraha', 'Yuyun', 'Agro Citra Harapan, UD', 1000.00, '2026-07-02 10:20:00', 'Perum Dim Gang 8 F No.8-10 RT.006/RW.004', '0331 411 673', NULL, 'Jember', 'JUT', '-', '-'),
@@ -60084,7 +60834,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (3575, 'KARY23', 'Nyarito', 'Reni', 'Karya Tani/Nyarito', 1000.00, '2026-07-02 10:20:00', 'Bulung, RT.004/RW.009', '081 330 757 163', NULL, 'Ngawi', 'MD-1', '-', '-'),
 (3576, 'KARY24', 'Karya Jaya, PT', 'Faris', 'Zclose Karya Jaya, PT', 1000.00, '2026-07-02 10:20:00', 'Simpang Utara No.4, RT.012/RW.008', '085 294 491 665', NULL, 'Bandung', 'MLG', '-', '-'),
 (3577, 'KARY25', 'Mulyo Cahyono', 'Reni', 'Karya Tani/Agus (Karya Tani L7)', 150000000.00, '2026-07-02 10:20:00', 'Jl. Dewi Sartika Perum New Dewi Sartika', '', NULL, 'Batu', 'MLG', '-', '-'),
-(3578, 'KARY26', 'Agung Basuki Rachmat', 'Reni', 'Karya Tani/Agus (Dhipta Bumi Sejahtera)', 200000000.00, '2026-07-02 10:20:00', 'Jl. Patimura IV No.10', '', NULL, 'Batu', 'MLG', '-', '-'),
+(3578, 'KARY26', 'Agung Basuki Rachmat', 'Reni', 'Karya Tani/Agus (Dhipta Bumi Sejahtera)', 100000000.00, '2026-07-02 10:20:00', 'Jl. Patimura IV No.10', '', NULL, 'Batu', 'MLG', '-', '-'),
 (3579, 'KARY27', 'Epit Ajisan', 'Reni', 'Karya Tani/Agus (Surya Abadi)', 200000000.00, '2026-07-02 10:20:00', 'Jl. Abdul Ghonaim No.16 Dsn. Banaran', '', NULL, 'Batu', 'MLG', '-', '-'),
 (3580, 'KARY28', 'Agus Darmawan', 'Reni', 'Karya Tani/Agus (Darmawan)', 1000.00, '2026-07-02 10:20:00', 'Pandanarang RT.013/RW.005', '085 706 089 787', NULL, 'Lamongan', 'P-2', '-', '-'),
 (3581, 'KARY29', 'Agus Darmawan', 'Reni', 'Karya Tani/Agus (tidak dipakai)', 1000.00, '2026-07-02 10:20:00', 'Pandanarang RT.013/RW.005', '085 706 089 787', NULL, 'Lamongan', 'P-1', '-', '-'),
@@ -62253,7 +63003,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (5736, 'RIZA06', 'Rizal Pati', 'Sheila', 'Rizal Pati', 1000.00, '2026-07-02 10:20:00', 'Kantor Pdam Cab Pati 3 Juwana, Jalan Juwana Jakenan No. 2', '0', NULL, 'Pati', 'SBY', '-', '-'),
 (5737, 'RIZA07', 'Rizza Fariz Syaukany', 'Others', 'Rizza/Bayer', 1000.00, '2026-07-02 10:20:00', 'Kota Permata Blok D2 No. 6 RT.001/RW.007', '0', NULL, 'Purwakarta', 'B Agronomis', '-', '-'),
 (5738, 'RIZK02', 'Kusnyoto', 'Yuyun', 'Rizki, UD/Kusnyoto', 200000000.00, '2026-07-02 10:20:00', 'Dusun. Sumberejo, RT.038/RW.013, Kel. Glundengan, Kec. Wuluhan', '085 259 219 612', NULL, 'Jember', 'JLS', '-', '-'),
-(5739, 'RIZK05', 'Rizky Jaya, CV', 'Reni', 'Rizki Tani/Ratna', 24988010000.00, '2026-07-02 10:20:00', 'Jl. Lawu Perum Green Residence FR 5', '081 335 553 372', NULL, 'Madiun', 'MD-1', '-', '-'),
+(5739, 'RIZK05', 'Rizky Jaya, CV', 'Reni', 'Rizki Tani/Ratna', 24994850000.00, '2026-07-02 10:20:00', 'Jl. Lawu Perum Green Residence FR 5', '081 335 553 372', NULL, 'Madiun', 'MD-1', '-', '-'),
 (5740, 'RIZK06', 'Fendik Desriadi', 'Syahra', 'Rizki, UD/Fendik', 1000.00, '2026-07-02 10:20:00', 'Maesan', '085 859 414 261', NULL, 'Bondowoso', 'JUT', '-', '-'),
 (5741, 'RIZK07', 'Sukarman', 'Faris', 'Rizki Santoso, UD', 1000.00, '2026-07-02 10:20:00', 'Dsn. Purworejo, RT.09/RW.01', '085 258 831 750', NULL, 'Banyuwangi', 'BWI-1', '-', '-'),
 (5742, 'RIZK08', 'Yasin, H', 'Reni', 'Rizkina/Yasin, H', 50000000.00, '2026-07-02 10:20:00', 'Bagor Wetan Sukomoro', '081 321 592 466', NULL, 'Nganjuk', 'KD-1', '-', '-'),
@@ -62419,7 +63169,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (5901, 'SAHA08', 'Sohib', 'Ariyani', 'Sahabat Tani/Shohib', 15000000.00, '2026-07-02 10:20:00', 'Dsn. Tegalbaru, RT.001/RW.023', '0336 441 383', '085 100 507 248', 'Jember', 'JLS', '-', '-'),
 (5902, 'SAHA09', 'Syafiudin', 'Zakia', 'Sahabat Tani/Syafiudin', 15000000.00, '2026-07-02 10:20:00', 'Dsn. Utara, RT.02/RW.01 Prekbun, Pademawu, Kab. Pamekasan', '081 332 829 788', NULL, 'Pamekasan', 'MDR', '-', '-'),
 (5903, 'SAHA11', 'Yatini', 'Syahra', 'Sahabat Tani/Yatini', 50000000.00, '2026-07-02 10:20:00', 'Wonorejo', '0333 463 023', NULL, 'Situbondo', 'JWS', '-', '-'),
-(5904, 'SAHA12', 'Syaiful Anam', 'Reni', 'Sahala/Syaiful', 10000000000.00, '2026-07-02 10:20:00', 'Mentoro Suko', '081 330 699 647', NULL, 'Tuban', 'P-2', '-', '-'),
+(5904, 'SAHA12', 'Syaiful Anam', 'Reni', 'Sahala/Syaiful', 9900000000.00, '2026-07-02 10:20:00', 'Mentoro Suko', '081 330 699 647', NULL, 'Tuban', 'P-2', '-', '-'),
 (5905, 'SAHA13', 'Sulih hari Setyawan', 'Reni', 'Sahabat Tani/Sulih', 1000.00, '2026-07-02 10:20:00', 'Dsn. Kajar, RT.03/RW.06, Ds. Pandanrejo, Kec. Bumaji Kota Batu', '0341 511113', NULL, 'Batu', 'MLG', '-', '-'),
 (5906, 'SAHA15', 'Parto Wiyono Yakim', 'Reni', 'Sahabat Tani/Darminto', 1000.00, '2026-07-02 10:20:00', 'Jl. Raya Pojok Dsn Pojok RT 001 RW 002', '085 731 620 414', NULL, 'Ngawi', 'MD-1', '-', '-'),
 (5907, 'SAHA17', 'Muhamad Laily Nurfitrah', 'Ariyani', 'Sahabat Baru, UD/David', 10000000.00, '2026-07-02 10:20:00', 'Jl. Ahmad Yani No.76, Ds. Bringin Lawang, RT.006/RW.005, Kel. Wonojati, Kec. Jenggawah', '085 236 218 068', NULL, 'Jember', 'JLS', '-', '-'),
@@ -63340,7 +64090,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (6819, 'SUMB43', 'Surya Mega Wijaya', 'Yuyun', 'Sumber Tani 2, UD', 25000000.00, '2026-07-02 10:20:00', 'Jl. KH. Agus Salim No. 10 RT.002/RW.002, Mumbulsari', '0331 793 281', NULL, 'Jember', 'JBR', '-', '-'),
 (6820, 'SUMB46', 'Sri Utami', 'Zakia', 'Sumber Tani, UD/Sri', 30000000.00, '2026-07-02 10:20:00', 'Dsn. Menang RT.002/RW.007,', '081 335 682 236', NULL, 'Kediri', 'KD-2', '-', '-'),
 (6821, 'SUMB47', 'Raturejo Makmur Sejahtera', 'Reni', 'Sumber Tani Makmur, UD/Suyitno, H', 3000000000.00, '2026-07-02 10:20:00', 'Jl. Raya Bojonegoro Babat, RT.002/RW.009', '081 330 664 438', '081 217 592 115', 'Bojonegoro', 'P-2', '-', '-'),
-(6822, 'SUMB48', 'Agin', 'Ariyani', 'Sumber Tani, UD/Agin', 750000000.00, '2026-07-02 10:20:00', 'Bulak Winong No. 148 Lumajang', '0334 571 082', NULL, 'Lumajang', 'LMJ', '-', '-'),
+(6822, 'SUMB48', 'Agin', 'Ariyani', 'Sumber Tani, UD/Agin', 725000000.00, '2026-07-02 10:20:00', 'Bulak Winong No. 148 Lumajang', '0334 571 082', NULL, 'Lumajang', 'LMJ', '-', '-'),
 (6823, 'SUMB50', 'Sumber Tani, CV', 'Zakia', 'Sumber Tani/Agus Widjaja', 5000000000.00, '2026-07-02 10:20:00', 'Jl. Rambutan, RT.021/RW.006, Cerme, Grogol. Kab. Kediri', '081 332 705 591', NULL, 'Kediri', 'KD-1', '-', '-'),
 (6824, 'SUMB51', 'Basuni', 'Reni', 'Sumber Tani, UD/Basuni', 1000000000.00, '2026-07-02 10:20:00', 'Dsn. Bungkal, RT.001/RW.001, Kel. Mayangkawis Kec. Balen', '081 330 109 671', NULL, 'Bojonegoro', 'P-2', '-', '-'),
 (6825, 'SUMB52', 'David Wijaya', 'Yuyun', 'Sumber Tani/David', 25000000.00, '2026-07-02 10:20:00', 'Dsn. Krajan 1, RT.003/RW.001, Ds. Sumberpakem Kec. Sumber Jambe, Kab. Jember', '', NULL, 'Jember', 'JUT', '-', '-'),
@@ -63785,7 +64535,7 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (7262, 'TANI56', 'Nur Eny Syarifah Arief', 'Yuyun', 'Tani Sejati/Eni', 55000000.00, '2026-07-02 10:20:00', 'Jl. Merak 64 Lingk. Kedawung Kidul RT.001/RW.001 Kel. Gebang Kec. Patrang', '0331 422 505', '081 336 140 008', 'Jember', 'JBR', '-', '-'),
 (7263, 'TANI57', 'Tani Sejati Mandiri, PT', 'Reni', 'Tani Sejati/Ivan', 13000000000.00, '2026-07-02 10:20:00', 'Jl. Raya Watudakon No.243, RT.009/RW.006', '081 233 023 42', NULL, 'Malang', 'MLG', '-', '-'),
 (7264, 'TANI58', 'Harapan Agro Mandiri, CV', 'Faris', 'Tani Sejati/Johny', 5850000000.00, '2026-07-02 10:20:00', 'Jl. Jend A Yani Bonggoeya', '082 347 456 430', NULL, 'Sulawesi Tenggara', 'SBY', '-', '-'),
-(7265, 'TANI59', 'Manunggal Agro Sentosa,PT', 'Ariyani', 'Tani Sejati/Meggie', 24789100000.00, '2026-07-02 10:20:00', 'Jl. Kalimantan No.216, Balung Lor, Balung', '081 244 999 158', NULL, 'Jember', 'JLS', '-', '-'),
+(7265, 'TANI59', 'Manunggal Agro Sentosa,PT', 'Ariyani', 'Tani Sejati/Meggie', 24894685000.00, '2026-07-02 10:20:00', 'Jl. Kalimantan No.216, Balung Lor, Balung', '081 244 999 158', NULL, 'Jember', 'JLS', '-', '-'),
 (7266, 'TANI62', 'Tani Subur Indonesia, PT', 'Syahra', 'Tani Subur, UD/Rudy', 1000.00, '2026-07-02 10:20:00', 'Jl. Raya Kembiritan No. 165', '081 332 278 728', NULL, 'Banyuwangi', 'BWI-2', '-', '-'),
 (7267, 'TANI63', 'Abdul Ghofur', 'Ariyani', 'Tani Subur/Abdul Ghofur', 30000000.00, '2026-07-02 10:20:00', 'Jl. Tanggiling Dsn. Katon RT.002 RW.002 Kemiri, Panti', '085 230 784 960', NULL, 'Jember', 'JLS', '-', '-'),
 (7268, 'TANI64', 'Agoes Priyanto', 'Ariyani', 'Tani Subur/Agus Priyanto', 30000000.00, '2026-07-02 10:20:00', 'jl. Watu Ulo No. 25', '0336 881 250', NULL, 'Jember', 'JLS', '-', '-'),
@@ -64628,6 +65378,1655 @@ INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_sales`, `
 (8102, 'ZULP01', 'Zulpah Ariani', 'Sheila', 'Zulpah Ariani', 1000.00, '2026-07-02 10:20:00', 'Jalan Sultan Agung No. 67, Toko Dapuria Houseware', '', NULL, 'Ponorogo', 'OL Shop', '', ''),
 (8103, 'ZUMR01', 'Zumrotun Nisa', 'Sheila', 'Zumrotun Nisa', 1000.00, '2026-07-02 10:20:00', 'Dusun Wates Lor RT.003/RW.009', '', NULL, 'Mojokerto', 'KD-1', '', ''),
 (8104, 'ZYAN01', 'Riono Dwi Santoso', 'Reni', 'Zyan Tani/Riono', 1000.00, '2026-07-02 10:20:00', 'Jl. Rekesan Barat RT.010/RW.002', '082 234 018 686', NULL, 'Malang', 'MLG', '', '');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tb_customer_acak`
+--
+
+CREATE TABLE `tb_customer_acak` (
+  `id` int NOT NULL,
+  `kd_customer` varchar(50) NOT NULL,
+  `nama_toko` varchar(255) NOT NULL,
+  `kd_customer_induk` varchar(50) DEFAULT NULL,
+  `kontak_person` varchar(255) NOT NULL,
+  `alamat` text,
+  `kota` varchar(100) DEFAULT NULL,
+  `nik` varchar(50) DEFAULT NULL,
+  `npwp` varchar(50) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tb_customer_acak`
+--
+
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(1, 'ABAT01AC', 'Aba, Toko', 'ABAT01', 'Sopian Andiwana', 'Teluk Sepang, RT.003/RW.000, Kel. Jembatan Gantung, Kec. Lembar', 'Lombok Barat', '5201131001890005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(2, 'ABAT02AC', 'Aba, Toko', 'ABAT01', 'Paozan', 'Teluk Sepang, RT.003/RW.000, Kel. Jembatan Gantung, Kec. Lembar', 'Lombok Barat', '5201133112860199', '000000000000000', '2026-09-23 02:29:01', NULL),
+(3, 'ABAT03AC', 'Aba, Toko', 'ABAT01', 'Sahman', 'Teluk Sepang, RT.003/RW.000, Kel. Jembatan Gantung, Kec. Lembar', 'Lombok Barat', '5201133112870182', '000000000000000', '2026-09-23 02:29:01', NULL),
+(4, 'ABAT04AC', 'Aba, Toko', 'ABAT01', 'Zul Baehaki', 'Teluk Sepang, RT.003/RW.000, Kel. Jembatan Gantung, Kec. Lembar', 'Lombok Barat', '5201130608890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(5, 'ADHI01AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Mutaji', 'Dsn. Kalipinggir, RT.024/RW.005, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503050809630001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(6, 'ADHI02AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Mustain', 'Dsn. Kebonsari, RT.022/RW.006, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503051208660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(7, 'ADHI03AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Marwiti', 'Dsn. Sumberejo, RT.002/RW.001, Kel. Winong, Kec. Tugu', 'Trenggalek', '3503055505740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(8, 'ADHI04AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Juremi', 'Dsn. Kalipinggir, RT.018/RW.005, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503053112630037', '000000000000000', '2026-09-23 02:29:01', NULL),
+(9, 'ADHI05AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Muawanah', 'Dsn. Setono, RT.014/RW.004, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503056707700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(10, 'ADHI06AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Slamet', 'Dsn. Kondang Kidul, RT.013/RW.003, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503052010710002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(11, 'ADHI07AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Sumarno', 'Dsn. Setono, RT.015/RW.004, Kel. Gondang, Kec. Tugu', 'Trenggalek', '3503051705580001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(12, 'ADHI08AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Asmoro', 'Dsn. Winong, RT.002/RW.001, Kel. Winong, Kec. Tugu', 'Trenggalek', '3503051004760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(13, 'ADHI09AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Djito', 'Dsn. Selomunding, RT.005/RW.002, Kel. Winong, Kec. Tugu', 'Trenggalek', '3503050407620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(14, 'ADHI10AC', 'Adhi Tani Mulyo, UD', 'ADHI02', 'Djemino', 'Dsn. Sumberejo, RT.002/RW.001, Kel. Winong, Kec. Tugu', 'Trenggalek', '3503050609710003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(15, 'ADIB01AC', 'Adib Lancar/Adib Irwanto', 'ADIT02', 'Muhammad Yusuf Hasyim As\'ari', 'Dsn. Tegalan, RT.001/RW.001, Kel. Kauman, Kec. Ngoro', 'Jombang', '3517031108790007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(16, 'AGOE01AC', 'Agoes Santoso', 'AGOE01', 'Agoes Santoso', 'Jl. Mojopahit Blok AC No. 1, RT.004/RW.003, Sempusari,', 'Kaliwates - Jember', '0000000000000000', '060356490626000', '2026-09-23 02:29:01', NULL),
+(17, 'AGOE02AC', 'Agoes Santoso', 'AGOE01', 'Ach. Fauzan', 'Dusun Paguan, RT.001/RW.004, Kel. Petung, Kec. Bangsalsari', 'Jember', '3509091706800007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(18, 'AGOE03AC', 'Agoes Santoso', 'AGOE01', 'Andik Dwi C', 'Dusun Krajan, RT.013/RW.007, Kel. Umbulrejo, Kec. Umbulsari', 'Jember', '3509052106910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(19, 'AGOE04AC', 'Agoes Santoso', 'AGOE01', 'Faradina Dwi A', 'Jl. Branjangan Ling. Semenggu, RT.002/RW.005, Kel. Bintoro, Kec. Patrang', 'Jember', '3509205501840005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(20, 'AGOE05AC', 'Agoes Santoso', 'AGOE01', 'Fery Hardian', 'Jl. Argopuro 37 Rambigundam, RT.005/RW.002, Kel. Rambigundam, Kec. Rambipuji', 'Jember', '3509130802830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(21, 'AGOE06AC', 'Agoes Santoso', 'AGOE01', 'Moh. Johan Arif', 'Dusun Krajan I, RT.002/RW.016, Kel. Grenden, Kec. Puger', 'Jember', '3509021009860003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(22, 'AGOE07AC', 'Agoes Santoso', 'AGOE01', 'Nasihul Ibadil H', 'Dusun Kresek, RT.003/RW.001, Kel. Pancakarya, Kec. Ajung', 'Jember', '3509172601920003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(23, 'AGOE08AC', 'Agoes Santoso', 'AGOE01', 'Fina Hidayati', 'Krajan, RT.001/RW.003, Kel. Menampu, Kec. Gumukmas', 'Jember', '3509086504870003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(24, 'AGOE09AC', 'Agoes Santoso', 'AGOE01', 'Lutfiah', 'Dusun Srino Karyo, RT.001/RW.005, Kel. Sukosari, Kec. Sukowono', 'Jember', '3509294107980144', '000000000000000', '2026-09-23 02:29:01', NULL),
+(25, 'AGOE10AC', 'Agoes Santoso', 'AGOE01', 'Siti Aisatul H', 'Dusun Bacem, RT.003/RW.002, Kel. Panduman, Kec. Jelbuk', 'Jember', '3509224501920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(26, 'AGOE11AC', 'Agoes Santoso', 'AGOE01', 'Totok Suyono', 'Dusun Dukuh I, RT.002/RW.007, Kel. Banjarsari, Kec. Bangsalsari', 'Jember', '3509092306850009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(27, 'AGOE12AC', 'Agoes Santoso', 'AGOE01', 'Yanuariski', 'Jl. Letjen Panjaitan X/20, RT.001/RW.025, Kel. Kebonsari, Kec. Sumbersari', 'Jember', '3509211501940010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(28, 'AGOE13AC', 'Agoes Santoso', 'AGOE01', 'Sony Wijaya', 'Dusun Jumbatan, RT.005/RW.009, Kel. Darungan, Kec. Tanggung', 'Jember', '3509061405960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(29, 'AGOE14AC', 'Agoes Santoso', 'AGOE01', 'Mohammad Rokip A', 'Dusun Bringin Lawang, RT.006/RW.005, Kel. Wonojati, Kec. Jenggawah', 'Jember', '3509042912760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(30, 'AGOE15AC', 'Agoes Santoso', 'AGOE01', 'Solehan', 'Dusun Andongsari, RT.001/RW.011, Kel. Tugusari, Kec. Bangsalsari', 'Jember', '3509090408840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(31, 'AGOE16AC', 'Agoes Santoso', 'AGOE01', 'Yuyut Priyono', 'Dusun Penitik, RT.001/RW.013, Kel. Wonosari, Kec. Puger', 'Jember', '3509082111760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(32, 'AGOE17AC', 'Agoes Santoso', 'AGOE01', 'Zuliarita Susila A', 'Dusun Krajan, RT.002/RW.010, Kel. Biting, Kec. Arjasa', 'Jember', '3509220107980219', '000000000000000', '2026-09-23 02:29:01', NULL),
+(33, 'AGOE18AC', 'Agoes Santoso', 'AGOE01', 'Sri Wahyuni', 'Dusun Krajan I, RT.001/RW.015, Kel. Badean, Kec. Bangsalsari', 'Jember', '3509095208770009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(34, 'AINU01AC', 'Ainun/Tanindo', 'AINU02', 'Khoirun Nisa', 'Dsn. Sempu, RT.003/RW.002, Kel. Sarimulyo, Kec. Cluring', 'Banyuwangi', '3510064603930002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(35, 'AINU02AC', 'Ainun/Tanindo', 'AINU02', 'Agung Anugerah Rizky', 'Jl. Wijaya Kusuma 10X, RT.003/RW.002, Kel. Boyolangu, Kec. Giri', 'Banyuwangi', '3510143010030003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(36, 'AINU03AC', 'Ainun/Tanindo', 'AINU02', 'Irvan Jama\'ah', 'KP. Tanggulun, RT.006/RW.003, Kel. Lamongan, Kec. Arjasa', 'Situbondo', '3512110206950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(37, 'AINU04AC', 'Ainun/Tanindo', 'AINU02', 'Sugiyanto', 'Dsn. Krajan RT.002/RW.005, Kel. Curahnongko, Kec. Tempurejo', 'Jember', '3509182712760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(38, 'ALMU01AC', 'Al Mubarok/Lutfi', 'ALMU02', 'Istifadah', 'Jl. Sanan A/37, RT.001/RW.014, Kel. Purwantoro, Kec. Blimbing', 'Malang', '3573015303760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(39, 'ALMU02AC', 'Al Mubarok/Lutfi', 'ALMU02', 'Istiqomah', 'Jl. Nakula No.7, RT.002/RW.005, Kel. Polehan, Kec. Blimbing', 'Malang', '3573016905710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(40, 'ALAM01AC', 'Alam Makmur, UD', 'ALAM12', 'Susiana', 'Dusun Semboro Lor, RT.003/RW.027, Kel. Semboro, Kec. Semboro', 'Jember', '3509074202780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(41, 'ALAM02AC', 'Alam Makmur, UD', 'ALAM12', 'Wahyu Nugroho', 'Dusun Beteng, RT.002/RW.002, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509072204840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(42, 'ALAM03AC', 'Alam Makmur, UD', 'ALAM12', 'Arif Dwi Saputro', 'Dusun Semboro Kidul, RT.003/RW.001, Kel. Semboro, Kec. Semboro', 'Jember', '3509072206910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(43, 'ALAM04AC', 'Alam Makmur, UD', 'ALAM12', 'Asmin', 'Dusun Semboro Lor, RT.002/RW.031, Kel. Semboro, Kec. Semboro', 'Jember', '3509070608700005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(44, 'ALIM02AC', 'Alimubro', 'ALIM01', 'Ampun Nyoto', 'Talangrejo, RT.001/RW.005, Kel. Gunungsari, Kec. Bumiaji', 'Batu', '3579022412820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(45, 'ALIM03AC', 'Alimubro', 'ALIM01', 'Lasenan', 'Talangrejo, RT.001/RW.005, Kel. Gunungsari, Kec. Bumiaji', 'Batu', '3579020201460001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(46, 'ALIM04AC', 'Alimubro', 'ALIM01', 'Ibnu Mas\'ud', 'Talangsari, RT.005/RW.005, Kel.Gunungsari, Kec. Bumiaji', 'Batu', '3579022208680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(47, 'ALME01AC', 'Almeera Tani/Alif', 'ALME01', 'Alif Mualifah', 'Jl. Budi Utomo RT.003/RW.003, Kel. Ronowijayan, Kec. Siman', 'Ponorogo', '3502104804820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(48, 'ALME02AC', 'Almeera Tani/Alif', 'ALME01', 'Rudiyanto', 'Dsn Sumberurip, RT.002/RW.011, kel. Barurejo, Kec. Siliragung', 'Banyuwangi', '3510220812880004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(49, 'ALME03AC', 'Almeera Tani/Alif', 'ALME01', 'Supriadi', 'Dsn Kaligesing, RT.001/RW.001, Kel. Karangmulyo, Kec. Tegalsari', 'Banyuwangi', '3510232602820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(50, 'ALME04AC', 'Almeera Tani/Alif', 'ALME01', 'Efendi', 'Kp Kidul RT.001/RW.004 , Kel. Kandang Kec. Kapongan', 'Situbondo', '3512101709890003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(51, 'ALME05AC', 'Almeera Tani/Alif', 'ALME01', 'Anwar', 'Dusun Krajan RT.004/RW.001 , Kel. Curah Tatal Kec. Arjasa', 'Situbondo', '3512111012800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(52, 'ALME06AC', 'Almeera Tani/Alif', 'ALME01', 'Dahliyatin', 'Kp Cangkring RT.003/RW.003 , Kel. Curah Tatal Kec. Arjasa', 'Situbondo', '3512114107990152', '000000000000000', '2026-09-23 02:29:01', NULL),
+(53, 'ALME07AC', 'Almeera Tani/Alif', 'ALME01', 'Zubaidah', 'Dusun Krajan RT.027/RW.006 , Kel. Jambeanom Kec. Jambesari Darus Sholah', 'Bondowoso', '3511225609020001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(54, 'ALME08AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(55, 'ALME09AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(56, 'ALME10AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(57, 'ALME11AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(58, 'ALME12AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(59, 'ALME13AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(60, 'ALME14AC', 'Almeera Tani/Alif', 'ALME01', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(61, 'HART01AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Masni', 'Jl. Gajah Mada RT.023/RW.000, Kel. Karang Anyar Pantai, Kec. Tarakan Barat', 'Tarakan', '6473017009830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(62, 'HART02AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Abdullah Syukur K', 'Tikatukang, RT.003/RW.002, Kel. Tikatukang, Kec. Adonara', 'Flores Timur', '5306170201950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(63, 'HART03AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Fendi', 'Dsn. Serundung Permai, RT.005/RW.003, Kel. Tanjung Niaga, Kec. Nanga Pinoh', 'Melawi', '6110022501910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(64, 'HART04AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Makximus Sesarius B', 'Amakaka, RT.001/RW.001, Kel. Amakaka, Kec. Ile Ape', 'Lembata', '5313032708980005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(65, 'HART05AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Yohanes Kopong S', 'Jl. KH. Dewantara, RT.005/RW.000, Kel. Karang Balik, Kec. Tarakan Barat', 'Tarakan', '6473011410840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(66, 'HART06AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Riksan Risandi', 'Jl. Pasar Baru Enrekang, RT.000/RW.000, Kel. Juppandang, Kec. Enrekang', 'Enrekang', '7316020608970003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(67, 'HART07AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Hasan', 'Jl. Kedondong, RT.001/RW.000, Kel. Kampung Empat, Kec. Tarakan Timur', 'Tarakan', '6473030805570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(68, 'HART08AC', 'Anda Jaya, Toko/Hartman Gunawan', 'ANDA04', 'Dominikus Doni W', 'Jl. Danau Jempang No.66, RT.005/RW.000, Kel. Pamusian, Kec. Tarakan Tengah', 'Tarakan', '6473021404840010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(69, 'ANUG01AC', 'Anugrah Tani/Agung', 'ANUG01', 'Sita Widyaningrum', 'Dsn. Jugo, RT.010/RW.002, Kel. Jugo, Kec. Mojo', 'Kediri', '3506024101900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(70, 'ANUG02AC', 'Anugrah Tani/Agung', 'ANUG01', 'Miftachul Munir', 'Dsn. Sekoto, RT.002/RW. 005, Kel. Sekoto, Kec. Badas', 'Kediri', '3506262102920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(71, 'ANUG03AC', 'Anugrah Tani/Agung', 'ANUG01', 'Martialis Martiah', 'Dsn. Sekaran Kidul, RT.002/RW.001, Kel. Sekaran, Kec. Kayen Kidul', 'Kediri', '3506244707610002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(72, 'ANUG04AC', 'Anugrah Tani/Agung', 'ANUG01', 'Bambang Sudaryanto', 'Jl. DR. Sutomo No. 23 A , RT.002/ RW.003, Kel. Pelem, Kec. Pare', 'Kediri', '3506172405760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(73, 'ANUG05AC', 'Anugrah Tani/Agung', 'ANUG01', 'Eka Agus Triyanto', 'Jl. Mas II, RT002/RW.006 Kel. Pelem, Kec. Pare', 'Kediri', '3506171408900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(74, 'ANUG06AC', 'Anugrah Tani/Agung', 'ANUG01', 'Winarko', 'Jl. Merapi, RT.001/RW.008, Kel. Kandangan, Kec. Kandangan', 'Kediri', '3506192209800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(75, 'ANUG07AC', 'Anugrah Tani/Agung', 'ANUG01', 'Ahmad Andika Risma', 'Sumber Agung, RT.003/RW.005, Kel. Krecek, Kec. Badas', 'Kediri', '3506260303930003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(76, 'ANUG08AC', 'Anugrah Tani/Agung', 'ANUG01', 'Bambang Prasetyo', 'Dsn. Jugo, RT.011/RW.002, Kel. Jugo, Kec. Mojo', 'Kediri', '3506020708770005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(77, 'ANUG09AC', 'Anugrah Tani/Agung', 'ANUG01', 'Dwi Harijanto', 'Ky. Sahlan 13/50, RT.004/RW.001, Kel. Manyarsidomukti, Kec. Manyar', 'Gresik', '3525100306780004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(78, 'ANUG10AC', 'Anugrah Tani/Agung', 'ANUG01', 'Fitri Indriasari', 'Jl. DR. Sutomo No. 23 A , RT.002/ RW.003, Kel. Pelem, Kec. Pare', 'Kediri', '3506174709780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(79, 'ANUG11AC', 'Anugrah Tani/Agung', 'ANUG01', 'Nailul Istiqomah', 'Jl. Masjid, RT.002/RW.003, Kel. Sumberbendo, Kec. Pare', 'Kediri', '3506176706890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(80, 'ANUG12AC', 'Anugrah Tani/Agung', 'ANUG01', 'Ainun Rofiq', 'Dsn. Sumber Agung, RT.001/RW.008, Kel. Krecek, Kec. Badas', 'Kediri', '3506260510870002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(81, 'ANUG13AC', 'Anugrah Tani/Agung', 'ANUG01', 'Meri Sunarto', 'Dsn. Sumber Agung, RT.001/RW.008, Kel. Krecek, Kec. Badas', 'Kediri', '3506166003950004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(82, 'ANUG14AC', 'Anugrah Tani/Agung', 'ANUG01', 'Yosafat Mujadi', 'Dsn. Sekaran Kidul, RT.002/RW.001, Kel. Sekaran, Kec. Kayen Kidul', 'Kediri', '3506241010500001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(83, 'ANUG15AC', 'Anugrah Tani/Agung', 'ANUG01', 'Pendik Kardianta', 'Dsn. Kwaringan, RT.002/RW.001, Kel.Mlancu, Kec. Kandangan', 'Kediri', '3505170605850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(84, 'ANUG16AC', 'Anugrah Tani/Agung', 'ANUG01', 'Tutik Wijayanti', 'Dsn. Kwaringan, RT.002/RW.001, Kel.Mlancu, Kec. Kandangan', 'Kediri', '3506195308920003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(85, 'ANUG17AC', 'Anugrah Tani/Agung', 'ANUG01', 'Ahmad Khabib', 'Dsn. Candirejo, RT.003/RW.011, Kel. Tegowangi, Kec. Plemahan', 'Kediri', '3506162505850005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(86, 'ANUG18AC', 'Anugrah Tani/Agung', 'ANUG01', 'Anggyn Novia', 'Jl. Sultan Agung, RT.003/RW.000, Kel. Sekoto, Kec. Badas', 'Kediri', '3506264811950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(87, 'ANUG19AC', 'Anugrah Tani/Agung', 'ANUG01', 'Agus Yulianto', 'Jl. Masjid, RT.002/RW.003, Kel. Sumberbendo, Kec. Pare', 'Kediri', '3506172107860003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(88, 'ANUG20AC', 'Anugrah Tani/Agung', 'ANUG01', 'Slamet Riadi', 'Jl. Mas II No. 26 Ngeblek, RT.002/RW.006, Kel. Pelem, Kec. Pare', 'Kediri', '3506171409820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(89, 'ANUG21AC', 'Anugrah Tani/Agung', 'ANUG01', 'Moh. Muntaha Ahsan', 'Dsn. Canggu, RT.002/RW.007, Kel. Canggu, Kec. Badas', 'Kediri', '3506261711960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(90, 'ANUG22AC', 'Anugrah Tani/Agung', 'ANUG01', 'Eko Wiyono', 'Dusun Semut, RT.001/RW.001, Kel. Jambu, Kec. Kayen Kidul', 'Kediri', '3506180206790002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(91, 'ANUG23AC', 'Anugrah Tani/Agung', 'ANUG01', 'Nurul Lisyayaroh', 'Dusun Semut, RT.001/RW.001, Kel. Jambu, Kec. Kayen Kidul', 'Kediri', '3506246809900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(92, 'ANUG24AC', 'Anugrah Tani/Agung', 'ANUG01', 'Indra Wati', 'Dsn. Candirejo, RT.003/RW.011, Kel. Tegowangi, Kec. Plemahan', 'Kediri', '3506166005890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(93, 'ATH01AC', 'Anugrah Tani/Heru', 'ANUG25', 'Tutik', 'Dsn. Secang RT.005/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504165307700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(94, 'ATH02AC', 'Anugrah Tani/Heru', 'ANUG25', 'Katemi', 'Dsn. Secang RT.005/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164905550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(95, 'ATH03AC', 'Anugrah Tani/Heru', 'ANUG25', 'Yadi', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160311400003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(96, 'ATH04AC', 'Anugrah Tani/Heru', 'ANUG25', 'Suningsih', 'Dsn. Secang RT.004/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504166310860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(97, 'ATH05AC', 'Anugrah Tani/Heru', 'ANUG25', 'Paiman', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160610570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(98, 'ATH06AC', 'Anugrah Tani/Heru', 'ANUG25', 'Winih', 'Dsn. Secang RT.002/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164511600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(99, 'ATH07AC', 'Anugrah Tani/Heru', 'ANUG25', 'Tumijan', 'Dsn. Secang RT.005/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160810450001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(100, 'ATH08AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sudarji', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504163003650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(101, 'ATH09AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sukini', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164104660004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(102, 'ATH10AC', 'Anugrah Tani/Heru', 'ANUG25', 'Lina Yuliana', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504166601950002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(103, 'ATH11AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sari', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162803590002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(104, 'ATH12AC', 'Anugrah Tani/Heru', 'ANUG25', 'Titik', 'Dsn. Secang RT.003/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164912720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(105, 'ATH13AC', 'Anugrah Tani/Heru', 'ANUG25', 'Agus Siswanto', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161008840004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(106, 'ATH14AC', 'Anugrah Tani/Heru', 'ANUG25', 'Tinah', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164105670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(107, 'ATH15AC', 'Anugrah Tani/Heru', 'ANUG25', 'Parni', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162605620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(108, 'ATH16AC', 'Anugrah Tani/Heru', 'ANUG25', 'Siti Khomsiyah', 'Dsn. Secang RT.003/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504165209710003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(109, 'ATH17AC', 'Anugrah Tani/Heru', 'ANUG25', 'Mukarom', 'Dsn. Secang RT.004/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504152009840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(110, 'ATH18AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sukilan', 'Dsn. Secang RT.004/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161506630001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(111, 'ATH19AC', 'Anugrah Tani/Heru', 'ANUG25', 'Martin', 'Dsn. Secang RT.005/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164908610002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(112, 'ATH20AC', 'Anugrah Tani/Heru', 'ANUG25', 'Rinanik', 'Dsn. Secang RT.007/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504166008760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(113, 'ATH21AC', 'Anugrah Tani/Heru', 'ANUG25', 'Munti', 'Dsn. Secang RT.004/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504165212350001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(114, 'ATH22AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sutriman', 'Dsn. Secang RT.001/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160204660003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(115, 'ATH23AC', 'Anugrah Tani/Heru', 'ANUG25', 'Pujianto', 'Dsn. Secang RT.005/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162206840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(116, 'ATH24AC', 'Anugrah Tani/Heru', 'ANUG25', 'Suyatun', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504166303660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(117, 'ATH25AC', 'Anugrah Tani/Heru', 'ANUG25', 'Yahman', 'Dsn. Secang RT.004/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161307570003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(118, 'ATH26AC', 'Anugrah Tani/Heru', 'ANUG25', 'Yamijan', 'Dsn. Secang RT.007/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160209680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(119, 'ATH27AC', 'Anugrah Tani/Heru', 'ANUG25', 'Djarni', 'Dsn. Secang RT.003/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162611610001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(120, 'ATH28AC', 'Anugrah Tani/Heru', 'ANUG25', 'Maryani', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162905530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(121, 'ATH29AC', 'Anugrah Tani/Heru', 'ANUG25', 'Heli Riana', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504166407820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(122, 'ATH30AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sarohmin', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164503850004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(123, 'ATH31AC', 'Anugrah Tani/Heru', 'ANUG25', 'Lamidi', 'Dsn. Secang RT.001/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160205610004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(124, 'ATH32AC', 'Anugrah Tani/Heru', 'ANUG25', 'Supirah', 'Dsn. Secang RT.003/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164106530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(125, 'ATH33AC', 'Anugrah Tani/Heru', 'ANUG25', 'Wahyu Kurniawan', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162008950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(126, 'ATH34AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sunarto', 'Dsn. Secang RT.003/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160406590002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(127, 'ATH35AC', 'Anugrah Tani/Heru', 'ANUG25', 'Nurhasim', 'Dsn. Secang RT.001/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161806620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(128, 'ATH36AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sukri', 'Dsn. Secang RT.005/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161506660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(129, 'ATH37AC', 'Anugrah Tani/Heru', 'ANUG25', 'Suliyah', 'Dsn. Secang RT.005/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164812680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(130, 'ATH38AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sairin', 'Dsn. Secang RT.001/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160511600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(131, 'ATH39AC', 'Anugrah Tani/Heru', 'ANUG25', 'Rokhimin', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160711740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(132, 'ATH40AC', 'Anugrah Tani/Heru', 'ANUG25', 'Mukiran', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160107430047', '000000000000000', '2026-09-23 02:29:01', NULL),
+(133, 'ATH41AC', 'Anugrah Tani/Heru', 'ANUG25', 'Lilis Nurwidayah', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504167009810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(134, 'ATH42AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sutarti', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164811750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(135, 'ATH43AC', 'Anugrah Tani/Heru', 'ANUG25', 'Badil', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160211570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(136, 'ATH44AC', 'Anugrah Tani/Heru', 'ANUG25', 'Haryono', 'Dsn. Secang RT.006/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504021007750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(137, 'ATH45AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sardi', 'Dsn. Secang RT.003/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161312550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(138, 'ATH46AC', 'Anugrah Tani/Heru', 'ANUG25', 'Samin', 'Dsn. Secang RT.004/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504162309550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(139, 'ATH47AC', 'Anugrah Tani/Heru', 'ANUG25', 'Martawi', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161508530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(140, 'ATH48AC', 'Anugrah Tani/Heru', 'ANUG25', 'Tukilah', 'Dsn. Secang RT.004/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504165044590002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(141, 'ATH49AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sadjuri', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161710680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(142, 'ATH50AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sumiran', 'Dsn. Secang RT.004/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160312700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(143, 'ATH51AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sari', 'Dsn. Secang RT.001/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160806740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(144, 'ATH52AC', 'Anugrah Tani/Heru', 'ANUG25', 'Samukri', 'Dsn. Secang RT.001/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160208570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(145, 'ATH53AC', 'Anugrah Tani/Heru', 'ANUG25', 'Painah', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164107480050', '000000000000000', '2026-09-23 02:29:01', NULL),
+(146, 'ATH54AC', 'Anugrah Tani/Heru', 'ANUG25', 'Jakim', 'Dsn. Secang RT.005/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504163011520002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(147, 'ATH55AC', 'Anugrah Tani/Heru', 'ANUG25', 'Nyono', 'Dsn. Secang RT.005/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504161506560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(148, 'ATH56AC', 'Anugrah Tani/Heru', 'ANUG25', 'Sunarti', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504164702780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(149, 'ATH57AC', 'Anugrah Tani/Heru', 'ANUG25', 'Kasan', 'Dsn. Secang RT.005/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160710750004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(150, 'ATH58AC', 'Anugrah Tani/Heru', 'ANUG25', 'Mariyatul Kibtiyah', 'Dsn. Secang RT.002/RW.001, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504105508850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(151, 'ATH59AC', 'Anugrah Tani/Heru', 'ANUG25', 'Salam', 'Dsn. Secang RT.006/RW.002, Kel. Pojok, Kec. Campurdarat', 'Tulungagung', '3504160102540003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(152, 'BABA01AC', 'Baba, UD/Suherman', 'BABA02', 'Ruslin', 'Dsn. Angrrek, RT.002/RW.001, Kel. Tente, Kec. Woha', 'Bima', '5206032808750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(153, 'BABA02AC', 'Baba, UD/Suherman', 'BABA02', 'Ady Yanto', 'Desa Pandai, RT.006/RW.002, Kel. Pandai, Kec. Woha', 'Bima', '3172041607830007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(154, 'BABA03AC', 'Baba, UD/Suherman', 'BABA02', 'Sunarti', 'Dsn. Angrrek, RT.002/RW.001, Kel. Tente, Kec. Woha', 'Bima', '5206036906710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(155, 'BABA04AC', 'Baba, UD/Suherman', 'BABA02', 'Kurniawan', 'Dsn. Angrrek, RT.002/RW.001, Kel. Tente, Kec. Woha', 'Bima', '5206032404031003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(156, 'BABA05AC', 'Baba, UD/Suherman', 'BABA02', 'Amirul Mukminin', 'Dsn. Angrrek, RT.002/RW.001, Kel. Tente, Kec. Woha', 'Bima', '5206032904021003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(157, 'BABA06AC', 'Baba, UD/Suherman', 'BABA02', 'Sukri', 'Kp. Sukapura, RT.010/RW.001, Kel. Sukapura, Kec. Cilincing', 'Jakarta', '3172041012780008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(158, 'BABA07AC', 'Baba, UD/Suherman', 'BABA02', 'Ismail', 'Dsn. Angrrek, RT.002/RW.001, Kel. Tente, Kec. Woha', 'Bima', '5206030107641116', '000000000000000', '2026-09-23 02:29:01', NULL),
+(159, 'BABA08AC', 'Baba, UD/Suherman', 'BABA02', 'Muhamad Fisa R', 'Kebon Baru Metros, RT.013/RW.010, Kel. Semper barat, Kec. Cilincing', 'Jakarta', '3172040103980013', '000000000000000', '2026-09-23 02:29:01', NULL),
+(160, 'BAGU01AC', 'Bagus Rizki, UD', 'BAGU03', 'Rajab', 'Areguling, RT.002/RW.002, Kel. Tumpak, Kec. Pujut', 'Lombok Tengah', '5202043112740008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(161, 'BAGU02AC', 'Bagus Rizki, UD', 'BAGU03', 'Lalu Rupawan', 'Batrata, RT.001/RW.000, Kel. Ubung, Kec. Jonggat', 'Lombok Tengah', '5202020107640148', '000000000000000', '2026-09-23 02:29:01', NULL),
+(162, 'BAGU03AC', 'Bagus Rizki, UD', 'BAGU03', 'Safi\'i', 'Dsn. Sedau Timur, Kel. Pemepek, Kec. Pringgarata', 'Lombok Tengah', '5202080107550261', '000000000000000', '2026-09-23 02:29:01', NULL),
+(163, 'BAGU04AC', 'Bagus Rizki, UD', 'BAGU03', 'Jaya Mingkum', 'Teluk Kateng, Kel. Mertak, Kec. Pujut', 'Lombok Tengah', '5202043112910277', '000000000000000', '2026-09-23 02:29:01', NULL),
+(164, 'BAGU05AC', 'Bagus Rizki, UD', 'BAGU03', 'Dahan Als Amaq', 'Belong, Kel. Sengkol, Kec. Pujut', 'Lombok Tengah', '5202043112600206', '000000000000000', '2026-09-23 02:29:01', NULL),
+(165, 'BAGU06AC', 'Bagus Rizki, UD', 'BAGU03', 'Rohani', 'Asrama TNI-AD Gililebur, RT.010/RW.000, Kel. Prapen, Kec. Praya', 'Lombok Tengah', '5202017012620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(166, 'BARO01AC', 'Barokah Tani/Nur Hisan', 'BARO46', 'Wahyu Dwi Sulistyo', 'Dusun Kerok, RT.020/RW.003, Kel. Montongsekar, Kec. Montong', 'Tuban', '3523100712930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(167, 'BARO02AC', 'Barokah Tani/Nur Hisan', 'BARO46', 'Nurhadi', 'Pucangan, RT.003/RW.007, Kel. Pucangan, Kec. Montong', 'Tuban', '3523101310850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(168, 'BARO03AC', 'Barokah Tani/Nur Hisan', 'BARO46', 'Deni Darmawan', 'Dusun Karang Mulyo, RT.004/RW.002, Kel. Karanglo, Kec. Kerek', 'Tuban', '3523080910010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(169, 'BARO04AC', 'Barokah Tani/Nur Hisan', 'BARO46', 'Wawan Adi', 'Karang Mulyo, RT.004/RW.001, Kel. Karanglo, Kec. Kerek', 'Tuban', '3523081910980003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(170, 'BARO05AC', 'Barokah Tani/Nur Hisan', 'BARO46', 'Dwifa Meitirta', 'Dusun Karang Mulyo, RT.004/RW.002, Kel. Karanglo, Kec. Kerek', 'Tuban', '3523085705020001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(171, 'BAWA01AC', 'Bawang Merah, UD', 'BAWA01', 'Haerudin', 'Dusun Ompu Boy, RT.003/RW.001, Kel. Monta, Kec. Monta', 'Bima', '5206012512001004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(172, 'BAWA02AC', 'Bawang Merah, UD', 'BAWA01', 'Wiranto', 'Monta, RT.002/RW.001, Kel. Monta, Kec. Monta', 'Bima', '5206011404990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(173, 'BAWA03AC', 'Bawang Merah, UD', 'BAWA01', 'Musa', 'Monta, RT.005/RW.002, Kel. Monta, Kec. Monta', 'Bima', '5206010107691175', '000000000000000', '2026-09-23 02:29:01', NULL),
+(174, 'BAWA04AC', 'Bawang Merah, UD', 'BAWA01', 'Irwan', 'Dusun II, RT.004/RW.002, Kel. Monta, Kec. Monta', 'Bima', '5206011101820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(175, 'BAWA05AC', 'Bawang Merah, UD', 'BAWA01', 'Ramlin', 'Monta, RT.001/RW.001, Kel. Monta, Kec. Monta', 'Bima', '5206011810921003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(176, 'BERK10AC', 'Berkah Tani/Cupo', 'BERK03', 'Tubari', 'Dsn. Tirtoasri, RT.03/RW.28, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509120107620161', '000000000000000', '2026-09-23 02:29:01', NULL),
+(177, 'BERK11AC', 'Berkah Tani/Cupo', 'BERK03', 'Suwono', 'Dsn. Tirtoasri, RT.03/RW.28, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509120107650477', '000000000000000', '2026-09-23 02:29:01', NULL),
+(178, 'BERK12AC', 'Berkah Tani/Cupo', 'BERK03', 'Arif Sugito', 'Dsn. Tirtoasri, RT.01/RW.27, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509122502720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(179, 'BERK13AC', 'Berkah Tani/Cupo', 'BERK03', 'Imam Hanafi', 'Dsn. Tirtoasri, RT.02/RW.28, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509120107850254', '000000000000000', '2026-09-23 02:29:01', NULL),
+(180, 'BERK14AC', 'Berkah Tani/Cupo', 'BERK03', 'Satuman', 'Dsn. Tirtoasri, RT.02/RW.26, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509120107600343', '000000000000000', '2026-09-23 02:29:01', NULL),
+(181, 'FALI01AC', 'Berkah Tani/Falichul', 'BERK36', 'Asmaiyah', 'Kuro, RT.02/RW.01, Kel. Kuro, Kec. Karangbinangun', 'Lamongan', '3524244309700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(182, 'FALI02AC', 'Berkah Tani/Falichul', 'BERK36', 'Adi Farid', 'Pedurungan, RT.02/RW.01, Kel. Dukuhtunggal, Kec. Glagah', 'Lamongan', '3524262712790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(183, 'FALI03AC', 'Berkah Tani/Falichul', 'BERK36', 'Mustarifah', 'Pedurungan, RT.01/RW.02, Kel. Dukuhtunggal, Kec. Glagah', 'Lamongan', '3524264307800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(184, 'FALI04AC', 'Berkah Tani/Falichul', 'BERK36', 'Hayyinatul Funun', 'Pedurungan, RT.02/RW.01, Kel. Dukuhtunggal, Kec. Glagah', 'Lamongan', '3524265306840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(185, 'FALI05AC', 'Berkah Tani/Falichul', 'BERK36', 'Elya Agustina', 'Tenggumung Karya, RT.02/RW.04, Kel.Pegirian, Kec. Semampir', 'Surabaya', '3524266908820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(186, 'FALI06AC', 'Berkah Tani/Falichul', 'BERK36', 'Siti Susaeni', 'Jatisari, RT.02/RW.01, Kel.Jatirenggo, Kec. Glagah', 'Lamongan', '3524264101590075', '000000000000000', '2026-09-23 02:29:01', NULL),
+(187, 'FALI07AC', 'Berkah Tani/Falichul', 'BERK36', 'Umu Choiriyah', 'Pedurungan, RT.02/RW.01, Kel. Dukuhtunggal, Kec. Glagah', 'Lamongan', '3524265801800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(188, 'FALI08AC', 'Berkah Tani/Falichul', 'BERK36', 'Ah Zainul Mahasin', 'Kuro, RT.02/RW.01, Kel. Kuro, Kec. Karangbinangun', 'Lamongan', '3524242504740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(189, 'FALI09AC', 'Berkah Tani/Falichul', 'BERK36', 'Moh. Fathur Rozaq', 'Meluwur, RT.002/RW.001, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260701820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(190, 'FALI10AC', 'Berkah Tani/Falichul', 'BERK36', 'Nur Kholis', 'Dusun Bapuh, RT.03/RW.01, Kel. Bapuhbaru, Kec. Glagah', 'Lamongan', '3507252412740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(191, 'FALI11AC', 'Berkah Tani/Falichul', 'BERK36', 'Muhammad Fuad', 'Pedurungan, RT.03/RW.02, Kel. Dukuhtunggal, Kec. Glagah', 'Lamongan', '3524262211770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(192, 'FALI12AC', 'Berkah Tani/Falichul', 'BERK36', 'Abdul Buari', 'Meluwur, RT.01/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260208760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(193, 'FALI13AC', 'Berkah Tani/Falichul', 'BERK36', 'Munawi', 'Meluwur, RT.01/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261012470001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(194, 'FALI14AC', 'Berkah Tani/Falichul', 'BERK36', 'Mukaromin', 'Meluwur, RT.01/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260506640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(195, 'FALI15AC', 'Berkah Tani/Falichul', 'BERK36', 'Kaderi', 'Meluwur, RT.02/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260603560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(196, 'FALI16AC', 'Berkah Tani/Falichul', 'BERK36', 'Moh. Sholeh', 'Meluwur, RT.01/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260503550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(197, 'FALI17AC', 'Berkah Tani/Falichul', 'BERK36', 'Supenan', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262406640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(198, 'FALI18AC', 'Berkah Tani/Falichul', 'BERK36', 'Syafaat', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262908650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(199, 'FALI19AC', 'Berkah Tani/Falichul', 'BERK36', 'M. Ali Mas\' Ud', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262211840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(200, 'FALI20AC', 'Berkah Tani/Falichul', 'BERK36', 'Ahmad Farikhin', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3525101804730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(201, 'FALI21AC', 'Berkah Tani/Falichul', 'BERK36', 'Mujairi', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261807670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(202, 'FALI22AC', 'Berkah Tani/Falichul', 'BERK36', 'Mustaqim', 'Meluwur, RT.02/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261005670004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(203, 'FALI23AC', 'Berkah Tani/Falichul', 'BERK36', 'Mukromin', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3525101005780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(204, 'FALI24AC', 'Berkah Tani/Falichul', 'BERK36', 'A. Arifuddin', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260907750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(205, 'FALI25AC', 'Berkah Tani/Falichul', 'BERK36', 'Kasmolan', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261304730004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(206, 'FALI26AC', 'Berkah Tani/Falichul', 'BERK36', 'Ach. Aminul Wahib', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261405800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(207, 'FALI27AC', 'Berkah Tani/Falichul', 'BERK36', 'Abd. Rokhim', 'Meluwur, RT.02/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260812600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(208, 'FALI28AC', 'Berkah Tani/Falichul', 'BERK36', 'Mulyono', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262206810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(209, 'FALI29AC', 'Berkah Tani/Falichul', 'BERK36', 'Ainur Ya\'in', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260810600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(210, 'FALI30AC', 'Berkah Tani/Falichul', 'BERK36', 'Hasanuddin', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262206790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(211, 'FALI31AC', 'Berkah Tani/Falichul', 'BERK36', 'Edy Cahyono', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261901840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(212, 'FALI32AC', 'Berkah Tani/Falichul', 'BERK36', 'Selamet', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261808610001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(213, 'FALI33AC', 'Berkah Tani/Falichul', 'BERK36', 'M. Nadhir', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260101570007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(214, 'FALI34AC', 'Berkah Tani/Falichul', 'BERK36', 'H. Naufal Abdulloh', 'Meluwur, RT.02/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262503530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(215, 'FALI35AC', 'Berkah Tani/Falichul', 'BERK36', 'Muhammad Syafi\'i', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262709710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(216, 'FALI36AC', 'Berkah Tani/Falichul', 'BERK36', 'Ai\'d Latif', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261105780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(217, 'FALI37AC', 'Berkah Tani/Falichul', 'BERK36', 'Muchammad Syafudin', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3525160507730122', '000000000000000', '2026-09-23 02:29:01', NULL),
+(218, 'FALI38AC', 'Berkah Tani/Falichul', 'BERK36', 'M. Taufiq', 'Meluwur, RT.02/RW.06, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261205690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(219, 'FALI39AC', 'Berkah Tani/Falichul', 'BERK36', 'Badrul Komar', 'Meluwur, RT.01/RW.01, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260412780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(220, 'FALI40AC', 'Berkah Tani/Falichul', 'BERK36', 'Shohib', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262506810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(221, 'FALI41AC', 'Berkah Tani/Falichul', 'BERK36', 'M. Amri Yahya', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524261502920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(222, 'FALI42AC', 'Berkah Tani/Falichul', 'BERK36', 'Mujahidin', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260905690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(223, 'FALI43AC', 'Berkah Tani/Falichul', 'BERK36', 'Kinun', 'Meluwur, RT.02/RW.04, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260210620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(224, 'FALI44AC', 'Berkah Tani/Falichul', 'BERK36', 'Miskan', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260110620004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(225, 'FALI45AC', 'Berkah Tani/Falichul', 'BERK36', 'Saiful Arif', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260101750005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(226, 'FALI46AC', 'Berkah Tani/Falichul', 'BERK36', 'Munaj', 'Meluwur, RT.01/RW.03, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260707570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(227, 'FALI47AC', 'Berkah Tani/Falichul', 'BERK36', 'Mohammad Kholil', 'Meluwur, RT.02/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524260904570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(228, 'FALI48AC', 'Berkah Tani/Falichul', 'BERK36', 'Muan', 'Meluwur, RT.01/RW.02, Kel. Meluwur, Kec. Glagah', 'Lamongan', '3524262406510001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(229, 'SURA01AC', 'Berkah Tani/Suradi', 'BERK22', 'Japar', 'Dsn. Pojok, RT.001/RW.004, Kel. Plemahan, Kec. Plemahan', 'Kediri', '3506161203800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(230, 'APRA01AC', 'Bintang Sejahtera/Aprianto', 'APRA01', 'Surya Fitriadi', 'Rambutan 16 No. 73, RT.001 / 013, Kel. Kuranji, Kec. Kuranji', 'Padang', '1371092308780005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(231, 'APRA02AC', 'Bintang Sejahtera/Aprianto', 'APRA01', 'Daswir', 'Jl. Imam Bonjol, Kel. Alahan Panjang, Kec. Lembah Gumanti', 'Solok', '1302042001750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(232, 'APRA04AC', 'Bintang Sejahtera/Aprianto', 'APRA01', 'Rozi Desmi Fitri', 'Jorong Sungai Pangalek, Kel. Sariak Alahan Tigo, Kec. Hiliran Gumanti', 'Solok', '1302174107960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(233, 'APRA05AC', 'Bintang Sejahtera/Aprianto', 'APRA01', 'Doni Putra', 'Jorong Taratak Baru, Kel. Salimpat, Kec. Lembah Gumanti', 'Solok', '1302171203820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(234, 'APRA06AC', 'Bintang Sejahtera/Aprianto', 'APRA01', 'Isnatil Khairat', 'Suayan Soriak, Kel. Suayan, Kec. Akabiluru', 'Lima Puluh Kota', '1307135001940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(235, 'SEHF01AC', 'Cahaya Jaya/Sehfudin', 'CAHA07', 'Subadar', 'Areng-areng Barat, RT.002/RW.003, Kel. Sambisirah, Kec. Wonorejo', 'Pasuruan', '3514072406590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(236, 'SEHF02AC', 'Cahaya Jaya/Sehfudin', 'CAHA07', 'Luqman Hakim', 'Dsn. Areng-Areng Barat, RT.002/RW.003, Kel. Sambisirah, Kec. Wonorejo', 'Pasuruan', '3514072510720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(237, 'CAMU01AC', 'Cahaya Mulya', 'CAHA01', 'Shokhib Burhan', 'Dusun Jenisari, RT.001/RW.001, Kel. Genteng Kulon, Kec. Genteng', 'Banyuwangi', '3510092009890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(238, 'DEAR01AC', 'Dear Tani/Suprayitno', 'DEAR01', 'Karmi', 'Dukuh Kalipucang, RT.002/RW.002, Kel. Kedungbanteng, Kec. Sukorejo', 'Ponorogo', '3502154911600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(239, 'DELI01AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Royhana', 'Jl. Sakapura No. 22, RT.002/RW.002, Kel. Triwung Kidul, Kec. Kademangan', 'Probolinggo', '3513235606880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(240, 'DELI02AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Makinul Amin', 'Dsn. Krajan, RT.002/RW.002, Kel. Triwung Kidul, Kec. Kademangan', 'Probolinggo', '3574012204790005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(241, 'DELI03AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Nurhayati', 'Jl. Priksan Gg. Karajan No.35, RT.001/RW.017, Kel.Kebonsari Kulon, Kec. Kanigaran', 'Probolinggo', '3574045809820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(242, 'DELI04AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Muhammad Hosen', 'Jl. Mayangan No. 327, RT.006/RW.002, Kel. Bantaran, Kec. Bantaran', 'Probolinggo', '3513040107800033', '000000000000000', '2026-09-23 02:29:01', NULL),
+(243, 'DELI06AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Delta Amalia', 'Dsn. Tegal Juwet, RT.014/RW.005, Kel. Sumberbulu, Kec. Tegalsiwalan', 'Probolinggo', '3513054607940003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(244, 'DELI07AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Enggik Yeni Saputra', 'Dsn. Tegal Juwet, RT.014/RW.005, Kel. Sumberbulu, Kec. Tegalsiwalan', 'Probolinggo', '3513201001910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(245, 'DELI08AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Muhammad Hermanto', 'Dsn. Sumbermuning, RT.009/002, Kel. Tegalsiwalan, Kec. Tegalsiwalan', 'Probolinggo', '3513201512960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(246, 'DELI09AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Suparmi', 'Dsn. Sumbermuning, RT.009/002, Kel. Tegalsiwalan, Kec. Tegalsiwalan', 'Probolinggo', '3513206010650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(247, 'DELI10AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Sudi Mastor', 'Dsn. Sumbermuning, RT.009/002, Kel. Tegalsiwalan, Kec. Tegalsiwalan', 'Probolinggo', '3513201011560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(248, 'DELI11AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Robiatul Adawiyah', 'Dsn. Kabuaran, RT.024/RW.007, Kel. Kotaanyar, Kec. Kotaanyar', 'Probolinggo', '3513114607970004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(249, 'DELI12AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Umi Kulsum', 'Dsn. Ibrak, RT.003/RW.005, Kel. Karangpranti, Kec. Pajarakan', 'Probolinggo', '3513166104790002', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(250, 'DELI13AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Sunan', 'Jl. Slamet Riyadi, RT.005/RW.008, Kel. Kanigaran, Kec. Kanigaran', 'Probolinggo', '3574042102790006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(251, 'DELI14AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Ahon', 'Dusun Nangka, RT.007/RW.004, Kel. Besuk, Kec. Bantaran', 'Probolinggo', '3513040107670343', '000000000000000', '2026-09-23 02:29:01', NULL),
+(252, 'DELI15AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Moh. Arkan Imantoko', 'Dusun Triwung, Rt.007/Rw.002, Kel. Warujinggo, Kec. Leces', 'Probolinggo', '3513050911670003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(253, 'DELI16AC', 'Delima, Toko/Nurhasan', 'DELI01', 'M. Hosen', 'Dusun Togur I, RT.013/RW.007, Kel. Bulang, Kec. Gending', 'Probolinggo', '3513182011680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(254, 'DELI17AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Malik', 'Dusun Kramat, RT.009/Rw.004, Kel. Sedarum, Kec. Nguling', 'Probolinggo', '3514214705850008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(255, 'DELI18AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Sagi', 'Jl. Yos Sudarso GG. Pertiwi No.11, RT.004/RW.004, Kel. Pabean, Kec. Dringu', 'Probolinggo', '3513190903620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(256, 'DELI19AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Ainul Yakin', 'Dusun Krajan, RT.005/RW.002, Kel. Triwung Kidul, Kec. Kademangan', 'Probolinggo', '3574012812950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(257, 'DELI20AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Indra Harianto', 'Dusun Mranggon, RT.013/RW.003, Kel. Mranggonlawang, Kec. Dringu', 'Probolinggo', '3513190212880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(258, 'DELI21AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Bambang Suyanto', 'Dusun Karanganyar, RT.005/RW.001, Kel. Curahsawo, Kec. Gending', 'Probolinggo', '3513182111820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(259, 'DELI22AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Asmat Junaedi', 'Dusun Pandean, RT.005/RW.005, Kel. Pabean, Kec. Dringu', 'Probolinggo', '3513190107770081', '000000000000000', '2026-09-23 02:29:01', NULL),
+(260, 'DELI24AC', 'Delima, Toko/Nurhasan', 'DELI01', 'Mohammad Dolili', 'Dusun Dulawang, RT.009/RW.004, Kel. Bulujaranlor, Kec. Tegalsiwalan', 'Probolinggo', '3513201805860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(261, 'ISNA01AC', 'Deni Isnawan', 'DENI09', 'Ardiyan Afandi', 'Asembagus, RT.003/RW.001, Kel. Purwoagung, Kec. Tegaldlimo', 'Banyuwangi', '3510042705950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(262, 'DENI01AC', 'Deni/Bisi', 'DENI02', 'Ilham Filayati R', 'Dsn. Bayat Rejo, RT.045/RW.009, Kel. Wringinpitu, Kec. Tegaldlimo', 'Banyuwangi', '3510043005960002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(263, 'DENI02AC', 'Deni/Bisi', 'DENI02', 'Yudi Hariyanto', 'Dsn. Krajan, RT.001/RW.005, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509123101850004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(264, 'DENI03AC', 'Deni/Bisi', 'DENI02', 'Sudiyono', 'Dsn. Pasar, RT.005/RW.002, Kel. Sumberarum, Kec. Songgon', 'Banyuwangi', '3510191507730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(265, 'DENI04AC', 'Deni/Bisi', 'DENI02', 'Hariyanto', 'Dusun Tembelang, RT.002/RW.001, Kel. Bareng, Kec. Kabat', 'Banyuwangi', '3510140101860008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(266, 'DENI05AC', 'Deni/Bisi', 'DENI02', 'Danang Alfian Nanda', 'Dusun Krajan, RT.002/RW.010, Kel. Tamanagung, Kec. Cluring', 'Banyuwangi', '3510061311960004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(267, 'DENI06AC', 'Deni/Bisi', 'DENI02', 'Ahmad Mualif', 'Dusun Kraton, RT.003/RW.003, Kel. Wonoasri Kec. Tempurejo', 'Jember', '3509181001940004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(268, 'DENI07AC', 'Deni/Bisi', 'DENI02', 'Achmad Gozali', 'Dusun Gumuksari, RT.004/RW.001, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509132709850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(269, 'DENI08AC', 'Deni/Bisi', 'DENI02', 'Ahmad Fausi', 'Dusun Bago, RT.009/RW.007, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107790262', '000000000000000', '2026-09-23 02:29:01', NULL),
+(270, 'DENI09AC', 'Deni/Bisi', 'DENI02', 'Daryanto', 'Dusun Krajan III, RT.003/RW.012, Kel. Keting, Kec. Jombang', 'Jember', '3509010404770005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(271, 'DENI10AC', 'Deni/Bisi', 'DENI02', 'Sujianto', 'Dusun Grobyog, RT.003/RW.007, Kel. Tanjung Rejo, Kec. Wuluhan', 'Jember', '3509110202790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(272, 'DENI11AC', 'Deni/Bisi', 'DENI02', 'Moh. Thowaf', 'Kp. Klowangan, RT.001/RW.001, Kel. Mlandingan Wetan, Kec. Bungatan', 'Jember', '3512170905840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(273, 'DENI12AC', 'Deni/Bisi', 'DENI02', 'Suhernik', 'Dusun Darungan, RT.041/RW.013, Kel. Selokgondang, Kec. Sukodono', 'Lumajang', '3508154204800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(274, 'DENI13AC', 'Deni/Bisi', 'DENI02', 'M. Husen', 'Dusun Kedung Sumur, RT.002/RW.012, Kel. Jambearum, Kec. Puger', 'Jember', '3509081301830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(275, 'DENI14AC', 'Deni/Bisi', 'DENI02', 'Fathor Rozi', 'Dusun Karang Semanding, RT.001/RW.004, Kel. Sukorejo, Kec. Bangsalsari', 'Jember', '3509091011780008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(276, 'EKAJ01AC', 'Eka Jaya/David', 'EKAJ01', 'Uswatun Khasanah', 'Dusun Tugung, RT.003/RW.003, Kel. Sempu, Kec. Sempu', 'Banyuwangi', '3510206412890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(277, 'EKAJ02AC', 'Eka Jaya/David', 'EKAJ01', 'Sugimah', 'Dusun  Krajan, RT.002/RW.003, Kel. Sumberkencono, Kec. Wongsorejo', 'Banyuwangi', '3510185212680007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(278, 'EKAJ03AC', 'Eka Jaya/David', 'EKAJ01', 'Suryono', 'Damtelu, RT.017/RW.002, Kel. Kedunggebang, Kec. Tegaldlimo', 'Banyuwangi', '3510040306700009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(279, 'ENGG01AC', 'Damar Batur Nusantara', 'ENGG02', 'Jundatul Masfufah', 'Dusun Krajan I, RT.001/RW.024, Kel. Kasiyan Timur, Kec. Puger', 'Jember', '3509086807000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(280, 'ENGG02AC', 'Damar Batur Nusantara', 'ENGG02', 'Satria Bagus Saputra', 'Dusun Purwosari, RT.001/RW.007, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509051805040003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(281, 'ENGG03AC', 'Damar Batur Nusantara', 'ENGG02', 'Dani Hermansyah', 'Dusun Krangkongan, RT.003/RW.014, Kel. Tegalwangi, Kec. Umbulsari', 'Jember', '3509051202020004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(282, 'ENGG04AC', 'Damar Batur Nusantara', 'ENGG02', 'Novia Lailatul Fitri', 'Dusun Purwosari, RT.002/RW.007, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509055411040003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(283, 'ENGG05AC', 'Damar Batur Nusantara', 'ENGG02', 'Lutfi Kamal', 'Dusun Jatilawang, RT.002/RW.004, Kel. Tegal Wangi, Kec. Umbulsari', 'Jember', '3509052401020004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(284, 'ENGG06AC', 'Damar Batur Nusantara', 'ENGG02', 'Rifqi Budiman Lopa', 'Dusun Semboro Lor, RT.001/RW.025, Kel. Semboro, Kec. Semboro', 'Jember', '3509070602970002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(285, 'ENGG07AC', 'Damar Batur Nusantara', 'ENGG02', 'Muhamad Hafid Rizki Irawan', 'Dusun Purwosari, RT.001/RW.002, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509052406020004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(286, 'ENGG08AC', 'Damar Batur Nusantara', 'ENGG02', 'Kholiffatunni\'mah', 'Dusun Babatan, RT.003/RW.018, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509074504000002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(287, 'ENGG09AC', 'Damar Batur Nusantara', 'ENGG02', 'Fahmi Ali Nadif', 'Dusun Babatan, RT.003/RW.015, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509070107010068', '000000000000000', '2026-09-23 02:29:01', NULL),
+(288, 'ENGG10AC', 'Damar Batur Nusantara', 'ENGG02', 'Nurhalimah', 'Dusun Krajan I, RT.001/RW.021, Kel. Kasiyan Timur, Kec. Puger', 'Jember', '3509086804840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(289, 'ENGG11AC', 'Damar Batur Nusantara', 'ENGG02', 'M Fauzi', 'Dusun Kebonsari, RT.003/RW.001, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050211010002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(290, 'ENGG12AC', 'Damar Batur Nusantara', 'ENGG02', 'Moh. Lukmannul Hakim', 'Dusun Lengkong, RT.001/RW.027, Kel. Wonosari, Kec. Puger', 'Jember', '3509082204940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(291, 'ENGG13AC', 'Damar Batur Nusantara', 'ENGG02', 'Musripah', 'Dusun Babatan, RT.003/RW.018, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509074107390049', '000000000000000', '2026-09-23 02:29:01', NULL),
+(292, 'ENGG14AC', 'Damar Batur Nusantara', 'ENGG02', 'M. Aldo Tampati', 'Dusun Sambileren, RT.002/RW.014, kel. Purwoasri, Kec. Gumukmas', 'Jember', '3509042405050002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(293, 'ENGG15AC', 'Damar Batur Nusantara', 'ENGG02', 'Sanari', 'Dusun Purwosari, RT.002/RW.011, kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050505550010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(294, 'ENGG16AC', 'Damar Batur Nusantara', 'ENGG02', 'Samin', 'Dusun Purwosari, RT.002/RW.011, kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050312610001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(295, 'ENGG17AC', 'Damar Batur Nusantara', 'ENGG02', 'Supar', 'Dusun Purwosari, RT.001/RW.008, kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050507600010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(296, 'ENGG18AC', 'Damar Batur Nusantara', 'ENGG02', 'Seniti', 'Dusun Purwosari, RT.001/RW.007, kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509054207600006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(297, 'ENGG19AC', 'Damar Batur Nusantara', 'ENGG02', 'Suyoto', 'Dusun Kemukuh, RT.001/RW.021, Kel. Tembokrejo, Kec. Gumuk Mas', 'Jember', '3509040601790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(298, 'ENGG20AC', 'Damar Batur Nusantara', 'ENGG02', 'Bejo', 'Dusun Krangkongan, RT.001/RW.013, Kel. Tegal Wangi, Kec. Umbulsari', 'Jember', '3509050201550003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(299, 'ENGG21AC', 'Damar Batur Nusantara', 'ENGG02', 'Basri', 'Dusun Purwosari, RT.001/RW.012, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050107380138', '000000000000000', '2026-09-23 02:29:01', NULL),
+(300, 'ENGG22AC', 'Damar Batur Nusantara', 'ENGG02', 'Suparti', 'Dusun Purwosari, RT.001/RW.007, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509054806700006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(301, 'ENGG23AC', 'Damar Batur Nusantara', 'ENGG02', 'Sri Utami', 'Dusun Krangkongan, RT.003/RW.014, Kel. Tegal Wangi, Kec. Umbulsari', 'Jember', '3509055207760006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(302, 'ENGG24AC', 'Damar Batur Nusantara', 'ENGG02', 'Budi Utomo', 'Dusun Purwosari, RT.001/RW.011, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509051005850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(303, 'ENGG25AC', 'Damar Batur Nusantara', 'ENGG02', 'Muhammad Rio Siswanto', 'Dusun Ajung Kulon, RT.002/RW.001, Kel. Ajung, Kec. Ajung', 'Jember', '3509171407980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(304, 'ENGG26AC', 'Damar Batur Nusantara', 'ENGG02', 'Siti Eka Perwitosari', 'Dusun Krajan, RT.002/RW.008, Kel. Bagorejo, Kec. Gumukmas', 'Jember', '3509044903010003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(305, 'ENGG27AC', 'Damar Batur Nusantara', 'ENGG02', 'Syahrul Halim', 'Dusun Besuki, RT.002/RW.027, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509070907000003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(306, 'ENGG28AC', 'Damar Batur Nusantara', 'ENGG02', 'Nabila Faradina Azzahro', 'Dusun Babatan, RT.001/RW.019, Kel. Sidomekar, Kec. Semboro', 'Jember', '3509076706010004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(307, 'ENGG29AC', 'Damar Batur Nusantara', 'ENGG02', 'M. Nashihul Kholqi', 'Dusun Krajan I, RT.002/RW.015, Kel. Jombang, Kec. Jombang', 'Jember', '3509012402000003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(308, 'ENGG30AC', 'Damar Batur Nusantara', 'ENGG02', 'Ngatimin', 'Dusun Pakem, RT.001/RW.010, Kel. Wringintelu, Kec. Puger', 'Jember', '3509081106640005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(309, 'ENGG31AC', 'Damar Batur Nusantara', 'ENGG02', 'Supiyan', 'Dusun Krangkongan, RT.001/RW.014, Kel. Tegal Wangi, Kec. Umbulsari', 'Jember', '3509050403650005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(310, 'ENGG32AC', 'Damar Batur Nusantara', 'ENGG02', 'Mat Saji', 'Dusun Krajan, RT.002/RW.006, Kel. Wringintelu, Kec. Puger', 'Jember', '3509080107630634', '000000000000000', '2026-09-23 02:29:01', NULL),
+(311, 'ENGG33AC', 'Damar Batur Nusantara', 'ENGG02', 'Lilik Ismiati', 'Dusun Purwosari, RT.002/RW.012, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509055212650003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(312, 'ENGG34AC', 'Damar Batur Nusantara', 'ENGG02', 'Muhammad Hasyim', 'Dusun Purwosari, RT.001/RW.011, Kel. Tanjungsari, Kec. Umbulsari', 'Jember', '3509050910850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(313, 'ENGG35AC', 'Damar Batur Nusantara', 'ENGG02', 'Sulastri', 'Dusun Krangkongan, RT.003/RW.014, Kel. Tegal Wangi, Kec. Umbulsari', 'Jember', '3509055112690005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(314, 'EVAN01AC', 'Evan Jaya, UD', 'EVAN02', 'Zulkarnain', 'Jln. Lintas Tente Karumbu, RT.007/Rw.004, Kel. Ncera, Kec. Belo', 'Bima', '5206041607931003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(315, 'EVAN02AC', 'Evan Jaya, UD', 'EVAN02', 'Junaidin', 'Dusun Santula, RT.012/RW.007, Kel. Samili, Kec. Woha', 'Bima', '5206030510771002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(316, 'EVAN03AC', 'Evan Jaya, UD', 'EVAN02', 'Jualfin', 'Bgali, RT.001/RW.001, Kel. Ngali, Kec. Belo', 'Bima', '5206041205930005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(317, 'EVAN04AC', 'Evan Jaya, UD', 'EVAN02', 'Zulkifli', 'Samili, RT.012/RW.006, Kel. Samili, Kec. Woha', 'Bima', '5206030709711004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(318, 'EVAN05AC', 'Evan Jaya, UD', 'EVAN02', 'Samsudin', 'Ngali, RT.010/RW.003, Kel. Ngali, Kec. Belo', 'Bima', '5206042305000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(319, 'EVAN06AC', 'Evan Jaya, UD', 'EVAN02', 'Asbah', 'Tanjung Baru, RT.011/RW.005, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206012706960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(320, 'EVAN07AC', 'Evan Jaya, UD', 'EVAN02', 'Subhan', 'Dusun Kalate, RT.009/RW.004, Kel. Soki, Kec. Belo', 'Bima', '5206041102840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(321, 'EVAN08AC', 'Evan Jaya, UD', 'EVAN02', 'Puasa', 'Tanjung Baru, RT.004/RW.002, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206010107831195', '000000000000000', '2026-09-23 02:29:01', NULL),
+(322, 'EVAN09AC', 'Evan Jaya, UD', 'EVAN02', 'Hadijah', 'Tanjung Baru, RT.004/RW.009, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206014107851257', '000000000000000', '2026-09-23 02:29:01', NULL),
+(323, 'EVAN10AC', 'Evan Jaya, UD', 'EVAN02', 'Sukarman', 'Ngali, RT.016/RW.004, Kel. Ngali, Kec. Belo', 'Bima', '5206043012630003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(324, 'EVAN11AC', 'Evan Jaya, UD', 'EVAN02', 'Iwan Setiawan', 'Ngali, RT.020/RW.007, Kel. Ngali, Kec. Belo', 'Bima', '5206071511930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(325, 'EVAN12AC', 'Evan Jaya, UD', 'EVAN02', 'Mubadin', 'Lido, RT.002/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206040908891004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(326, 'EVAN13AC', 'Evan Jaya, UD', 'EVAN02', 'Nisfullail', 'Ngali, RT.005/RW.001, Kel. Ngali, Kec. Belo', 'Bima', '5206040208890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(327, 'EVAN14AC', 'Evan Jaya, UD', 'EVAN02', 'Suhardin', 'Ngali, RT.020/RW.007, Kel. Ngali, Kec. Belo', 'Bima', '5206041203950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(328, 'EVAN15AC', 'Evan Jaya, UD', 'EVAN02', 'Buhari', 'Lido, RT.006/RW.002, Kel. Lido, Kec. Belo', 'Bima', '5206040102830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(329, 'EVAN16AC', 'Evan Jaya, UD', 'EVAN02', 'Mansyur', 'Ngali, RT.017/RW.004, Kel. Ngali, Kec. Belo', 'Bima', '5206040502790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(330, 'EVAN17AC', 'Evan Jaya, UD', 'EVAN02', 'Burhanudin', 'Ngali, RT.021/RW.006, Kel. Ngali, Kec. Belo', 'Bima', '5206040107861091', '000000000000000', '2026-09-23 02:29:01', NULL),
+(331, 'EVAN18AC', 'Evan Jaya, UD', 'EVAN02', 'Suharmaji', 'Ngali, RT.020/RW.007, Kel. Ngali, Kec. Belo', 'Bima', '5206041010960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(332, 'EVAN19AC', 'Evan Jaya, UD', 'EVAN02', 'Irwansyah', 'Ngali, RT.012/RW.004, Kel. Ngali, Kec. Belo', 'Bima', '5206111411960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(333, 'EVAN20AC', 'Evan Jaya, UD', 'EVAN02', 'Yufitasari', 'Dsn. Telaga Renda, RT.018/RW.001, Kel. Renda, Kec. Belo', 'Bima', '5206044703021003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(334, 'EVAN21AC', 'Evan Jaya, UD', 'EVAN02', 'RobinSyah', 'Dsn. Telaga Renda, RT.018/RW.001, Kel. Renda, Kec. Belo', 'Bima', '5206040512990002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(335, 'EVAN22AC', 'Evan Jaya, UD', 'EVAN02', 'Jufrin', 'Ngali, RT.003/RW.001, Kel. Ngali, Kec. Belo', 'Bima', '5206043112630042', '000000000000000', '2026-09-23 02:29:01', NULL),
+(336, 'EVAN23AC', 'Evan Jaya, UD', 'EVAN02', 'ST. Maryam', 'Ncera, RT.002/005, Kel. Ncera, Kec. Belo', 'Bima', '5206045312620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(337, 'EVAN24AC', 'Evan Jaya, UD', 'EVAN02', 'Juharuddin', 'Jl. Lintas Tente Karumbu, RT,002/RW,001, Kel. Diha, Kec. Belo', 'Bima', '5206040906940003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(338, 'EVAN25AC', 'Evan Jaya, UD', 'EVAN02', 'Mansyur', 'Jl. Lintas Tente Karumbu, RT,002/RW,002, Kel. Ncera, Kec. Belo', 'Bima', '5206040711810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(339, 'EVAN26AC', 'Evan Jaya, UD', 'EVAN02', 'Yasin A Kadir', 'Bojong Menteng, RT.001/RW.006, Kel. Bojong Menteng, Kec. Rawa Lumbu', 'Bekasi', '3275050408860005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(340, 'EVAN27AC', 'Evan Jaya, UD', 'EVAN02', 'Ilyas Yasin', 'Ngali, RT.001/RW.001, Kel. Ngali, Kec. Belo', 'Bima', '5206040507891004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(341, 'EVAN28AC', 'Evan Jaya, UD', 'EVAN02', 'Yasin', 'Dusun Oi kalate, RT.006, RW.005, Kel. Soki, Kec. Belo', 'Bima', '5206040906760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(342, 'EVAN29AC', 'Evan Jaya, UD', 'EVAN02', 'Andi Gunarso', 'Sai, RT.025/RW.012, Kel. Sai, Kec. Soromandi', 'Bima', '5206150203861005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(343, 'EVAN30AC', 'Evan Jaya, UD', 'EVAN02', 'Siti Qomariatun', 'Sai, RT.003/RW.003, Kel. Sai, Kec. Soromandi', 'Bima', '5206154901921003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(344, 'EVAN31AC', 'Evan Jaya, UD', 'EVAN02', 'Ardiansyah', 'Dusun Dewa Kala, RT.004/RW.002, Kel. Soki, Kec. Belo', 'Bima', '5206041006960005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(345, 'EVAN32AC', 'Evan Jaya, UD', 'EVAN02', 'A. Kasyim', 'Ncera,RT.003/RW.001, Kel. Ncera, Kec. Belo', 'Bima', '5206043112560020', '000000000000000', '2026-09-23 02:29:01', NULL),
+(346, 'EVAN33AC', 'Evan Jaya, UD', 'EVAN02', 'Asnawi', 'Ncera,RT.002/RW.001, Kel. Ncera, Kec. Belo', 'Bima', '5206042106790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(347, 'EVAN34AC', 'Evan Jaya, UD', 'EVAN02', 'Buhari', 'Tanjung Baru, RT.007/RW.004, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206010107821277', '000000000000000', '2026-09-23 02:29:01', NULL),
+(348, 'EVAN35AC', 'Evan Jaya, UD', 'EVAN02', 'A. Gani', 'Jln. Tente Karumbu, RT.002/RW.005, Kel. Ncera, Kec. Belo', 'Bima', '5206045012760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(349, 'EVAN36AC', 'Evan Jaya, UD', 'EVAN02', 'Hamdiah', 'Jln. Lintas Tente Karumbu, RT.001/RW.008, Kel. Ncera, Kec. Belo', 'Bima', '5206040107601147', '000000000000000', '2026-09-23 02:29:01', NULL),
+(350, 'EVAN37AC', 'Evan Jaya, UD', 'EVAN02', 'Abdul Kadir', 'Jln. Lintas Tente Karumbu, RT.015/RW.007, Kel. Ncera, Kec. Belo', 'Bima', '5206042007891009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(351, 'EVAN38AC', 'Evan Jaya, UD', 'EVAN02', 'Suhendi', 'Dusun Telaga Renda, RT.002/Rw.001, Kel. Renda, Kec. Belo', 'Bima', '5206041607851003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(352, 'EVAN39AC', 'Evan Jaya, UD', 'EVAN02', 'Syafruddin', 'Ngali, RT.012/RW.000, Kel. Ngali, Kec. Belo', 'Bima', '5206043112700046', '000000000000000', '2026-09-23 02:29:01', NULL),
+(353, 'EVAN40AC', 'Evan Jaya, UD', 'EVAN02', 'Heri Santoso', 'Dusun Bewakalea, RT.005/RW.002, Kel. Soki, Kec. Belo', 'Bima', '5206041604931004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(354, 'EVAN41AC', 'Evan Jaya, UD', 'EVAN02', 'Jakariah', 'Desa Ncera, RT.002/RW.002, Kel. Ncera, Kec. Belo', 'Bima', '5206043112590019', '000000000000000', '2026-09-23 02:29:01', NULL),
+(355, 'EVAN42AC', 'Evan Jaya, UD', 'EVAN02', 'Sudirman', 'Diha, RT.003/RW.002, Kel. Diha, Kec. Belo', 'Bima', '5206042809910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(356, 'EVAN43AC', 'Evan Jaya, UD', 'EVAN02', 'Irwan', 'Dusun Nari, RT.009/RW.005, Kel. Naru, Kec. Sape', 'Bima', '5206062005740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(357, 'EVAN44AC', 'Evan Jaya, UD', 'EVAN02', 'Ediansyah', 'Dusun Nggaro Tire, RT.006/ RW.003, Kel. Diha, Kec. Belo', 'Bima', '5206041812860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(358, 'EVAN45AC', 'Evan Jaya, UD', 'EVAN02', 'Hasan', 'Tanjung Baru, RT.009/RW.004, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206010507791003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(359, 'EVAN46AC', 'Evan Jaya, UD', 'EVAN02', 'Yasin', 'Dusun Oi Kalate, RT.007/RW.003, Kel. Soki, Kec. Belo', 'Bima', '5206040107921197', '000000000000000', '2026-09-23 02:29:01', NULL),
+(360, 'EVAN47AC', 'Evan Jaya, UD', 'EVAN02', 'Aminudin', 'Jl. Lintas Tente Karumbu, RT.001/RW.001, Kel. Ncera, Kec. Belo', 'Bima', '5206040605710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(361, 'EVAN48AC', 'Evan Jaya, UD', 'EVAN02', 'Husni', 'Tangga Baru, RT.008/RW.005, Kel. Tangga Baru, Kec. Monta', 'Bima', '5206010107601246', '000000000000000', '2026-09-23 02:29:01', NULL),
+(362, 'FAJA01AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Sunyoto', 'Dsn. Logawe RT.003/RW.006, Kel. Sawahan, Kec. Rengel', 'Tuban', '3523141603840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(363, 'FAJA03AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Andre Herdian Putra', 'Jl. Veteran GG. Sawah, RT.001/RW.001, Kel. Brangkal, Kec. Parengan', 'Tuban', '3578141609960002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(364, 'FAJA04AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Yanuarizki M. Nur', 'Karang Mrnjangan 5/24, RT.005/RW.007, Kel. Mojo, Kec. Gubeng', 'Surabaya', '3578080101880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(365, 'FAJA05AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Hendrik Prastiyo', 'Dusun Tegal Boro, RT.011/RW.002, Kel. Pacing, Kec. Parengan', 'Tuban', '3523092808990002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(366, 'FAJA06AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Hadi Suparjo', 'Pungpungan, RT.005/RW.001, Kel. Pungpungan, Kec. Kalitudu', 'Bojonegoro', '3522161502700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(367, 'FAJA07AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Siehab', 'Dsn. Purboyo mayang Sekar, RT.002/RW.007, Kel. Rengel, Kec. Rengel', 'Tuban', '3523142404630003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(368, 'FAJA08AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Iswandi', 'Dsn. Sarirejo, RT.004/RW.005, Kel. Rahayu, Kec. Soko', 'Tuban', '3523110107750050', '000000000000000', '2026-09-23 02:29:01', NULL),
+(369, 'FAJA09AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Wiji', 'Dsn. Logawe RT.003/RW.006, Kel. Sawahan, Kec. Rengel', 'Tuban', '3523142507770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(370, 'FAJA10AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Siti Mutmainah', 'Dsn. Tegalboro, RT.011/RW.002, Kel. Pacing, Kec. Parengan', 'Tuban', '3523096011020001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(371, 'FAJA11AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Siti Novita W', 'Dsn. Krasaan RT.003/RW.001, Kel. Kumpulrejo, Kec. Parengan', 'Tuban', '3523094907000002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(372, 'FAJA12AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Sundari', 'Jl. Veteran GG. Sawah RT.001/RW.001, Kel. Brangkal, Kec. Parengan', 'Tuban', '3523095509960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(373, 'FAJA13AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Sarmucin', 'Dusun Secang, RT.010/RW.001, Kel. Ngandong, Kec. Grabagan', 'Tuban', '3523204604770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(374, 'FAJA14AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Kurdi', 'Dsn Sambungrejo, RT.002/RW.002, Kel. Wukirharjo, Kec. Parengan', 'Tuban', '3523090509600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(375, 'FAJA15AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Yahman', 'Dsn Sambungrejo, RT.003/RW.002, Kel. Wukirharjo, Kec. Parengan', 'Tuban', '3523090710610001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(376, 'FAJA16AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Munadi', 'Dsn. Krasaan RT.003/RW.001, Kel. Kumpulrejo, Kec. Parengan', 'Tuban', '3523091102760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(377, 'FAJA17AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Edi Susanto', 'Dusun Temor Leke, RT.003/RW.001, Kel. Saroka, Kec. Saronggi', 'Sumenep', '3172060406600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(378, 'FAJA18AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Rudi Hartono', 'Dusun Temor Leke, RT.004/RW.001, Kel. Saroka, Kec. Saronggi', 'Sumenep', '3529061901830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(379, 'FAJA19AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Sudariyanti', 'Dsn. Randu Pagir, RT.012/RW.006, Kel. Pekuwon, Kec. Rengel', 'Tuban', '3523146412900003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(380, 'FAJA20AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Ngadiyem', 'Dsn. Awu-awu RT.002/RW.003, Kel. Temuasri, Kec. Sempu', 'Banyuwangi', '3510207112510002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(381, 'FAJA21AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Poniyem', 'Dusun Bloksolo, RT.002/RW.003, Kel. Sumbersari, Kec. Purwoharjo', 'Banyuwangi', '3510035201600008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(382, 'FAJA23AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Dilla Martasya Anggara', 'Dsn. Ringinsari, RT.002/RW.002, Kel. Pesanggaran, Kec. Pesanggaran', 'Banyuwangi', '3510015903020001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(383, 'FAJA24AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Hendrawan Cahyo Nugroho', 'Dsn. Tegalpakis, RT.003/RW.002, Kel. Kalibaru Wetan, Kec. Kalibaru', 'Banyuwangi', '3510111507740007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(384, 'FAJA25AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Yosi Kurniawan', 'Jl. Musi GG Mawar, No. 62, RT.001/RW.002, Kel. Penganjuran, Kec. Banyuwangi', 'Banyuwangi', '3510160408830004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(385, 'FAJA26AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Muhlisin', 'Dusun Tamansari, RT.001/RW.001, Kel. Pendarungan, Kec. Kabat', 'Banyuwangi', '3510141709810006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(386, 'FAJA27AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Febri Yuliyanti', 'Dusun Krajan, RT.004/RW.004, Kel. Kedayunan, Kec. Kabat', 'Banyuwangi', '3510144702010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(387, 'FAJA28AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Reviatul Rohma', 'Dusun Krajan, RT.001/RW.008, Kel. Pakistaji, Kec. Kabat', 'Banyuwangi', '3510054602030004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(388, 'FAJA29AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Sumartini', 'Jl. Terusan Borobudur No.189, RT.002/RW.004, kel. Tamanbaru, Kec. Banyuwangi', 'Banyuwangi', '3510166404420001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(389, 'FAJA30AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Alfian Jayadi', 'Perum Griya Indah Agus Salim Blok C2, RT.002/RW.001, Kel. Mojopanggung, Kec. Giri', 'Banyuwangi', '3510171404810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(390, 'FAJA31AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Nur Hariri', 'Lingk. Kramat, RT.003/RW.002, Kel. Kertosari, Kec. Banyuwangi', 'Banyuwangi', '3510161309790002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(391, 'FAJA32AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Nur Holis', 'Dusun Krajan, RT.002/RW.001, Kel. Jelun, Kec. Licin', 'Banyuwangi', '3510240710760005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(392, 'FAJA33AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Rofiq Hidayat', 'Jl. Indra Giri, RT.002/RW.004, kel. Penataran, Kec. Giri', 'Banyuwangi', '3510170301910003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(393, 'FAJA34AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Busairi', 'Jl. Yos Sudarso Link. Sukowidi, RT.003/RW.003, Kel. Klatak, Kec. Kalipuro', 'Banyuwangi', '3510212101670002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(394, 'FAJA35AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'Poniyah', 'Dusun Krajan 2, RT.001/RW.004, Kel. Gambiran, Kec. Gambiran', 'Banyuwangi', '3510077006680028', '000000000000000', '2026-09-23 02:29:01', NULL),
+(395, 'FAJA36AC', 'Fajar Tani Muliya/Ibnu', 'FAJA07', 'ada KTP lain blm input', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(396, 'FANJ01AC', 'Fandi Jaya/Afandi', 'FAND01', 'Masriah', 'Siwuran, RT.001/RW.002, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524105710560004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(397, 'FANJ02AC', 'Fandi Jaya/Afandi', 'FAND01', 'Supriyadi FJ', 'Klagensrampat, RT.006/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524102002550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(398, 'FANJ03AC', 'Fandi Jaya/Afandi', 'FAND01', 'Hasyim', 'Klagensrampat, RT.004/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524101106670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(399, 'FANJ04AC', 'Fandi Jaya/Afandi', 'FAND01', 'Usman', 'Klagensrampat, RT.006/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524102508710003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(400, 'FANJ05AC', 'Fandi Jaya/Afandi', 'FAND01', 'Teguh Santoso', 'Klagensrampat, RT.003/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524103006670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(401, 'FANJ06AC', 'Fandi Jaya/Afandi', 'FAND01', 'Supraji', 'Klagensrampat, RT.003/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524101506690003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(402, 'FANJ07AC', 'Fandi Jaya/Afandi', 'FAND01', 'Amuji', 'Klagensrampat, RT.006/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524101003780002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(403, 'FANJ08AC', 'Fandi Jaya/Afandi', 'FAND01', 'Maki', 'Siwuran, RT.001/RW.001, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524102808550003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(404, 'FANJ24AC', 'Fandi Jaya/Afandi', 'FAND01', 'Surip', 'Klagensrampat, RT.001/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524100802660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(405, 'FANJ25AC', 'Fandi Jaya/Afandi', 'FAND01', 'Suprobo', 'Siwuran, RT.006/RW.002, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524102505750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(406, 'FANJ26AC', 'Fandi Jaya/Afandi', 'FAND01', 'Utomo', 'Siwuran, RT.006/RW.002, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524102008660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(407, 'FANJ27AC', 'Fandi Jaya/Afandi', 'FAND01', 'Yatemah', 'Siwuran, RT.001/RW.001, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524104605600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(408, 'FANJ28AC', 'Fandi Jaya/Afandi', 'FAND01', 'Khusnan Marzuki', 'Siwuran, RT.004/RW.001, Kel. Siwuran, Kec. Maduran', 'Lamongan', '3524103004850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(409, 'FATH01AC', 'Fathur Roziq', 'FATH03', 'Romelan', 'Takerharjo, RT.04/RW.04, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524151106590002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(410, 'FATH02AC', 'Fathur Roziq', 'FATH03', 'Dwi Triyani', 'Takerharjo, RT.04/RW.04, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524154303950003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(411, 'FATH03AC', 'Fathur Roziq', 'FATH03', 'Moh. Zainuri, SE', 'Takerharjo, RT.04/RW.04, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524152210900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(412, 'FATH04AC', 'Fathur Roziq', 'FATH03', 'Muhammad Taufik Rohman', 'Tepanas, RT.02/RW.02, Kel. Kranji, Kec. Paciran', 'Lamongan', '3524141606010007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(413, 'FATH05AC', 'Fathur Roziq', 'FATH03', 'Kamsir', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524150101660014', '000000000000000', '2026-09-23 02:29:01', NULL),
+(414, 'FATH06AC', 'Fathur Roziq', 'FATH03', 'Mustaqim', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524151305660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(415, 'FATH07AC', 'Fathur Roziq', 'FATH03', 'Samikah', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524154101690022', '000000000000000', '2026-09-23 02:29:01', NULL),
+(416, 'FATH08AC', 'Fathur Roziq', 'FATH03', 'Roudlotul Faizah', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524155412740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(417, 'FATH09AC', 'Fathur Roziq', 'FATH03', 'Fathul Mubin', 'Banyubang, RT.003/RW.001, Kel. Banyubang, Kec. Solokuro', 'Lamongan', '3524151112910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(418, 'FATH10AC', 'Fathur Roziq', 'FATH03', 'Sufaid', 'Takerharjo, RT.001/RW.001, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524151502860004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(419, 'FATH11AC', 'Fathur Roziq', 'FATH03', 'Abd. Kholiq Ghofar', 'Takerharjo, RT.004/RW.002, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524151605690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(420, 'FATH12AC', 'Fathur Roziq', 'FATH03', 'Asifah', 'Takerharjo, RT.003/RW.002, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524155404730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(421, 'FATH13AC', 'Fathur Roziq', 'FATH03', 'Tina Deniyanti', 'Takerharjo, RT.001/RW.001, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524156812860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(422, 'FATH14AC', 'Fathur Roziq', 'FATH03', 'Qiraatul Faizah', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524154110800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(423, 'FATH15AC', 'Fathur Roziq', 'FATH03', 'Sutarno', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524152310830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(424, 'FATH16AC', 'Fathur Roziq', 'FATH03', 'Ferri Agus Santoso', 'Takerharjo, RT.001/RW.002, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524151911890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(425, 'FATH17AC', 'Fathur Roziq', 'FATH03', 'Rusiyanan', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524150102710007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(426, 'FATH18AC', 'Fathur Roziq', 'FATH03', 'Moh. Rodli', 'Takerharjo, RT.004/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524153009820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(427, 'FATH19AC', 'Fathur Roziq', 'FATH03', 'Suwati', 'Takerharjo, RT.001/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524154101450035', '000000000000000', '2026-09-23 02:29:01', NULL),
+(428, 'FATH20AC', 'Fathur Roziq', 'FATH03', 'Kamijo', 'Takerharjo, RT.001/RW.004, Kel. Takerharjo, Kec. Solokuro', 'Lamongan', '3524150101400028', '000000000000000', '2026-09-23 02:29:01', NULL),
+(429, 'FATH21AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(430, 'FATH22AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(431, 'FATH23AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(432, 'FATH24AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(433, 'FATH25AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(434, 'FATH26AC', 'Fathur Roziq', 'FATH03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(435, 'GAN08AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Misdi', 'Jl. Imam Bonjol II, No. 73, RT.004/RW.002, Kel. Sisir, Kec. Batu', 'Batu', '3579021111650003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(436, 'GAN10AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Riadi', 'Gangsiran Putuk, RT.003/RW.005, Kel. Tlekung, Kec. Junrejo', 'Batu', '3579030803660003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(437, 'GAN11AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Imam Muslim', 'Jl.TVRI Dusun Krajan, RT.002/RW.003, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3505111702810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(438, 'GAN12AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Kiki Pujianto', 'Toyomerto, RT.002/RW.002, Kel. Pesanggrahan, Kec. Batu', 'Batu', '3579010306870007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(439, 'GAN13AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Isrofi Suhartono', 'Dsn. Sebaluh, RT.025/RW.005, Kel. Pandesari, Kec. Pujon', 'Batu', '3507261101790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(440, 'GAN14AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Suwandi', 'Krajan, RT.006/RW.006, Kel. Tlekung, Kec. Junrejo', 'Batu', '3579031708630001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(441, 'GAN15AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Sulkan', 'Jl. Sumber Darmi, RT.005/RW.001, Kel. Tlekung, Kec. Junrejo', 'Batu', '3579030103540001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(442, 'GAN16AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Mudjahidin', 'Jl. Anggrek, RT.001/RW.009, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579010512870007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(443, 'GAN17AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Yasin', 'JL. Kenanga, RT.001/RW.006, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579011308700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(444, 'GAN18AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Lasmat', 'Sumbergondo Tegalsari, RT.001/RW.003, Kel. Sumbergondo, Kec. Bumiaji', 'Batu', '3579022201800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(445, 'GAN19AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Karnadi', 'Dsn. Salam, RT.010/RW.002, Kel. Sidodadi, Kec. Ngantang', 'Malang', '3507272812650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(446, 'GAN20AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Lestari Emor', 'Dsn. Dresel, RT.001/RW.010, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579012304650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(447, 'GAN21AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Supa\'at', 'Jl. Hasanudin, RT.002/RW.008, Kel. Junrejo, Kec. Junrejo', 'Batu', '3579031001650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(448, 'GAN22AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Ahmad Mujahidin', 'Jl. Mawar, RT.003/RW.009, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579011111770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(449, 'GAN23AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Supriyanto', 'Jl. Kenanga 168, RT.002/RW.006, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579012002780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(450, 'GAN24AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Supardi', 'Jl. TVRI, Dsn. Krajan, RT.001/RW.001, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579010102510001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(451, 'GAN25AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Tarmudji', 'Jl. Asalia, Dsn. Dresel, RT.001/RW.009, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579011012610003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(452, 'GAN26AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Mujianto', 'Jl. Kenanga, RT.002/RW.006, Kel. Oro-oro Ombo, Kec. Batu', 'Batu', '3579012506830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(453, 'GAN27AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Panjuni', 'Jl. Panderman, RT.002/RW.004, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579013103660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(454, 'GAN28AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Saan Widiyanto', 'Jl. WR Supratman, RT.002/RW.004, Kel. Sisir, Kec. Batu', 'Batu', '3579011609650003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(455, 'GAN29AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Sutrisno', 'JL. Wukir GG 7, RT.005/RW.004, Kel. Temas, Kec. Batu', 'Batu', '3579013101650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(456, 'GAN30AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Selvianto Ridho', 'Dsn. Brau, RT.004/RW.010, Kel. Gunungsari, Kec. Bumiaji', 'Batu', '3579021207990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(457, 'GAN31AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Miskat', 'Dsn. Ngudi, RT.036/RW.009, Kel. Tawangargo, Kec. Karangploso', 'Batu', '3507232507600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(458, 'GAN32AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Iswanto', 'Jl. Apel, RT.001/RW.001, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579010106670004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(459, 'GAN33AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Abdullah Sidiq', 'Jl. Lahor No.84, RT.004/RW.012, Kel. Pesanggrahan, Kec. Batu', 'Batu', '3579010406640002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(460, 'GAN34AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Suyono', 'Pandaan, RT.004/RW.009, Kel. Pandanrejo, Kec. Bumiaji', 'Batu', '3579021112620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(461, 'GAN35AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Kamari', 'Dsn. Gesingan, RT.007/RW.003, Kel. Pandesari, Kec. Pujon', 'Malang', '3507260101590010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(462, 'GAN37AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Siswanto', 'Jl. Kenanga, RT.002/RW.006, Kel. Oro-oro Ombo, Kec. Batu', 'Batu', '3579011307700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(463, 'GAN38AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Suparman', 'Desa Sumberejo, RT.003/RW.009, Kel. Sumberejo, Kec. Batu', 'Batu', '3579010607620004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(464, 'GAN39AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Kabul Arifin', 'Dusun Brau, RT.003/RW.010, Kel. Gunungsari, Kec. Bumiaji', 'Batu', '3507260801730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(465, 'GAN40AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Poniman', 'Dsn. Krajan, RT.014/RW.007, Kel. Ngroto, Kec. Pujon', 'Malang', '3507260101650041', '000000000000000', '2026-09-23 02:29:01', NULL),
+(466, 'GAN41AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Fathur Rohman', 'Jl. Cempaka 70, RT.002/RW.005, Kel. Pesanggrahan, Kec. Batu', 'Batu', '3579012505790006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(467, 'GAN42AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Mislan', 'Dusun Krajan, RT.002/RW.002, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579011803670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(468, 'GAN43AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Nurahman', 'Desa Sumberejo, RT.004/RW.009, Kel. Sumberejo, Kec. Batu', 'Batu', '3579010104580005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(469, 'GAN44AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Maryono', 'Jl. Kenanga, RT.002/RW.006, Kel. Oro-oro Ombo, Kec. Batu', 'Batu', '3579013003840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(470, 'GAN45AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Riyanto', 'Jl. Kenanga, RT.001/RW.007, Kel. Oro-oro Ombo, Kec. Batu', 'Batu', '3579010105710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(471, 'GAN46AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Rudianto', 'Jl. Karyorejo, RT.005/RW.005, Kel. Pesanggrahan, Kec. Batu', 'Batu', '3579011804810003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(472, 'GAN47AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Suratin', 'Jl. Imam Bonjol I, RT.003/RW.002, Kel. Sisir, Kec. Batu', 'Batu', '3579011807570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(473, 'GAN48AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Sugeng Riadi', 'Jl. Jeruk RT.001/RW.002, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579012101700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(474, 'GAN49AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Asnadi', 'Jl. Wukir GG 5, RT.002/RW.002, Kel. Temas, Kec. Batu', 'Batu', '3579010102630003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(475, 'GAN50AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Sunariyah', 'Jl. Sarimun, RT.002/RW.003, Kel. Beji, Kec. Junrejo', 'Batu', '3579034202660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(476, 'GAN51AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Sutrisno Buang', 'Jl. Kenanga, RT.002/RW.006, Kel. Oro-oro Ombo, Kec. Batu', 'Batu', '3579012810580001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(477, 'GAN52AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Kasmuri', 'Gangsiran Putuk, RT.004/RW.005, Kel. Tlekung, Kec. Junrejo', 'Batu', '3579030108580002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(478, 'GAN53AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Lasim', 'Dusun Pandan, RT.017/RW.011, Kel. Pandanrejo, Kec. Bumiaji', 'Batu', '3579022406600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(479, 'GAN54AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Joko Susianto', 'Desa Sumberejo, RT.002/RW.010, Kel. Sumberejo, Kec. Batu', 'Batu', '3579011909750003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(480, 'GAN55AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Lasmadi', 'Jl. Mawar, RT.003/RW.009, Kel. Oro-Oro Ombo, Kec. Batu', 'Batu', '3579011611730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(481, 'GAN56AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Mulyono', 'Jl. Patimura VII No. 77, RT.004/RW.007, Kel. Temas, Kec. Batu', 'Batu', '3579012401750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(482, 'GAN57AC', 'Gangsar Tani/Noto, H', 'GANG01', 'Suparni', 'Dsn. Sembon, RT.001/RW.002, Kel. Sembon, Kec. Karangrejo', 'Tulungagung', '3504082312640004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(483, 'GAS01AC', 'Gasar Tani/Warno', 'GASA01', 'Kholid Mawardi', 'Dr Wahidin SHD IA, RT.001/RW.005, Kel. Kebomas Kec. Kebomas', 'Gresik', '3525141304870005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(484, 'GUD02AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Sawito Supriyadi', 'Dusun Talang, RT.002/RW.002, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513160107340011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(485, 'GUD03AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Haris Diansyah', 'Dusun Asam, RT.002/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513162308700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(486, 'GUD04AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Misti', 'Dusun Krajan 2, RT.004, Kel. Selogudig Wetan, Kec, Pajarakan', 'Probolinggo', '3513164107570040', '000000000000000', '2026-09-23 02:29:01', NULL),
+(487, 'GUD05AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Satiman', 'Dusun Asam, RT.005/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513160107580011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(488, 'GUD06AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Sulusia', 'Dusun Asam, RT.001/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513165604740007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(489, 'GUD07AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Mohammad Aksin', 'Dusun Asam, RT.001/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513160102680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(490, 'GUD08AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Lukman Nur Hikman', 'Dusun Krajan 2, RT.003/RW.001, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513162810900003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(491, 'GUD10AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Hasan', 'Dusun Asam, RT.003/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513161102690003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(492, 'GUD11AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Buhami', 'Dusun Krajan II, RT.001/RW.001, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513164908660003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(493, 'GUD12AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Rosidi', 'Dusun Asam, RT.002/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513160909700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(494, 'GUD13AC', 'Gudang Barokah/Ishak', 'GUDA02', 'Edi Siswanto', 'Dusun Asam, RT.005/RW.004, Kel. Selogudig Wetan, Kec. Pajarakan', 'Probolinggo', '3513160206830005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(495, 'HADI01AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Darmi', 'Jln. Cimuk LK. IV, Kel. Sei Merbau, Kec. Teluk Nibung', 'Tanjung Balai', '1274044901720002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(496, 'HADI02AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Liza Khairani', 'Jln. Letjed. Suprapto LK. IV, Kel. Matahalasan, Kec. Tanjungbalai Utara', 'Tanjung Balai', '1274024202930004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(497, 'HADI03AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Yanto', 'I.R Pedatuan Darat, RT.008/003, Kel. 12 Ulu, Kec. Seberang Ulu II', 'Palembang', '1671033012770013', '000000000000000', '2026-09-23 02:29:01', NULL),
+(498, 'HADI04AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Ade Suryadi', 'Jl. SH. Wardoyo LR. Kencana III, RT.015/RW.003, Kel. 5 Ulu, Kec. Seberang Ulu I', 'Palembang', '1671020301940009', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(499, 'HADI05AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Eka Nurachman', 'Kel. Air Bang, RT.007/RW.003, Kel. Air Bang, Kec. Curup Tengah', 'Rejang Lebong', '1702190904900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(500, 'HADI06AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Misnanto', 'Jl. Pancasila, RT.005/RW.002, Kecl. Sako Baru, Kec. Sako', 'Palembang', '1671081107900003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(501, 'HADI07AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Syahril', 'Komplek Perumahan Rakyat 2 No. 787, RT.022/RW.003, Kel. Sei Buah, Kec. Ilir Timur II', 'Palembang', '1671062712680007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(502, 'HADI08AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Muhammad Okta Apriyanto', 'Jl. Pangkalan Benteng, RT.022/RW.008, Kel. Talangbetutu, Kec. Sukarami', 'Palembang', '1671041610950005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(503, 'HADI09AC', 'Hadi/Garuda Sarana Agro, CV', 'HADI07', 'Ambar Risdianto', 'Cempaka Dalam GG Arena No. 26 A, RT.014/RW.004, Kel. 26 Ilir, Kec. Bukit Kecil', 'Palembang', '1671110401610003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(504, 'TERA01AC', 'Harapan Terang/Heri', 'HARA16', 'Kasdi', 'Dsn Waru, RT.003/RW.004, Kel. Cepokorejo, Kec. Palang', 'Tuban', '3523182505740008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(505, 'HARI01AC', 'Hariyono Sby', 'HARI01', 'Suhartini', 'Dusun Bongso Kulon No.50, RT.001/RW.001, Kel. Pengalangan, Kec. Menganti', 'Gresik', '3525134206850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(506, 'HARI02AC', 'Hariyono Sby', 'HARI01', 'Nurul Anam', 'Dsn Kanigoro, RT.010/RW.003, Kel. Keboharan, Kec. Krian', 'Sidoharjo', '3515110101730023', '000000000000000', '2026-09-23 02:29:01', NULL),
+(507, 'HARI03AC', 'Hariyono Sby', 'HARI01', 'M Salahudin Al Ayyubi', 'DK. Kukun, RT.001/RW.005, Babat Jerawat', 'Surabaya', '3578300301980001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(508, 'HEFN01AC', 'Hefni/Bayer', 'HEFN01', 'Zaenal Arifin', 'Dusun Kantong, RT.003/RW.001, Kemiri, Panti', 'Jember', '3509140610710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(509, 'HENG01AC', 'Hengki/Branita', 'HENG01', 'Katno', 'Jl. Banda RT.02/RW.02, Nambak, Bungkal', 'Ponorogo', '3502031004770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(510, 'HENG02AC', 'Hengki/Branita', 'HENG01', 'Miswanto', 'Dukuh Pramben, RT.02 / RW.01, Ronosentanan, Siman', 'Ponorogo', '3502102612780002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(511, 'HENG03AC', 'Hengki/Branita', 'HENG01', 'Mohammad Asmui, H', 'Dsn. Cermenan RT.02/RW.02, Sugihwaras, Ngoro', 'Jombang', '3517031404660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(512, 'HENG04AC', 'Hengki/Branita', 'HENG01', 'Gunawan', 'Dusun Gondang RT.03/ RW.01 Ngampel, Papar', 'Kediri', '3506140603700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(513, 'HENG05AC', 'Hengki/Branita', 'HENG01', 'Sudarto, SP', 'Tengaran RT.011/RW.04, Tengaran, Peterongan', 'Jombang', '3517101402700004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(514, 'HENG06AC', 'Hengki/Branita', 'HENG01', 'Samsul Huda', 'Dsn. Slombok RT.01/RW.02, Plemahan, Sumobito', 'Jombang', '3517110706760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(515, 'HENG07AC', 'Hengki/Branita', 'HENG01', 'Sugeng Harianto', 'Dsn. Kedungwangi RT.01/RW.06, Gedangan, Kutorejo', 'Mojokerto', '3516072906680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(516, 'HENG08AC', 'Hengki/Branita', 'HENG01', 'Zulkarnain', 'Dsn. Pucanggro RT.3/RW.2, Pucangro, Gudo', 'Jombang', '3517020101850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(517, 'HENG09AC', 'Hengki/Branita', 'HENG01', 'Sunyoto', 'Jl. Krakatau RT.2/RW.8, Pelem, Pare', 'Kediri', '3506171303670003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(518, 'HENG10AC', 'Hengki/Branita', 'HENG01', 'Samuit', 'Dsn. Sentulan RT.14/RW3, Bongkot, Peterongan', 'Jombang', '3517102508580001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(519, 'HENG11AC', 'Hengki/Branita', 'HENG01', 'Sodin', 'Ngasinan RT.3/RW.10, Kempleng, Purwoasri', 'Kediri', '3506151611680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(520, 'HENG12AC', 'Hengki/Branita', 'HENG01', 'Sutrisno', 'Dsn. Jatirejo, RT.2/RW.6, Payaman, Plemahan', 'Kediri', '3506160202670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(521, 'HENR01AC', 'Henry Aditanzil Sugianto', 'HENR02', 'Henry Aditanzil', 'Jl. Niaga 26, RT.002/RW.002, Kel.Barurambat Kota, Kec. Pamekasan', 'Pamekasan', '3528042710800004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(522, 'HIDAY01AC', 'Hidayat Tani, UD', 'HIDA08', 'Muhrim', 'Ampan, Kel. Sikur, Kec. Sikur', 'Lombok Timur', '5203040107600739', '000000000000000', '2026-09-23 02:29:01', NULL),
+(523, 'HIDAY02AC', 'Hidayat Tani, UD', 'HIDA08', 'Husni, S.E', 'Marang Selatan, Kel. Kotaraja, Kec. Sikur', 'Lombok Timur', '5203041009820004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(524, 'HIDAY03AC', 'Hidayat Tani, UD', 'HIDA08', 'Ijun Ardias', 'Mangkung, Kel. Sikur, Kec. Sikur', 'Lombok Timur', '5203041406930001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(525, 'HIDAY04AC', 'Hidayat Tani, UD', 'HIDA08', 'Erni Azmatul Laily', 'Karang Anyar, Kel. Sikur, Kec. Sikur', 'Lombok Timur', '5203045202950002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(526, 'HIDAY05AC', 'Hidayat Tani, UD', 'HIDA08', 'Lalu Zainudin Habib Rahman', 'Dasan Has, Kel. Sakra, Kec. Sakra', 'Lombok Timur', '5203020107990774.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(527, 'HIDAY07AC', 'Hidayat Tani, UD', 'HIDA08', 'Mawardi', 'Lendang Penyonggok, RT.000/RW.000, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203040107790613.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(528, 'HIDAY08AC', 'Hidayat Tani, UD', 'HIDA08', 'Marsah', 'Lingkok Marang, RT.000/RW.000, Kel. Kotaraja, Kec. Sikur', 'Lombok Timur', '5203043112850392.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(529, 'HIDAY09AC', 'Hidayat Tani, UD', 'HIDA08', 'Herman Fauzi', 'Lendang Penyonggok, RT.000/RW.000, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203040506900003.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(530, 'HIDAY10AC', 'Hidayat Tani, UD', 'HIDA08', 'Lalu Nasruddin', 'Lekong Pituk, RT.001/RW.001, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203041212800011.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(531, 'HIDAY11AC', 'Hidayat Tani, UD', 'HIDA08', 'Maksum', 'Montong Men, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203040107640326.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(532, 'HIDAY12AC', 'Hidayat Tani, UD', 'HIDA08', 'Sabli', 'Montong Men, RT.001/RW.004, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203042210700001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(533, 'HIDAY13AC', 'Hidayat Tani, UD', 'HIDA08', 'Martini', 'Lendang Penyonggok, RT.004/RW.004, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203044807890001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(534, 'IKHL01AC', 'Ikhlas Tani, UD', 'IKHL01', 'H. Syeh Mulahela', 'Lingkungan Pohdana, RT.012/RW.003, Kel. Gerung Utara, Kec. Gerung', 'Lombok Barat', '5201012108560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(535, 'IKHL02AC', 'Ikhlas Tani, UD', 'IKHL01', 'Ummu Farwa', 'Lingkungan Pohdana, RT.012/RW.003, Kel. Gerung Utara, Kec. Gerung', 'Lombok Barat', '5271016312990001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(536, 'IKHL03AC', 'Ikhlas Tani, UD', 'IKHL01', 'Fauzi', 'Dusun Batu Mulik Karang Tengah, RT.000/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201012312700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(537, 'IKHL04AC', 'Ikhlas Tani, UD', 'IKHL01', 'Kamaludin', 'Dusun Bongor, RT.007/RW.000, Kel. Taman Ayu, Kec. Gerung', 'Lombok Barat', '5201010107710063', '000000000000000', '2026-09-23 02:29:01', NULL),
+(538, 'IKHL05AC', 'Ikhlas Tani, UD', 'IKHL01', 'Hardian', 'Dusun Batu Mulik Kr. Tengah, RT.003/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201010107750367', '000000000000000', '2026-09-23 02:29:01', NULL),
+(539, 'IKHL06AC', 'Ikhlas Tani, UD', 'IKHL01', 'Nurul Hikmah', 'Dusun Batu Mulik Kr. Tengah, RT.003/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201016505840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(540, 'IKHL07AC', 'Ikhlas Tani, UD', 'IKHL01', 'Sanusi', 'Batu Mulik Dusun Batu Mulik, RT.010/RW.002, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201010107770456', '000000000000000', '2026-09-23 02:29:01', NULL),
+(541, 'IKHL08AC', 'Ikhlas Tani, UD', 'IKHL01', 'M. Nasir', 'Pelah, Kel. Mareje Timur, Kec. Lembar', 'Lombok Barat', '5201132512820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(542, 'IKHL10AC', 'Ikhlas Tani, UD', 'IKHL01', 'Siti Wardiah', 'Dusun Batu Mulya, RT.002/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201014107920387', '000000000000000', '2026-09-23 02:29:01', NULL),
+(543, 'IKHL11AC', 'Ikhlas Tani, UD', 'IKHL01', 'Hajah Patimah', 'Batu Mulik Dusun Batu Mulik, RT.013/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201014107520022', '000000000000000', '2026-09-23 02:29:01', NULL),
+(544, 'IKHL12AC', 'Ikhlas Tani, UD', 'IKHL01', 'Haji Mahdan', 'Dusun Batu Mulya, RT.000/RW.000, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201012308800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(545, 'IKHL13AC', 'Ikhlas Tani, UD', 'IKHL01', 'Zaenudin', 'Dusun Batu Mulik, RT.013/RW.003, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201010107760210', '000000000000000', '2026-09-23 02:29:01', NULL),
+(546, 'IKHL14AC', 'Ikhlas Tani, UD', 'IKHL01', 'Mahni', 'Dusun Batu Mulik, RT.013/RW.003, Kel. Gapuk, Kec. Gerung', 'Lombok Barat', '5201017112660123', '000000000000000', '2026-09-23 02:29:01', NULL),
+(547, 'IMAM13AC', 'Imam Ali Saputro', 'IMAM29', 'Imam Ali Saputro', 'Grojogan, RT.003 / RW.005, Kel. Kalang, Kec. Pitu', 'Ngawi', '3521161801980001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(548, 'FAUJ01AC', 'Imam, UD', 'IMAM11', 'Abdolah', 'Ncera, RT.003/RW.004, Kel. Ncera, Kec. Belo', 'Bima', '5206040807761099', '000000000000000', '2026-09-23 02:29:01', NULL),
+(549, 'FAUJ02AC', 'Imam, UD', 'IMAM11', 'Aminah', 'Ncera, RT.003/RW.006, Kel. Ncera, Kec. Belo', 'Bima', '5206046306850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(550, 'FAUJ03AC', 'Imam, UD', 'IMAM11', 'Juharni', 'Dsn La Raji, RT.001/RW.001, Kel. Diha, Kec. Belo', 'Bima', '5206044103781004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(551, 'FAUJ04AC', 'Imam, UD', 'IMAM11', 'Amliati', 'Ncera, RT.001/RW.002, Kel. Ncera, Kec. Belo', 'Bima', '5206047112740030', '000000000000000', '2026-09-23 02:29:01', NULL),
+(552, 'FAUJ05AC', 'Imam, UD', 'IMAM11', 'Mardan', 'Jl. Lintas Tente Karumbu, RT,017/RW,007, Kel. Ncera, Kec. Belo', 'Bima', '5206046411960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(553, 'FAUJ06AC', 'Imam, UD', 'IMAM11', 'Arbiah', 'Jln. Lintas Tente Karumbu, RT,001/RW,002, Kel. Ncera, Kec. Belo', 'Bima', '5206046602880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(554, 'FAUJ07AC', 'Imam, UD', 'IMAM11', 'Rukmini', 'Ncera, RT,003/RW,005, Kel. Ncera, Kec. Belo', 'Bima', '5206046412640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(555, 'FAUJ08AC', 'Imam, UD', 'IMAM11', 'Sakinah', 'Ncera, RT,006/RW,003, Kel. Ncera, Kec. Belo', 'Bima', '5206045203850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(556, 'FAUJ09AC', 'Imam, UD', 'IMAM11', 'Samsidah', 'Jln. Lintas Tente Karumbu, RT,001/RW,001, Kel. Diha, Kec. Belo', 'Bima', '3275054603810020', '000000000000000', '2026-09-23 02:29:01', NULL),
+(557, 'FAUJ10AC', 'Imam, UD', 'IMAM11', 'Nuraena', 'Jln. Lintas Karumbu, RT,001/RW,001, Kel. Diha, Kec. Belo', 'Bima', '5206045303850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(558, 'FAUJ11AC', 'Imam, UD', 'IMAM11', 'Mukminah', 'Jln. Lintas Tente Karumbu, RT,001/RW,007, Kel. Ncera, Kec. Belo', 'Bima', '5206046312710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(559, 'FAUJ12AC', 'Imam, UD', 'IMAM11', 'Aminah', 'Ncera, RT.003/RW.006, Kel. Ncera, Kec. Belo', 'Bima', '5206045006780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(560, 'FAUJ13AC', 'Imam, UD', 'IMAM11', 'Samsudin', 'Dusun La Raji, RT,001/RW,001, Kel, Diha, Kec. Belo', 'Bima', '5206040412720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(561, 'FAUJ14AC', 'Imam, UD', 'IMAM11', 'Budiman', 'Jln. Tente Karumbu, RT,003/RW,004, Kel. Ncera, Kec. Belo', 'Bima', '5206042502730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(562, 'FAUJ15AC', 'Imam, UD', 'IMAM11', 'Nujulan', 'Lido, RT.008/RW.004, Kel. Lido, Kec. Belo', 'Bima', '5206040107801256', '000000000000000', '2026-09-23 02:29:01', NULL),
+(563, 'FAUJ16AC', 'Imam, UD', 'IMAM11', 'Endang', 'Ncera, RT.001/RW.001, Kel. Ncera, Kec. Belo', 'Bima', '5206047112830015', '000000000000000', '2026-09-23 02:29:01', NULL),
+(564, 'FAUJ17AC', 'Imam, UD', 'IMAM11', 'M. Sidik', 'Jln. Tente Karumbu, RT.002/RW.002, Kel. Ncera, Kec. Belo', 'Bima', '5206041102820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(565, 'IWJA01AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Jumadi Jayansyah', 'Lingkungan Jado, RT.010/RW.004, Kel. Dorotangga, Kec. Dompu', 'Dompu', '5205010403970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(566, 'IWJA02AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Abd. Landa', 'Dusun Tolo Renda, RT.006/RW.003, Kel. Renda, Kec. Belo', 'Bima', '5206041804920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(567, 'IWJA03AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Yusuf Rizal', 'Dusun Rato Baru, RT.010/RW.005, Kel. Rato. Kec. Lambu', 'Bima', '5206122302981002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(568, 'IWJA04AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Sahrul', 'Tangga, RT.010/RW.003', 'Bima', '5206010112030003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(569, 'IWJA05AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Gusnedi', 'Sawang Rawang, RT.000/RW.000, K. Campago Barat, Kec. V Koto Kampung Dalam', 'Padang Pariaman', '3271041708810039', '000000000000000', '2026-09-23 02:29:01', NULL),
+(570, 'IWJA06AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Farisi Anwar', 'Kp. Tangah Jorong Cacang Tinggi, Kel. Tiku Utara, Kec. Tanjung Mutiara', 'Agam', '1306010101950019', '000000000000000', '2026-09-23 02:29:01', NULL),
+(571, 'IWJA07AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'M. Yusuf', 'Ujung Labung, Kel. Malai V Suku, Kec. Batang Gasan', 'Padang Pariaman', '1306010111810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(572, 'IWJA08AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Rahmat Hidayat', 'Sawah Rawang, Kel. Campago Barat, Kec. V Koto Kampung Dalam', 'Padang Pariaman', '1305060501000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(573, 'IWJA09AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Roni Putra', 'Sibarueh, Kel. Pilubang, Kec. Sungai Limau', 'Padang Pariaman', '1305081903950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(574, 'IWJA10AC', 'Iwan Jaya, UD/Iwan', 'IWAN04', 'Nurul Huda', 'Lewi Ntana RT.007/RW.003 , Lewintana Kel. Soromandi', 'Bima', '5206151904901002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(575, 'JAEN01AC', 'Jaenal/Branita', 'ANIT02', 'Suryono', 'Dsn. Merkawang, RT.3/RW.2, Merkawang, Tambakboyo', 'Tuban', '3523062303750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(576, 'JAEN02AC', 'Jaenal/Branita', 'ANIT02', 'Sulaiman', 'Gayam, RT.6/RW.8, Payaman, Solokuro', 'Lamongan', '3524152008740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(577, 'JAEN03AC', 'Jaenal/Branita', 'ANIT02', 'Tomy Marmadion', 'Dsn. Kebonan RT.4/RW.2, Kalisalam, Dringu', 'Probolinggo', '3513192008900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(578, 'JAEN04AC', 'Jaenal/Branita', 'ANIT02', 'Gunawan Wiji Saksono', 'Wonosobo, RT.4/RW.3, Sidorejo, Geneng', 'Ngawi', '3521131810760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(579, 'PRAY01AC', 'Jaya Abadi/Prayogi', 'JAYA45', 'Prayogi Ika Handayani', 'Dusun Kauman, RT.003/RW.011, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3511016607790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(580, 'JENNY01AC', 'Jenny Wati', 'JENN01', 'Jemmy', 'Jl. Mulyosari Satu/100-A, RT.010/RW.006, Kel. Kalisari, Kec. Mulyorejo', 'Surabaya', '3578260204800007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(581, 'JENNY02AC', 'Jenny Wati', 'JENN01', 'Eveline S', 'D. Husada Ind Timur 8/14 L-109, RT.005/RW.009, Kel. Mulyorejo, Kec. Mulyorejo', 'Surabaya', '3578265411940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(582, 'JENNY03AC', 'Jenny Wati', 'JENN01', 'Pauline S', 'D. Husada Ind Timur 8/14 L-109, RT.005/RW.009, Kel. Mulyorejo, Kec. Mulyorejo', 'Surabaya', '3578264303990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(583, 'JENNY04AC', 'Jenny Wati', 'JENN01', 'Jennywati', 'D. Husada Ind Timur 8/14 L-109, RT.005/RW.009, Kel. Mulyorejo, Kec. Mulyorejo', 'Surabaya', '3578265206640004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(584, 'KAMI01AC', 'Kamil, H', 'KAMI01', 'Sundari Eko W', 'Dsn. Krajan, RT.003/RW.006, Kel. Jatian, Kec. Pakusari', 'Jember', '3509241205710004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(585, 'KAMI02AC', 'Kamil, H', 'KAMI01', 'Ahmad Sholeh', 'Dsn. Krajan I RT.001/RW.001, Kel. Gambiran, Kec. Kalisat', 'Jember', '3509270107770153', '000000000000000', '2026-09-23 02:29:01', NULL),
+(586, 'KARI09AC', 'Karisma Indoagro Universal, PT', 'KARI09', 'PT. Karisma Indoagro Universal', 'Jl. Semeru No. 89 RT.001/RW.004, Ajung', 'Jember', '0000000000000000', '019477371651000', '2026-09-23 02:29:01', NULL),
+(587, 'KARU01AC', 'Karunia Makmur, UD', 'KARU01', 'Wahyu Agung Widodo', 'Dsn. Silirkrombang, RT.003/RW.002, Kel. Seneporejo, Kec. Siliragung', 'Banyuwangi', '3510020601820002.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(588, 'KARU03AC', 'Karunia Makmur, UD', 'KARU01', 'Buhari', 'Dusun Silirkrombang, RT.003/ RW.002, Kel. Seneporejo, Kec. Siliragung', 'Banyuwangi', '3510222707690005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(589, 'KARU05AC', 'Karunia Makmur, UD', 'KARU01', 'Sugiharta', 'Dusun Pecemengan, RT.001/RW.002, Kel. Buluagung, Kec. Siliragung', 'Banyuwangi', '3510221602880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(590, 'KARU06AC', 'Karunia Makmur, UD', 'KARU01', 'Muhajam', 'Ringin Asri, RT.024/RW.006, Kel. Wringinpitu, Kec. Tegaldlimo', 'Banyuwangi', '3510040509700009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(591, 'KARU07AC', 'Karunia Makmur, UD', 'KARU01', 'Eko Prastyo', 'Dsn. Bulurejo, RT.003/RW.002, Kel. Tegalrejo, Kec. Tegalsari', 'Banyuwangi', '6271031104890009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(592, 'KARU08AC', 'Karunia Makmur, UD', 'KARU01', 'Prayu Tri Apriyanto', 'Dusun Tempurejo, RT.004/RW.001, Kel. Purwodadi, Kec. Gambiran', 'Banyuwangi', '3510071304930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(593, 'KARU09AC', 'Karunia Makmur, UD', 'KARU01', 'Bonasir', 'Dsn. Curahpacul, RT.001/RW.001, Kel. Tambakrejo, Kec. Muncar', 'Banyuwangi', '3510053006680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(594, 'KARU10AC', 'Karunia Makmur, UD', 'KARU01', 'Ponijan', 'Dusun Kaligoro, RT.002/RW.002, Kel. Sukomaju, Kec. Srono', 'Banyuwangi', '3510080102600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(595, 'KARU11AC', 'Karunia Makmur, UD', 'KARU01', 'Imfron Rosidi', 'Dusun Plosorejo, RT.003/RW.001, Kel. Kaliploso, Kec. Cluring', 'Banyuwangi', '3510061109900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(596, 'KARU12AC', 'Karunia Makmur, UD', 'KARU01', 'Painten', 'Dsn. Kedungrejo, RT.001/RW.006, Kel. Sambimulyo, Kec. Bangorejo', 'Banyuwangi', '3510025907630002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(597, 'KARU13AC', 'Karunia Makmur, UD', 'KARU01', 'Mohamad Kosim', 'Dsn. Krajan, RT.002/RW.002, Kel. Sarongan, Kec. Pesanggaran', 'Banyuwangi', '3510012803810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(598, 'KARU14AC', 'Karunia Makmur, UD', 'KARU01', 'Faruq Imami', 'Dsn. Cemetuk, RT.001/RW.003, Kel. Cluring, Kec. Cluring', 'Banyuwangi', '3510232805820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(599, 'KARU15AC', 'Karunia Makmur, UD', 'KARU01', 'Mohamad Ali Mansur', 'Dusun Kaligoro, RT.004/RW.001, Kel. Sukomaju, Kec. Srono', 'Banyuwangi', '3510081009800009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(600, 'KARU16AC', 'Karunia Makmur, UD', 'KARU01', 'Supriyadi', 'Damtelu, RT.013/RW.002, Kel. Kedunggebang, Kec. Tegaldlimo', 'Banyuwangi', '3510041204820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(601, 'KARU17AC', 'Karunia Makmur, UD', 'KARU01', 'Ardani', 'Sumberkepuh, RT.014/RW.002, Kel. Kedungwungu, Kec. Tegaldlimo', 'Banyuwangi', '3510042010720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(602, 'KARU18AC', 'Karunia Makmur, UD', 'KARU01', 'Ahmad Nabawi', 'Dsn. Tanjungrejo, RT.001/RW.002, Kel. Kebondalem, Kec. Bangorejo', 'Banyuwangi', '3510021011700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(603, 'KARU19AC', 'Karunia Makmur, UD', 'KARU01', 'Syamsul Arifin', 'Dsn. Krajan 1, RT.009/RW.002, Kel. Tegalsari , Kec. Tegalsari', 'Banyuwangi', '3510231709930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(604, 'KARU20AC', 'Karunia Makmur, UD', 'KARU01', 'Tukijan', 'Dsn. Curahpalung, RT.003/RW.003, Kel. Kradenan, Kec. Purwoharjo', 'Banyuwangi', '3510031508580003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(605, 'KARU21AC', 'Karunia Makmur, UD', 'KARU01', 'Susiyono', 'Dsn. Sidomukti, RT.001/RW.001, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510071001800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(606, 'KARU22AC', 'Karunia Makmur, UD', 'KARU01', 'Warsan Hadi', 'Dsn. Pasembon, RT.005/RW.004, Kel. Sambirejo, Kec. Bangorejo', 'Banyuwangi', '3510011010780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(607, 'KARU23AC', 'Karunia Makmur, UD', 'KARU01', 'Sudiyono', 'Dsn. Pasar, RT.005/RW.002, Kel. Sumberarum, Kec. Songgon', 'Banyuwangi', '3510191507730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(608, 'KARU24AC', 'Karunia Makmur, UD', 'KARU01', 'Daryanto', 'Dsn. Krajan 111, RT.003/RW.012, Kel. Keting, Kec. Jombang', 'Jember', '3509010404770005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(609, 'KARU25AC', 'Karunia Makmur, UD', 'KARU01', 'Hariyoso', 'Dsn. Jatisari, RT.002/RW.001, Kel. Wringinagung, Kec. Gambiran', 'Banyuwangi', '3510060909820008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(610, 'KARU26AC', 'Karunia Makmur, UD', 'KARU01', 'Akhiyat', 'Dsn. Pancursari, RT.003/RW.001, Kel. Benculuk, Kec. Cluring', 'Banyuwangi', '3510062304670003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(611, 'KARU27AC', 'Karunia Makmur, UD', 'KARU01', 'Wendy Kristanto', 'Dsn. Ringinmulyo, RT.002/RW.004, Kel. Pesanggaran, Kec. Pesanggaran', 'Banyuwangi', '3510011604820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(612, 'KARU28AC', 'Karunia Makmur, UD', 'KARU01', 'Pujiadi', 'Dsn. Trembelang, RT.002/RW.002, Kel. Cluring, Kec. Cluring', 'Banyuwangi', '3510061308700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(613, 'KARU29AC', 'Karunia Makmur, UD', 'KARU01', 'Pujiati', 'Dsn. Gunungsari, RT.001/RW.003, Kel. Bangorejo, Kec. Bangorejo', 'Banyuwangi', '3510025307720003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(614, 'KARU30AC', 'Karunia Makmur, UD', 'KARU01', 'Imam Daroji', 'Dsn. Kalirejo, RT/001/RW.008, Kel. Kaliploso, Kec. Cluring', 'Banyuwangi', '3510061304870002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(615, 'KARU31AC', 'Karunia Makmur, UD', 'KARU01', 'Arik Kusuma', 'Dsn. Ringinagung, RT.006/RW.003, Kel. Pesanggaran, Kec. Pesanggaran', 'Banyuwangi', '3510012510880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(616, 'KARU32AC', 'Karunia Makmur, UD', 'KARU01', 'Elby Cahya Putra', 'Dsn. Krajan, RT.003/RW.006, Kel. Purwoharjo, Kec. Purwoharjo', 'Banyuwangi', '3510031410930002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(617, 'KARU33AC', 'Karunia Makmur, UD', 'KARU01', 'Warsiman', 'Dsn. Cemoro, RT.001/RW.001, Kel. Balak, Kec. Songgon', 'Banyuwangi', '3510190206660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(618, 'KARU34AC', 'Karunia Makmur, UD', 'KARU01', 'Nunuk Kariyono', 'Petahunan, RT.004/RW.003, Kel. Jajag, Kec. Gambiran', 'Banyuwangi', '3510072512710006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(619, 'KARU35AC', 'Karunia Makmur, UD', 'KARU01', 'Syaiful Amin', 'Dsn. Bangeran, RT.002/RW.001, Kel. Macan Putih, Kec. Kabat', 'Banyuwangi', '3510140302950005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(620, 'KARU36AC', 'Karunia Makmur, UD', 'KARU01', 'Rusdiawan', 'Dsn. Krajan, RT.001/RW.001, Kel. Sraten, Kec. Cluring', 'Banyuwangi', '3510061010870004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(621, 'KARU37AC', 'Karunia Makmur, UD', 'KARU01', 'Gus Da\'im', 'Dsn. Krajan, RT.003/RW.002, Kel. Purwodadi, Kec. Gambiran', 'Banyuwangi', '3510072102750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(622, 'KARU38AC', 'Karunia Makmur, UD', 'KARU01', 'Marzuki.Drs.', 'Dsn. Krajan, RT.001/RW.003, Kel. Sraten, Kec. Cluring', 'Banyuwangi', '3510062612660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(623, 'KARU39AC', 'Karunia Makmur, UD', 'KARU01', 'Suwandi', 'Dsn. Curahkrakal, RT.001/RW.004, Kel. Tambakrejo, Kec. Muncar', 'Banyuwangi', '3510051506530005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(624, 'KARU40AC', 'Karunia Makmur, UD', 'KARU01', 'Faridatullilah', 'Dsn. Pancursari, RT.003/RW.003, Kel. Benculuk, Kec. Cluring', 'Banyuwangi', '3510065606770004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(625, 'KARU41AC', 'Karunia Makmur, UD', 'KARU01', 'Hariyono', 'Dsn. Krajan, RT.001/RW.002, Kel. Sumbersewu, Kec. Muncar', 'Banyuwangi', '3510050504820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(626, 'KARU42AC', 'Karunia Makmur, UD', 'KARU01', 'Salimin', 'Dsn. Simbar II, RT.002/RW.003, Kel. Tampo, Kec. Cluring', 'Banyuwangi', '3510063006590014', '000000000000000', '2026-09-23 02:29:01', NULL),
+(627, 'KARU43AC', 'Karunia Makmur, UD', 'KARU01', 'Sukateno', 'Dsn. Pasembon, RT.002/RW.003, Kel. Sambirejo, Kec. Bangorejo', 'Banyuwangi', '3510021205600008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(628, 'KARU44AC', 'Karunia Makmur, UD', 'KARU01', 'Samsudin', 'Dsn. Jalen, RT.006/RW.003, Kel. Setail, Kec. Genteng', 'Banyuwangi', '3510090408600006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(629, 'KARU45AC', 'Karunia Makmur, UD', 'KARU01', 'Muhammad Suhadi', 'Jl. Teratai VII/121 Lingk. Conro Utama, RT.002/RW.006, Kel. Kaliwates, Kec. Kaliwates', 'Jember', '3509190111790004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(630, 'IRWA01AC', 'Karya Tani Makmur/Irwanto', 'KARY22', 'Dwi Yuli Dyah Yati', 'Dsn. Karangjati, RT.009/RW.005, Kel. Sidorejo, Kec. Kedungadem', 'Bojonegoro', '3522085401930005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(631, 'IRWA02AC', 'Karya Tani Makmur/Irwanto', 'KARY22', 'Rita Sukma Andrianti', 'Dusun Sukorame, RT.020/RW.005, Kel. Purwoasri, Kec. Sukosewu', 'Bojonegoro', '3523165303020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(632, 'KAWA01AC', 'Kawan Tani/Fathor', 'KAWA05', 'Atir Rakhman', 'Dsn. Darma, RT.018/RW.008, Kel. Bulay, Kec. Galis', 'Pamekasan', '3528030503820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(633, 'KAWA02AC', 'Kawan Tani/Fathor', 'KAWA05', 'M Ipung Sugiarto', 'Dsn. Billa\'an, RT.001/RW.002, Kel. Montok, Kec. Larangan', 'Pamekasan', '3528080807900004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(634, 'KAWA03AC', 'Kawan Tani/Fathor', 'KAWA05', 'As Ardli Kurniawan', 'Dsn. Solot, RT.002/RW.002, Kel. Muangan, Kec. Saronggi', 'Sumenep', '3528022409860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(635, 'KSUC01AC', 'KSU CU Sang Timur/CU Agro', 'GAGR01', 'Yogi Fatoni', 'Dusun Krajan, RT.001/RW.005, Kel. Purwoharjo, Kec. Purwoharjo', 'Banyuwangi', '3510032912830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(636, 'LAMB01AC', 'Lamba Rasa', 'LAMB02', 'Maemunah', 'Roi, RT.008/RW.002, Kel. Roi, Kec. Palibelo', 'Bima', '5206184107571103', '000000000000000', '2026-09-23 02:29:01', NULL),
+(637, 'LAMB02AC', 'Lamba Rasa', 'LAMB02', 'Aan Ardiansyah', 'Dore, RT.001/RW.001, Kel. Dore, Kec. Palibelo', 'Bima', '5206181509010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(638, 'LAMB03AC', 'Lamba Rasa', 'LAMB02', 'Syarifullah', 'Dore, RT.006/RW.003, Kel. Dore, Kec. Palibelo', 'Bima', '5206182807861004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(639, 'LAMB04AC', 'Lamba Rasa', 'LAMB02', 'Arahman', 'Dore, RT.002/RW.001, Kel. Dore, Kec. Palibelo', 'Bima', '5206031202940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(640, 'LAMB05AC', 'Lamba Rasa', 'LAMB02', 'Syafrudin', 'Dore, RT.003/RW.002, Kel. Dore, Kec. Palibelo', 'Bima', '5206181007911003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(641, 'LAMB06AC', 'Lamba Rasa', 'LAMB02', 'Hadijah', 'Dusun II, RT.005/RW.003, Kel. Dore, Kec. Palibelo', 'Bima', '5206187009730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(642, 'LAMB07AC', 'Lamba Rasa', 'LAMB02', 'Dahliah Wati', 'Dusun Godo, RT.015/RW.006, Kel. Dadibou, Kec. Woha', 'Bima', '5206035505851008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(643, 'LANG08AC', 'Langgeng Makmur', 'LANG01', 'Genta Syahirul Alim', 'Jl. Sayu Geringsing No. 63, RT.002/RW.003, Kel. Kampung Mandar, Kec. Banyuwangi', 'Banyuwangi', '3510162603000003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(644, 'LANG09AC', 'Langgeng Makmur', 'LANG01', 'Adi Prayoga', 'Lingkungan Sukorojo, RT.003/RW.002, Kel. Banjarsari, Kec. Glagah', 'Banyuwangi', '3510151106960002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(645, 'LANG10AC', 'Langgeng Makmur', 'LANG01', 'Vera Fitriani', 'Perum Citra Pesona Indah II, RT.004/RW.004, Kel. Kertosari, Kec. Banyuwangi', 'Banyuwangi', '3510164301010005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(646, 'LANG11AC', 'Langgeng Makmur', 'LANG01', 'Andre Trio Prawira', 'Jl. Sekardalu, RT.003/Rw.003, Kel. Temenggungan, Kec. Banyuwangi', 'Banyuwangi', '3510161609970003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(647, 'LANG12AC', 'Langgeng Makmur', 'LANG01', 'Ifan Lukmantara', 'Dusun Gunung Remuk, RT.002/RW.004, Kel. Ketapang, Kec. Kalipuro', 'Banyuwangi', '3510210805990003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(648, 'LANG13AC', 'Langgeng Makmur', 'LANG01', 'Trio Muhammad Haqiqi', 'Dusun Sumberagung, RT.003/RW.004,Kel. Karangdoro, Kec. Tegalsari', 'Banyuwangi', '3510232602990002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(649, 'LANG14AC', 'Langgeng Makmur', 'LANG01', 'Susiyono', 'Dusun Sidomukti, RT.001/RW.001, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510071001800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(650, 'LANG15AC', 'Langgeng Makmur', 'LANG01', 'Ika Noer Aini Zuhdi', 'Dusun Kaligoro, RT.001/RW.002, Kel. Sukomaju, Kec. Srono', 'Banyuwangi', '3510086107750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(651, 'LANG16AC', 'Langgeng Makmur', 'LANG01', 'Agus Supriyanto', 'Dusun Sukorejo, RT.004/RW.003, Kel. Sukomaju, Kec. Srono', 'Banyuwangi', '3510081708820014', '000000000000000', '2026-09-23 02:29:01', NULL),
+(652, 'LANG17AC', 'Langgeng Makmur', 'LANG01', 'Robi Sofyan Amrullah', 'Dsn. Palurejo, RT.002/RW.019, Kel. Tembokrejo, Kec. Muncar', 'Banyuwangi', '3510050804620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(653, 'LANG18AC', 'Langgeng Makmur', 'LANG01', 'faridatullilah', 'Dusun Kedungrejo, RT.006/RW.006, Kel. Sambimulyo, Kec. Bangorejo', 'Banyuwangi', '3510026609850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(654, 'LANG19AC', 'Langgeng Makmur', 'LANG01', 'Yustika Dwi Anggriyani', 'Dsn. Curahkrakal, RT.003/RW.003, Kel. Tambakrejo, Kec. Muncar', 'Banyuwangi', '3510055005740003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(655, 'LANG20AC', 'Langgeng Makmur', 'LANG01', 'Ponirin', 'Dusun Simbar I, RT.002/RW.004, Kel. Tampo, Kec. Cluring', 'Banyuwangi', '3510061704520003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(656, 'LANG22AC', 'Langgeng Makmur', 'LANG01', 'Andri Wiyono', 'Dusun Umbulrejo, RT.004/RW.004, Kel. Bagorejo, Kec. Srono', 'Banyuwangi', '3510081809900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(657, 'LANG23AC', 'Langgeng Makmur', 'LANG01', 'Akhmad Ningsun', 'Lingkungan Sukorojo, RT.002/RW.001, Kel. Banjarsari, Kec. Glagah', 'Banyuwangi', '3510151909550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(658, 'LANG24AC', 'Langgeng Makmur', 'LANG01', 'Suryadi', 'Dusun Mulyoasri, RT.005/RW.002, Kel. Sumbermulyo, Kec. Pesanggaran', 'Banyuwangi', '3510010101700022', '000000000000000', '2026-09-23 02:29:01', NULL),
+(659, 'LANG25AC', 'Langgeng Makmur', 'LANG01', 'Sukardi', 'Dusun Pancer, RT.006/RW.002, Kel. Sumberagung, Kec. Pesanggaran', 'Banyuwangi', '3510060604790006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(660, 'LANG26AC', 'Langgeng Makmur', 'LANG01', 'Warsan Hadi', 'Dsn. Pasembon, RT.005/RW.004, Kel. Sambirejo, Kec. Bangorejo', 'Banyuwangi', '3510011010780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(661, 'LANG27AC', 'Langgeng Makmur', 'LANG01', 'Reni Mujiati', 'Dsn Sidorejo Wetan, RT.003/RW.002, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510074207750003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(662, 'LANG28AC', 'Langgeng Makmur', 'LANG01', 'Nurhadi', 'Dusun Tulunrejo RT.001/RW.004 , Kel. Sembulung Kec. Cluring', 'Banyuwangi', '3510060103670003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(663, 'LANG29AC', 'Langgeng Makmur', 'LANG01', 'Turmudzi', 'Dusun Krajan RT.003/RW.006 , Kel. Puwoharjo Kec. Purwoharjo', 'Banyuwangi', '3510031007800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(664, 'LANG30AC', 'Langgeng Makmur', 'LANG01', 'Sugeng Widiyanto', 'Dusun Tempurejo RT.006/RW.001 , Kel. Puwodadi Kec. Gambiran', 'Banyuwangi', '3510071506730003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(665, 'LANG33AC', 'Langgeng Makmur', 'LANG01', 'Teguh Wiyono', 'Dusun Gungsari RT.001/RW.002 , Kel. Bangorejo Kec. Bangorejo', 'Banyuwangi', '3510021403770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(666, 'LANG34AC', 'Langgeng Makmur', 'LANG01', 'Mungkasono', 'Dusun Krajan RT.002/RW.003 , Kel. Tamanagung Kec. Cluring', 'Banyuwangi', '3510061405770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(667, 'LANG35AC', 'Langgeng Makmur', 'LANG01', 'Miftakul Huda', 'Dusun Yosowinangun RT.002/RW.001 , Kel. Jajag Kec. Gambiran', 'Banyuwangi', '3510070205840004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(668, 'LANG36AC', 'Langgeng Makmur', 'LANG01', 'Moh Umar', 'Dusun Pancursari RT.004/RW.004 , Kel. Benculuk Kec. Cluring', 'Banyuwangi', '3510060607810003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(669, 'LANG37AC', 'Langgeng Makmur', 'LANG01', 'Fathkur Rohman', 'Dusun Pancursari RT.004/RW.004 , Kel. Benculuk Kec. Cluring', 'Banyuwangi', '3510061111910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(670, 'LANG38AC', 'Langgeng Makmur', 'LANG01', 'Imam Khoiri', 'Dusun Mojoroto RT.003/RW.002 , Kel. Tegalsari Kec. Tegalsari', 'Banyuwangi', '3510232006720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(671, 'LANG39AC', 'Langgeng Makmur', 'LANG01', 'Mahmudi', 'Dusun Krajan RT.002/RW.003 , Kel. Tapanrejo Kec. Muncar', 'Banyuwangi', '3510052005650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(672, 'LANG41AC', 'Langgeng Makmur', 'LANG01', 'Sugiyanto', 'Dusun Krajan RT.003/RW.005 , Kel. Plampangrejo Kec. Cluring', 'Banyuwangi', '3510061403780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(673, 'LANG42AC', 'Langgeng Makmur', 'LANG01', 'Mahmad Hariyadi, S.E.', 'Dusun Sumberjaya RT.002/RW.002 , Kel. Wringinagung Kec. Gambiran', 'Banyuwangi', '3510072904790004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(674, 'LANG43AC', 'Langgeng Makmur', 'LANG01', 'Abdul Ghofur', 'Dusun Pasembon RT.002/RW.002 , Kel. Sambirejo Kec. Bangorejo', 'Banyuwangi', '3510022008800005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(675, 'LANG44AC', 'Langgeng Makmur', 'LANG01', 'Andi Suwito', 'Dusun Mojoroto RT.001/RW.002 , Kel. Tegalsari Kec. Tegalsari', 'Banyuwangi', '3510230505820009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(676, 'LANG45AC', 'Langgeng Makmur', 'LANG01', 'Andika Fauzi', 'Dusun Tulunrejo RT.002/RW.004 , Kel. Sembulun Kec. Cluring', 'Banyuwangi', '3510060209860007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(677, 'LANG46AC', 'Langgeng Makmur', 'LANG01', 'Ardani', 'Sumberkepuh RT.014/RW.002 , Kel. Kedungwungu Kec. Tegaldlimo', 'Banyuwangi', '3510042010720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(678, 'LANG47AC', 'Langgeng Makmur', 'LANG01', 'Bagus Baidowi Akbar', 'Dusun Wijenan Kidul RT.002/RW.002 , Kel. Singolatren, Kec. Singojuruh', 'Banyuwangi', '3510120306970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(679, 'LANG48AC', 'Langgeng Makmur', 'LANG01', 'Bagus Hartono', 'Dusun Klontang RT.004/RW.005 , Kel. Gendoh Kec. Sempu', 'Banyuwangi', '3510202011980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(680, 'LANG49AC', 'Langgeng Makmur', 'LANG01', 'Choirul Anam', 'Dusun Mojoroto RT.006/RW.001 , Kel, Tegalsari Kec. Tegalsari', 'Banyuwangi', '3510233006540009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(681, 'LANG50AC', 'Langgeng Makmur', 'LANG01', 'Deby Rudiyanto', 'Dusun Sukodadi RT.001/RW.001 , Kel. Sraten kec. Cluring', 'Banyuwangi', '3510060506920007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(682, 'LANG51AC', 'Langgeng Makmur', 'LANG01', 'Edi Sugianto', 'Jalan Air Port No. 23 RT.003/RW.000 , Kel. Tanjung Limau Kec. Muara Badak', 'Kutai Kertanegara', '6402050101810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(683, 'LANG52AC', 'Langgeng Makmur', 'LANG01', 'Fenny Nila Fitria', 'Dusun Cemetuk RT.004/RW.005 , Kel. Cluring Kec. Cluring', 'Banyuwangi', '3510065202970007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(684, 'LANG53AC', 'Langgeng Makmur', 'LANG01', 'Hariyanto', 'Dusun Sukodadi RT.002/RW.003 , Kel, Sraten Kec. Cluring', 'Banyuwangi', '3510061503770007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(685, 'LANG54AC', 'Langgeng Makmur', 'LANG01', 'Harnoko', 'Dusun Salamrejo RT.003/RW.002 , Kel. Sumbergondo Kec. Glenmore', 'Banyuwangi', '3510100904810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(686, 'LANG55AC', 'Langgeng Makmur', 'LANG01', 'Heri Susanto', 'Dusun Cemetuk RT.003/RW.003 , Kel. Cluring Kec. Cluring', 'Banyuwangi', '3510061711680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(687, 'LANG56AC', 'Langgeng Makmur', 'LANG01', 'Imam Taufiq', 'Dusun Pancusari RT.003/RW.001 , Kel. Benculuk Kec. Cluring', 'Banyuwangi', '3510061708720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(688, 'LANG57AC', 'Langgeng Makmur', 'LANG01', 'Khoirul Nurudin', 'Dusun Gumukrejo RT.006/RW.002 , Kel. Sidorejo Kec. Purwoharjo', 'Banyuwangi', '3510030405910003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(689, 'LANG58AC', 'Langgeng Makmur', 'LANG01', 'Masduki, H', 'Dusun Kaligoro RT.005/RW.003 , Kel. Sukomaju Kec. Srono', 'Banyuwangi', '3510080507640005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(690, 'LANG59AC', 'Langgeng Makmur', 'LANG01', 'Mohamad Faisal Hawari', 'Dusun Pasembon RT.005/RW.001 , Kel. Sambirejo Kec. Bangorejo', 'Banyuwangi', '3510022409010008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(691, 'LANG60AC', 'Langgeng Makmur', 'LANG01', 'Mugi Prihantoro', 'Dusun Gunungsari RT.002/RW.001 , Kel. Sumbergondo Kec. Glenmore', 'Banyuwangi', '3510091118910005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(692, 'LANG61AC', 'Langgeng Makmur', 'LANG01', 'Ninik Suprapti', 'Dusun Bangorejo RT.001/RW.005 , Kel. Bangorejo Kec. Bangorejo', 'Banyuwangi', '3510024706730003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(693, 'LANG62AC', 'Langgeng Makmur', 'LANG01', 'Nur Kholis', 'Dusun Jenisari RT.001/RW.001 , Kel. Genteng Kulon Kec. Genteng', 'Banyuwangi', '3510091403760004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(694, 'LANG63AC', 'Langgeng Makmur', 'LANG01', 'Siswanto', 'Dusun Tapansari RT.003/RW.003 , Kel. Sraten Kec. Cluring', 'Banyuwangi', '3510060707760005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(695, 'LANG64AC', 'Langgeng Makmur', 'LANG01', 'Sulistiani', 'Dusun Plosorejo RT.001/RW.005 , Kel. Kaliploso Kec. Cluring', 'Banyuwangi', '3510064205750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(696, 'LANG65AC', 'Langgeng Makmur', 'LANG01', 'Sumantri', 'Dusun Sukodadi RT.004/RW.002 , Kel. Sraten Kec. Cluring', 'Banyuwangi', '3510060302680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(697, 'LANG66AC', 'Langgeng Makmur', 'LANG01', 'Sunalis Novitasari', 'Dusun Sumbergroto RT.005/RW.002 , Kel. Rejoagung Kec. Srono', 'Banyuwangi', '3510084506780014', '000000000000000', '2026-09-23 02:29:01', NULL),
+(698, 'LANG67AC', 'Langgeng Makmur', 'LANG01', 'Superik', 'Dusun Pekiwen RT.003/RW.004 , Kel. Kaliagung Kec. Blimbingsari', 'Banyuwangi', '3510131206600003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(699, 'LANG68AC', 'Langgeng Makmur', 'LANG01', 'Teguh Wiyono', 'Dusun Trembelang RT.002/RW.001 , Kel. Cluring Kec. Cluring', 'Banyuwangi', '3510060911670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(700, 'LANG69AC', 'Langgeng Makmur', 'LANG01', 'Waluyo', 'Dusun Sidomukti RT.002/RW.001 , Kel. Yosomulyo Kec. Gambiran', 'Banyuwangi', '3510071505790007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(701, 'LANG70AC', 'Langgeng Makmur', 'LANG01', 'Wendy Kristanto', 'Dsn. Ringinmulyo, RT.002/RW.004, Kel. Pesanggaran, Kec. Pesanggaran', 'Banyuwangi', '3510011604820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(702, 'LANGK01AC', 'Langkah Pasti', 'LANG04', 'Amnah', 'Lido, RT.006/RW.003, Kel. Lido, Kec. Belo', 'Bima', '5206047112640051', '000000000000000', '2026-09-23 02:29:01', NULL),
+(703, 'LANGK02AC', 'Langkah Pasti', 'LANG04', 'Mahfud', 'Ngali, RT.011/RW.004, Kel. Ngali, Kec. Belo', 'Bima', '5206041502730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(704, 'LANGK03AC', 'Langkah Pasti', 'LANG04', 'Ma\'Anti', 'Ngali, RT.011/RW.004, Kel. Ngali, Kec. Belo', 'Bima', '5206045006790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(705, 'LANGK04AC', 'Langkah Pasti', 'LANG04', 'Adiman', 'Lido, RT.003/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206012807930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(706, 'LANGK05AC', 'Langkah Pasti', 'LANG04', 'Sudirman', 'Lido, RT.003/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206041701000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(707, 'LANGK06AC', 'Langkah Pasti', 'LANG04', 'Wahidah', 'Lido, RT.003/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206045212880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(708, 'LANGK07AC', 'Langkah Pasti', 'LANG04', 'Erni Wati', 'Lido, RT.003/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206044404920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(709, 'LANGK08AC', 'Langkah Pasti', 'LANG04', 'Azhar', 'Lido, RT.002/RW.001, Kel. Lido, Kec. Belo', 'Bima', '5206040206860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(710, 'LANGK09AC', 'Langkah Pasti', 'LANG04', 'Salam', 'Lido, RT.002/RW.001, Kel. Lido, Kec. Belo', 'Bima', '52060420020051', '000000000000000', '2026-09-23 02:29:01', NULL),
+(711, 'MATO10AC', 'Madya Tani/Halimatus', 'MADY01', 'Suyadi', 'Dusun Pontang Tengah, Kel. Pontang, Kec. Ambulu', 'Jember', '3509122102670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(712, 'MATO13AC', 'Madya Tani/Halimatus', 'MADY01', 'Kasiami', 'Dusun Pontang Utara, RT.055/RW.014, Kel. Pontang, Kec. Ambulu', 'Jember', '3509124107640115', '000000000000000', '2026-09-23 02:29:01', NULL),
+(713, 'MATO14AC', 'Madya Tani/Halimatus', 'MADY01', 'Moh. Suwito', 'Dusun Utara, RT.065/RW.017, Kel. Pontang, Kec. Ambulu', 'Jember', '3509121904780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(714, 'MAUL01AC', 'Maulana Ansori', 'MAUL05', 'Muhammad Alfaruq', 'Tanjung Batu Harapan GG Sejati, RT.006/RW.001, Kel. Sedau, Kec. Singkawang Selatan', 'Singkawang', '6172051101010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(715, 'MAUL02AC', 'Maulana Ansori', 'MAUL05', 'Dera', 'Dusun Gunung Hijau, RT.015/RW.008, Kel. Selakau Tua, Kec. Selakau Timur', 'Sambas', '6101194301040002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(716, 'MAUL03AC', 'Maulana Ansori', 'MAUL05', 'Hardi', 'Dusun Sejahtera, RT.002/RW.001, Kel. Gayung Bersambut, Kec. Selakau', 'Sambas', '6101071710030005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(717, 'MAUL04AC', 'Maulana Ansori', 'MAUL05', 'dikirim lg tp sama lg', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(718, 'MERD03AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Samiran', 'Dsn. Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107500443', '000000000000000', '2026-09-23 02:29:01', NULL),
+(719, 'MERD05AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sukarman', 'Dsn. Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509132709600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(720, 'MERD06AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Imam Mujayyin', 'Dsn. Gumuk Limo, RT.003/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131009890003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(721, 'MERD07AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Kariman', 'Dsn. Sumberejo, RT.036/RW.012, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509111012820005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(722, 'MERD08AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Slamet H', 'Dusun Gumuklimo, RT.007/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107700006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(723, 'MERD10AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sholihin', 'Dusun Sumberjo, RT.036/RW.012, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509112512690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(724, 'MERD11AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Niton', 'Gumuk Bago, RT.013/RW.003, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107400087', '000000000000000', '2026-09-23 02:29:01', NULL),
+(725, 'MERD13AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Asan', 'Dusun Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131108700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(726, 'MERD14AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sehafur Romeli', 'Dusun Rejosari, RT.002/RW.011, Kel. Gumukmelar, Kec. Balung', 'Jember', '3509100701700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(727, 'MERD15AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Suyanto', 'Dusun Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130407750006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(728, 'MERD16AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Suyono', 'Dusun Gumuk Limo, RT.014/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131204800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(729, 'MERD17AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Muhayyanah', 'Dusun Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134107850302', '000000000000000', '2026-09-23 02:29:01', NULL),
+(730, 'MERD18AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Aziz', 'Dusun Gumuk Bago, RT.010/RW.007, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131407720003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(731, 'MERD19AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Muhammad Nuril Muzakki', 'Dusun Gumuk Limo, RT.002/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509132310850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(732, 'MERD20AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Juma\'ah', 'Dusun Gumuk Sari, RT.025/RW.013, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107610174', '000000000000000', '2026-09-23 02:29:01', NULL),
+(733, 'MERD22AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ahmad Amin', 'Dusun Gumuk Limo, RT.003/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107570228', '000000000000000', '2026-09-23 02:29:01', NULL),
+(734, 'MERD23AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Saman', 'Dusun Gumuk Limo, RT.006/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131312410001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(735, 'MERD24AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Slamet', 'Dusun Gumuk Limo, RT.014/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509132303700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(736, 'MERD25AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Moch. Saleh', 'Dusun Gumuk Limo, RT.014/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131811620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(737, 'MERD27AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ahmad Zaeni', 'Dusun Gumuk Limo, RT.017/RW.017, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130407700005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(738, 'MERD28AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Salama', 'Dusun Gumuk Sari, RT.025/RW.013, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134107790231', '000000000000000', '2026-09-23 02:29:01', NULL),
+(739, 'MERD29AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Misnari', 'Dusun Gumuk Sari, RT.001/RW.009, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107620254', '000000000000000', '2026-09-23 02:29:01', NULL),
+(740, 'MERD30AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Abdullah', 'Dusun Gumuk Limo, RT.014/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130705690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(741, 'MERD31AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Toasim', 'Dusun Gumuk Sari, RT.017/RW.012, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131510500001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(742, 'MERD32AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Birul Walidaeni', 'Dusun Gumuk Sari, RT.026/RW.013, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509132506790005.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(743, 'MERD33AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Misran', 'Dusun Gumuk Limo, RT.015/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107600488', '000000000000000', '2026-09-23 02:29:01', NULL),
+(744, 'MERD34AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Rohmah', 'Dusun Gumuk Limo, RT.010/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509135511720003', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(745, 'MERD35AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Musaram', 'Dusun Gumuk Limo, RT.017/RW.017, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130708550006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(746, 'MERD36AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Abdurahman', 'Dusun Gumuk Bago, RT.009/RW.007, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131106620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(747, 'MERD37AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sutila', 'Dusun Gumuk Limo, RT.005/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134107800342', '000000000000000', '2026-09-23 02:29:01', NULL),
+(748, 'MERD38AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ahmad Muhlis', 'Dusun Gumuk Limo, RT.007/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131607810003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(749, 'MERD39AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Jamilah', 'Dusun Gumuk Limo, RT.003/RW.016, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134503760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(750, 'MERD40AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sawir', 'Gumuk Limo, RT.002/RW.005, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107650386', '000000000000000', '2026-09-23 02:29:01', NULL),
+(751, 'MERD43AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Muhammad Gufron', 'Gumuk Limo, RT.002/RW.003, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130808970005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(752, 'MERD44AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sholihin', 'Gumuk Limo, RT.002/RW.005, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509130107650038', '000000000000000', '2026-09-23 02:29:01', NULL),
+(753, 'MERD45AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Salama', 'Gumuk Limo, RT.001/RW.004, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134704850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(754, 'MERD46AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Mistina', 'Gumuk Limo, RT.002/RW.004, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509135007750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(755, 'MERD47AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti', 'Gumuk Limo, RT.001/RW.003, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134309580002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(756, 'MERD48AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Subari', 'Gumuk Limo, RT.001/RW.001, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131910500001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(757, 'MERD49AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ida Farida', 'Gumuk Limo, RT.003/RW.001, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509135808800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(758, 'MERD51AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Buyani', 'Gumuk Limo, RT.001/RW.003, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509115201730008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(759, 'MERD52AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Asdim', 'Dusun Sumberjo, RT.036/RW.012, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509110106550007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(760, 'MERD53AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Nur Rohim', 'Gumuk Limo, RT.001/RW.001, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509100202820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(761, 'MERD54AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Bambang Hermawan', 'Dusun Rejosari, RT.004/RW.012, Kel.Gumelar, Kec. Balung', 'Jember', '3509101609740003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(762, 'MERD55AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Aisyah', 'Dusun Gumuk Limo, RT.007/RW.014, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509136808820005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(763, 'MERD57AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sari', 'Dusun Sumberjo, RT.036/RW.012, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509114107650815', '000000000000000', '2026-09-23 02:29:01', NULL),
+(764, 'MERD58AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Arnima', 'Dusun Gumuk Limo, RT.016/RW.015, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509134105620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(765, 'MERD59AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Muhammad Nasir', 'Dusun Sumberjo, RT.036/RW.012, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509111402700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(766, 'MERD60AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Achmad Solihin', 'Dusun Gumuksari, RT.007/RW.010, Kel. Nogosari, Kec. Rambipuji', 'Jember', '3509131402900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(767, 'MERD61AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Muniroh', 'Dusum Sumberjo RT.043/RW.009 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509114310600003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(768, 'MERD63AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Abdul Hasan', 'Dusun Tanjung Sari RT.031/RW.010 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509110601780007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(769, 'MERD64AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Holik', 'Dusun Tanjungsari RT.032/RW.010 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509110911890004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(770, 'MERD65AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Suhrianto', 'Dusun Semboro RT.045/RW.011 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509112802860005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(771, 'MERD66AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sumiati', 'Dusun Sumberjo RT.037/RW.012 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509115209790006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(772, 'MERD67AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ahmad', 'Dusun Tanjung Sari RT.037/RW.010 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509110911660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(773, 'MERD68AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Bunami', 'Dusun Gumuk Limo RT.006/RW.014 , Kec. Nogosari Kel. Rambipuji', 'Jember', '3509135511720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(774, 'MERD69AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Eka Agustin', 'Dusun Gumuk Sari RT.025/RW.005 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509135608920009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(775, 'MERD70AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Muawanah', 'Dusun Gumuklimo RT.002/RW.014 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509136304930003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(776, 'MERD71AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Noval Supandi', 'Dusun Krajan RT.003/RW.003 , Kel. Pecoro Kec. Rambipuji', 'Jember', '3509131906960002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(777, 'MERD72AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Nidin', 'Dusun Gumuk Sari RT.026/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107790237', '000000000000000', '2026-09-23 02:29:01', NULL),
+(778, 'MERD75AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ruhyatin', 'Dusun Sumberjo RT.045/RW.015 , Kel. Glundengan Ke. Wuluhan', 'Jember', '3509115706700006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(779, 'MERD77AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Iye', 'Dusun Sumberjo RT.036/RW.012 , Kel. Glundengan Kec. Wuluhan', 'Jember', '3509110107650588', '000000000000000', '2026-09-23 02:29:01', NULL),
+(780, 'MERD78AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ahmad Salim', 'Dusun Gumuk Limo RT.009/RW.015 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130812750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(781, 'MERD79AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Wagisah', 'Dusun Gumuk Bago RT.004/RW.001 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509135404630002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(782, 'MERD80AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Bunoso', 'Dusun Gumuk Sari RT.026/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107690257', '000000000000000', '2026-09-23 02:29:01', NULL),
+(783, 'MERD81AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Babun', 'Dusun Gumuklimo RT.008/RW.015 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509131003790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(784, 'MERD82AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Mas Bambang', 'Dusun Gumuklimo RT.004/RW.015 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130212600004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(785, 'MERD83AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Mat Saihu', 'Dusun Gumuksari RT.026/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107640018', '000000000000000', '2026-09-23 02:29:01', NULL),
+(786, 'MERD84AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Zainal', 'Dusun Gumuk Bago RT.013/RW.003 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107660100', '000000000000000', '2026-09-23 02:29:01', NULL),
+(787, 'MERD85AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Amarudin', 'Dusun Gumuklimo RT.003/RW.001 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130103750006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(788, 'MERD86AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Mufaridah', 'Dusun Gumuksari RT.026/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509134107710297', '000000000000000', '2026-09-23 02:29:01', NULL),
+(789, 'MERD87AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siti Wulandari', 'Dusun Gumuklimo RT.002/RW.014 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509134903960004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(790, 'MERD88AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Syaeful', 'Dusun Gumuksari RT.002/RW.001 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509131607740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(791, 'MERD89AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sutrisno', 'Dusun Gumuklimo RT.007/RW.014 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130702570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(792, 'MERD90AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sumiati', 'Dusun Gumuk Sari RT.025/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509134107870300', '000000000000000', '2026-09-23 02:29:01', NULL),
+(793, 'MERD91AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sumaji', 'Dusun Gumuklimo RT.005/RW.014 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130901640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(794, 'MERD92AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Siswoyo', 'Dusun Gumuk Sari RT.026/RW.013 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107630461', '000000000000000', '2026-09-23 02:29:01', NULL),
+(795, 'MERD93AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Sami', 'Dusun Gumuklimo RT.028/RW.004 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509135007680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(796, 'MERD94AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Misnayan', 'Dusun Gumuk Sari RT.009/RW.010 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509131705600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(797, 'MERD95AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Misnari', 'Dusun Gumuk Sari RT.001/RW.001 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130107670035', '000000000000000', '2026-09-23 02:29:01', NULL),
+(798, 'MERD96AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Mashadi', 'Dusun Gumuk Sari RT.015/RW.011 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509130707680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(799, 'MERD97AC', 'Merdeka Tani/Sugiono', 'MERD01', 'Ali Muksen', 'Dusun Gumuk Bago RT.010/RW.007 , Kel. Nogosari Kec. Rambipuji', 'Jember', '3509131712790006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(800, 'MITR01AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Giman Prawito', 'Dsn. Sumberejo, RT.001/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510082303520002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(801, 'MITR02AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Jarkoni', 'Dsn. Sumberejo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510082604750006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(802, 'MITR03AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Yeti Widiyani', 'Dsn. Sumberejo, RT.002/RW.003, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084111820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(803, 'MITR05AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Ngadisan', 'Dsn. Blangkon, RT.002/RW.005, Kel. Kebaman, Kec. Srono', 'Banyuwangi', '3510081508500003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(804, 'MITR06AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Prihatin', 'Dsn. Blangkon, RT.002/RW.005, Kel. Kebaman, Kec. Srono', 'Banyuwangi', '3510085211750011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(805, 'MITR07AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Sujoko', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510082606710008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(806, 'MITR08AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Katiran', 'Dusun Sumberjo, RT.002/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080904480002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(807, 'MITR09AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Sumarmi', 'Dusun Sumberjo, RT.002/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084906730006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(808, 'MITR10AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Giran', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510081004570003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(809, 'MITR11AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Titik Pratiwi', 'Dusun Sumberjo, RT.001/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510085011540002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(810, 'MITR13AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Nur Salim', 'Dusun Sumberjo, RT.002/RW.003, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510082810760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(811, 'MITR14AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Siti Rohmah', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084510660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(812, 'MITR15AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Iswahyudi', 'Dusun Kepundungan, RT.004/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510082510830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(813, 'MITR16AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Yahmin', 'Dusun Sumberjo, RT.001/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080101640003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(814, 'MITR18AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Winarsih', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510086111710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(815, 'MITR19AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Tukidi', 'Dusun Sumberjo, RT.002/RW.003, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080507710008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(816, 'MITR20AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Anwarudin', 'Dusun Sumberejo, RT.001/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080403680004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(817, 'MITR21AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Lina Nuryanti', 'Dusun Sumberejo, RT.001/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084708860006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(818, 'MITR22AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Istiqomah', 'Dsn Cempokosari, RT.001/Rw.004, Kel. Sarimulyo, Kec. Cluring', 'Banyuwangi', '3510064301540001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(819, 'MITR23AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Marmi', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084907560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(820, 'MITR24AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Sripah', 'Dusun Sumberjo, RT.003/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510086303680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(821, 'MITR27AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Lasmirah', 'Dusun Sumberjo, RT.002/RW.003, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510085704620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(822, 'MITR28AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Sakiman', 'Dusun Sumberjo, RT.003/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510081103550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(823, 'MITR29AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Paijan', 'Dusun Sumberjo, RT.003/RW.001, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080604520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(824, 'MITR30AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Ponidi', 'Dusun Krajan, RT.003/RW.002, Kel.. Sumbersari, Kec. Srono', 'Banyuwangi', '3510081212570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(825, 'MITR31AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Ustianah', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510084605660007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(826, 'MITR32AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Fatkhur Rozi', 'Dusun Sumberejo, RT.001/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510080708620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(827, 'MITR33AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Mariyam', 'Dusun Sumberjo, RT.002/RW.002, Kel. Kepundungan, Kec. Srono', 'Banyuwangi', '3510087006710029', '000000000000000', '2026-09-23 02:29:01', NULL),
+(828, 'MITR35AC', 'Mitra Tani/Hariyanto', 'MITR11', 'Budi Santoso', 'Dusun Blangkon, RT.002/RW.005, Kel. Kebaman, Kec. Srono', 'Banyuwangi', '3510080512730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(829, 'SUNA01AC', 'Mitra Tani/Sunardi', 'SUNA03', 'Waris', 'Dsn. Blokagung, RT.003/RW.004, Kel. Karangdoro, Kec. Tegalsari', 'Banyuwangi', '3510230602690005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(830, 'SUNA02AC', 'Mitra Tani/Sunardi', 'SUNA03', 'Mujiono', 'Dsn. Sumbermanggis, RT.004/RW.014, Kel. Barurejo, Kec. Siliragung', 'Banyuwangi', '3510221102680003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(831, 'SUNA03AC', 'Mitra Tani/Sunardi', 'SUNA03', 'Mesran', 'Dsn. Blokagung, RT.005/RW.005, Kel. Karangdoro, Kec. Tegalsari', 'Banyuwangi', '3510230506770004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(832, 'ABDU01AC', 'Mitra Tani/Yudi, H', NULL, 'Sayuti', 'Ds. Curawoloh, RT.003/RW.003, Kel. Mojotengah, Kec. Sukorejo', 'Pasuruan', '3514095010650005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(833, 'ABDU02AC', 'Mitra Tani/Yudi, H', NULL, 'Abdul Wahab', 'Dsn. Tegal Kidul, RT.007/RW.003, Kel. Jatiarjo, Kec. Prigen', 'Pasuruan', '3514100403760009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(834, 'ABDU03AC', 'Mitra Tani/Yudi, H', NULL, 'Abd. Majid', 'Dusun Genengan, RT.004/RW.002, Kel. Glagahsari, Kec. Sukorejo', 'Pasuruan', '3514091802570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(835, 'ABDU04AC', 'Mitra Tani/Yudi, H', NULL, 'Abdulloh Faqih', 'Dusun Genengan, RT.003/RW.002, Kel. Glagahsari, Kec. Sukorejo', 'Pasuruan', '3514091111490001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(836, 'ABDU05AC', 'Mitra Tani/Yudi, H', NULL, 'Aswan', 'Dusun Pakunden, RT.002/RW.010, Kel. Pakukerto, Kec. Sukorejo', 'Pasuruan', '3514092507630001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(837, 'ABDU06AC', 'Mitra Tani/Yudi, H', NULL, 'Astro', 'Dsn. Sengkan, RT.002/RW.007, Kel. Sukorejo, Kec. Sukorejo', 'Pasuruan', '3514093006610044', '000000000000000', '2026-09-23 02:29:01', NULL),
+(838, 'ABDU07AC', 'Mitra Tani/Yudi, H', NULL, 'Amin', 'Dusun Genengan, RT.004/RW.001, Kel. Glagahsari, Kec. Sukorejo', 'Pasuruan', '3514091610620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(839, 'ABDU08AC', 'Mitra Tani/Yudi, H', NULL, 'Agus Salim', 'Dusun Genengan, RT.003/RW.001, Kel. Glagahsari, Kec. Sukorejo', 'Pasuruan', '3514091408940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(840, 'MITRA01AC', 'Mitra Usaha Tani/Yulianto', 'MITR32', 'Abdullah', 'Miru, RT.006/RW.002, Kel. Miru, Kec. Sekaran', 'Lamongan', '3524090311510002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(841, 'MITRA02AC', 'Mitra Usaha Tani/Yulianto', 'MITR32', 'Sumining', 'Miru, RT.010/RW.003, Kel. Miru, Kec. Sekaran', 'Lamongan', '3524094407640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(842, 'MITRA03AC', 'Mitra Usaha Tani/Yulianto', 'MITR32', 'Lely Andriyani', 'Miru, RT.010/RW.003, Kel. Miru, Kec. Sekaran', 'Lamongan', '3524094912880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(843, 'MITRA04AC', 'Mitra Usaha Tani/Yulianto', 'MITR32', 'Kasemat', 'Miru, RT.003/RW.001, Kel. Miru, Kec. Sekaran', 'Lamongan', '3524090206520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(844, 'MITRA05AC', 'Mitra Usaha Tani/Yulianto', 'MITR32', 'Samikan', 'Miru, RT.012/RW.004, Kel. Miru, Kec. Sekaran', 'Lamongan', '3524091010680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(845, 'MPM01AC', 'Mohan Putra Mandiri', 'MOHA01', 'Soleh', 'Dsn. Wadang RT.15/RW.005, Kel. Wadang, Kec. Ngasem', 'Bojonegoro', '3522041010580004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(846, 'MPM02AC', 'Mohan Putra Mandiri', 'MOHA01', 'Fitri Ratna S. S', 'Kalitidu, RT.012 / RW.002, Kec. Kalitidu, Kel Kalitidu', 'Bojonegoro', '3522164502960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(847, 'MPM03AC', 'Mohan Putra Mandiri', 'MOHA01', 'Debi Feri S', 'Mojosari, RT.011 / RW.002, Kel. Mojosari / Kec. Kalitidu', 'Bojonegoro', '3522160704910004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(848, 'MPM04AC', 'Mohan Putra Mandiri', 'MOHA01', 'Sutrisno', 'Ngujo, RT.012/ RW. 002, Kel. Ngujo, Kec. Kalitidu', 'Bojonegoro', '3522161203760007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(849, 'MPM05AC', 'Mohan Putra Mandiri', 'MOHA01', 'Hendrik Susilo', 'Jampet, RT.016/ RW.004, Kel. Jampet, Kec. Ngasem', 'Bojonegoro', '3522041707950004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(850, 'MPM06AC', 'Mohan Putra Mandiri', 'MOHA01', 'Arif Fauzan', 'Ngujo, RT.005/ RW. 001, Kel. Ngujo, Kec. Kalitidu', 'Bojonegoro', '3522160606940003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(851, 'MPM07AC', 'Mohan Putra Mandiri', 'MOHA01', 'Jupri', 'Tlumbung, RT.012/RW.003, Kel. Manukan, Kec. Gayam', 'Bojonegoro', '3522160506660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(852, 'MUGI01AC', 'Mugi Lestari, Kios', 'MUGI01', 'Sri Muntayah', 'Dusun Jatirejo, RT.001/RW.001, Kel. Pakisrejo, Kec. Tanggunggunung', 'Tulungagung', '3504195003700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(853, 'MUGI02AC', 'Mugi Lestari, Kios', 'MUGI01', 'Yeyen Wahyu Fitriana', 'Dsn. Jatirejo, RT.001/RW.001, Kel. Pakisrejo, Kec. Tanggunggunung', 'Tulungagung', '3504196810890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(854, 'MUGI03AC', 'Mugi Lestari, Kios', 'MUGI01', 'Susanto', 'Dsn. Jatirejo, RT.001/RW.001, Kel. Pakisrejo, Kec. Tanggunggunung', 'Tulungagung', '3504152409860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(855, 'MULI01AC', 'Mulia Jaya/Sugianto', 'MULI02', 'Fariah', 'Kala, RT.003/ RW.001, Kel. Kala, Kec. Donggo', 'Bima', '5206084107731078', '000000000000000', '2026-09-23 02:29:01', NULL),
+(856, 'MULI02AC', 'Mulia Jaya/Sugianto', 'MULI02', 'Sumarni', 'Pemukiman, RT.004/RW.002, Kel. Bumi Pajo, Kec. Donggo', 'Bima', '5206085703760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(857, 'MULI03AC', 'Mulia Jaya/Sugianto', 'MULI02', 'Sri Rahmah', 'Dusun Suka Maju, RT.006/RW.002, Kel. Kaleo, Kec. Lambu', 'Bima', '5206124101781006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(858, 'MULI04AC', 'Mulia Jaya/Sugianto', 'MULI02', 'Jufrin', 'Dusun Sori, RT.009/RW.005, Kel. Sumbi, Kec. Lambu', 'Bima', '5206120605710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(859, 'RISM01AC', 'Mulyo Tani, UD', 'MULY06', 'Paimin', 'Dsn. Sidorejo wetan, RT.004/Rw.002, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510070302620003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(860, 'RISM02AC', 'Mulyo Tani, UD', 'MULY06', 'Muhammad Misroi', 'Dsn. Sumberejo, RT.001/RW.001, Kel.Wringinagung, Kec. Gambiran', 'Banyuwangi', '3510070303730008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(861, 'RISM03AC', 'Mulyo Tani, UD', 'MULY06', 'Darsono', 'Dsn. Sidorejo wetan, RT.002/Rw.004, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510070502740003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(862, 'RISM04AC', 'Mulyo Tani, UD', 'MULY06', 'Wagito', 'Dsn. Sidorejo Kulon, RT.001/RW.002, Kel. Yosomulyo, Kec. Gambiran', 'Banyuwangi', '3510072103670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(863, 'MUTI01AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Mulyono', 'Dusun Jajar, RT.005/RW.002, Kel. Temaji, Kec. Jenu', 'Tuban', '3523121006740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(864, 'MUTI02AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Rudi Witanto', 'Lingk. Jarkali, RT.003/RW.016, Kel. Gedongombo, Kec. Semanding', 'Tuban', '3523152707870002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(865, 'MUTI03AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Adi Pranoto', 'Dsn. Kesamben Timur, RT.006/RW.001, Kel. Kesamben, Kec. Plumpang', 'Tuban', '3523172805940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(866, 'MUTI04AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Insiyah', 'Nguruan, RT.008/RW.001, Kel. Nguruan, Kec. Soko', 'Tuban', '3523114107640197', '000000000000000', '2026-09-23 02:29:01', NULL),
+(867, 'MUTI06AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Nurudin', 'Klumpit, RT.004/RW.002, Kel. Klumpit, Kec. Soko', 'Tuban', '3523111006920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(868, 'MUTI07AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Eko Rukmanto', 'Dsn. Pakah RT.002/RW.007\' Kel. Gesing, Kec. Semanding', 'Tuban', '3523151808690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(869, 'MUTI08AC', 'Mutiara Sejati/Inge', 'TIAR01', 'Suhartono', 'Jl. Panglima Sudirman, RT.003/RW.002, Kel. Sukolilo, Kec. Tuban', 'Tuban', '3523160607830009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(870, 'IMR07AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ahmad Syafi\'i', 'Dusun Krajan, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510180102730007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(871, 'IMR08AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Anton Supriyadi', 'Dusun Krajan, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510180810840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(872, 'IMR09AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ngaderi MT', 'Dusun Krajan, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510183006650140', '000000000000000', '2026-09-23 02:29:01', NULL),
+(873, 'IMR10AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Katirin', 'Dusun Krajan, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181409570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(874, 'IMR11AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Suyoto', 'Dusun Krajan II, RT.004 / RW. 002, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510181510710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(875, 'IMR12AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Dery Zulkarnain', 'Dusun Krajan, RT.004 / RW.020, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510182510790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(876, 'IMR13AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'A. Sulhan', 'Dusun Krajan II, RT.010 / RW.001, Kel. Alasbuluh, Kec. Wogsorejo', 'Banyuwangi', '3510182105590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(877, 'IMR14AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Agus Nuryanto', 'Dusun Krajan, RT.006 / RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510181605850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(878, 'IMR15AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Misnadi', 'Dusun Karangrejo Utara, RT.007 / RW.001, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510182206790003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(879, 'IMR16AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Mulahwi', 'Dusun Krajan, RT.003 / RW.011, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181705600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(880, 'IMR17AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Moh. Suhawi', 'Dusun Possumur, RT.001 / RW.004, Kel. Bengkak, Kec. Wongsorejo', 'Banyuwangi', '3510181108650003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(881, 'IMR18AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Muhammad Hasan', 'Dusun Krajan, RT.001 / RW. 010, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181105940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(882, 'IMR19AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Busana', 'Dusun Karangrejo Utara, RT.001 / RW.002, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181202730009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(883, 'IMR20AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Narto', 'Dusun Krajan, RT.003 / RW.005, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510183006540073', '000000000000000', '2026-09-23 02:29:01', NULL),
+(884, 'IMR22AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Arifin', 'Dusun Krajan Baru, RT.008 / RW. 001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510181909760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(885, 'IMR24AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Kusmiyanto', 'Dusun Krajan I, RT.003 / RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180404780012', '000000000000000', '2026-09-23 02:29:01', NULL),
+(886, 'IMR25AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Sumarjono', 'Dusun Krajan, RT.001 / RW.002, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510040504700011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(887, 'IMR26AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Sumai', 'Dusun Krajan I, RT.006/ RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510184605660005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(888, 'IMR27AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ali Imron', 'Dusun Karangrejo Utara, RT.002/RW.001, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510180103010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(889, 'IMR29AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Poniman', 'Dusun Krajan I, RT.005/ RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510182810850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(890, 'IMR30AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Alimakki', 'Dusun Krajan, RT.008/ RW.002, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180909740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(891, 'IMR31AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Hanipan', 'Dusun Possumur, RT.001/RW.005, Kel. Bengkak, Kec. Wongsorejo', 'Banyuwangi', '3510180812740005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(892, 'IMR32AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ramelan', 'Dusun Krajan, RT.003/ RW.002, Kec. Wongsorejo', 'Banyuwangi', '3510180711360002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(893, 'IMR33AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Tukina', 'Dusun Karangrejo Utara, RT.005/RW.002, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510184107600025', '000000000000000', '2026-09-23 02:29:01', NULL),
+(894, 'IMR34AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Misnari', 'Dusun Karangrejo Utara, RT.005/RW.002, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510180107530035', '000000000000000', '2026-09-23 02:29:01', NULL),
+(895, 'IMR35AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Jumahrap', 'Dusun Krajan II, RT.004/ RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510182208750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(896, 'IMR36AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ponirin', 'Dusun Krajan I, RT.003/ RW.002, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180204770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(897, 'IMR37AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Sahri', 'Jl. Jendral Sudirman, RT.004/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510183006780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(898, 'IMR38AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Mujiman', 'Dusun Karangrejo Selatan, RT.006/RW.001, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181703620004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(899, 'IMR39AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Heriyanto', 'Dusun Krajan, RT.005/RW.002, Kel. Bengkak, Kec. Wongsorejo', 'Banyuwangi', '3510181005900013', '000000000000000', '2026-09-23 02:29:01', NULL),
+(900, 'IMR40AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Tolak Iman', 'Dusun Karangrejo Utara, RT.004/RW.002, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181410930002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(901, 'IMR41AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Sekarini', 'Dusun Karangrejo Selatan, RT.006/RW.001, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510186107690006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(902, 'IMR42AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Tasmirah', 'Dusun Krajan, Kel. Sumberkencono, Kec. Wongsorejo', 'Banyuwangi', '3510184212550006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(903, 'IMR43AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Misna', 'Krajan I, RT.005/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510184101550008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(904, 'IMR44AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Samsul Arifin', 'Dusun Krajan II, RT.008/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510182107810006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(905, 'IMR45AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Atim Rahman', 'Dusun Krajan I, RT.011/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180505850015', '000000000000000', '2026-09-23 02:29:01', NULL),
+(906, 'IMR46AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Ismail', 'Dusun Krajan, RT.004/RW.005, Kel. Wongsorejo, Kec. Wongsorejo', 'Banyuwangi', '3510181404640004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(907, 'IMR47AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Tolak Amin', 'Dusun Krajan, RT.006/RW.002, Kel. Bengkak, Kec. Wongsorejo', 'Banyuwangi', '3510181610950003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(908, 'IMR48AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'M. Siroyuddin', 'Dusun Krajan II, RT.014/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3511150101930008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(909, 'IMR49AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Rusdi', 'Dusun Possumur, RT.001/RW.005, Kel. Bengkak, Kec. Wongsorejo', 'Banyuwangi', '3510182407790003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(910, 'IMR50AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Heriyanto', 'Dusun Krajan II, RT.012/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180612810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(911, 'IMR52AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Supiyati', 'Dusun Krajan II, RT.009/RW.001, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510185709500003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(912, 'IMR53AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'A Baidowi', 'Dusun Krajan I, RT.002/RW.002, Kel. Alasbuluh, Kec. Wongsorejo', 'Banyuwangi', '3510180506720007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(913, 'IMR55AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Bayu Andira', 'Dusun Karangrejo Selatan RT.005/RW.002 , Kel. Wongsorejo Kec. Wongsorejo', 'Banyuwangi', '3510182601060005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(914, 'IMR56AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Fitriyani', 'Dusun Karang Baru RT.009/RW.004 , Kel. Alasbuluh Kec. Wongsorejo', 'Banyuwangi', '3510185705860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(915, 'IMR57AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Hendra Luki', 'Dusun Krajan RT.003/RW.001 , Kel. Wongsorejo Kec. Wongsorejo', 'Banyuwangi', '3510181705950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(916, 'IMR58AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Miswati', 'Dusun Karangrejo Selatan, RT.001/RW.001 , Kel. Wongsorejo Kec. Wongsorejo', 'Banyuwangi', '3510185203810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(917, 'IMR59AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Mohammad Nuril Ikhsan', 'Karangrejo Selatan, RT.004/RW.001 , Kel. Wongsorejo, Kec Wongsorejo', 'Banyuwangi', '3510181312960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(918, 'IMR60AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Muhammad Arif', 'Dusun Karang Baru RT.007/RW.001 , Kel. Alasbuluh Kec. Wongsorejo', 'Banyuwangi', '3510180612960006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(919, 'IMR61AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Siti Saidah Khotijah', 'Dusun Karang Baru RT.009/RW.001 , Kel. Alasbuluh Kec. Wongsorejo', 'Banyuwangi', '3510184101040012', '000000000000000', '2026-09-23 02:29:01', NULL),
+(920, 'IMR62AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Yanuar tri Hartono', 'Dusun Karangrejo Selatan RT.006/RW.001 , Kel. Karangrejo, Kec. Karangrejo', 'Banyuwangi', '3509201001950005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(921, 'IMR63AC', 'Mutiara Tani, UD/Abdur Rahman', 'MUTI01', 'Yono Susilo', 'Karangrejo Selatan, RT.004/RW.001 , Kel. Wongsorejo, Kec Wongsorejo', 'Banyuwangi', '3510183003850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(922, 'AIN04AC', 'Nuansa Tani', 'NUAN01', 'Jemirah', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502155807530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(923, 'AIN06AC', 'Nuansa Tani', 'NUAN01', 'Sukarjianto', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502150912810003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(924, 'AIN07AC', 'Nuansa Tani', 'NUAN01', 'Kimun', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502152110490001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(925, 'AIN08AC', 'Nuansa Tani', 'NUAN01', 'Ruwig', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502155507300001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(926, 'AIN09AC', 'Nuansa Tani', 'NUAN01', 'Kartini', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502155709620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(927, 'AIN10AC', 'Nuansa Tani', 'NUAN01', 'Eni Susanti', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502154601850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(928, 'AIN11AC', 'Nuansa Tani', 'NUAN01', 'Misman', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502153006490085', '000000000000000', '2026-09-23 02:29:01', NULL),
+(929, 'AIN13AC', 'Nuansa Tani', 'NUAN01', 'Tukimun', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502151010670004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(930, 'AIN14AC', 'Nuansa Tani', 'NUAN01', 'Eko Purwanto', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502151506890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(931, 'AIN15AC', 'Nuansa Tani', 'NUAN01', 'Suratemi', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502157006680137', '000000000000000', '2026-09-23 02:29:01', NULL),
+(932, 'AIN16AC', 'Nuansa Tani', 'NUAN01', 'Japar', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502153006520118', '000000000000000', '2026-09-23 02:29:01', NULL),
+(933, 'AIN17AC', 'Nuansa Tani', 'NUAN01', 'Partin', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502155807590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(934, 'AIN18AC', 'Nuansa Tani', 'NUAN01', 'Sumirin', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502150904760008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(935, 'AIN22AC', 'Nuansa Tani', 'NUAN01', 'Hj. Misratin', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502157006570143', '000000000000000', '2026-09-23 02:29:01', NULL),
+(936, 'AIN23AC', 'Nuansa Tani', 'NUAN01', 'Sunarto', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502132112740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(937, 'AIN24AC', 'Nuansa Tani', 'NUAN01', 'Sri Handayani', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502154405780005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(938, 'AIN25AC', 'Nuansa Tani', 'NUAN01', 'Yoyok Hariyanto', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502152307870002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(939, 'AIN26AC', 'Nuansa Tani', 'NUAN01', 'Winda Agustina', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502156008870001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(940, 'AIN27AC', 'Nuansa Tani', 'NUAN01', 'Hasim', 'Dukuh Menggeng, Ds. Gelang Lor, Kec. Sukorejo', 'Ponorogo', '3502150111780002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(941, 'AIN28AC', 'Nuansa Tani', 'NUAN01', 'Eko Wahyudi', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3502190710850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(942, 'AIN29AC', 'Nuansa Tani', 'NUAN01', 'Marnianto', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502191002600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(943, 'AIN30AC', 'Nuansa Tani', 'NUAN01', 'Rini Isnawati', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502194706830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(944, 'AIN31AC', 'Nuansa Tani', 'NUAN01', 'Parti', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3502194609390001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(945, 'AIN32AC', 'Nuansa Tani', 'NUAN01', 'Supriati', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502195305680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(946, 'AIN33AC', 'Nuansa Tani', 'NUAN01', 'Miati', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502196909600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(947, 'AIN34AC', 'Nuansa Tani', 'NUAN01', 'Heru Fitriawan', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502191809770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(948, 'AIN36AC', 'Nuansa Tani', 'NUAN01', 'Yuliana', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3502194911830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(949, 'AIN37AC', 'Nuansa Tani', 'NUAN01', 'Sogol', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3502193004440001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(950, 'AIN38AC', 'Nuansa Tani', 'NUAN01', 'Partini', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502195206750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(951, 'AIN39AC', 'Nuansa Tani', 'NUAN01', 'Purwati', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502196001820007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(952, 'AIN40AC', 'Nuansa Tani', 'NUAN01', 'Susiati', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502194903910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(953, 'AIN41AC', 'Nuansa Tani', 'NUAN01', 'Mardi Utomo', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3502190305820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(954, 'AIN42AC', 'Nuansa Tani', 'NUAN01', 'Haryani', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502194404820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(955, 'AIN43AC', 'Nuansa Tani', 'NUAN01', 'Supriyanto', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502190603750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(956, 'AIN45AC', 'Nuansa Tani', 'NUAN01', 'Susiana', 'Desa Ngrogung, Kec. Ngabel', 'Ponorogo', '3519024104890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(957, 'AIN46AC', 'Nuansa Tani', 'NUAN01', 'Joko Setiyantoro', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502192410800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(958, 'AIN47AC', 'Nuansa Tani', 'NUAN01', 'Suyanto', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502191801710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(959, 'AIN48AC', 'Nuansa Tani', 'NUAN01', 'Sutikno', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502191206710003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(960, 'AIN50AC', 'Nuansa Tani', 'NUAN01', 'Sugianto', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502190409700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(961, 'AIN51AC', 'Nuansa Tani', 'NUAN01', 'Tukiyem', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502196701550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(962, 'AIN52AC', 'Nuansa Tani', 'NUAN01', 'Abdul Wahid Romdoni', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502192507790002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(963, 'AIN53AC', 'Nuansa Tani', 'NUAN01', 'Narni', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502196012840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(964, 'AIN54AC', 'Nuansa Tani', 'NUAN01', 'Edi Suwoko', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502191608730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(965, 'AIN56AC', 'Nuansa Tani', 'NUAN01', 'Suwenti Dwi Cahyanti', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502196611870001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(966, 'AIN57AC', 'Nuansa Tani', 'NUAN01', 'Riyanto', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502193006710002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(967, 'AIN58AC', 'Nuansa Tani', 'NUAN01', 'Sunardi', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502191808690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(968, 'AIN59AC', 'Nuansa Tani', 'NUAN01', 'Alip Nurani', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502195103860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(969, 'AIN60AC', 'Nuansa Tani', 'NUAN01', 'Marmi', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502195305650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(970, 'AIN61AC', 'Nuansa Tani', 'NUAN01', 'Ari', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502195701850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(971, 'AIN62AC', 'Nuansa Tani', 'NUAN01', 'Diki Agus Setiawan', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502192108860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(972, 'AIN63AC', 'Nuansa Tani', 'NUAN01', 'Supiyah', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502196303740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(973, 'AIN64AC', 'Nuansa Tani', 'NUAN01', 'Wiryadi', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502191412490001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(974, 'AIN65AC', 'Nuansa Tani', 'NUAN01', 'Kastoli', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502190911760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(975, 'AIN66AC', 'Nuansa Tani', 'NUAN01', 'Harini', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502194206650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(976, 'AIN67AC', 'Nuansa Tani', 'NUAN01', 'Sutini', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502194701790002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(977, 'AIN68AC', 'Nuansa Tani', 'NUAN01', 'Rinem', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502194306540001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(978, 'AIN69AC', 'Nuansa Tani', 'NUAN01', 'Muhammad Zulkarnain A. H', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502190712830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(979, 'AIN70AC', 'Nuansa Tani', 'NUAN01', 'Sarti', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502196711520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(980, 'AIN71AC', 'Nuansa Tani', 'NUAN01', 'Sri Puryanti', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502195602840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(981, 'AIN72AC', 'Nuansa Tani', 'NUAN01', 'Nur Hayati', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502194805760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(982, 'AIN73AC', 'Nuansa Tani', 'NUAN01', 'Suharsih', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502194704790005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(983, 'AIN74AC', 'Nuansa Tani', 'NUAN01', 'Marno', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502190406440001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(984, 'AIN75AC', 'Nuansa Tani', 'NUAN01', 'Yatimun', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502192912600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(985, 'AIN76AC', 'Nuansa Tani', 'NUAN01', 'Lamuji', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502196404710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(986, 'AIN77AC', 'Nuansa Tani', 'NUAN01', 'Bibit', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502192009720003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(987, 'AIN78AC', 'Nuansa Tani', 'NUAN01', 'Suti', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502194508480001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(988, 'AIN79AC', 'Nuansa Tani', 'NUAN01', 'Siti Fatimah', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502195907930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(989, 'AIN80AC', 'Nuansa Tani', 'NUAN01', 'Prihatin', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502195004690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(990, 'AIN81AC', 'Nuansa Tani', 'NUAN01', 'Fajar Wardoyo', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502192809950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(991, 'AIN82AC', 'Nuansa Tani', 'NUAN01', 'Edi Supeno', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502190701730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(992, 'AIN83AC', 'Nuansa Tani', 'NUAN01', 'Supingi', 'Desa Wagir Lor, Kec. Ngebel', 'Ponorogo', '3502190403780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(993, 'AIN85AC', 'Nuansa Tani', 'NUAN01', 'Warinem', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502196709570003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(994, 'AIN88AC', 'Nuansa Tani', 'NUAN01', 'Siti Masunah', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502194806760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(995, 'AIN89AC', 'Nuansa Tani', 'NUAN01', 'Basri', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502195412670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(996, 'AIN90AC', 'Nuansa Tani', 'NUAN01', 'Sujarno', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502191908880001', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(997, 'AIN91AC', 'Nuansa Tani', 'NUAN01', 'Suparni', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502191412660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(998, 'AIN93AC', 'Nuansa Tani', 'NUAN01', 'Yati', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502197006500046', '000000000000000', '2026-09-23 02:29:01', NULL),
+(999, 'AIN94AC', 'Nuansa Tani', 'NUAN01', 'Hesti Astuti', 'Desa Sahang, Kec. Ngebel', 'Ponorogo', '3502196912720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1000, 'AIN96AC', 'Nuansa Tani', 'NUAN01', 'Sumadi', 'Desa Ngrogung, Kec. Ngebel', 'Ponorogo', '3502191009680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1001, 'PERS01AC', 'Persada Tani/Munir', 'PERS02', 'Muhammad Ali', 'Dsn. Balong, RT.001/RW.003, Kel. Padangan, Kec. Ngantru', 'Tulungagung', '3504042212770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1002, 'PJF 01AC', 'Putra Jaya/Fahan', 'PUTR05', 'Moch. Dian Prasetyo', 'Benoe I, RT.003/RW.001, Kel. Benoe, Kec. Garum', 'Blitar', '3505111307010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1003, 'PJF 02AC', 'Putra Jaya/Fahan', 'PUTR05', 'Aldi Cahyono', 'Dsn. Karang Tengah, RT.005/RW.007, Kel. Pikatan, Kec. Wonodadi', 'Blitar', '3505010107040004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1004, 'RASK01AC', 'Raska, UD', 'RASK01', 'A. Zainudin Anshori', 'Dsn. Sambiringik, RT.005/RW.008/, Kel. Ampel, Kec. Wuluhan', 'Jember', '3509112505930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1005, 'RASK02AC', 'Raska, UD', 'RASK01', 'Iguh Firmansyah', 'Dsn. Tirtoasri, RT.02/RW.26, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509122407980003.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1006, 'RASK03AC', 'Raska, UD', 'RASK01', 'Moh. Abdul Abidin', 'Dsn. Krajan, RT.002/RW.005, Kel. Ampel, Kec. Wuluhan', 'Jember', '3509111801980007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1007, 'RASK04AC', 'Raska, UD', 'RASK01', 'Candi Amiruddin', 'Dsn. Krangkongan, RT.002/RW.013, Kel. Tegalwangi, Kec. Umbulsari', 'Jember', '3509051701000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1008, 'RASK05AC', 'Raska, UD', 'RASK01', 'Ryan Dwi Ananta', 'Perum Pancoran Mas F-12, RT037/RW.013, Kel. Pancoran, Kec. Bondowoso', 'Bondowoso', '3511111607900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1009, 'RASK06AC', 'Raska, UD', 'RASK01', 'Eka Putra W', 'Dsn. Wuluhan, RT.001/RW.011, Kel. Dukuh Dempok, Kec. Wuluhan', 'Jember', '3509112012920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1010, 'RATU01AC', 'Ratu Tani/Yusuf', 'RATU01', 'Faisal Rusli', 'Bunu, Kel. Bubun Lamba, Kec. Anggeraja', 'Enrekang', '7316041702970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1011, 'RATU02AC', 'Ratu Tani/Yusuf', 'RATU01', 'Fadhil Muhammad Sani', 'Dsn. Patila, RT.003/RW.004, Kel. Patila, Kec. Tana Lili', 'Luwu Utara', '7322020203970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1012, 'RATU03AC', 'Ratu Tani/Yusuf', 'RATU01', 'Musfianto', 'Karangwaru Lor TR II/228 D, RT.056/RW.002, Kel. Karangwaru, Kec. Tegalrejo', 'Yogyakarta', '7316052411900004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1013, 'RATU04AC', 'Ratu Tani/Yusuf', 'RATU01', 'Usman', 'Buntu Limbong, Kel. Buntu Limbong, Kec. Gandangbatu Sillanan', 'Tana Toraja', '7316120309920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1014, 'RATU05AC', 'Ratu Tani/Yusuf', 'RATU01', 'Livia', 'Sossok, Kel. Mataran, Kec. Anggeraja', 'Enrekang', '7316044112970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1015, 'RATU06AC', 'Ratu Tani/Yusuf', 'RATU01', 'Djasman, ST', 'Jl. Poros Makassar Tator, RT.002/RW.001, Kel. Kalosi, Kec. Alla', 'Enrekang', '7316050409840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1016, 'RATU07AC', 'Ratu Tani/Yusuf', 'RATU01', 'Rusdin', 'Baraka, Kel. Tomenawa, Kec. Baraka', 'Enrekang', '7316032607830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1017, 'RATU08AC', 'Ratu Tani/Yusuf', 'RATU01', 'Reski Ananda', 'Bolong, Kel. Bolong, Kec. Walenrang Utara', 'Luwu', '7401045210990003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1018, 'RATU09AC', 'Ratu Tani/Yusuf', 'RATU01', 'Nasri Nada', 'Tampang, Kel. Tirowali, Kec. Baraka', 'Enrekang', '7316032511800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1019, 'RATU10AC', 'Ratu Tani/Yusuf', 'RATU01', 'Ardiansyah', 'Baraka, Kel. Tomenawa, Kec. Baraka', 'Enrekang', '7316032211940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1020, 'RATU11AC', 'Ratu Tani/Yusuf', 'RATU01', 'Yasmin Tadjuddin', 'Belajen Utara, Kel. Kambiolangi, Kec. Alla', 'Enrekang', '7316052307870004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1021, 'REPL01AC', 'Replacement', NULL, 'Dian Suprapto', 'Purworejo, RT.006/RT.001, Kel. Kalipait, Kec. Tegaldlimo', 'Banyuwangi', '3510041112830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1022, 'REPL02AC', 'Replacement', NULL, 'Supeno', 'Purworejo, RT.008/RT.001, Kel. Kalipait, Kec. Tegaldlimo', 'Banyuwangi', '3510041307730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1023, 'REPL03AC', 'Replacement', NULL, 'A.M.Manir', 'Dusun Temurejo, RT.003/RW.004, Kel. Kembiritan, Kec. Genteng', 'Banyuwangi', '3510090306650010', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1024, 'REPL04AC', 'Replacement', NULL, 'Nismah', 'Jl. Argopuro 37 Rambigundam, RT.005/RW.002, Kel. Rambigundam, Kec. Rambipuji', 'Jember', '3509134706830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1025, 'REPL05AC', 'Replacement', NULL, 'Sapari', 'Dsn. Krajan, RT.001/RW.001, Kel. Kaliwining, Kec. Rambipuji', 'Jember', '3509130508700006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1026, 'RIZK01AC', 'Rizkina/Yasin, H', 'RIZK08', 'Panuji', 'Dsn. Bingungan, RT.002/RW.006, Kel. Kedungpadang, Kec. Rejoso', 'Nganjuk', '3518161507860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1027, 'RUKU01AC', 'Rukun Tani/Rojimin', 'RUKU02', 'Mat Sayuti', 'Dusun Jati, RT.003/RW.003, Mergayu, Bandung', 'Tulungagung', '3504170201620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1028, 'AMIR01AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'A. Rajak', 'Dsn. Karombo I, RT.003/RW.002, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060107680224', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1029, 'AMIR02AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Adiman', 'Dsn. Karombo I, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060604840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1030, 'AMIR03AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Agus Ramdan', 'Dsn. Soridei, RT.003/Rw.001, Nangammiro, Pekat', 'Dompu', '5205060107870190', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1031, 'AMIR04AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Ahmadin', 'Dsn. Ladore, RT.002/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060707880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1032, 'AMIR05AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Aidin', 'Dsn. Ladore, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060107740191', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1033, 'AMIR06AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Arfin', 'Dsn. Ladore, RT.002/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205061511760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1034, 'AMIR07AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Arif Budiman', 'Dsn. Karombo I, RT.001/RW.001, Kel. Nangamiro, Kec. Pekat', 'Dompu', '5205062002960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1035, 'AMIR08AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Saiful Adha', 'Dsn. Soridei, RT.001/RW.001, Kel.Karombo, Kec. Pekat', 'Dompu', '5205062512910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1036, 'AMIR09AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Junaedin', 'Dsn. Soridei, RT.001/RW.001, Kel. Nangamiro, Kec. Pekat', 'Dompu', '5205060210800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1037, 'AMIR10AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Suhirman', 'Dsn. Sori Dei, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060107850327', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1038, 'AMIR11AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Sumardi', 'Dsn. Karombo, Ds. Nangamiro, RT.002/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205061106760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1039, 'AMIR12AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Sabrang', 'Dsn. Karombo, RT.003/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060606770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1040, 'AMIR13AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Ikhsan', 'Dsn. Karombo, Ds. Nangamiro, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060707770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1041, 'AMIR14AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Arwan', 'Dusun Ladore, RT.003/RW.002, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060511750003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1042, 'AMIR15AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Damsul', 'Dusun Karombo I, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060708850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1043, 'AMIR16AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Dewi Andriani', 'Dusun Karombo I, RT.001/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205066003940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1044, 'AMIR17AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Firman', 'Dusun Karombo I, RT.004/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060107900295', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1045, 'AMIR18AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Hariswan', 'Dusun Karombo, RT.001/RW.004, Kel. Karombo, Kec. Pekat', 'Dompu', '5205061001820004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1046, 'AMIR19AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Irwandi', 'Link. Sembalun, RT.001/RW.179, Kel. Tanjung Karang, Kec. Sekarbela', 'Dompu', '5271042102870004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1047, 'AMIR20AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Ishaq', 'Dusun Karombo II, RT.001/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060601910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1048, 'AMIR21AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'M. Nor', 'Dusun Ladore, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205061201600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1049, 'AMIR22AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Muhidin', 'Dusun Karombo, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060107770272', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1050, 'AMIR23AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Sumardin', 'Dusun Karombo I, RT.002/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205061505770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1051, 'AMIR24AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Salahudin', 'Dusun Karombo I, RT.004/RW.002, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060107800391', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1052, 'AMIR25AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'M. Yasin', 'Dusun Soridei, RT.002/RW.001, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060107870192', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1053, 'AMIR26AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'M. Idris', 'Dusun Sori Dei, RT.003/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205061403970002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1054, 'AMIR27AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Suharno Putra S', 'Dusun Ladore, RT.001/RW.002, Kel. Karombo, Kec. Pekat', 'Dompu', '5204181007960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1055, 'AMIR28AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Suparno', 'Dusun Karombo I, RT.001/RW.003, Kel. Karombo, Kec. Pekat', 'Dompu', '5205060107750244', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1056, 'AMIR29AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Syahrul', 'Dusun Karombo I, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060107690166', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1057, 'AMIR30AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Sukardi', 'Dusun Karombo Desa Nangamiro, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205060806770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1058, 'AMIR31AC', 'Sahabat Tani, UD/Amirudin', 'SAHA30', 'Utar Kasinah', 'Dusun Karombo Desa Nangamiro, RT.001/RW.001, Kel. Nangammiro, Kec. Pekat', 'Dompu', '5205061002520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1059, 'ENDA01AC', 'Sahabat Tani, UD/Endang', 'SAHA35', 'Adi Sucipto', 'Dusun La Wontu, RT.012/RW.005, Kel. Risa, Kec. Woha', 'Bima', '5206031902001004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1060, 'ENDA02AC', 'Sahabat Tani, UD/Endang', 'SAHA35', 'Arjuna', 'Dusun La Wontu, RT.013/RW.006, Kel. Risa, Kec. Woha', 'Bima', '5206035302790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1061, 'ENDA03AC', 'Sahabat Tani, UD/Endang', 'SAHA35', 'Nur Safitri', 'Dusun La Wontu, RT.012/RW.005, Kel. Risa, Kec. Woha', 'Bima', '5206035005001006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1062, 'ENDA04AC', 'Sahabat Tani, UD/Endang', 'SAHA35', 'Diana', 'Risa, RT.012/RW.006, Kel. Risa, Kec. Woha', 'Bima', '5206034104001005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1063, 'ENDA05AC', 'Sahabat Tani, UD/Endang', 'SAHA35', 'Nufrah', 'Risa, RT.014/RW.005, Kel. Risa, Kec. Woha', 'Bima', '5206034707880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1064, 'KHO01AC', 'Sahala/Syaiful', 'SAHA12', 'Sarminah', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114910590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1065, 'SAHA100AC', 'Sahala/Syaiful', 'SAHA12', 'Yatmo', 'Sumurpandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242206540003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1066, 'SAHA101AC', 'Sahala/Syaiful', 'SAHA12', 'Musa', 'Dusun Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240110670028', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1067, 'SAHA102AC', 'Sahala/Syaiful', 'SAHA12', 'Gunawi', 'Dusun Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240110730014', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1068, 'SAHA103AC', 'Sahala/Syaiful', 'SAHA12', 'Damiran', 'Sumberjokidul, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242307690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1069, 'SAHA104AC', 'Sahala/Syaiful', 'SAHA12', 'Mardi', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240512590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1070, 'SAHA105AC', 'Sahala/Syaiful', 'SAHA12', 'Jalidin', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240612630002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1071, 'SAHA106AC', 'Sahala/Syaiful', 'SAHA12', 'Lilis Handayani', 'Mojoroto, RT.002/RW.002, Kel. Duyungan, Kec. Sukosewu', 'Bojonegoro', '3522245603750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1072, 'SAHA108AC', 'Sahala/Syaiful', 'SAHA12', 'Sumiran', 'Sumur Pandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241011700008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1073, 'SAHA109AC', 'Sahala/Syaiful', 'SAHA12', 'Suyanto', 'Dusun Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241404760003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1074, 'SAHA110AC', 'Sahala/Syaiful', 'SAHA12', 'Warimin', 'Dusun Sumur Pandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240111370003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1075, 'SAHA111AC', 'Sahala/Syaiful', 'SAHA12', 'Gunawan', 'Dusun Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242106750001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1076, 'SAHA112AC', 'Sahala/Syaiful', 'SAHA12', 'Sucan', 'Sumberejo Kidul, RT.005/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240608810003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1077, 'SAHA113AC', 'Sahala/Syaiful', 'SAHA12', 'Ngatemi', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522244303730009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1078, 'SAHA114AC', 'Sahala/Syaiful', 'SAHA12', 'Sundani', 'Sumberejo Kidul, RT.004/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240110640038', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1079, 'SAHA115AC', 'Sahala/Syaiful', 'SAHA12', 'Basirun', 'Sumberjo Kidul, RT.004/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240612600003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1080, 'SAHA116AC', 'Sahala/Syaiful', 'SAHA12', 'Suprih', 'Sumberjo Kidul, RT.004/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241608760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1081, 'SAHA117AC', 'Sahala/Syaiful', 'SAHA12', 'Jiyatri', 'Dusun Sumurpandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522244508760005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1082, 'SAHA118AC', 'Sahala/Syaiful', 'SAHA12', 'Ngatemi', 'Sumberejo Kidul, RT.004/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522246112710002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1083, 'SAHA119AC', 'Sahala/Syaiful', 'SAHA12', 'Jaemun', 'Sumberjo Kidul, RT.002/RW.005, Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240505570002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1084, 'SAHA120AC', 'Sahala/Syaiful', 'SAHA12', 'Sarpi', 'Sumurpandan, RT.002/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522246410690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1085, 'SAHA121AC', 'Sahala/Syaiful', 'SAHA12', 'Sujar', 'Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240511610002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1086, 'SAHA123AC', 'Sahala/Syaiful', 'SAHA12', 'Supardi', 'Sumurpandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241504590003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1087, 'SAHA124AC', 'Sahala/Syaiful', 'SAHA12', 'Sugito', 'Dusun Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242708880002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1088, 'SAHA125AC', 'Sahala/Syaiful', 'SAHA12', 'Ruslan', 'Dusun Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240704690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1089, 'SAHA126AC', 'Sahala/Syaiful', 'SAHA12', 'Turkamun', 'Sumurpandan, RT.002/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241602720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1090, 'SAHA127AC', 'Sahala/Syaiful', 'SAHA12', 'Salim', 'Sumurpandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240911600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1091, 'SAHA128AC', 'Sahala/Syaiful', 'SAHA12', 'Sudirman', 'Sumurpandan, RT.002/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240603880005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1092, 'SAHA129AC', 'Sahala/Syaiful', 'SAHA12', 'Jadin', 'Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240201510001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1093, 'SAHA130AC', 'Sahala/Syaiful', 'SAHA12', 'Abdul Adha', 'Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240307900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1094, 'SAHA131AC', 'Sahala/Syaiful', 'SAHA12', 'Nyono', 'Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241205620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1095, 'SAHA132AC', 'Sahala/Syaiful', 'SAHA12', 'Warsito', 'Sumurpandan, RT.001/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240110670027', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1096, 'SAHA133AC', 'Sahala/Syaiful', 'SAHA12', 'Parwoto', 'Dusun Sumurpandan, RT.002/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242007880002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1097, 'SAHA16AC', 'Sahala/Syaiful', 'SAHA12', 'Kasdan', 'Sumurcinde, RT.02/RW.07, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111408620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1098, 'SAHA18AC', 'Sahala/Syaiful', 'SAHA12', 'Warsiman', 'Sumurcinde, RT.02/RW.07, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523112912600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1099, 'SAHA19AC', 'Sahala/Syaiful', 'SAHA12', 'Lasmini', 'Sumurcinde, RT.02/RW.06, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114501910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1100, 'SAHA22AC', 'Sahala/Syaiful', 'SAHA12', 'Tamsinah', 'Sumurcinde, RT.04/RW.07, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115007600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1101, 'SAHA25AC', 'Sahala/Syaiful', 'SAHA12', 'Endang Liswatin', 'Dsn. Maner, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114403900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1102, 'SAHA26AC', 'Sahala/Syaiful', 'SAHA12', 'Wahyu Ningsih', 'Dsn. Maner, RT.002/RW.007, Kel. Sumbercinde, Kec. Soko', 'Tuban', '3521177110930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1103, 'SAHA27AC', 'Sahala/Syaiful', 'SAHA12', 'Sukarji', 'Sumurcinde, RT.003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523112506550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1104, 'SAHA28AC', 'Sahala/Syaiful', 'SAHA12', 'Darsih', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523116704600005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1105, 'SAHA29AC', 'Sahala/Syaiful', 'SAHA12', 'Kristiana', 'Dsn. Maner, RT.002/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115403880006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1106, 'SAHA30AC', 'Sahala/Syaiful', 'SAHA12', 'Kasemi', 'Sumurcinde, RT.003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115908710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1107, 'SAHA31AC', 'Sahala/Syaiful', 'SAHA12', 'Suparto', 'Dsn. Maner, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110705680008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1108, 'SAHA32AC', 'Sahala/Syaiful', 'SAHA12', 'Paniran', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110806590002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1109, 'SAHA33AC', 'Sahala/Syaiful', 'SAHA12', 'Satiman', 'Sumurcinde, RT.003/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110107800288', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1110, 'SAHA34AC', 'Sahala/Syaiful', 'SAHA12', 'Jaidu Rohman', 'Dsn. Maner, RT.003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110505900004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1111, 'SAHA35AC', 'Sahala/Syaiful', 'SAHA12', 'Sanuri', 'Sumurcinde, RT.002/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523112503850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1112, 'SAHA36AC', 'Sahala/Syaiful', 'SAHA12', 'Sauji', 'Dsn. Maner, RT.002/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111704840004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1113, 'SAHA37AC', 'Sahala/Syaiful', 'SAHA12', 'Dardinduk', 'Sumurcinde, RT.001/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115110600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1114, 'SAHA38AC', 'Sahala/Syaiful', 'SAHA12', 'Sumijah', 'Sumurcinde, RT.004/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115010640003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1115, 'SAHA39AC', 'Sahala/Syaiful', 'SAHA12', 'Kasmi', 'Sumurcinde, RT.001/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115911620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1116, 'SAHA40AC', 'Sahala/Syaiful', 'SAHA12', 'Sarto', 'Sumurcinde, RT.001/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110908530003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1117, 'SAHA41AC', 'Sahala/Syaiful', 'SAHA12', 'Miftakul Huda', 'Sumurcinde, RT.003/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523112604780002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1118, 'SAHA43AC', 'Sahala/Syaiful', 'SAHA12', 'Muarifah', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523116006840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1119, 'SAHA44AC', 'Sahala/Syaiful', 'SAHA12', 'Siti Markamah', 'Dsn. Maner, RT.002/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115109700004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1120, 'SAHA45AC', 'Sahala/Syaiful', 'SAHA12', 'Sunari', 'Sumurcinde, RT.002/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111601580001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1121, 'SAHA46AC', 'Sahala/Syaiful', 'SAHA12', 'Lasmi', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114409500002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1122, 'SAHA48AC', 'Sahala/Syaiful', 'SAHA12', 'Satemi', 'Dsn. Maner, RT 003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115503580002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1123, 'SAHA50AC', 'Sahala/Syaiful', 'SAHA12', 'Rokib', 'Sumurcinde, RT.002/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111211840005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1124, 'SAHA51AC', 'Sahala/Syaiful', 'SAHA12', 'Sulikah', 'Sumurcinde, RT.002/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114708720003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1125, 'SAHA53AC', 'Sahala/Syaiful', 'SAHA12', 'Juwarning', 'Dsn. Maner, RT.004/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114112810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1126, 'SAHA54AC', 'Sahala/Syaiful', 'SAHA12', 'Sumiati', 'Dsn. Maner, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115909820005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1127, 'SAHA55AC', 'Sahala/Syaiful', 'SAHA12', 'Risnoto', 'Dsn. Maner, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111704700008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1128, 'SAHA56AC', 'Sahala/Syaiful', 'SAHA12', 'Suliman', 'Sumurcinde, RT.003/RW.006, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110407410002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1129, 'SAHA58AC', 'Sahala/Syaiful', 'SAHA12', 'Kasduri', 'Sumurcinde, RT.003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110609660003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1130, 'SAHA59AC', 'Sahala/Syaiful', 'SAHA12', 'Sukarti', 'Sumurcinde, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114401820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1131, 'SAHA60AC', 'Sahala/Syaiful', 'SAHA12', 'Risa Farihatul Ilma', 'Ds. Mentoro, RT.007/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3517085201920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1132, 'SAHA61AC', 'Sahala/Syaiful', 'SAHA12', 'Syntia Amanda Febriyani', 'Jl. Phendem, RT.012/RW.001, Kel. Sidobandung, Kec. Balen', 'Bojonegoro', '3522135102030001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1133, 'SAHA62AC', 'Sahala/Syaiful', 'SAHA12', 'Wiji Lestari Istikomah', 'Sumurcinde, RT.006/RW.001, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115507940003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1134, 'SAHA63AC', 'Sahala/Syaiful', 'SAHA12', 'Sukanto', 'Ds. Mentoro, RT.008/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523111210760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1135, 'SAHA64AC', 'Sahala/Syaiful', 'SAHA12', 'Mistakul Rohman', 'Dsn. Sumerdadi, RT.003/RW.003, Kel. Mentoro, Kec. Soko', 'Tuban', '3523112709930002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1136, 'SAHA65AC', 'Sahala/Syaiful', 'SAHA12', 'Teguh Hariono', 'Dusun Kendal, RT.002/RW.002, Kel. Sidodadi, Kec. Sukosewu', 'Bojonegoro', '3522240406780003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1137, 'SAHA66AC', 'Sahala/Syaiful', 'SAHA12', 'Wiwik Purwanti', 'Dusun Kendal, RT.002/RW.002, Kel. Sidodadi, Kec. Sukosewu', 'Bojonegoro', '3522246810820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1138, 'SAHA67AC', 'Sahala/Syaiful', 'SAHA12', 'Wiwik Mujiasih', 'Dsn. Sawahan, RT005/RW.001, Kel. Prambontergayang, Kec. Soko', 'Tuban', '3523114509810002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1139, 'SAHA68AC', 'Sahala/Syaiful', 'SAHA12', 'Juwarpi\'ah', 'Prambontergayang, RT.005/RW.001, Kel. Prambotergayang, Kec. Soko', 'Tuban', '3523115812750002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1140, 'SAHA69AC', 'Sahala/Syaiful', 'SAHA12', 'Dian Eryaning', 'Ds. Mentoro, RT.008/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523116712920003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1141, 'SAHA70AC', 'Sahala/Syaiful', 'SAHA12', 'Siti Roni Widana', 'Ds. Mentoro, RT.007/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523054612960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1142, 'SAHA71AC', 'Sahala/Syaiful', 'SAHA12', 'Tri Nurhayati', 'Ds. Mentoro, RT.007/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523115002930006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1143, 'SAHA72AC', 'Sahala/Syaiful', 'SAHA12', 'Sulistiyani', 'Ds. Mentoro, RT.006/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523115411930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1144, 'SAHA73AC', 'Sahala/Syaiful', 'SAHA12', 'Lilik Qomariyah', 'Ds. Mentoro, RT.006/RW.001, Kel. Mentoro, Kec. Soko', 'Tuban', '3523115910880002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1145, 'SAHA74AC', 'Sahala/Syaiful', 'SAHA12', 'Agung Adi Saputro', 'Prambontergayang, RT.005/RW.001, Kel. Prambontergayang, Kec. Soko', 'Tuban', '3523111108000003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1146, 'SAHA75AC', 'Sahala/Syaiful', 'SAHA12', 'Fauzun', 'Simo Krajan, RT.003/RW.001, Kel. Simo, Kec. Soko', 'Tuban', '3523112102670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1147, 'SAHA76AC', 'Sahala/Syaiful', 'SAHA12', 'Sa\'roni', 'Dsn Sundulan, RT.002/RW.001, Kel. Sandingrowo, Kec. Soko', 'Tuban', '3523111605720003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1148, 'SAHA77AC', 'Sahala/Syaiful', 'SAHA12', 'Wijiyanto', 'Dusun Krajan, RT.001/RW.001, Kel. Mojodeso, Kec. Kapas', 'Bojonegoro', '3522132404800003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1149, 'SAHA78AC', 'Sahala/Syaiful', 'SAHA12', 'Hamdan M. Nafi', 'Simo krajan, RT.002/RW.002, Kel. Simo, Kec. Soko', 'Tuban', '3523110408920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1150, 'SAHA79AC', 'Sahala/Syaiful', 'SAHA12', 'Pujinah', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522245008660003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1151, 'SAHA80AC', 'Sahala/Syaiful', 'SAHA12', 'Suparno', 'Sumberjo Kidul, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240508600003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1152, 'SAHA81AC', 'Sahala/Syaiful', 'SAHA12', 'Mardi', 'Dusun Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241607700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1153, 'SAHA83AC', 'Sahala/Syaiful', 'SAHA12', 'Said', 'Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240610690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1154, 'SAHA84AC', 'Sahala/Syaiful', 'SAHA12', 'Supatmin', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240208500001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1155, 'SAHA85AC', 'Sahala/Syaiful', 'SAHA12', 'Mujiah', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522246006600005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1156, 'SAHA86AC', 'Sahala/Syaiful', 'SAHA12', 'Warjono', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240304700009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1157, 'SAHA88AC', 'Sahala/Syaiful', 'SAHA12', 'Parwito', 'Sumberjo Kidul, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240110720016', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1158, 'SAHA89AC', 'Sahala/Syaiful', 'SAHA12', 'Martinah', 'Sumberjo Kidul, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522245406720004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1159, 'SAHA90AC', 'Sahala/Syaiful', 'SAHA12', 'Sakrip', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241011540002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1160, 'SAHA92AC', 'Sahala/Syaiful', 'SAHA12', 'Maskanto', 'Dusun Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240310740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1161, 'SAHA93AC', 'Sahala/Syaiful', 'SAHA12', 'Endang Sunarsih', 'Dusun Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522246904690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1162, 'SAHA94AC', 'Sahala/Syaiful', 'SAHA12', 'Darno', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240504730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1163, 'SAHA95AC', 'Sahala/Syaiful', 'SAHA12', 'Ngatipan', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241506510003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1164, 'SAHA96AC', 'Sahala/Syaiful', 'SAHA12', 'Munahar', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240506730003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1165, 'SAHA97AC', 'Sahala/Syaiful', 'SAHA12', 'Jaelan', 'Sumur Pandan, RT.014/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241307740003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1166, 'SAHA98AC', 'Sahala/Syaiful', 'SAHA12', 'Sutrisno', 'Dusun Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241006860003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1167, 'SAHA99AC', 'Sahala/Syaiful', 'SAHA12', 'Djiran', 'Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242210640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1168, 'SAHA134AC', 'Sahala/Syaiful', 'SAHA12', 'Saminah', 'Sumurcinde, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523116008630002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1169, 'SAHA135AC', 'Sahala/Syaiful', 'SAHA12', 'Susi Rumiana', 'Sumurcinde, RT.001/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523116510900003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1170, 'SAHA136AC', 'Sahala/Syaiful', 'SAHA12', 'Moch Taman', 'Sumurcinde, RT.003/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523110110680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1171, 'SAHA137AC', 'Sahala/Syaiful', 'SAHA12', 'Abdul Matin', 'Sumurcinde, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523111707840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1172, 'SAHA138AC', 'Sahala/Syaiful', 'SAHA12', 'Silah', 'Sumurcinde, RT.002/RW.005, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523116601660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1173, 'SAHA139AC', 'Sahala/Syaiful', 'SAHA12', 'Suripah', 'Sumurcinde, RT.002/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523115205820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1174, 'SAHA140AC', 'Sahala/Syaiful', 'SAHA12', 'Parinah', 'Sumurcinde, RT.004/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114607780007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1175, 'SAHA141AC', 'Sahala/Syaiful', 'SAHA12', 'Sumirah', 'Sumurcinde, RT.004/RW.007, Kel. Sumurcinde, Kec. Soko', 'Tuban', '3523114106580002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1176, 'SAHA142AC', 'Sahala/Syaiful', 'SAHA12', 'Supiyah', 'Jatitengah RT.001/RW.001 Kel. Jatitengah Kec. Sugihwaras', 'Bojonegoro', '3522075607650005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1177, 'SAHA144AC', 'Sahala/Syaiful', 'SAHA12', 'Sayitno', 'Sumur Pandan, RT.004/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522242205660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1178, 'SAHA145AC', 'Sahala/Syaiful', 'SAHA12', 'Agus Kurniawan', 'Sumur Pandan, RT.003/RW.005, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522241808900003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1179, 'SAHA146AC', 'Sahala/Syaiful', 'SAHA12', 'Imam Mahdudin', 'Sumurcinde RT.004/RW.003 , Kel. Sumurcinde Kec. Soko', 'Tuban', '3523112112920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1180, 'SAHA147AC', 'Sahala/Syaiful', 'SAHA12', 'Aminah Firthriyah', 'Kauman RT.003/RW.001 , Kel. Kauman Kec. Sidayu', 'Gresik', '3525094702960003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1181, 'SAHA148AC', 'Sahala/Syaiful', 'SAHA12', 'Reno Badini', 'KP Bundar RT.001/RW.003 , Kel. Bundar Kec. Cigudeg', 'Bogor', '3201221904910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1182, 'SAHA149AC', 'Sahala/Syaiful', 'SAHA12', 'Adolf Riupassa', 'Passo RT.022/RW.005 , Kel. Baguala', 'Ambon', '8106010506020006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1183, 'SAHA150AC', 'Sahala/Syaiful', 'SAHA12', 'Binsar Fredy Renaldo S', 'KP Nagrog RT.001/RW.001 , Kel. Jayaratu Kec. Sariwangi', 'Tasikmalaya', '3275040410960022', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1184, 'SAHA151AC', 'Sahala/Syaiful', 'SAHA12', 'Meriyanto', 'Karangklesem RT.006/RW.003 , Kel. Karangklesem Kec. Kutasari', 'Purbalingga', '3303072105030001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1185, 'SAHA152AC', 'Sahala/Syaiful', 'SAHA12', 'Mahendra Saputra', 'Jalan Ngoro Mojoagung RT.003/RW.002 , Kel. Selorejo Kec. Mojowarno', 'Jombang', '3517071108730007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1186, 'SAHA153AC', 'Sahala/Syaiful', 'SAHA12', 'Feisal Ardyansyah', 'Metro Parung Blok A3. No 42 RT.001/RW.007 , Kel. Waru Kec. Parung', 'Bogor', '3275100311980009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1187, 'SAHA154AC', 'Sahala/Syaiful', 'SAHA12', 'I Gede Ryanta Putra Ardana', 'Perum GKGA Blok-GE/14 RT.002/RW.003 , Kel. Kedanyang Kec. Kebomas', 'Gresik', '3525141603960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1188, 'SAHA155AC', 'Sahala/Syaiful', 'SAHA12', 'M Ridhlotul Izza', 'Dusun Kedawung RT.001/RW.007 , Kel. Kedawung Kec. Nglegok', 'Blitar', '3505092408000003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1189, 'SAHA156AC', 'Sahala/Syaiful', 'SAHA12', 'Yudistira Adi Nugraha', 'Jalan Pasir X/4 RT.005/RW.005 , Kel. Pongangan Kec. Manyar', 'Gresik', '3525100805960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1190, 'SAHA157AC', 'Sahala/Syaiful', 'SAHA12', 'Sun Erna Sartika Dewi', 'Sutorejo Selatan I/24 RT.004/RW.008 , Kel. Dukuh Sutorejo Kec. Mulyorejo', 'Surabaya', '3578266810810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1191, 'SAHA159AC', 'Sahala/Syaiful', 'SAHA12', 'Darnuji', 'Dusun Bulung RT.001/RW.003 , Kel. Nguruan Kec. Soko', 'Tuban', '3523110506680004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1192, 'SAHA160AC', 'Sahala/Syaiful', 'SAHA12', 'Istiqomah', 'Dusun Bulung RT.001/RW.003 , Kel. Nguruan Kec. Soko', 'Tuban', '3523115206950003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1193, 'SAHA158AC', 'Sahala/Syaiful', 'SAHA12', 'M. Solikin', 'Dusun Balung RT.001/RW.003 , Kel. Nguruan Kec. Soko', 'Tuban', '3523110903940005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1194, 'SAHA161AC', 'Sahala/Syaiful', 'SAHA12', 'Lailatul Faris', 'Dusun Mawot RT.002/RW.002 , Kel. Sugijharjo Kec. Tuban', 'Tuban', '3523165902990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1195, 'SAHA162AC', 'Sahala/Syaiful', 'SAHA12', 'Ervizal Khozinudin', 'Jalan Nangka RT.005/RW.001 , Kel. Perbon, Kec. Tuban', 'Tuban', '3523181712940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1196, 'SAHA163AC', 'Sahala/Syaiful', 'SAHA12', 'Aji Bayu Prayogo', 'Dusun Warang RT.002/RW.002 , Kel. Sumurcinde Kec. Soko', 'Tuban', '3523110607990004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1197, 'SAHA164AC', 'Sahala/Syaiful', 'SAHA12', 'Sendy Wapan Aprilianto', 'Dusun Tanggungan RT.001/RW.001 , Kel. Plumpang Kec. Plumpang', 'Tuban', '3523172804950003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1198, 'SAHA165AC', 'Sahala/Syaiful', 'SAHA12', 'Mely Wulandari', 'Latsari GG IV RT.005/RW.004 , Kel. Latsari Kec. Tuban', 'Tuban', '3523135608840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1199, 'SAHA166AC', 'Sahala/Syaiful', 'SAHA12', 'Unika Jantri Rahayu', 'Dusun Kedungsari RT.004/RW.005 , Kel.Tuwiri Wetan Kec. Merakurak', 'Tuban', '3523134101000007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1200, 'SAHA167AC', 'Sahala/Syaiful', 'SAHA12', 'Herlina Endah Wulandari', 'Jalan Lukman Hakim N RT.001/RW.004 , Kel. Doromukti Kec. Tuban', 'Tuban', '3523164405730004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1201, 'SAHA168AC', 'Sahala/Syaiful', 'SAHA12', 'Muhammad Joko Sampurno', 'Dusun Juwiri RT.005/RW.003 , Kel. Tuwiriwetan Kec. Merakurak', 'Tuban', '3523130105010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1202, 'SAHA169AC', 'Sahala/Syaiful', 'SAHA12', 'Anta Maulana', 'Dusun Plumpang RT.003/RW.008 , Kel. Plumpang Kec. Plumpang', 'Tuban', '3523170603920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1203, 'SAHA170AC', 'Sahala/Syaiful', 'SAHA12', 'Adi Prayogo', 'Krocok RT.006/RW002 , Kel. Kocok Kec. Jrapah', 'Blora', '3316161809020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1204, 'SAHA171AC', 'Sahala/Syaiful', 'SAHA12', 'Devi Nur Sifa', 'Dusun Wonosari RT.004/RW.002 , Kel. Wonodari Kec. Senori', 'Tuban', '3523056312050003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1205, 'SAHA172AC', 'Sahala/Syaiful', 'SAHA12', 'Aix Surip', 'Ahsana Elite Residence Blok C No. 86 RT.001/RW.005 , Kel. Perbon Kec. Tuban', 'Tuban', '3523182508830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1206, 'SAHA173AC', 'Sahala/Syaiful', 'SAHA12', 'Ida Khoirin Nisak', 'Dusun Mondokan RT.001/RW.004 , Kel. Mondokan Kec. Tuban', 'Tuban', '3523164305000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1207, 'SAHA174AC', 'Sahala/Syaiful', 'SAHA12', 'Fatkul Nasir', 'Dusun Krajan RT.003/RW.002 , Kel. Sumber Kec. Merakurak', 'Tuban', '3523131805980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1208, 'SAHA176AC', 'Sahala/Syaiful', 'SAHA12', 'Habib Prasetyo', 'Dusun Kradenan RT.001/RW.002 , Kel. Kradenan Kec. Palang', 'Tuban', '3523180107990054', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1209, 'SAHA177AC', 'Sahala/Syaiful', 'SAHA12', 'M. Ali Wahyudi', 'Dusun Tegal Mambung RT.003/RW.004 , Kel. Dawung Kec. Palang', 'Tuban', '3523182005980005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1210, 'SAHA178AC', 'Sahala/Syaiful', 'SAHA12', 'Eva Fitriyana', 'Sendangharjo GG V No. 3 RT.001/RW.002 , Kel. Sedangharjo Kel. Tuban', 'Tuban', '3523165703920006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1211, 'SAHA179AC', 'Sahala/Syaiful', 'SAHA12', 'Agus Gatot Saputro', 'Dusun Karangagung Timur RT.013/RW.003 , Kel. Karangagung Kec. Palang', 'Tuban', '3523183008830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1212, 'SAHA181AC', 'Sahala/Syaiful', 'SAHA12', 'Fidda Novita Sari', 'Latsari II Sejahtera No. 4 RT.006/RW.004 , Kel. Latsari Kec. Tuban', 'Tuban', '3524165605870001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1213, 'SAHA182AC', 'Sahala/Syaiful', 'SAHA12', 'Tasrifan', 'Ds Kaliuntu RT.001/RW.002 , Kel. Kaliuntu Kec. Jenu', 'Tuban', '3523121409760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1214, 'SAHA183AC', 'Sahala/Syaiful', 'SAHA12', 'Sindi Sanggita Pradana', 'GG Anggrek No. 180 RT.001/RW.002 , Kel. Doromukti Kec. Tuban', 'Tuban', '3505035906000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1215, 'SAHA184AC', 'Sahala/Syaiful', 'SAHA12', 'Hafrida Tri Rahayu', 'Lingk Jarkali RT.004/RW.002 , Kel. Gedongombo Kec. Semanding', 'Tuban', '3523155201070001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1216, 'SAHA185AC', 'Sahala/Syaiful', 'SAHA12', 'Devi Nur Halimah', 'Dusun Dikir RT.006/RW.002 , Kel. Dikir Kec. Tambakboyo', 'Tuban', '3523066088040002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1217, 'SAHA186AC', 'Sahala/Syaiful', 'SAHA12', 'Ali Mudhofar', 'Dusun Jambean RT.006/RW.002 , Kel. Kedungjambe Kec. Singgahan', 'Tuban', '3523070812840001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1218, 'SAHA187AC', 'Sahala/Syaiful', 'SAHA12', 'Kukuh Prassetya', 'Sadang RT.001/RW.008 , Kel. Sadang Kec. Jatirogo', 'Tuban', '3523021506990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1219, 'SAHA188AC', 'Sahala/Syaiful', 'SAHA12', 'Fatkul Nasir', 'Dusun Krajan RT.003/RW.002 , Kel. Sumber Kec. Merakurak', 'Tuban', '3523131805980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1220, 'SAHA189AC', 'Sahala/Syaiful', 'SAHA12', 'Widya Dwi Ratna', 'Jalan Pahlawan No. 13 RT.001/RW.006 , Kel. Kebonsari Kec. Tuban', 'Tuban', '3523167112950002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1221, 'SAHA190AC', 'Sahala/Syaiful', 'SAHA12', 'Muhammad Nuril Huda', 'Dusun Cangkring RT.005/RW.001 , Kel. Cangkring Kec. Plumpang', 'Tuban', '3523170910030001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1222, 'SAHA191AC', 'Sahala/Syaiful', 'SAHA12', 'David Andiyanto', 'Jalan Gayam VI No. 11 RT.004/RW.003 , Kel. Tasikmadu Kec. Gayang', 'Tuban', '3523142909760004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1223, 'SAHA192AC', 'Sahala/Syaiful', 'SAHA12', 'Lili Aulia Rahman', 'GG Sedap Malam 629 RT.003/RW.004 , Kel. Doromukti Kec. Tuban', 'Tuban', '3523161508880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1224, 'SAHA193AC', 'Sahala/Syaiful', 'SAHA12', 'Fira Firamazuna', 'Jalan Cendana Raya No. 07 RT.008/RW.003 , Kel. Tasik Madu Kec. Palang', 'Tuban', '3523145511790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1225, 'SAHA194AC', 'Sahala/Syaiful', 'SAHA12', 'Sucarwin', 'Lingk. Wedengan RT.005/RW.002 , Kel. Gedongombo Kec. Semanding', 'Tuban', '3523155504760004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1226, 'SAHA195AC', 'Sahala/Syaiful', 'SAHA12', 'Maulida Izzati Kharimah', 'Dusun Krajan RT.002/RW.002 , Kel. Bejangung Kec. Semanding', 'Tuban', '3524256506030001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1227, 'SAHA196AC', 'Sahala/Syaiful', 'SAHA12', 'Sumning', 'Dusun Ngimbang RT.001/RW.007 , Kel. Ngimbang Kec. Palang', 'Tuban', '3523185807640002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1228, 'SAHA197AC', 'Sahala/Syaiful', 'SAHA12', 'Yuni Lestari', 'Dusun Bangsri RT.006/RW.006 , Kel. Ngujuran Kec. Bancar', 'Tuban', '3523045107980005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1229, 'SAHA198AC', 'Sahala/Syaiful', 'SAHA12', 'Noviana', 'Kelapa Gading VI/7 Perumnas Tasikmadu RT.001/RW.003 , Kel. Tasik Madu Kec. Palang', 'Tuban', '3523167110940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1230, 'SAHA199AC', 'Sahala/Syaiful', 'SAHA12', 'Ahmad Fathkul Mubin', 'Dusun Ngemplak RT.004/RW.004 , Kel. Bejagung Kec. Semanding', 'Tuban', '3523052106850003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1231, 'SAHA200AC', 'Sahala/Syaiful', 'SAHA12', 'Arif Fakhrudin', 'Sendangharjo GG.II/8 RT.001/RW.005 , Kel. Sendangharjo Kel. Tuban', 'Tuban', '3523161911930002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1232, 'SAHA201AC', 'Sahala/Syaiful', 'SAHA12', 'Sucipto', 'Jalan Panglima Sudirman RT.003/RW.004 , Kel. Sukolilo Kec. Tuban', 'Tuban', '3523161301710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1233, 'SAHA202AC', 'Sahala/Syaiful', 'SAHA12', 'Rita Istiana', 'Jalan Langsep 4 RT.003/RW.005 , Kel. Latsari Kec. Tuban', 'Tuban', '3523165805630002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1234, 'SAHA203AC', 'Sahala/Syaiful', 'SAHA12', 'Betty Zirra Feby Zona', 'Mondokan RT.001/RW.004 , Kel. Mondokan Kec. Tuban', 'Tuban', '3523166202040001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1235, 'SAHA204AC', 'Sahala/Syaiful', 'SAHA12', 'Sofia', 'Lingk. Kiring RT.001/RW.014 , Kel. Gedongombo Kec. Semanding', 'Tuban', '3523155904020005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1236, 'SAHA205AC', 'Sahala/Syaiful', 'SAHA12', 'Kacung Hariyanto', 'Dusun Karangrejo RT.001/RW.006 , Kel. Tegalrejo Kec. Merakurak', 'Tuban', '3523130607940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1237, 'SAHA206AC', 'Sahala/Syaiful', 'SAHA12', 'Muhammad Abdullah Idris', 'Sendangharjo RT.006/RW.001 , Kel. Sendangharjo Kec. Brondong', 'Lamongan', '3524070411010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1238, 'SAHA207AC', 'Sahala/Syaiful', 'SAHA12', 'Zaenal Abidin', 'Dusun Kedinding RT.003/RW.002 , Kel. Sekardadi Kec. Jenu', 'Tuban', '3523121612020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1239, 'SAHA208AC', 'Sahala/Syaiful', 'SAHA12', 'Afifuddin Zahid', 'Widhe RT.002/RW.001 , Kel. Sedangharjo Kec. Brondong', 'Lamongan', '3524072306010003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1240, 'SAHA209AC', 'Sahala/Syaiful', 'SAHA12', 'Niken Ayu Damayanti, S.S', 'Jalan KH. Malik Dalam RT.001/RW.007 , Kel. Buring Kec. Kedungkandang', 'Malang', '3316095606950004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1241, 'SAHA210AC', 'Sahala/Syaiful', 'SAHA12', 'Kis Handoyo Poespito', 'Kutorejo GG. VI/412 RT.004/RW.001 , Kel. Kutorejo Kec. Tuban', 'Tuban', '3523162509680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1242, 'SAHA211AC', 'Sahala/Syaiful', 'SAHA12', 'Richardus Onena Sanjaya', 'Godongombo Permai C/15 RT.006/RW.007 , Kel. Gedongomgo Kec. Semanding', 'Tuban', '3523150909740005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1243, 'SAHA212AC', 'Sahala/Syaiful', 'SAHA12', 'Achmad Nur Arifin', 'Dusun Jarum RT.001/RW.013 , Kel. Jadi Kec. Semanding', 'Tuban', '3523150507050002', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(1244, 'SAHA213AC', 'Sahala/Syaiful', 'SAHA12', 'Dini Kristiana Ningtyas', 'Dusun Tambakrejo RT.004/RW.003 , Kel. Glodog Kec. Palang', 'Tuban', '3523186712050001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1245, 'SAHA214AC', 'Sahala/Syaiful', 'SAHA12', 'Bagos Rianto', 'Dusun Bogor RT.004/RW.015 , Kel. Bektiharjo Kec. Semanding', 'Tuban', '3523153112010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1246, 'SAHA215AC', 'Sahala/Syaiful', 'SAHA12', 'Ester Asri Herliyan', 'Sendangharjo GG. II/71 B RT.003/RW.003 , Kel. Sendangharjo Kec. Tuban', 'Tuban', '3523166507910001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1247, 'SAHA216AC', 'Sahala/Syaiful', 'SAHA12', 'Iva Zamlikha', 'Perum Latsari Indah Asri No. 4 RT.004/RW.004 , Kel. Latsari Kec. Tuban', 'Tuban', '3523084610720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1248, 'SANT01AC', 'Santoso Tani', 'SANT02', 'Suhendro', 'Dsn. Kebonrejo, RT.001/RW.001, Kel. Ngembul, Kec. Binangun', 'Blitar', '3505161011740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1249, 'SANT02AC', 'Santoso Tani', 'SANT02', 'Handri Setyo Rahayu', 'Dsn. Mojorejo, Rt.019/RW.004, Kel. Mojorejo, Kec. Wates', 'Blitar', '3505201309900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1250, 'SANT03AC', 'Santoso Tani', 'SANT02', 'Mujiyono', 'Lingkungan Jatikunir, RT.002/RW.008, Kel. Bajang, Kec. Talun', 'Blitar', '3505142107690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1251, 'SANT04AC', 'Santoso Tani', 'SANT02', 'Subiyanto', 'Jl. Brantas, RT.002/RW.003, Kel. Talun, Kec. Talun', 'Blitar', '3505140508530001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1252, 'SANT05AC', 'Santoso Tani', 'SANT02', 'Sukris Wiyono', 'Lingkungan Keningaran, RT.003 / RW.003, Kel. Bajang, Kec. Talun', 'Blitar', '3505140611620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1253, 'SANT06AC', 'Santoso Tani', 'SANT02', 'Supadi', 'Lingkungan Gogosuket, RT.001/RW.004, Kel. Bajang, Kec. Talun', 'Blitar', '3505142909520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1254, 'SANT07AC', 'Santoso Tani', 'SANT02', 'Suyoto', 'Lingkungan Pagak, RT.002/RW.008, Kel. Talun, Kec. Talun', 'Blitar', '3505140507400002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1255, 'SANT08AC', 'Santoso Tani', 'SANT02', 'Sugeng Widayat', 'Dsn. Bumirejo, RT.003/RW.002, Kel. Bumirejo, Kec. Kesamben', 'Blitar', '3505192802920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1256, 'SANT09AC', 'Santoso Tani', 'SANT02', 'Suhardini', 'Dusun Kembangarum, RT.003/RW.001, Kel. Wonorejo, Kec. Talun', 'Blitar', '3505145804890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1257, 'SANT10AC', 'Santoso Tani', 'SANT02', 'Achmad Jaelani', 'Dusun Kembangarum, RT.003/RW.001, Kel. Wonorejo, Kec. Talun', 'Blitar', '3505142409890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1258, 'SANT11AC', 'Santoso Tani', 'SANT02', 'Hariyati', 'Jl. Ronggowuni, RT.003/RW.002, Kel. Wlingi, Kec. Wlingi', 'Blitar', '3505175705680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1259, 'SARA01AC', 'Sarana Agro Makmur/Hadi', 'SARA01', 'Panut', 'Dsn. Stoplas, RT.004/RW.004, Kel. Kedungrejo, Kec. Muncar', 'Banyuwangi', '3510051003580004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1260, 'SARI01AC', 'Sarise, Toko', 'SARI20', 'Zainudin', 'Talabiu, RT.011/RW.006, Kel. Talabiu, Kec. Woha', 'Bima', '5206031011961007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1261, 'SARI02AC', 'Sarise, Toko', 'SARI20', 'Sumarni', 'Talabiu, RT.011/RW.006, Kel. Talabiu, Kec. Woha', 'Bima', '5206035802760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1262, 'SARI03AC', 'Sarise, Toko', 'SARI20', 'Irna Suryani', 'Ntonggu, RT.024/RW.007, Kel. Ntonggu, Kec. Palibelo', 'Bima', '5206185903000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1263, 'SARI04AC', 'Sarise, Toko', 'SARI20', 'Safrudin', 'Talabiu, RT.011/RW.006, Kel. Talabiu, Kec. Woha', 'Bima', '5206030605751005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1264, 'SATU01AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Dewi Sekartaji Heryan', 'Dusun Kauman, RT.001/RW.002, kel. Lab. Sumbawa, Kec. Labuhan Badas', 'Sumbawa', '5203056201980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1265, 'SATU02AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Haeriah', 'Kampung Turingan, RT.001/RW.001, Kel. Tanjung, Kec. Labuhan Haji', 'Lombok Timur', '5203174107610368', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1266, 'SATU03AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Hajjah Juriah', 'Sompang, RT.004/RW.002, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203044107660304', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1267, 'SATU04AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Zaeniah', 'Lendang Penyonggok, RT.004/RW.004, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203045507850007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1268, 'SATU05AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Suparlan', 'Lekong Pituk, Kel. Tetebatu Selatan, Kec. Sikur', 'Lombok Timur', '5203043112780287', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1269, 'SATU06AC', 'Satura Tani/Febrisnaini', 'SATU03', 'Supandi', 'Kebon Dalem, Kel. Kotaraja, Kec. Sikur', 'Lombok Timur', '5203043112830160', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1270, 'SEKA22AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Sutar', 'Banjar Pukuh, Kel. Tiga, Kec. Susut', 'Bangli', '5106013112690124', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1271, 'SEKA23AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Nengah Kundri', 'Banjar Pukuh, Kel. Tiga, Kec. Susut', 'Bangli', '5106013112700102', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1272, 'SEKA24AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Kadek Armawan', 'Banjar Pukuh, Kel. Tiga, Kec. Susut', 'Bangli', '5106010103940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1273, 'SEKA25AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Subagia', 'BR. Pukuh, Kel. Tiga, Kec. Susut', 'Bangli', '5106012404810004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1274, 'SEKA26AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Urip', 'Dusun Pukuh, Kel. Tiga, Kec. Susut', 'Bangli', '5106013112490031', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1275, 'SEKA27AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Nengah Sarwa', 'Banjar Temaga, Kel. Tiga, Kec. Susut', 'Bangli', '5106010206760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1276, 'SEKA28AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Nengah Rauh', 'Banjar Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106010708770005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1277, 'SEKA29AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Rana', 'Banjar Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106010404860004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1278, 'SEKA30AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Sinah', 'Banjar Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106013112600229', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1279, 'SEKA31AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Ketut Budiasa', 'BR. Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106011001710004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1280, 'SEKA32AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Suparta', 'BR. Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106012704010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1281, 'SEKA33AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Nyoman Suartika', 'BR. Kayuambua, Kel. Tiga, Kec. Susut', 'Bangli', '5106013112710120', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1282, 'SEKA34AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Putu Wiradnyana', 'Lingk./BR. Pekuwon, Kel. Cempaga, Kec. Bangli', 'Bangli', '5106020611940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1283, 'SEKA35AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Widana', 'Lingk./BR. Pekuwon, Kel. Cempaga, Kec. Bangli', 'Bangli', '5106023112630339', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1284, 'SEKA36AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Widiarta', 'Desa Belangan, Kel. Belangan, Kec. Kintamani', 'Bangli', '5106042208910005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1285, 'SEKA37AC', 'Sekar Ayu Lestari', 'SEKA01', 'I Wayan Suarsa', 'Banjar Belangan, Kel. Belangan, Kec. Kintamani', 'Bangli', '5106043004810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1286, 'MATO01AC', 'Sekar Tani/Matori', 'SEKA02', 'Supeno', 'Dusun Pontang Tengah, RT.048/RW.012, Kel. Pontang, Kec. Ambulu', 'Jember', '3509121005580003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1287, 'MATO02AC', 'Sekar Tani/Matori', 'SEKA02', 'Mohammad Andris Novrianto', 'Dusun Tutul, RT.003/RW.025, Kel. Tegalsari, Kec. Ambulu', 'Jember', '3509120811010003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1288, 'MATO03AC', 'Sekar Tani/Matori', 'SEKA02', 'Edi Anroni', 'Dusun Krajan, RT.001/Rw.002, Kel. Andongsari, Kec. Ambulu', 'Jember', '3509121002850005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1289, 'MATO04AC', 'Sekar Tani/Matori', 'SEKA02', 'Ribut Sugiyanto', 'Dusun Langon, RT.003/RW.030, Kel. Ambulu, Kec. Ambulu', 'Jember', '3509120504670002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1290, 'MATO05AC', 'Sekar Tani/Matori', 'SEKA02', 'Ahmad Ajis', 'Dusun Krajan Lor, RT.002/RW.005, Kel. Sumberejo, Kec. Ambulu', 'Jember', '3509123108980003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1291, 'MATO08AC', 'Sekar Tani/Matori', 'SEKA02', 'Suhaji', 'Jl. Brawijaya, RW.017, Kel. Pontang, Kec. Ambulu', 'Jember', '3509122401780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1292, 'MATO09AC', 'Sekar Tani/Matori', 'SEKA02', 'Paidi', 'Dusun Utara, RT.065/RW.017, Kel. Pontang, Kec. Ambulu', 'Jember', '3509120911670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1293, 'ARIF01AC', 'Sido Makmur/Arif', 'SIDO01', 'Siti Aminah', 'Tulungagung', 'Tulungagung', '3504134606670005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1294, 'ARIF02AC', 'Sido Makmur/Arif', 'SIDO01', 'Karsani', 'Tulungagung', 'Tulungagung', '3504131504680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1295, 'ARIF04AC', 'Sido Makmur/Arif', 'SIDO01', 'Nakip', 'Tulungagung', 'Tulungagung', '3504130407770006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1296, 'ARIF05AC', 'Sido Makmur/Arif', 'SIDO01', 'Sarbi', 'Tulungagung', 'Tulungagung', '3504130207510001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1297, 'ARIF06AC', 'Sido Makmur/Arif', 'SIDO01', 'Karni', 'Tulungagung', 'Tulungagung', '3504130101660009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1298, 'ARIF07AC', 'Sido Makmur/Arif', 'SIDO01', 'Musali', 'Tulungagung', 'Tulungagung', '3504120107520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1299, 'ARIF08AC', 'Sido Makmur/Arif', 'SIDO01', 'Tukiran', 'Tulungagung', 'Tulungagung', '3504132508580001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1300, 'ARIF09AC', 'Sido Makmur/Arif', 'SIDO01', 'Katiyah', 'Tulungagung', 'Tulungagung', '3504136305560001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1301, 'ARIF10AC', 'Sido Makmur/Arif', 'SIDO01', 'Sarno', 'Tulungagung', 'Tulungagung', '3504132512550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1302, 'ARIF11AC', 'Sido Makmur/Arif', 'SIDO01', 'Dori Santoso', 'Tulungagung', 'Tulungagung', '3504132810740004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1303, 'ARIF13AC', 'Sido Makmur/Arif', 'SIDO01', 'Ginah', 'Tulungagung', 'Tulungagung', '3504134107580003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1304, 'ARIF14AC', 'Sido Makmur/Arif', 'SIDO01', 'Klutuk', 'Tulungagung', 'Tulungagung', '3504132210650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1305, 'ARIF15AC', 'Sido Makmur/Arif', 'SIDO01', 'Suraji', 'Tulungagung', 'Tulungagung', '3504130505690006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1306, 'ARIF16AC', 'Sido Makmur/Arif', 'SIDO01', 'Slamet', 'Tulungagung', 'Tulungagung', '3504132802480001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1307, 'SINA01AC', 'Sinar Harapan', 'SINA22', 'Ernawati', 'Sumbergandu, RT.013/RW.002, kel. Sumbergandu, Kec. Pilangkenceng', 'Madiun', '3519134108740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1308, 'SINA02AC', 'Sinar Harapan', 'SINA22', 'Sri Widayati', 'Sumbergandu, RT.017/RW.003, kel. Sumbergandu, Kec. Pilangkenceng', 'Madiun', '3519136702700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1309, 'SINA03AC', 'Sinar Harapan', 'SINA22', 'Ufiz Laisa Annafi', 'Jl. Trengguli No.23, RT.005/RW.001, kel. Oro-oro Ombo, Kec. Kartoharjo', 'Madiun', '3577014311940003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1310, 'MAKM01AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Anton Sutrisno', 'Dusun Krajan, RT.001/RW.009, Kel. Mojomulyo, Kec. Puger', 'Jember', '3509081710940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1311, 'MAKM03AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Fenty Lailatun Nisa', 'Dsn. Kapitan, RT.002/RW.001, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509045003920007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1312, 'MAKM05AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Kumboyono', 'Menampu, RT.001/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040105640002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1313, 'MAKM06AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Sriati', 'Dusun Kapitan, RT.001/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509044107630328', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1314, 'MAKM07AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Rofiatun', 'Dusun Kapitan, RT.002/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509046501700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1315, 'MAKM08AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Tulkan', 'Dusun Kapitan, RT.002/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040108690003.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1316, 'MAKM09AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Suarno', 'Dusun Kedung Lengkong, RT.001/RW.009, Kel. Menampu, Kec. Gumukmas', 'Jember', '3509040107630190', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1317, 'MAKM10AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Moh. Acang Muhakam', 'Dusun Karangsono, RT.002/RW.003, Kel. Grenden, Kec. Puger', 'Jember', '3509041506840002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1318, 'MAKM11AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Marno', 'Dusun Kapitan, RT.001/RW.018, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040107550060', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1319, 'MAKM12AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Lukman Hakim', 'Dusun Kapitan, RT.001/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040609860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1320, 'MAKM14AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Ida Faridah', 'Dusun Kapitan, RT.001/RW.018, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509044504860007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1321, 'MAKM15AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Sanikem', 'Menampu, RT.002/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509045004550002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1322, 'MAKM17AC', 'Sugeng Makmur, Toko', 'SUGE02', 'M. Nur Cholis', 'Dusun Kapitan, RT.001/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509041605760004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1323, 'MAKM18AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Rohani', 'Dusun Kapitan, RT.002/RW.018, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040107680257', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1324, 'MAKM19AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Junaidah', 'Dusun Kapitan, RT.001/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509044309680005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1325, 'MAKM20AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Muhammad Sholeh', 'Dusun Kapitan, RT.002/RW.018, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040307690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1326, 'MAKM21AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Mualim', 'Dusun Kapitan, RT.001/RW.002, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040107750165', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1327, 'MAKM22AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Utfiah', 'Jl. Puger 29, Dusun Menampu, RT.001/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509066101830001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1328, 'MAKM23AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Budi Wahono', 'Dusun Kapitan, RT.001/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040409710002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1329, 'MAKM24AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Mispan', 'Dusun Kapitan, RT.002/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040305500007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1330, 'MAKM25AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Nur Husen Ar', 'Dusun Bendorejo, RT.002/RW.012, Kel. Karangrejo, Kec. Gumuk Mas', 'Jember', '3509041003730004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1331, 'MAKM26AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Maryam', 'Dusun Kapitan, RT.002/RW.018, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509044212420001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1332, 'MAKM27AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Sukardi', 'Dusun Kapitan, RT.002/RW.016, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509042506600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1333, 'MAKM28AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Mat Lubi', 'Dusun Kapitan, RT.002/RW.001, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040208750005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1334, 'MAKM29AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Mohamad Rafli Agatha', 'Dusun Kapitan, RT.001/RW.017, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509040905030003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1335, 'MAKM30AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Muti\'ah', 'Dusun Bendorejo, RT.003/RW.012, Kel. Karangrejo, Kec. Gumuk Mas', 'Jember', '3509046012710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1336, 'MAKM31AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Moh. Rosyidin', 'Dusun Tanjung Sari, RT.029/RW.010, Kel. Glundengan, Kec. Wuluhan', 'Jember', '3509040912900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1337, 'MAKM32AC', 'Sugeng Makmur, Toko', 'SUGE02', 'Maisaroh Solihin', 'Dusun Kapitan, RT.002/RW.015, Kel. Menampu, Kec. Gumuk Mas', 'Jember', '3509044502730003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1338, 'ASIO01AC', 'Sugeyo, UD', 'SUGE05', 'Irwan Prasetyo', 'Dusun Silirsari, RT.003/RW.002, Kel. Kesilir, Kec. Siliragung', 'Banyuwangi', '3510222610990002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1339, 'BRAN01AC', 'Sumber Brantas', 'SUMB117', 'Budi Sejati', 'Dsn. Wonorejo, RT.005/RW.015, Kel. Tulungrejo', 'Batu', '3579022305700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1340, 'BRAN02AC', 'Sumber Brantas', 'SUMB117', 'Sati', 'Dsn. Bakalan, RT.006/RW.002, Kecl. Gajahrejo, Kec. Purwodadi', 'Pasuruan', '3514017006580058', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1341, 'BRAN03AC', 'Sumber Brantas', 'SUMB117', 'Ngatemin', 'Dsn. Bakalan, RT.006/RW.002, Kecl. Gajahrejo, Kec. Purwodadi', 'Pasuruan', '3514011209490002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1342, 'BRAN04AC', 'Sumber Brantas', 'SUMB117', 'Misbah Choiriyah', 'Dsn. Laju, TR.005/RW.001, Kel. Banjarejo, Kec. Ngantang', 'Malang', '3514016403770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1343, 'BRAN05AC', 'Sumber Brantas', 'SUMB117', 'Moh Kotibul Umam', 'Dsn. Bulurejo, RT.033/RW.008, Kel. Damarwulan, Kec. Kepung', 'Kediri', '3506182707950004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1344, 'SUJA01AC', 'Sumber Jaya Tani/Amir', 'SUMB164', 'Nuril Anwar', 'Dsn. Murong, RT.035/RW.011, Kel. Mayangan, Kec. Jogoroto', 'Jombang', '3517191710010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1345, 'PUGU01AC', 'Sumber Lancar/Puguh', 'SUMB13', 'Jawal', 'Dsn Ngrombot, RT.003/RW.001, Kel. Kalang Semanding, Kec. Perak', 'Jombang', '3517013011660007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1346, 'PUGU02AC', 'Sumber Lancar/Puguh', 'SUMB13', 'Waras', 'Dsn. Kalangan, RT.002/RW.001, Kel. Kalang Semanding, Kec. Perak', 'Jombang', '3517010107720002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1347, 'IHYA01AC', 'Sumber Rejeki, Toko/Ihya', 'SUMB158', 'Ridwan Syah Aditama', 'Winong, RT.002/RW.004, Jambangan, Paron', 'Ngawi', '9171052610900006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1348, 'IHYA02AC', 'Sumber Rejeki, Toko/Ihya', 'SUMB158', 'Ihya', 'Dusun Bendo, RT.005/RW.010, Tempuran, Paron', 'Ngawi', '9171050702950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1349, 'IHYA03AC', 'Sumber Rejeki, Toko/Ihya', 'SUMB158', 'Muhammad Ismu', 'Jl. Bandara Eltari V H-15, RT.005/RW.008, Gemorokandang, Kedungkandang', 'Malang', '3506171104830002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1350, 'REJE01AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Mahfud', 'Krajan, RT.005/RW.002, Kel. Kepuh, Kec. Kajayan', 'Pasuruan', '3514060708700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1351, 'REJE02AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Jupri', 'Krajan - Kepuh, RT.005/RW.002, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060808520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1352, 'REJE03AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Muhtar', 'Krajan, RT.005/RW.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060205820003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1353, 'REJE04AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Soleh', 'Krajan Utara, RT.001/RW.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060306740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1354, 'REJE05AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Syamsul Arifin', 'Krajan Utara, RT.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514061207730006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1355, 'REJE06AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Samsudin', 'Krajan Utara, RT.001/RW.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060308760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1356, 'REJE07AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Sodikin', 'Krajan Utara, RT.001/RW.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060710800002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1357, 'REJE08AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Rifai', 'Kepuh, RT.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060107420005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1358, 'REJE09AC', 'Sumber Rejeki/Ali', 'SUMB126', 'Alimun', 'Krajan Utara, RT.001/RW.001, Kel. Kepuh, Kec. Kejayan', 'Pasuruan', '3514060602640002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1359, 'IWAN01AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Fathorrozi', 'Dusun Kauman, RT.001/RW.010, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3509181008750003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1360, 'IWAN02AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Muniri', 'Dusun Kauman, RT.001/RW.007, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3528073112830016', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1361, 'IWAN03AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Samsukdin', 'Dusun Kauman, RT.001/RW.007, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3509180103820004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1362, 'IWAN04AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Hosnan', 'Dusun Kauman, RT.002/RW.008, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3509181212600003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1363, 'IWAN05AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Maisaroh', 'Dusun Kauman, RT.001/RW.008, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3509184606900006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1364, 'IWAN06AC', 'Sumber Rejeki/Iwan', 'SUMB204', 'Abd Bari', 'Dusun Kauman, RT.001/RW.007, Kel. Tempurejo, Kec. Tempurejo', 'Jember', '3509182710830003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1365, 'AGIN01AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Rokhim', 'Dsn. Krajan Barat, RT.057/RW.008, Kel. Nguter, Kec. Pasirian', 'Lumajang', '3508041011970003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1366, 'AGIN03AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Fricylia Gaghansa', 'Lingkungan III, RT.012/RW.003, Kel. Kakenturan Dua, Kec. Maesa', 'Bitung', '7172076202880002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1367, 'AGIN04AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Nurul Fitriana C', 'Jl. Bunisari No. 174, RT.004/RW.007, Kel. Antapani Wetan, Kec. Antapani', 'Bandung', '3273204509940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1368, 'AGIN05AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Darmawi', 'Jengan Danum, RT001/RW.-, Kel. Jangan Danum, Kec. Damai', 'Kutai Barat', '6407081804720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1369, 'AGIN07AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Wiwik Setiyaningsih', 'Jl. Ki Hajar Dewantara 3A, No.1, RT.012/RW.009, Kel. Selosari, Kec. Magetan', 'Magetan', '3520066905680001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1370, 'AGIN09AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Bayu Andreas', 'Curah 2, RT.004/RW.017, Kel. Sokorini, Kec. Mutilan', 'Magelang', '3311091107900004.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1371, 'AGIN10AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Tab Barani', 'Dusun Kaya Tani, Kel. Seunebok Antara, Kec. Langsa Timur', 'Langsa', '1174012607970003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1372, 'AGIN11AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Rasha Faisal', 'Perum Villa Sengkaling A/10, RT.001/RW.003, Kel. Mulyoagung, Kec. Dau', 'Malang', '3507226010870001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1373, 'AGIN12AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Debby Anggraini', 'Jl. Kecapi V, RT.006/RW.005, Kel. Jagakarsa, Kec. Jagakarsa', 'Jakarta Selatan', '3174096112900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1374, 'AGIN13AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'M. Agus', 'Botong, RT.020/RW.019, Kec. Bontomana, Kel. Bungaya', 'Gowa', '7306091408930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1375, 'AGIN14AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Prasetyo Febriyanto', 'Jl. Jecd. Sudirman No.416, RT.020/RW.007, Kel. Ganjar Agung, Kec. Metro Barat', 'Metro', '1872030102920001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1376, 'AGIN15AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Adolof Lukas Y.W', 'Jl. Barend, RT.002/RW.002, Kel. Amban, Kec. Manokwari Barat', 'Manokwari', '9202120706930006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1377, 'AGIN16AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Afiqah Azizah', 'Jl. Kebon Jati No.182, RT.008/RW.004, Kel. Kebon Jeruk, Kec. Andir', 'Bandung', '3273052405860011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1378, 'AGIN17AC', 'Sumber Tani, UD/Agin', 'SUMB48', 'Abdul Fatah', 'KP. Sekolahan, RT.002/RW.001, Kel. Widoro Payung, Kec. Besuki', 'Situbondo', '3512020703910004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1379, 'BASU01AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Samsudin', 'Sumberejokidul, RT.002/RW.003, Kel. Sumberjokidul, Kec. Sukosewu', 'Bojonegoro', '3522240809770006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1380, 'BASU02AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Heri Prabowo', 'Drenges, RT.007/RW.002, Kel. Drenges, Kec. Sugihwaras', 'Bojonegoro', '3522070406870001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1381, 'BASU03AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Romisyah', 'Dsn Bungkal, RT.001/RW.001, Kel. Mayangkawis, Kec. Balen', 'Bojonegoro', '3522130909860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1382, 'BASU04AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Enik Susiati', 'Krajan I, RT.004/RW.002, Kel. Temayang, Kec. Temayang', 'Bojonegoro', '3522215010650004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1383, 'BASU05AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Dewi Rosita', 'Kedungsumber, RT.011/RW.004, Kel. Kedungsumber, Kec. Temayang', 'Bojonegoro', '3522215411940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1384, 'BASU07AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Karsono', 'Dusun Sidorejo, RT.005/RW.001, Kel. Sidorejo, Kec. Sukosewu', 'Bojonegoro', '3522242210770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1385, 'BASU08AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Hari Sucipto', 'Alasgung, RT.015/RW.005, Kel. Alasgung, Kec. Sugihwaras', 'Bojonegoro', '3522070108670001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1386, 'BASU09AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Basuki', 'Dusun Dureg, RT.031/RW.002, Kel. Sidobandung, Kec. Balen', 'Bojonegoro', '3522133112600034', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1387, 'BASU10AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Siti Elok Afifah', 'Dusun Bujel, RT.022/RW.002, Kel. Suwaloh, Kec. Balen', 'Bojonegoro', '3522134608880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1388, 'BASU11AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Susilo Ali Sahbudi', 'Glagahan, RT.008/RW.004, Kel. Glagahan, Kec. Sugihwaras', 'Bojonegoro', '3522242007900001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1389, 'BASU12AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'Yosi Aryani', 'Dusun Badegan, RT.010/RW.003, Kel. Ngambon, Kec. Ngambon', 'Bojonegoro', '3315145304910004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1390, 'BASU13AC', 'Sumber Tani, UD/Basuni', 'SUMB51', 'M. Ali Imron', 'Kalicilik, RT.005/RW.002, Kel. Kalicilik, Kec. Sukosewu', 'Bojonegoro', '3522240110740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1391, 'KHO02AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Putut Titus K', 'Jl. Dewi Sartika GG 1A No.7, RT.009/RW.009, Kel. Temas, Kec. Batu', 'Batu', '3579013108890003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1392, 'KHO03AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Joko Utomo', 'Jl. Kelud No. 08, RT.002/RW.011, Kel. Sisir, Kec. Batu', 'Batu', '3579013108860007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1393, 'KHO04AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Susan Alvionita', 'Jl. Kelud No.08, RT.002/RW.011, Kel. Sisir, Kec. Batu', 'Batu', '3579016302930001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1394, 'KHO05AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Selvi Anggreani W', 'Sumbersari, RT.004/RW.006, Kel. Sumberejo, Kec. Batu', 'Batu', '3579014403850002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1395, 'KHO06AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Sutono', 'Sumbersari, RT.004/RW.006, Kel. Sumberejo, Kec. Batu', 'Batu', '3579011204770011', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1396, 'KHO07AC', 'Sumber Tani/Kho Hie', 'SUMB58', 'Lusiawati', 'Jl. Dewi Sartika GG 1A No.7, RT.009/RW.009, Kel. Temas, Kec. Batu', 'Batu', '3579015010900004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1397, 'ROY 01AC', 'Sumber Tani/Roy', 'SUMB160', 'Supriyadi', 'Banyuasin Timur, RT.008/RW.002, Kel. Karang Anyar, Kec. Karanganyar', 'Ngawi', '3521172203820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1398, 'ROY 02AC', 'Sumber Tani/Roy', 'SUMB160', 'Lastiyono', 'Banyuasin Barat, RT.006/RW.003, Kel. Karang Anyar, Kec. Karanganyar', 'Ngawi', '3521170402870001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1399, 'ROY 03AC', 'Sumber Tani/Roy', 'SUMB160', 'Budi Widodo', 'Bendo, RT.001/RW.004, Kel. Karang Anyar, Kec. Karanganyar', 'Ngawi', '3521170705770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1400, 'ROY 04AC', 'Sumber Tani/Roy', 'SUMB160', 'Satiran', 'Banyuasin Timur, RT007/RW.002, Kel. Karanganyar, Kec. Karanganyar', 'Ngawi', '3521120511830004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1401, 'ROY 05AC', 'Sumber Tani/Roy', 'SUMB160', 'Sumiyem', 'Banyuasin Timur, RT002/RW.002, Kel. Karanganyar, Kec. Karanganyar', 'Ngawi', '3521176702660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1402, 'ROY 06AC', 'Sumber Tani/Roy', 'SUMB160', 'Endang Wahyu Pamungkas', 'Banyuasin Barat RT.007/RW.003 , Kel. Karanganyar Kec. Karanganyar', '', '3521171605020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1403, 'SUGE11AC', 'Sumber Tani/Sugeng', 'SUMB63', 'Supai', 'Genengan, RT.011/RW.003, Desa Parangargo, Kec. Wagir', 'Malang', '3507210304520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1404, 'SUGE12AC', 'Sumber Tani/Sugeng', 'SUMB63', 'Ribowo Adi Sutriatmoko', 'Sumber Buncis, RT.011/RW.004, Kel. Sonowangi, Kec. Ampelgading', 'Malang', '3507062310720001.00', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1405, 'SUPE01AC', 'Super Bagus', 'SUPE01', 'Gusti Ayu Nika U', 'Br. Dinas Kawanan, Kel. Bila, Kec. Kubutambahan', 'Buleleng', '5108026502910006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1406, 'SUPE02AC', 'Super Bagus', 'SUPE01', 'I Gusti Made Sama', 'Banjar Dinas Bukit Sakti, Kel. Lokapaksa, Kec. Seririt', 'Buleleng', '5108023010650004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1407, 'SUPE03AC', 'Super Bagus', 'SUPE01', 'I Gusti Putu Sumardika', 'Banjar Dinas jero Agung, Kel. Lokapaksa, Kec. Seririt', 'Buleleng', '5108021707790007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1408, 'SURY01AC', 'Surya Mandiri Utama, CV', 'SURY14', 'Sopian.S.P. M.SC', 'Jl. Sunan Muria No.14 Jaban, RT.001/RW.025, Kel. Sinduharjo, Kec. Ngaglik', 'Jember', '3404122612820006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1409, 'SUYI02AC', 'Suyitno', 'SUYI01', 'Yeni Astutik', 'Dsn. Krajan, RT.006/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509185206950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1410, 'SUYI03AC', 'Suyitno', 'SUYI01', 'Didin Enggar Widiatama', 'Dsn. Krajan, RT.006/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509182310960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1411, 'SUYI04AC', 'Suyitno', 'SUYI01', 'Sugiono', 'Dsn. Krajan, RT.006/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509181908720002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1412, 'SUYI05AC', 'Suyitno', 'SUYI01', 'Jeje Sunday Awan', 'Dsn. Krajan, RT.006/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509182804020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1413, 'SUYI06AC', 'Suyitno', 'SUYI01', 'Ayu Firma', 'Dsn. Krajan, RT.006/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509185903990001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1414, 'SUYI07AC', 'Suyitno', 'SUYI01', 'Agus Purnomo', 'Dsn. Krajan, RT.004/RW.001, Kel. Sanenrejo, Kec. Tempurejo', 'Jember', '3509182808890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1415, 'HARA01AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Syarfuddin', 'Dusun Rade, RT.005/RW.003, Kel. Kalampa, Kec. Woha', 'Bima', '5206030107771211', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1416, 'HARA02AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Ibrahim', 'Dusun Sari, Kec. Kalampa, Kec. Woha', 'Bima', '5206032502741002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1417, 'HARA03AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Arasul', 'Kalampa, Woha', 'Bima', '5206030510701008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1418, 'HARA04AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Dakhlan', 'Dusun Rade, RT.007/RW.004, Kel. Kalampa, Kec. Woha', 'Bima', '5206032604870003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1419, 'HARA05AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Sulaiman', 'Dusun Rade, RT.007/RW.004, Kel. Kalampa, Kec. Woha', 'Bima', '5206030107651186', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1420, 'HARA06AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Ramli', 'Dusun Rade, Kel. Kalampa, Kec. Woha', 'Bima', '5206030405860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1421, 'HARA07AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Aswad', 'Dusun Sari, Kel. Kalampa, Kec. Woha', 'Bima', '5206031505770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1422, 'HARA08AC', 'Tani Harapan, UD/Darwis', 'TANI157', 'Burhan', 'Dusun Rangga, RT.001/RW.001, Kel. Kalampa, Kec. Woha', 'Bima', '5206030207760002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1423, 'AFUK01AC', 'Tani Jaya/Afuk', 'TANI89', 'Miswari', 'Kidul Kali, RT.006/RW.002, Kel. Locare, Kec. Curahdami', 'Bondowoso', '3511071604690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1424, 'AFUK02AC', 'Tani Jaya/Afuk', 'TANI89', 'Didik', 'Klabang Agung, RT.002/RW.002, Kel. Klabang Agung, Kec. Tegalampel', 'Bondowoso', '3511131110790002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1425, 'AFUK03AC', 'Tani Jaya/Afuk', 'TANI89', 'Zaenol Rahman', 'Ds. Karang Anyar, RT.013/RW.004, Kel. Karang Anyar, Kec. Tegalampel', 'Bondowoso', '3511130107860003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1426, 'AFUK04AC', 'Tani Jaya/Afuk', 'TANI89', 'Abd Razak', 'Desa Klabang Agung, RT.002/RW.002, Kel. Klabang Agung, Kec. Tegalampel', 'Bondowoso', '3511132912680002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1427, 'AFUK05AC', 'Tani Jaya/Afuk', 'TANI89', 'Sumawe', 'Sumbercanting, RT.004/RW.002, Kel. Sumbercanting, Kec. Botolinggo', 'Bondowoso', '3511145306500005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1428, 'AFUK06AC', 'Tani Jaya/Afuk', 'TANI89', 'Hori', 'Sumber Canting, RT.009/RW.005, Kel. Sumbercanting, Kec. Botolinggo', 'Bondowoso', '3511141306730001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1429, 'AFUK07AC', 'Tani Jaya/Afuk', 'TANI89', 'Hariyanto', 'Sumbercanting, RT.001/RW.001, Kel. Sumbercanting, Kec. Botolinggo', 'Bondowoso', '3511141906850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1430, 'AFUK08AC', 'Tani Jaya/Afuk', 'TANI89', 'Miftahul Arifin Billah', 'Sumbercanting, RT.006/RW.001, Kel. Sumbercanting, Kec. Botolinggo', 'Bondowoso', '3511230907000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1431, 'AFUK09AC', 'Tani Jaya/Afuk', 'TANI89', 'Agung Mohamad Al Diansah', 'Sumber Canting, RT.003/RW.001, Kel. Sumbercanting, Kec. Botolinggo', 'Bondowoso', '3511142708010001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1432, 'AFUK10AC', 'Tani Jaya/Afuk', 'TANI89', 'Abdulasir', 'Randucangkring, RT.009/RW.002, Kel. Randu Cangkring, Kec. Pujer', 'Bondowoso', '3511050304720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1433, 'AFUK11AC', 'Tani Jaya/Afuk', 'TANI89', 'Anang Budiman Prayitno', 'Randu Cangkring, RT.007/RW.001, Kel. Randu Cangkring, Kec. Pujer', 'Bondowoso', '3511051703870002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1434, 'AFUK12AC', 'Tani Jaya/Afuk', 'TANI89', 'Abdul Wahid', 'Randu Cangkring, RT.005/RW.001, Kel. Randu Cangkring, Kec. Pujer', 'Bondowoso', '3511050510950002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1435, 'AFUK13AC', 'Tani Jaya/Afuk', 'TANI89', 'Rudi Hartono', 'Randu Cangkring, RT.008/RW.001, Kel. Randu Cangkring, Kec. Pujer', 'Bondowoso', '3511051205950003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1436, 'AFUK14AC', 'Tani Jaya/Afuk', 'TANI89', 'Mabrur', 'Jebung Lor, RT.018/RW.002, Kel. Jebung Lor, Kec. Tlogosari', 'Bondowoso', '3511032904900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1437, 'TANI04AC', 'Tani Jaya/Erna', 'TANI162', 'Susi Indrawati', 'Dusun Klerek, RT.001/RW.002, Kel. Torongrejo, Kec. Junrejo', 'Batu', '3579034209950001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1438, 'TANI05AC', 'Tani Jaya/Erna', 'TANI162', 'Krismiati', 'Dusun Klerek, RT.001/RW.002, Kel. Torongrejo, Kec. Junrejo', 'Batu', '3579036601940001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1439, 'TANI06AC', 'Tani Jaya/Erna', 'TANI162', 'Rizqi Apriliya', 'Langlang, RT.004/RW004, Kel. Lang-Lang, Kec. Singosari', 'Malang', '3507245304970006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1440, 'TANI07AC', 'Tani Jaya/Erna', 'TANI162', 'Muliati', 'Dusun Klerek, RT.001/RW.002, Kel. Torongrejo, Kec. Junrejo', 'Batu', '3579034802770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1441, 'TANI08AC', 'Tani Jaya/Erna', 'TANI162', 'Ilham Ramadhana S', 'Jl. Segaran Dusun Karanglo, RT.004/RW.010, Kel. Banjararum, Kec. Singosari', 'Malang', '3507242001970002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1442, 'TANI09AC', 'Tani Jaya/Erna', 'TANI162', 'Adianto', 'Dusun Klerek, RT.001/RW.002, Kel. Torongrejo, Kec. Junrejo', 'Batu', '3579032607850001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1443, 'SYAI01AC', 'Tani Makmur/Syain', 'TANI47', 'M. Taufiq', 'Klagensrampat, RT.003/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524101911820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1444, 'SYAI02AC', 'Tani Makmur/Syain', 'TANI47', 'Mispan', 'Klagensrampat, RT.005/RW.001, Kel. Klagensrampat, Kec. Maduran', 'Lamongan', '3524102306860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1445, 'SYAI03AC', 'Tani Makmur/Syain', 'TANI47', 'Sunardi', 'Sampangan, RT.002/RW.004, Kel. Tukkerto, Kec. Deket', 'Lamongan', '3524251503660001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1446, 'SYAI04AC', 'Tani Makmur/Syain', 'TANI47', 'Moch. Mujib Ridwan', 'Semampir, RT.004/RW.001, Kel. Sidomulyo, Kec. Modo', 'Lamongan', '3524031002720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1447, 'SYAI05AC', 'Tani Makmur/Syain', 'TANI47', 'Didik Purnomo', 'Ledok, RT.004/RW.007, Kel. Pule, Kec. Modo', 'Lamongan', '3524032208800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1448, 'SYAI06AC', 'Tani Makmur/Syain', 'TANI47', 'Eko Santoso', 'Dsn. Pule, RT.002/RW.003, Kel. Oule, Kec. Modo', 'Lamongan', '3524032602820002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1449, 'SYAI08AC', 'Tani Makmur/Syain', 'TANI47', 'Sumirin', 'Karangpilang, RT.005/RW.001, Kel. Kedungrejo, Kec. Modo', 'Lamongan', '3524031104770002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1450, 'SYAI09AC', 'Tani Makmur/Syain', 'TANI47', 'Sumali', 'Landeyan, RT.005/RW.001, Kel. Kedungwaras, Kec. Modo', 'Lamongan', '3524030307720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1451, 'SYAI10AC', 'Tani Makmur/Syain', 'TANI47', 'Tarno', 'Karangpilang, RT.001/RW.001, Kel. Kedungrejo, Kec. Modo', 'Lamongan', '3524031010580002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1452, 'SYAI11AC', 'Tani Makmur/Syain', 'TANI47', 'Sarkam', 'Gabang, RT.013/RW.004, Kel. Kedungrejo, Kec. Modo', 'Lamongan', '3524030101600007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1453, 'SYAI12AC', 'Tani Makmur/Syain', 'TANI47', 'Tasrun', 'Karangpilang, RT.004/RW.001, Kel. Kedungrejo, Kec. Modo', 'Lamongan', '3524032011570001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1454, 'SYAI13AC', 'Tani Makmur/Syain', 'TANI47', 'Sampurno', 'Sedah, RT.002/RW.007, Kel. Pule, Kec. Modo', 'Lamongan', '3524031307790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1455, 'SYAI14AC', 'Tani Makmur/Syain', 'TANI47', 'Abd Malik', 'Semampir, RT.004/RW.001, Kel. Sidomulyo, Kec. Modo', 'Lamongan', '3524030706710001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1456, 'SYAI16AC', 'Tani Makmur/Syain', 'TANI47', 'Kamim', 'Semampir, RT.005/RW.001, Kel. Sidomulyo, Kec. Modo', 'Lamongan', '3524031302600002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1457, 'SYAI17AC', 'Tani Makmur/Syain', 'TANI47', 'Agus Bambang Suprapto', 'Ledok, RT.004/RW.007, Kel. Pule, Kec. Modo', 'Lamongan', '3524032202740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1458, 'SYAI18AC', 'Tani Makmur/Syain', 'TANI47', 'Sucipto A.', 'Mlaten, RT.001/RW.003, Kel. Kedungpengaron, Kec. Modo', 'Lamongan', '3524032504700003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1459, 'SYAI19AC', 'Tani Makmur/Syain', 'TANI47', 'Supriyono', 'Mlaten, Kel. Kedungpengaron, Kec. Modo', 'Lamongan', '3524030905740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1460, 'SYAI20AC', 'Tani Makmur/Syain', 'TANI47', 'Sumarlan', 'Calonan, RT.019/RW.008, Kel. Jegreg, Kec. Modo', 'Lamongan', '3524032507750003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1461, 'SYAI21AC', 'Tani Makmur/Syain', 'TANI47', 'Sumarto', 'Mlaten, RT.002/RW.003, Kel. Kedungpengaron, Kec. Modo', 'Lamongan', '3524031009790004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1462, 'SYAI23AC', 'Tani Makmur/Syain', 'TANI47', 'Ramin', 'Ledok, RT.004/RW.007, Kel. Pule, Kec. Modo', 'Lamongan', '3524031305620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1463, 'SYAI24AC', 'Tani Makmur/Syain', 'TANI47', 'A Samsul', 'Semampir, RT.004/RW.001, Kel. Sidomulyo, Kec. Modo', 'Lamongan', '3524030501520002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1464, 'TAN06AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Utoyo', 'Dsn. Jambean RT.1/RW.1, Dawuhan Sengon, Purwodadi', 'Pasuruan', '3514011209790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1465, 'TAN07AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Endik Setiawan', 'Dsn. Kuntul RT.3/RW.1, Kali Pucang, Tutur', 'Pasuruan', '3514021812970002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1466, 'TAN08AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Putri Jilaturohmi', 'Ploso, RT.14/RW.3, Ploso Wonoayu', 'Sidoarjo', '3515105112970001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1467, 'TAN09AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Mohamad Afifin', 'Bangeran, RT.5/RW.2, Mulyodadi, Wonoayu', 'Sidoarjo', '3515101412900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1468, 'TAN10AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Syaifudin', 'Krajan III, RT.2/RW.1, Andongsari, Tutur', 'Pasuruan', '3514020311880004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1469, 'TAN11AC', 'Tani Makmur/Yamin, H', 'TANI82', 'Syaiqu Nur K', 'Dusun Tengah, RT.004/RW.005,Kel. Gerbo, Kec. Purwodadi', 'Pasuruan', '3514011311000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1470, 'TAMA01AC', 'Tani Marem Mojoranu/Endah', 'TANI239', 'Endah Prasetyo', 'Gempol RT.014/RW.007, Kel. Mayangrejo, Kec. Kalitidu', 'Bojonegoro', '3522066609970004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1471, 'TAMA02AC', 'Tani Marem Mojoranu/Endah', 'TANI239', 'Teguh Hermawan Safroni', 'Dusun Plosorejo, RT.032/RW.006, Kel. Sumberagung, Kec. Dander', 'Bojonegoro', '3522061808820005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1472, 'JOH07AC', 'Tani Sejati/Johny', 'TANI58', 'Mimin', 'Jl. A. Yani I.R. H. Ambodalle, RT.003/RW.009, Kel.Kadia, Kec. Kadia', 'Kendari', '7471086505910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1473, 'JOH08AC', 'Tani Sejati/Johny', 'TANI58', 'La Ode Musu', 'Desa Guali, RT.001/RW.001, Kel. Guali, Kec. Kusambi', 'Muna', '7403050701870202', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1474, 'TSK01AC', 'Tani Sejati/Johny', 'TANI58', 'Rusdi', 'Dsn. II Pambusuang, Kel. Pambusuang, Kec. Balanipa', 'Polewali Mandar', '7604122401900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1475, 'TSK02AC', 'Tani Sejati/Johny', 'TANI58', 'Fadel Adiputra', 'Koppe, RT.002/RW.001, Kel. Lili Riawang, Kec. Bengo', 'Bone', '7308262602000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1476, 'TSK03AC', 'Tani Sejati/Johny', 'TANI58', 'H Yahya', 'Lingk BT Cabu, RT.002/RW.001, Kel. Maccini Baji, Kec. Lau', 'Maros', '7309121204740002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1477, 'TSK04AC', 'Tani Sejati/Johny', 'TANI58', 'Murt Utami', 'Jl. Sakura, RT.003/RW.003, Kel. Nario Indah, Kec. Wawotobi', 'Konawe', '7402035605650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1478, 'TSK05AC', 'Tani Sejati/Johny', 'TANI58', 'Wagiran', 'Lalousu, Kel. Lalousu, Kec. Wonggeduku', 'Konawe', '7401260502620003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1479, 'TSK06AC', 'Tani Sejati/Johny', 'TANI58', 'Suparman', 'Jl. Alpukat Desa Karandu, RT.006/RW.004, Kel. Karandu, Kec. Wawotobi', 'Konawe', '7402030105740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1480, 'TSK07AC', 'Tani Sejati/Johny', 'TANI58', 'Wagimin', 'Desa Karandu, RT.001/RW.002, Kel. Karandu, Kec. Wawotobi', 'Konawe', '7402032304600001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1481, 'TSK08AC', 'Tani Sejati/Johny', 'TANI58', 'Siti Nurdiana', 'Desa Bumbu, RT.002/RW.002, Kel. Bumbu, Kec. Pasir Putih', 'Muna', '7403234107950237', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1482, 'TSK09AC', 'Tani Sejati/Johny', 'TANI58', 'Tirta Dewa Kirana Prawira', 'Jl. Ikan Nus Timur 47, RT.011/RW.005, Kel. Tunjungsekar, Kec. Lowokwaru', 'Malang', '3573052903040003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1483, 'TSK10AC', 'Tani Sejati/Johny', 'TANI58', 'Hamsa', 'Watarema, RT.001/RW.001, Kel. Watarema, Kec. Lambuya', 'Konawe', '7402010507820001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1484, 'TSK11AC', 'Tani Sejati/Johny', 'TANI58', 'DG. Makka', 'Watarema, RT.001, Kel. Watarema, Kec. Lambuya', 'Konawe', '7402011708450001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1485, 'TSK12AC', 'Tani Sejati/Johny', 'TANI58', 'Siti', 'Desa Wowasolo, RT.002/RW.002, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402194107500052', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1486, 'TSK13AC', 'Tani Sejati/Johny', 'TANI58', 'Sukar', 'Desa Wowasolo, RT.005/RW.003, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402191205650002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1487, 'TSK14AC', 'Tani Sejati/Johny', 'TANI58', 'Maulan', 'Desa Wowasolo, RT.005/RW.003, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402191107550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1488, 'TSK15AC', 'Tani Sejati/Johny', 'TANI58', 'Nanik Kamidah', 'Desa Wowasolo, RT.001/RW.001, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402194305700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1489, 'TSK16AC', 'Tani Sejati/Johny', 'TANI58', 'Sumari', 'Desa Wowasolo, RT.004/RW.003, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402192005690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1490, 'TSK17AC', 'Tani Sejati/Johny', 'TANI58', 'Samud', 'Desa Wowasolo, RT.002/RW.001, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402193112550008', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1491, 'TSK18AC', 'Tani Sejati/Johny', 'TANI58', 'Puji Nurgiono', 'Desa  Waworaha, RT.002/RW.000, Kel. Waworaha, Kec. Palangga', 'Konawe Selatan', '7405040103810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1492, 'TSK19AC', 'Tani Sejati/Johny', 'TANI58', 'Khusaeni Sahlan', 'Dusun II, RT.001/RW.002, Kel. Waworaha, Kec. Palangga', 'Konawe Selatan', '7405041507500003', '000000000000000', '2026-09-23 02:29:01', NULL);
+INSERT INTO `tb_customer_acak` (`id`, `kd_customer`, `nama_toko`, `kd_customer_induk`, `kontak_person`, `alamat`, `kota`, `nik`, `npwp`, `created_at`, `updated_at`) VALUES
+(1493, 'TSK20AC', 'Tani Sejati/Johny', 'TANI58', 'Tamrin', 'Dusun IV Maminasa, RT.001/RW.004, Kel. Keisio, Kec. Lalolae', 'Kolaka Timur', '7401231010800005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1494, 'TSK22AC', 'Tani Sejati/Johny', 'TANI58', 'Bambang Hartoyo', 'Desa Wowasolo, RT.005/RW.003, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402190404620002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1495, 'TSK23AC', 'Tani Sejati/Johny', 'TANI58', 'Muh. Saleh', 'Polandangi, RT.002/RW.002, Kel. Polandangi, Kec. Wonggeduku', 'Konawe', '7402193112870007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1496, 'TSK24AC', 'Tani Sejati/Johny', 'TANI58', 'Riyatmi', 'Desa Wowasolo, RT.002/RW.001, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402195005690004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1497, 'TSK25AC', 'Tani Sejati/Johny', 'TANI58', 'Wakijan. T', 'Desa Wowasolo, RT.006/RW.003, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402190307470001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1498, 'TSK26AC', 'Tani Sejati/Johny', 'TANI58', 'Muhsan', 'Desa Wowasolo, RT.002/RW.002, Kel. Wowasolo, Kec. Wonggeduku', 'Konawe', '7402192707700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1499, 'TSK27AC', 'Tani Sejati/Johny', 'TANI58', 'Arife', 'Lingk. II, Kel. Lapai, Kec. Ngapa', 'Kolaka Utara', '7408063004770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1500, 'TSK28AC', 'Tani Sejati/Johny', 'TANI58', 'Irsan', 'Lingk. I Kel. Lapai, Kel. Lapai, Kec. Ngapa', 'Kolaka Utara', '7408063012960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1501, 'TSK29AC', 'Tani Sejati/Johny', 'TANI58', 'Moh. Kuatno', 'Desa Kapu Jaya, RT.002/RW.003, Kel. Kapu jaya, Kec. Palangga', 'Konawe Selatan', '7405040712770001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1502, 'TSK30AC', 'Tani Sejati/Johny', 'TANI58', 'Hanami', 'Lingk. II, Kel. Lapai, Kec. Ngapa', 'Kolaka Utara', '7408066110720002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1503, 'TSK31AC', 'Tani Sejati/Johny', 'TANI58', 'Gede Sentana', 'Dusun Harapan Jaya, RT.001/RW.001, Kel. Wia-wia, Kec. Poli Polia', 'Kolaka Utara', '7401223112790001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1504, 'TSK32AC', 'Tani Sejati/Johny', 'TANI58', 'Muhammad Arfan', 'Jl. R suprapto LR Pengayoman, RT.014/RW.005, Kel. Tobuuha, Kec. Puuwatu', 'Kendari', '7471071905910002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1505, 'TSK33AC', 'Tani Sejati/Johny', 'TANI58', 'Namar', 'Kel. Tumpas, RT.001/RW.001, Kel. Tumpas, Kec. Unaaha', 'Konawe', '7405022512700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1506, 'INGG01AC', 'Tani, UD/Inggrid', 'TANI76', 'Iin Budja', 'Loli Saluran, RT.000/RW.000, Kel. Loli Saluran, Kec. Banawa', 'Donggala', '7203085809980005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1507, 'INGG02AC', 'Tani, UD/Inggrid', 'TANI76', 'Roib', 'KP. Kademangan, RT.012/RW.004, Kel. Caringin, Kec. Labuan', 'Pandeglang', '3601120107840106', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1508, 'INGG03AC', 'Tani, UD/Inggrid', 'TANI76', 'Rony Nuraeni', 'KP. Kademangan, RT.012/RW.004, Kel. Caringin, Kec. Labuan', 'Pandeglang', '3601286007880003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1509, 'INGG04AC', 'Tani, UD/Inggrid', 'TANI76', 'Irmawati', 'Jl. Palu Sabang, RT.000/RW.000, Kel. Labuan Salumbone, Kec. Labuan', 'Donggala', '7203095203960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1510, 'INGG05AC', 'Tani, UD/Inggrid', 'TANI76', 'Citra Dewi', 'Loli Pesua, RT.003/RW.001, Kel. Loli Pesua, Kec. Banawa', 'Donggala', '7203085207960005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1511, 'INGG06AC', 'Tani, UD/Inggrid', 'TANI76', 'Ni Made Dwi Adnyani', 'Dusun I, RT.002/RW.000, Kel. Ongka Trimuspasari, Kec. Bolano Lambunu', 'Parigi Moutong', '7208074809700007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1512, 'TRUB03AC', 'Trubus Jaya/Deni', 'TRUB02', 'Sugiharti', 'Ds Gempol, RT.001/RW.001, Kel. Gempol, Kec. Rejoso', 'Nganjuk', '3573055202520001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1513, 'USAH01AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Misnati', 'Dsn. Banmote, Kel. Kedungdung, Kec. Kedungdung', 'Sampang', '3527064803880006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1514, 'USAH02AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Misro', 'Dsn. Tengah, RT.001/RW.003, Kel. Gunung Maddah, Kec. Sampang', 'Sampang', '3527030107651911', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1515, 'USAH03AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Misru\'i', 'Dsn. Tengah, RT.001/RW.003, Kel. Gunung Maddah, Kec. Sampang', 'Sampang', '3527032404780004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1516, 'USAH04AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Ach. Heriyanto', 'Dusun Talon, Kel. Panggung, Kec. Sampang', 'Sampang', '3527032204850005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1517, 'USAH05AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Hj. Hozaimiyah', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527084508740005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1518, 'USAH06AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Syamsuri', 'Dsn. Dajaan Timur, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527081608890007', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1519, 'USAH07AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'H. Syaiful Ansori', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527083012650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1520, 'USAH08AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Sakur', 'Dsn. Jianyar, Kel. Aeng Sareh, Kec. Sampang', 'Sampang', '3527030204630001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1521, 'USAH09AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Eva', 'Dsn. Bandungan, RT.001/RW.002, Kel. Karang Penang Onjur, Kec. Karangpenang', 'Sampang', '3527146311840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1522, 'USAH10AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Syifauddin', 'Dsn. Sekolan, Kel. Blu\'uran, Kec. Karang Penang', 'Sampang', '7174041709820004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1523, 'USAH11AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Moch. Saihu', 'Dsn. Bandungan, Kel. Karang Penang Onjur, Kec. Karang Penang', 'Sampang', '3527140902800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1524, 'USAH12AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Nuria Ulfa', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527085212710004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1525, 'USAH13AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Holili', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527080805760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1526, 'USAH14AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Hoiri', 'Dsn. Olor, Kel. Sokobanah Laok, Kec. Sokobanah', 'Sampang', '3527110707690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1527, 'USAH15AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Subaidi', 'Dsn. Pandian, Kel. Dharma Tanjung, Kec. Camplong', 'Sampang', '3527042506810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1528, 'USAH16AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Hozaini', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527082104690002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1529, 'USAH17AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'H Lutfi', 'Dsn. Sang Sang, Kel. Omben, Kec. Omben', 'Sampang', '3527050107611302', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1530, 'USAH18AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Hosilah', 'Dsn. Sang Sang, Kel. Omben, Kec. Omben', 'Sampang', '3527054107701548', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1531, 'USAH19AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Fatoni', 'Dsn. Bungkak, Kel. Batorasang, Kec. Tambelangan', 'Sampang', '3527082111660002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1532, 'USAH20AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'H Husnol Ilmi Fahmi', 'Dsn. Duko, Kel. Tambelangan, Kec. Tambelangan', 'Sampang', '3527080107610067', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1533, 'USAH21AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Holiyah', 'Dusun Nongkesan, Kel. Tamberudaya, Kec. Sokobanah', 'Sampang', '3527114508820006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1534, 'USAH22AC', 'Usaha Tani/Abd. Moehid', 'USAH07', 'Zen Amin Jakfar', 'Dusun Batulengger Barat, Kel. Bira Tengah, Kec. Sokobanah', 'Sampang', '3527110810500004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1535, 'WASI01AC', 'Wasir/Rondiyah', 'WASI01', 'Ahmad Khoiruddin', 'Sumbermulyo, RT.005/RW.001, Kel. Sumbermulyo, Kec. Sarang', 'Rembang', '3317052812020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1536, 'WASI02AC', 'Wasir/Rondiyah', 'WASI01', 'Suyikno', 'Sumber Mulyo, RT.001/RW.001, Kel. Sumbermulyo, Kec. Sarang', 'Rembang', '3317052506850004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1537, 'WASI03AC', 'Wasir/Rondiyah', 'WASI01', 'Nia Yuanita', 'Gonggang, RT.006/RW.002, Kel. Gonggang, Kec. Sarang', 'Rembang', '3317054404870003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1538, 'WASI04AC', 'Wasir/Rondiyah', 'WASI01', 'Nor Hayati', 'Ds. Kalipang, RT.002/RW.003, Kel. Kalipang, Kec. Sarang', 'Rembang', '3317056507860002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1539, 'WASI05AC', 'Wasir/Rondiyah', 'WASI01', 'Ahmad Syafii', 'Sumbermulyo, RT.001/RW.001, Kel. Sumbermulyo, Kec. Sarang', 'Rembang', '3317051208810001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1540, 'WASI07AC', 'Wasir/Rondiyah', 'WASI01', 'Ramini', 'Sumbermulyo, RT.002/RW.001, Kel.Sumbermulyo, Kec. Sarang', 'Rembang', '3317055707780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1541, 'WASI08AC', 'Wasir/Rondiyah', 'WASI01', 'Sukarji', 'Sumber Mulyo, RT.010/RW.002, Kel. Sumbermulyo, Kec. Sarang', 'Rembang', '3317050204880001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1542, 'WASI09AC', 'Wasir/Rondiyah', 'WASI01', 'Sri Wahyuni', 'Sumbermulyo, RT.005/RW.001, Kel. Sumbermulyo, Kec. Sarang', 'Rembang', '3317054411840003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1543, 'ALAS01AC', 'Alaska Prima Perkasa, CV', 'ALAS01', 'Sapirah', 'Jl. SH. Wardoyo LR. Kencana III, RT.015/RW.003, Kel. Lima Ulu, Kec. Seberang Ulu Satu', 'Palembang', '1671024702030019', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1544, 'RUDY01AC', 'Rudy advansia', NULL, 'Rudi Hari Purnomo', 'Desa Kedungsumber, RT.012/RW.004, Kel. Kedungsumber, Kec. Temanyang', 'Bojonegoro', '3522210906890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1545, 'BASU06AC', 'Rudy advansia', NULL, 'Ardhylla Fajar', 'Desa Kedungsumber, RT.012/RW.004, Kel. Kedungsumber, Kec. Temayang', 'Bojonegoro', '3522215811890001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1546, 'BIAK01AC', 'Surya Biak', 'ANIN02', 'Sartika Musa', 'Lingkungan VI, RT.006/RW.000, Kel. Mahawu, Kec. Tuminting', 'Manado', '7171035407960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1547, 'BIAK02AC', 'Surya Biak', 'ANIN02', 'Rizki Rahman Kasim', 'Lingkungan VI, RT.000/RW.006, Kel. Mahawu, Kec. Tuminting', 'Manado', '7171020902960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1548, 'PESO01AC', 'Pesona Tani', 'PESO01', 'Jahruddin', 'Dusun Tani Mulya, RT.008/RW.004, Kel. Naru, Kec. Woha', 'Bima', '5206030505731006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1549, 'PESO02AC', 'Pesona Tani', 'PESO01', 'Syamsudin', 'Waduwani, RT.003/RW.001, Kel. Waduwani, Kec. Woha', 'Bima', '5206030106661004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1550, 'MAJU04AC', 'Maju Jaya/Hasan', 'MAJU05', 'Abd Rohman', 'Wangkal, RT.001/RW.002, Kel. Wangkalwetan, Kec. Kejayan', 'Pasuruan', '3514060101010015', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1551, 'SUKA01AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Ita Aprilia', 'Dusun Semenrejo, RT.001/Rw.001, Kel. Truwolu, Kec. Ngaringan', 'Grobogan', '3315096004000002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1552, 'SUKA02AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Putra Aldo Seno', 'Dukuh Manggir, RT.001/RW.001, Kel. Ngumbul, Kec. Todonan', 'Blora', '3316142910030005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1553, 'SUKA03AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Siti Handayani', 'Dusun Doro, RT.003/RW.003, Kel. Tanjungsari, Kec. Kradenan', 'Grobogan', '3315075709050002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1554, 'SUKA04AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Turmudi', 'Dusun Sawit, RT.006/RW.001, kel. Tanjungrejo, Kec. Wirosari', 'Grobogan', '3315101008890002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1555, 'SUKA05AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Uma Rohmatul Kasanah', 'Dusun Jati Tengah, RT.002/RW.010, Kel. Tambakselo, Kec. Wirosari', 'Grobogan', '3315105207000004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1556, 'SUKA06AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Dwi Agustin Nisak', 'Dukuh Manggir, RT.002/RW.001, Kel. Ngumbul, kec. Todanan', 'Blora', '3316145208040002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1557, 'SUKA07AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Nufa Sri Rizki', 'Dusun Wonorejo RT.002/RW.009 , Kel. Tambakelo Kec. Wirosari', 'Grobogan', '3315102608070001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1558, 'SUKA08AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Andika Sukma Prihantika', 'Jalan A Yani RT.002/RW.006 , Kel. Kunden Kec. Wirosari', 'Grobogan', '3315105510000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1559, 'SUKA09AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Riana Arofah', 'Dusun Krajan RT.003/RW.002 , Kel. Bandungsari Kec. Ngaringan', 'Grobogan', '3328014612080002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1560, 'SUKA10AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Sri Wahyuni', 'Dusun Jati Tangah RT.002/RW.010 , Kel. Tambakselo Kec. Wirosari', 'Grobogan', '3315105011780002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1561, 'SUKA11AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Rizal Andika', 'Dusun Jati Tengah RT.004/RW.010 ,Kel. Tambakselo Kec. Wirosari', 'Grobogan', '3315102003060001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1562, 'SUKA12AC', 'Barokah Tani, Toko/Sukardi', 'BARO50', 'Rendy Roy Tianto', 'Todanan RT.003/RW.002 , Kel. Todanan Kec. Todanan', 'Blora', '3316141504050004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1563, 'DIAN01AC', 'Dian Anggraeni', 'DIAN06', 'Poerwoto', 'Simo Hilir 1-A2/81, RT.013/RW.003, Kel. Simomulyo Baru, Kec. Sukomanunggal', 'Surabaya', '3578051012550001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1564, 'SISW01AC', 'Anugrah Tani Sejahtera/Siswoyo Adi P', 'ANUG14', 'Ulvida Inayatul Fuad', 'Karangtengah, RT.003/RW.002, Kel. Karangtengah, Kec. Bogor', 'Nganjuk', '3518137011960004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1565, 'SISW02AC', 'Anugrah Tani Sejahtera/Siswoyo Adi P', 'ANUG14', 'Olivia Nagareth Vicki', 'Jalan DR Soetomo No. 106 RT.003/RW.003 , Kel. Gunung Simping Kec. Cilacap Tengah', 'Nganjuk', '3518146102000002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1566, 'REST01AC', 'Maju Riyan Tani/Resty', 'MAJU22', 'Hati Mamonto', 'Dusun I, Kel. Nonapan II, Kec. Poigar', 'Bolaang Mongondow', '7101206104710302', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1567, 'IBRA01AC', 'Ibrahim Papua', 'IBRA02', 'Bayani Tompunu', 'Tanamon Utara, RW.007, Kel. Tanamon Utara, Kec. Sinonsayang', 'Minahasa Selatan', '7105085707620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1568, 'IBRA02AC', 'Ibrahim Papua', 'IBRA02', 'Djubaili Katili', 'Tanamon Utara, RW.007, Kel. Tanamon Utara, Kec. Sinonsayang', 'Minahasa Selatan', '7105081003590001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1569, 'ELVI01AC', 'Elvira Sahabat', 'ELVI01', 'Sultje Rantung', 'Lopana, RT.000/RW. 004, Kel. Lopana, Kec. Amurang Timur', 'Minahasa Selatan', '7105186409720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1570, 'SEDE01AC', 'Sederhana Tani', 'SEDE04', 'Malik Islam', 'Jl. Gora Lingk. Nyangget, RT.001/RW 272, Kel. Selagalas, Kec. Sandubaya', 'Mataram', '5271061508050001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1571, 'SEDE02AC', 'Sederhana Tani', 'SEDE04', 'Moch. Hifzul Hilmi', 'Keluncing, RT.004/RW.000, Kel. Perian, Kec. Montong Gading', 'Lombok Timur', '5201021901920002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1572, 'SEDE03AC', 'Sederhana Tani', 'SEDE04', 'Khairul Apriadi', 'Labuan Pandan, RT.002/RW.000, Kel. Labuan Pandan, Kec. Sambelia', 'Lombok Timur', '5203100904950002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1573, 'SEDE04AC', 'Sederhana Tani', 'SEDE04', 'H. Marzuki', 'Penyinggir RT.000/RW.000, Kel. Sikur Barat, Kec. Sikur', 'Lombok Timur', '5203043112630032', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1574, 'JEMM01AC', 'Jemmy Mariansang', 'JEMM01', 'Rosmi Rumondor', 'Dusun II, RT.008/RW.000, Kel. Langagon, Kec. Bolaang', 'Bolaang Mongondow', '7101134101800301', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1575, 'KHAR01AC', 'Kharisma/Nanang', 'KHAR03', 'M. Fahrizal Fahmi', 'Dusun Barat Sawah, RT.005/RW.001, Kel. Rowosari, Kec. Sumberjambe', 'Jember', '3509311904960001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1576, 'KHAR02AC', 'Kharisma/Nanang', 'KHAR03', 'Muhammad Yusril Isa', 'Dusun Krajan, RT.006/RW.001, Kel. Cumedak, Kec. Sumberjambe', 'Jember', '3509311703980002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1577, 'PERT11AC', 'Pertanian Yuliana/Tumiran', 'PERT10', 'Tumiran', 'Dusun Tubo RT.002/RW.001, Kel. Purwosekar, Kec. Tajinan', 'Malang', '3507152207720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1578, 'PERT12AC', 'Pertanian Yuliana/Tumiran', 'PERT10', 'Sudarmanto', 'Dusun Tubo, RT.014/RW.002, Kel. Purwosekar, Kec. Tajinan', 'Malang', '3507150509810004', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1579, 'PERT13AC', 'Pertanian Yuliana/Tumiran', 'PERT10', 'Anang Yahya Mashuri', 'Dusun Tubo, RT.011/RW.002, Kel. Purwosekar, Kec. Tajinan', 'Malang', '3507152208780001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1580, 'HERR01AC', 'Herry Djuwarsa', 'DEKA01', 'A Ramin', 'Kp Lapang RT.001/RW.003 , Kel. Sariwangi Kec. Parongpong', 'Bandung Barat', '3217022107670002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1581, 'HERR02AC', 'Herry Djuwarsa', 'DEKA01', 'Agus', 'Kp Malati Hasim RT.002/RW.008 , Kel. Padasuka Kec. Pasirwangi', 'Garut', '3205080903080001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1582, 'HERR04AC', 'Herry Djuwarsa', 'DEKA01', 'Dani Darmawan', 'Jalan Gegerkalong Girang No. 99 RT.007/RW.003 , Kel. Gegerkalong Kec. Sukasari', 'Bandung', '3273012311840005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1583, 'HERR05AC', 'Herry Djuwarsa', 'DEKA01', 'Deden Muhamamd M', 'Jalan Pak Gatot II No. 21-G KPAD RT.003/RW.002 , Kel. Gegerkalong Kec. Sukasari', 'Bandung', '3273010106650001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1584, 'HERR06AC', 'Herry Djuwarsa', 'DEKA01', 'Desty Apriani', 'Kresnomulyo Selatan RT.001/RW.006 , Kel. Kresno Mulyo, Kec. Ambarawa', 'Pringsewu', '1810036404860001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1585, 'HERR08AC', 'Herry Djuwarsa', 'DEKA01', 'Jumadi. MS', 'Ambarawa RT.003/RW.001 , Kel. Ambarawa Kec. Ambarawa', 'Pringsewu', '1810031904690001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1586, 'HERR09AC', 'Herry Djuwarsa', 'DEKA01', 'Matoyah', 'Ambarawa III RT.005/RW.003 , Kel. Ambarawa Kec. Ambarawa', 'Pringsewu', '1810034107680042', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1587, 'HERR10AC', 'Herry Djuwarsa', 'DEKA01', 'Rosmawati', 'Jalan Posksai LKIV RT.019/RW.004 , Kel. Hadimulyo Barat Kec. Metro Pusat', 'Metro', '1872014311700002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1588, 'HERR11AC', 'Herry Djuwarsa', 'DEKA01', 'Saimah', 'Ambarawa RT.003/RW.001 , Kel. Ambarawa Kec. Ambarawa', 'Pringsewu', '1810035110640001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1589, 'HERR12AC', 'Herry Djuwarsa', 'DEKA01', 'Sartimin', 'Lembur Panjang RT.001/RW.008 , Kel. Cihanjuang Kec. Parongpong', 'Bandung Barat', '3217020408730009', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1590, 'HERR13AC', 'Herry Djuwarsa', 'DEKA01', 'A. Muhammad Raup', 'Jalan Kapten Abdul Hamid No. 42 A RT.001/RW.006 , Kel. Hegarmanah Kec. Cidadap', 'Bandung', '3217020202830006', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1591, 'BTWD01AC', 'Barokah Tani/Widianto', 'BARO74', 'Imam Sutikno', 'Jambangan RT.025/RW.004 , Kel. Jambangan Kec. Dampit', 'Malang', '3507051801980005', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1592, 'DHIM01AC', 'Sumber Rejeki/Dhimas', 'SUMB233', 'Majdah Fakhiroh', 'Tlogosari RT.001/RW.001 , Kel. Tlogosari Kec. Tlogosari', 'Bondowoso', '3511036703000002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1593, 'SUCI01AC', 'Agro Suci/Bety', 'AGRO52', 'Mistarohati', 'Jalan Mahakan dusun karang anom RT.002 , RW.010 Kel. Serut Kec. Panti', 'Jember', '3509146105760001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1594, 'IBUT01AC', 'Ibu Tani II', 'IBUT03', 'Ahmat Basri', 'Dusun Krajan RT.012/RW.004 , Kel. Banyuanyar Lor Kec. Gending', 'Probolinggo', '3513180107560023', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1595, 'IBUT02AC', 'Ibu Tani II', 'IBUT03', 'Ali Imron Effendi', 'Dusun Karanganyar RT.013/RW.004 , Kel. Clarak Kec. Leces', 'Probolinggo', '3513052003620001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1596, 'IBUT03AC', 'Ibu Tani II', 'IBUT03', 'Amirul Mu\'minin', 'Gili Pasar RT.001/RW.010 , Kel. Jongoran Kec. Leces', 'Probolinggo', '3513050107660189', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1597, 'IBUT04AC', 'Ibu Tani II', 'IBUT03', 'Andi Hermanto', 'Somor Kodung RT.012/RW.006 , Kel. Sumberrejo Kec. Tongas', 'Probolinggo', '3513190505890003', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1598, 'IBUT05AC', 'Ibu Tani II', 'IBUT03', 'Buama', 'Dusun Bukolan RT.002/RW.004 , Kel. Tamansari Kec. Dringu', 'Probolinggo', '3513196601800001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1599, 'IBUT06AC', 'Ibu Tani II', 'IBUT03', 'Cahya Eka Prasetiya', 'Dusun Bajul RT.003/RW.001 , Kel. Tegalmojo Kec. Tegalsiwalan', 'Probolinggo', '3513181208940002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1600, 'IBUT07AC', 'Ibu Tani II', 'IBUT03', 'Deefryan Okafianto', 'Dusun Pasar RT.002/RW.001 , Kel. Banyuanyar Lor Kec. Gending', 'Probolinggo', '3513120610020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1601, 'IBUT08AC', 'Ibu Tani II', 'IBUT03', 'Misna', 'Dusun Landaur RT.002/Rw.001 , Kel. Karangpranti Kec. Pejarakan', 'Probolinggo', '3513164107740136', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1602, 'IBUT09AC', 'Ibu Tani II', 'IBUT03', 'Moh Urip Ilhami', 'Dusun Krajan RT.012/RW.004 , Kel. Banyuanyar Lor Kec. Gending', 'Probolinggo', '3513182410020002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1603, 'IBUT10AC', 'Ibu Tani II', 'IBUT03', 'Nor Cahyo Hadi Kusumo', 'Dusun Bajul RT.003/RW.001 , Kel. Tegalmojo Kec. Tegalsiwalan', 'Probolinggo', '3513202503030001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1604, 'IBUT11AC', 'Ibu Tani II', 'IBUT03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(1605, 'IBUT12AC', 'Ibu Tani II', 'IBUT03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(1606, 'IBUT13AC', 'Ibu Tani II', 'IBUT03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(1607, 'IBUT14AC', 'Ibu Tani II', 'IBUT03', '', '', '', '', '', '2026-09-23 02:29:01', NULL),
+(1608, 'DIUD01AC', 'Diana, UD', 'DIAN02', 'Miftachur Rohman', 'Kamp. Yasa Mulya RT.014/RW.003 , Kel. Yasa Mulya Kec.Tanah Miring', 'Merauke', '9101011812900002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1609, 'AGRO01AC', 'Agro Makmur Sentosa', 'AGRO76', 'Dwi Ratnawati', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520047107740001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1610, 'AGRO02AC', 'Agro Makmur Sentosa', 'AGRO76', 'Eko Wahyu Wulandari', 'Dusun Sumbelmulyo RT.002/RW.001 , Kel. Jomblang Kec. Takeran', 'Magetan', '3520044301720001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1611, 'AGRO03AC', 'Agro Makmur Sentosa', 'AGRO76', 'Faradilla Charizma Putri', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520044106040002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1612, 'AGRO04AC', 'Agro Makmur Sentosa', 'AGRO76', 'Hanifian Ahmad Musyaffa', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520042312000001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1613, 'AGRO05AC', 'Agro Makmur Sentosa', 'AGRO76', 'Heru Sucahyo', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520041510730002', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1614, 'AGRO06AC', 'Agro Makmur Sentosa', 'AGRO76', 'Ninik Darwati', 'Dusun Banar RT.005/RW.006 , Kel. Deryangan Kec. Mertoyudan', 'Magelang', '3308105808700001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1615, 'AGRO07AC', 'Agro Makmur Sentosa', 'AGRO76', 'Octaviona Zea Putri Lathifa', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520046710080001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1616, 'AGRO08AC', 'Agro Makmur Sentosa', 'AGRO76', 'Srijati', 'Banaran RT.018/RW.003 , Kel. Kerik Kec. Takeran', 'Magetan', '3520045103500001', '000000000000000', '2026-09-23 02:29:01', NULL),
+(1617, 'SHTH01AC', 'Sahabat Tani/Harianto', 'SAHA33', 'Sapriadi', 'Semalang RT.000/RW.000 , Kel. Dasan Baru Kec. Kopang', 'Lombok Tengah', '5202092503890001', '000000000000000', '2026-09-23 02:29:01', NULL);
 
 -- --------------------------------------------------------
 
@@ -72839,14 +75238,22 @@ CREATE TABLE `tb_detail_do` (
 --
 
 INSERT INTO `tb_detail_do` (`id`, `id_pre_do`, `kd_do`, `kd_faktur`, `tgl_transaksi`, `kd_rute`, `kd_customer`, `kd_barang`, `nama_barang`, `qty`, `satuan`, `no_lot`, `tgl_exp`, `norut`, `nominal_p`, `jtempo`, `note_faktur`, `dt_status`, `status`, `input_at`, `create_at`) VALUES
-(1, 1, 'KIUDO0409260001', 'DINV0409260001', '2026-09-04', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '556633', '2027-02-01', 1, 45000, 0, '', 1, 1, '04/09/2026', '2026-09-04 09:38:44'),
-(2, 2, 'KIUDO0409260001', 'DINV0409260001', '2026-09-04', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '556633', '2027-02-01', 1, 45000, 0, '', 1, 1, '04/09/2026', '2026-09-04 09:38:44'),
-(3, 3, 'KIUDO0409260001', 'DINV0409260001', '2026-09-04', 'JLS', 'TANI59', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500, 'Pack', '00212', '2027-02-01', 1, 105000, 0, '', 1, 1, '04/09/2026', '2026-09-04 09:38:44'),
-(4, 4, 'KIUDO0409260002', 'DINV0409260002', '2026-09-01', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '556633', '2027-02-01', 1, 45000, 60, '', 1, 1, '04/09/2026', '2026-09-04 09:44:52'),
-(5, 5, 'KIUDO0409260002', 'DINV0409260002', '2026-09-01', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '556633', '2027-02-01', 1, 45000, 60, '', 1, 1, '04/09/2026', '2026-09-04 09:44:52'),
-(6, 6, 'KIUDO0409260002', 'DINV0409260002', '2026-09-01', 'JLS', 'TANI59', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500, 'Pack', '00212', '2027-02-01', 1, 105000, 60, '', 1, 1, '04/09/2026', '2026-09-04 09:44:52'),
-(7, 7, 'KIUDO0409260003', 'DINV0409260003', '2026-08-06', 'MD-1', 'RIZK05', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25, 'Zak', '1123514', '2027-02-01', 1, 50000, 60, '', 1, 1, '04/09/2026', '2026-09-04 09:45:24'),
-(8, 8, 'KIUDO0409260003', 'DINV0409260003', '2026-08-06', 'MD-1', 'RIZK05', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168, '', '112233', '2027-02-01', 1, 80000, 60, '', 1, 1, '04/09/2026', '2026-09-04 09:45:24');
+(1, 1, 'KIUDO2108260001', 'DINV2108260001', '2026-08-01', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '101019', '2027-06-21', 1, 45000, 60, '', 1, 1, '21/08/2026', '2026-08-21 14:23:20'),
+(2, 2, 'KIUDO2108260001', 'DINV2108260001', '2026-08-01', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 5, 'Pack', '101019', '2027-06-21', 1, 45000, 60, '', 1, 1, '21/08/2026', '2026-08-21 14:23:20'),
+(3, 3, 'KIUDO2108260001', 'DINV2108260001', '2026-08-01', 'JLS', 'TANI59', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 500, 'Pack', '1010101', '2027-11-21', 1, 105000, 60, '', 1, 1, '21/08/2026', '2026-08-21 14:23:20'),
+(4, 4, 'KIUDO2108260002', 'DINV2108260002', '2026-08-06', 'MD-1', 'RIZK05', 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 25, 'Zak', '101011', '2028-01-21', 1, 50000, 30, '', 1, 1, '21/08/2026', '2026-08-21 14:23:25'),
+(5, 5, 'KIUDO2108260002', 'DINV2108260002', '2026-08-06', 'MD-1', 'RIZK05', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 168, '', '101015', '2028-04-21', 1, 80000, 30, '', 1, 1, '21/08/2026', '2026-08-21 14:23:25'),
+(6, 9, 'KIUDO1109260001', 'DINV1109260001', '2026-09-27', 'JLS', 'TANI59', 'QTOMA06', 'Tomat Saviro 18 X 25 X 5 gr', 1, 'Pack', '101019', '2027-06-21', 1, 45000, 30, '', 1, 1, '11/09/2026', '2026-09-11 13:39:34'),
+(7, 10, 'KIUDO1109260002', 'DINV1109260002', '2026-10-05', 'MD-1', 'RIZK05', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 11, '', '101015', '2028-04-21', 1, 80000, 30, '', 1, 1, '11/09/2026', '2026-09-11 13:40:24'),
+(8, 11, 'KIUDO2209260001', 'ZINV2209260001', '2026-09-22', 'MLG', 'KARY26', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 100, 'Pack', '1010101', '2027-11-21', 1, 1000000, 30, '', 1, 1, '22/09/2026', '2026-09-22 11:00:48'),
+(9, 12, 'KIUDO2209260001', 'ZINV2209260002', '2026-09-22', 'MLG', 'AGRI09', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 100, '', '101015', '2028-04-21', 2, 1000000, 30, '', 1, 1, '22/09/2026', '2026-09-22 11:00:48'),
+(10, 15, 'KIUDO2309260001', 'ZINV2309260003', '2026-09-23', 'MD-2', 'SAHA12', 'QPADI45', 'Padi NK 2133 20 X 1 kg', 100, 'Pack', '1010101', '2027-11-21', 1, 800000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:41:17'),
+(11, 16, 'KIUDO2309260001', 'ZINV2309260004', '2026-09-23', 'MD-2', 'AGRO76', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 300, '', '101015', '2028-04-21', 2, 400000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:41:17'),
+(12, 13, 'KIUDO2309260002', 'ZINV2309260001', '2026-09-23', 'PRB', 'SUMB48', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 50, '', '101013', '2030-04-21', 1, 400000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:41:22'),
+(13, 14, 'KIUDO2309260002', 'ZINV2309260002', '2026-09-23', 'PRB', 'IBUT03', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 50, '', '101013', '2030-04-21', 2, 400000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:41:22'),
+(14, 17, 'KIUDO2309260003', 'ZINV2309260005', '2026-09-23', 'JBR', 'AGRO76', 'QROUN011', 'Round Up 486 SL 12 X 1 ltr', 257, '', '101015', '2028-04-21', 1, 80000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:42:15'),
+(15, 18, 'KIUDO2309260003', 'ZINV2309260005', '2026-09-23', 'JBR', 'AGRO76', 'QSPON081', 'Spontas 450 SL 10 X 1 ltr', 7, '', '101013', '2030-04-21', 1, 148000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:42:15'),
+(16, 19, 'KIUDO2309260003', 'ZINV2309260005', '2026-09-23', 'JBR', 'AGRO76', 'QCHAM04', 'Champion 77 WP 14 X 1 kg', 140, '', '101012', '2027-08-21', 1, 120000, 30, '', 1, 1, '23/09/2026', '2026-09-23 13:42:15');
 
 -- --------------------------------------------------------
 
@@ -72940,9 +75347,14 @@ CREATE TABLE `tb_do` (
 --
 
 INSERT INTO `tb_do` (`id`, `kd_do`, `nolambung`, `regional`, `driver`, `tgl_pengiriman`, `tgl_create`, `status`, `sales_confirm_at`, `sales_confirm_by`, `sales_confirm_note`, `sales_confirm_status`) VALUES
-(1, 'KIUDO0409260001', '', 'JLS', '', '2026-09-04', '2026-09-04 09:38:44', 5, NULL, NULL, NULL, NULL),
-(2, 'KIUDO0409260002', '', 'JLS', '', '2026-09-04', '2026-09-04 09:44:52', 5, NULL, NULL, NULL, NULL),
-(3, 'KIUDO0409260003', '', 'MD-1', '', '2026-09-04', '2026-09-04 09:45:24', 5, NULL, NULL, NULL, NULL);
+(1, 'KIUDO2108260001', '', 'JLS', '', '2026-08-21', '2026-08-21 14:23:20', 5, NULL, NULL, NULL, NULL),
+(2, 'KIUDO2108260002', '', 'MD-1', '', '2026-08-21', '2026-08-21 14:23:25', 5, NULL, NULL, NULL, NULL),
+(3, 'KIUDO1109260001', '', 'JLS', '', '2026-09-11', '2026-09-11 13:39:34', 5, NULL, NULL, NULL, NULL),
+(4, 'KIUDO1109260002', '', 'MD-1', '', '2026-09-11', '2026-09-11 13:40:24', 5, NULL, NULL, NULL, NULL),
+(5, 'KIUDO2209260001', '', 'MLG', '', '2026-09-22', '2026-09-22 11:00:48', 5, NULL, NULL, NULL, NULL),
+(6, 'KIUDO2309260001', '', 'MD-2', '', '2026-09-23', '2026-09-23 13:41:17', 5, NULL, NULL, NULL, NULL),
+(7, 'KIUDO2309260002', '', 'PRB', '', '2026-09-23', '2026-09-23 13:41:22', 5, NULL, NULL, NULL, NULL),
+(8, 'KIUDO2309260003', '', 'JBR', '', '2026-09-23', '2026-09-23 13:42:15', 5, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -75564,7 +77976,8 @@ INSERT INTO `tb_gudang` (`id_gudang`, `nama_gudang`, `tipe`, `is_active`, `creat
 (2, 'Gdg. Induk', 'INDUK', 1, '2026-01-06 12:30:28'),
 (5, 'Gdg. Rusak', 'EXPIRED', 1, '2026-01-06 12:30:28'),
 (6, 'Gdg. Expired', 'EXPIRED', 1, '2026-01-06 12:30:28'),
-(10, 'Gdg. Titipan', 'INDUK', 1, '2026-01-06 12:30:28');
+(10, 'Gdg. Titipan', 'INDUK', 1, '2026-01-06 12:30:28'),
+(12, 'Gdg. Bundling', 'INDUK', 1, '2026-09-11 15:14:59');
 
 -- --------------------------------------------------------
 
@@ -89800,13 +92213,13 @@ INSERT INTO `tb_karyawan` (`id`, `nik`, `nm_karyawan`, `departemen`, `jobdesk`, 
 (65, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmjt', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 1, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (66, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmjb', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 2, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (67, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmntb', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 3, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
-(68, 'QIUK11111', 'Reni', 'DEP012', 'SC', 'kiuscc', 'B', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-04 13:04:20', 1, 'AKTIF', NULL, '2026-09-04 13:04:20', NULL),
+(68, 'QIUK11111', 'Reni', 'DEP012', 'SC', 'kiuscc', 'B', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-23 15:36:23', 1, 'AKTIF', NULL, '2026-09-23 15:36:23', NULL),
 (69, 'QIUK11111', 'kiuhard', 'DEP012', 'ITHARD', 'kiuhard', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
-(70, 'QIUK111112', 'Ariyani', 'DEP012', 'SC', 'kiuscc2', 'C', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-04 09:31:51', 1, 'AKTIF', NULL, '2026-09-04 09:31:51', NULL),
+(70, 'QIUK111112', 'Ariyani', 'DEP012', 'SC', 'kiuscc2', 'C', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-23 12:17:38', 1, 'AKTIF', NULL, '2026-09-23 12:17:38', NULL),
 (71, 'ADMINSC', 'Admin SC', 'SALES', 'ADMINSC', 'admsc', 'D', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-18 08:34:56', 1, 'AKTIF', NULL, '2026-08-18 08:34:56', NULL),
 (72, 'Q1234124', 'evi', 'SALES', 'MANAGERSC', 'mngsc', 'D', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-08 11:09:48', 1, 'AKTIF', NULL, '2026-08-08 11:09:48', NULL),
 (73, 'Q12341241', 'dewi', 'KEUANGAN', 'ADMRETUR', 'admretur', 'D', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-07-27 14:54:31', 1, 'AKTIF', NULL, '2026-07-27 14:54:31', NULL),
-(74, 'Q1234124', 'kadepsc', 'SALES', 'KADEPSC', 'kadepsc', 'D', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-04 13:10:09', 1, 'AKTIF', NULL, '2026-09-04 13:10:09', NULL),
+(74, 'Q1234124', 'kadepsc', 'SALES', 'KADEPSC', 'kadepsc', 'D', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-09-15 13:58:09', 1, 'AKTIF', NULL, '2026-09-15 13:58:09', NULL),
 (75, 'Q1234124', 'logistik', 'DEP02', 'LOGISTIC', 'sprlog', 'D', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-01 10:24:38', 1, 'AKTIF', NULL, '2026-08-01 10:24:38', NULL),
 (76, 'ADM001', 'Admin LPB2', 'Sales', 'ADMLPB2', 'admlpb2', NULL, '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-06 14:54:41', 1, 'AKTIF', NULL, '2026-08-06 14:54:41', NULL),
 (77, 'COL001', 'Team Collection', 'Sales', 'COLLECTION', 'collection1', NULL, '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-12 11:05:00', 1, 'AKTIF', NULL, '2026-08-12 11:05:00', NULL),
@@ -89820,8 +92233,7 @@ INSERT INTO `tb_karyawan` (`id`, `nik`, `nm_karyawan`, `departemen`, `jobdesk`, 
 (85, 'QIUK_PUR', 'purchasing', 'DEP01', 'admin_purchasing', 'purchasing', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-07-25 08:31:54', 1, 'AKTIF', NULL, '2026-07-25 08:31:54', NULL),
 (86, 'QIUK_PUR', 'purchasing', 'DEP01', 'PURCHASING', 'purchasing', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-07-24 15:50:36', 1, 'AKTIF', NULL, '2026-07-24 15:50:36', NULL),
 (87, 'QIUK_PUR', 'manager_sc', 'DEP01', 'MNGSC', 'mngsc', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-07-24 15:50:36', 1, 'AKTIF', NULL, '2026-07-24 15:50:36', NULL),
-(88, 'QIUK_PUR', 'manager_tc', 'DEP01', 'MNGTC', 'mngtc', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-08 11:10:18', 1, 'AKTIF', NULL, '2026-08-08 11:10:18', NULL),
-(89, 'QIUK_LOBY01', 'Marisa', 'SALES', 'LOBY', 'loby', 'LBY', '$2y$10$3B6bnOs/Qv8/Rk67DBTKTug5ZpX0uq5EyT.IIQsBXN.TgKbV3NwhK', 0, 0, 1, NULL, '2026-08-26 08:51:17', NULL, NULL, NULL, '2026-08-26 15:56:12', 1, 'AKTIF', NULL, '2026-08-26 15:56:12', NULL);
+(88, 'QIUK_PUR', 'manager_tc', 'DEP01', 'MNGTC', 'mngtc', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-08 11:10:18', 1, 'AKTIF', NULL, '2026-08-08 11:10:18', NULL);
 
 -- --------------------------------------------------------
 
@@ -94673,7 +97085,9 @@ CREATE TABLE `tb_loading_kk` (
 --
 
 INSERT INTO `tb_loading_kk` (`id`, `kode`, `tgl`, `waktu_siap_loading`, `keterangan`, `pintu`, `waktu_do_selesai`, `waktu_cetak_do`, `waktu_mulai_siapkan`, `waktu_selesai_siapkan`, `nik_checker`, `nm_checker`, `waktu_mulai`, `waktu_selesai`, `progres`, `progres_siapkan`, `status`, `is_paused`, `total_pause_secs`, `is_paused_siapkan`, `paused_at_siapkan`, `total_pause_secs_siapkan`, `pernah_pause_siapkan`, `paused_at`, `pernah_pause`, `is_archived`, `archived_at`, `archived_by`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 'KK0409260001', '2026-09-04', '2026-09-04 09:38:44', 'JLS', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, 0, NULL, 0, 0, NULL, 0, 0, NULL, NULL, 'Admin SC', '2026-09-04 09:38:44', '2026-09-04 09:38:44');
+(1, 'KK2108260001', '2026-08-21', '2026-08-21 14:23:20', 'JLS', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, 0, NULL, 0, 0, NULL, 0, 0, NULL, NULL, 'admlog', '2026-08-21 14:23:20', '2026-08-21 14:23:20'),
+(2, 'KK2309260001', '2026-09-23', '2026-09-23 13:41:22', 'PRB', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, 0, NULL, 0, 0, NULL, 0, 0, NULL, NULL, 'admlog', '2026-09-23 13:41:22', '2026-09-23 13:41:22'),
+(3, 'KK2309260002', '2026-09-23', '2026-09-23 13:42:15', 'JBR', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, 0, NULL, 0, 0, NULL, 0, 0, NULL, NULL, 'Admin SC', '2026-09-23 13:42:15', '2026-09-23 13:42:15');
 
 -- --------------------------------------------------------
 
@@ -94760,7 +97174,9 @@ CREATE TABLE `tb_loading_lk` (
 --
 
 INSERT INTO `tb_loading_lk` (`id`, `kode`, `tgl`, `waktu_siap_loading`, `keterangan`, `pintu`, `waktu_do_selesai`, `waktu_cetak_do`, `waktu_mulai_siapkan`, `waktu_selesai_siapkan`, `nik_checker`, `nm_checker`, `waktu_mulai`, `waktu_selesai`, `progres`, `progres_siapkan`, `status`, `is_paused`, `is_paused_siapkan`, `paused_at_siapkan`, `total_pause_secs_siapkan`, `pernah_pause_siapkan`, `total_pause_secs`, `paused_at`, `pernah_pause`, `is_archived`, `archived_at`, `archived_by`, `created_by`, `created_role`, `created_at`, `updated_at`) VALUES
-(1, 'LK0409260001', '2026-09-04', '2026-09-04 09:45:24', 'MD-1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, NULL, 0, 0, 0, NULL, 0, 0, NULL, NULL, 'Admin SC', NULL, '2026-09-04 09:45:24', '2026-09-04 09:45:24');
+(1, 'LK2108260001', '2026-08-21', '2026-08-21 14:23:25', 'MD-1', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, NULL, 0, 0, 0, NULL, 0, 0, NULL, NULL, 'admlog', NULL, '2026-08-21 14:23:25', '2026-08-21 14:23:25'),
+(2, 'LK2209260001', '2026-09-22', '2026-09-22 11:00:48', 'MLG', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, NULL, 0, 0, 0, NULL, 0, 0, NULL, NULL, 'Admin SC', NULL, '2026-09-22 11:00:48', '2026-09-22 11:00:48'),
+(3, 'LK2309260001', '2026-09-23', '2026-09-23 13:41:17', 'MD-2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 'SIAP_LOADING', 0, 0, NULL, 0, 0, 0, NULL, 0, 0, NULL, NULL, 'admlog', NULL, '2026-09-23 13:41:17', '2026-09-23 13:41:17');
 
 -- --------------------------------------------------------
 
@@ -95844,70 +98260,117 @@ INSERT INTO `tb_login_log` (`id`, `id_karyawan`, `username`, `ip_address`, `brow
 (1017, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:24:48'),
 (1018, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:44:01'),
 (1019, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 12:27:41'),
-(1020, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 08:24:03'),
-(1021, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:02:27'),
-(1022, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:02:39'),
-(1023, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:23:13'),
-(1024, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:28:10'),
-(1025, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:35:06'),
-(1026, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:35:33'),
-(1027, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:35:54'),
-(1028, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:41:13'),
-(1029, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:44:55'),
-(1030, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:44:59'),
-(1031, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:47:53'),
-(1032, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 09:57:05'),
-(1033, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:06:12'),
-(1034, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:08:50'),
-(1035, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:10:01'),
-(1036, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:18:59'),
-(1037, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:19:12'),
-(1038, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:21:39'),
-(1039, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:23:16'),
-(1040, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 10:27:34'),
-(1041, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:13:32'),
-(1042, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:14:04'),
-(1043, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:14:50'),
-(1044, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:16:59'),
-(1045, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:24:55'),
-(1046, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:27:08'),
-(1047, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:27:55'),
-(1048, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:28:39'),
-(1049, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 11:30:28'),
-(1050, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 13:26:50'),
-(1051, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 13:30:39'),
-(1052, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 13:30:55'),
-(1053, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 14:02:54'),
-(1054, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-08-24 15:29:39'),
-(1055, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-26 08:22:35'),
-(1056, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-26 09:18:42'),
-(1057, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-26 12:39:43'),
-(1058, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-26 14:09:52'),
-(1059, 205, 'admin', '10.10.10.57', NULL, NULL, NULL, '2026-08-26 14:28:46'),
-(1060, 89, 'loby', '127.0.0.1', NULL, NULL, NULL, '2026-08-26 15:56:12'),
-(1061, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-27 08:35:22'),
-(1062, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-27 12:50:22'),
-(1063, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-27 12:50:31'),
-(1064, 205, 'admin', '::1', NULL, NULL, NULL, '2026-08-27 18:33:44'),
-(1065, 205, 'admin', '::1', NULL, NULL, NULL, '2026-08-27 18:33:50'),
-(1066, NULL, 'root', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 08:17:20'),
-(1067, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 08:17:29'),
-(1068, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 08:28:53'),
-(1069, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:18:31'),
-(1070, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:19:28'),
-(1071, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:31:51'),
-(1072, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:36:49'),
-(1073, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:38:27'),
-(1074, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 09:46:11'),
-(1075, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 10:08:56'),
-(1076, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 12:57:23'),
-(1077, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:01:18'),
-(1078, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:04:20'),
-(1079, 74, 'kadepsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:10:00'),
-(1080, 74, 'kadepsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:10:09'),
-(1081, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:10:31'),
-(1082, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:16:50'),
-(1083, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-04 13:17:33');
+(1020, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:23:32'),
+(1021, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:48:59'),
+(1022, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:53:07'),
+(1023, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:54:05'),
+(1024, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:57:30'),
+(1025, 216, 'admlpb2', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 10:57:44'),
+(1026, 215, 'admretur', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 11:01:19'),
+(1027, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 11:07:40'),
+(1028, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 11:07:51'),
+(1029, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 11:07:58'),
+(1030, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 11:11:18'),
+(1031, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:22:17'),
+(1032, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:22:44'),
+(1033, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:23:14'),
+(1034, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:24:02'),
+(1035, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:29:23'),
+(1036, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:34:43'),
+(1037, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:34:50'),
+(1038, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:37:27'),
+(1039, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:38:19'),
+(1040, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:39:04'),
+(1041, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:39:47'),
+(1042, 211, 'kiukeu', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:41:02'),
+(1043, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-11 13:44:00'),
+(1044, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-11 13:53:16'),
+(1045, 205, 'admin', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 08:14:42'),
+(1046, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 09:35:40'),
+(1047, NULL, 'amlpb', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 10:47:05'),
+(1048, 207, 'admlpb', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 10:47:12'),
+(1049, 205, 'admin', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 11:10:31'),
+(1050, 207, 'admlpb', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 11:15:09'),
+(1051, 207, 'admlpb', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 11:15:14'),
+(1052, 205, 'admin', '10.10.10.69', NULL, NULL, NULL, '2026-09-12 11:18:54'),
+(1053, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-12 13:37:58'),
+(1054, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:11:35'),
+(1055, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:11:45'),
+(1056, 223, 'admpnj', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:14:37'),
+(1057, NULL, 'admin1234', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:34:12'),
+(1058, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:44:10'),
+(1059, 223, 'admpnj', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:45:07'),
+(1060, 223, 'admpnj', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:45:36'),
+(1061, 74, 'kadepsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-12 14:46:10'),
+(1062, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-14 09:46:44'),
+(1063, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-14 10:31:00'),
+(1064, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-09-14 14:28:28'),
+(1065, 207, 'admlpb', '127.0.0.1', NULL, NULL, NULL, '2026-09-14 14:28:33'),
+(1066, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-14 14:53:44'),
+(1067, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 09:41:55'),
+(1068, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 12:35:34'),
+(1069, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:02:04'),
+(1070, 74, 'kadepsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:51:56'),
+(1071, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:57:42'),
+(1072, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:57:54'),
+(1073, 74, 'kadepsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:58:09'),
+(1074, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:58:50'),
+(1075, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 13:58:59'),
+(1076, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 14:10:07'),
+(1077, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 14:21:05'),
+(1078, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 14:21:11'),
+(1079, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-15 14:23:00'),
+(1080, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-16 08:32:42'),
+(1081, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 08:42:41'),
+(1082, NULL, 'kiusc', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 09:07:48'),
+(1083, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 09:08:42'),
+(1084, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 09:10:29'),
+(1085, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 09:21:04'),
+(1086, 214, 'mngsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-17 09:23:15'),
+(1087, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-17 09:33:49'),
+(1088, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-18 08:07:55'),
+(1089, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-18 09:03:09'),
+(1090, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-19 09:16:17'),
+(1091, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-19 09:18:42'),
+(1092, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-19 10:11:15'),
+(1093, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-21 09:11:26'),
+(1094, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 09:18:03'),
+(1095, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 09:18:41'),
+(1096, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 09:19:05'),
+(1097, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 09:19:21'),
+(1098, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 09:33:33'),
+(1099, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:16:38'),
+(1100, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:24:18'),
+(1101, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:26:15'),
+(1102, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:29:16'),
+(1103, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:29:54'),
+(1104, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:31:18'),
+(1105, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 10:32:16'),
+(1106, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 11:00:57'),
+(1107, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 12:50:17'),
+(1108, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-22 13:23:00'),
+(1109, 68, 'kiuscc', '10.10.10.68', NULL, NULL, NULL, '2026-09-22 14:13:58'),
+(1110, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-22 15:39:29'),
+(1111, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 08:23:09'),
+(1112, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 09:54:12'),
+(1113, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 11:45:22'),
+(1114, 212, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:17:30'),
+(1115, 70, 'kiuscc2', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:17:38'),
+(1116, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:18:14'),
+(1117, 162, 'admlog', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:22:31'),
+(1118, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:23:02'),
+(1119, 213, 'admsc', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 12:25:16'),
+(1120, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:16:48'),
+(1121, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:33:26'),
+(1122, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:34:13'),
+(1123, 68, 'kiuscc', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:34:58'),
+(1124, 162, 'admlog', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:40:00'),
+(1125, 213, 'admsc', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:41:47'),
+(1126, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 13:42:31'),
+(1127, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 14:29:19'),
+(1128, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 14:35:19'),
+(1129, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-09-23 14:55:08'),
+(1130, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-09-23 15:36:23');
 
 -- --------------------------------------------------------
 
@@ -95929,11 +98392,23 @@ CREATE TABLE `tb_log_confirm_sales` (
 --
 
 INSERT INTO `tb_log_confirm_sales` (`id`, `kd_do`, `action`, `note`, `confirm_by`, `confirm_at`) VALUES
-(1, 'MD-1', 'siap', '', 'Reni', '2026-09-04 09:31:39'),
-(2, 'JLS', 'siap', '', 'Ariyani', '2026-09-04 09:36:27'),
-(3, 'KIUDO0409260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-04 09:38:44'),
-(4, 'KIUDO0409260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-04 09:44:52'),
-(5, 'KIUDO0409260003', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-1 selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-04 09:45:24');
+(1, 'JLS', 'siap', '', 'Ariyani', '2026-08-21 14:18:47'),
+(2, 'MD-1', 'siap', '', 'Reni', '2026-08-21 14:19:06'),
+(3, 'KIUDO2108260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'admlog', '2026-08-21 14:23:20'),
+(4, 'KIUDO2108260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-1 selesai difakturkan dan termuat semua.', 'admlog', '2026-08-21 14:23:25'),
+(5, 'MD-1', 'siap', '', 'Reni', '2026-09-11 13:34:34'),
+(6, 'JLS', 'siap', '', 'Ariyani', '2026-09-11 13:36:52'),
+(7, 'KIUDO1109260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JLS selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-11 13:39:34'),
+(8, 'KIUDO1109260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-1 selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-11 13:40:24'),
+(9, 'MLG', 'siap', '', 'Reni', '2026-09-22 10:26:42'),
+(10, 'MLG', 'siap', '', 'Reni', '2026-09-22 10:31:11'),
+(11, 'KIUDO2209260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MLG selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-22 11:00:48'),
+(12, 'PRB', 'siap', '', 'Ariyani', '2026-09-23 12:18:07'),
+(13, 'MD-2', 'siap', '', 'Reni', '2026-09-23 12:22:24'),
+(14, 'JBR', 'siap', '', 'Reni', '2026-09-23 13:39:02'),
+(15, 'KIUDO2309260001', 'siap', 'DO otomatis dibuat setelah seluruh SO rute MD-2 selesai difakturkan dan termuat semua.', 'admlog', '2026-09-23 13:41:17'),
+(16, 'KIUDO2309260002', 'siap', 'DO otomatis dibuat setelah seluruh SO rute PRB selesai difakturkan dan termuat semua.', 'admlog', '2026-09-23 13:41:22'),
+(17, 'KIUDO2309260003', 'siap', 'DO otomatis dibuat setelah seluruh SO rute JBR selesai difakturkan dan termuat semua.', 'Admin SC', '2026-09-23 13:42:15');
 
 -- --------------------------------------------------------
 
@@ -95955,9 +98430,14 @@ CREATE TABLE `tb_log_do` (
 --
 
 INSERT INTO `tb_log_do` (`id_log`, `kd_do`, `tgl_input`, `keterangan`, `inputer`, `create_at`) VALUES
-(1, 'KIUDO0409260001', '04/09/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-04 02:38:44'),
-(2, 'KIUDO0409260002', '04/09/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-04 02:44:52'),
-(3, 'KIUDO0409260003', '04/09/2026', 'AUTO DO RUTE MD-1 dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-04 02:45:24');
+(1, 'KIUDO2108260001', '21/08/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh admlog', 'admlog', '2026-08-21 07:23:20'),
+(2, 'KIUDO2108260002', '21/08/2026', 'AUTO DO RUTE MD-1 dari faktur Admin SC & Checker oleh admlog', 'admlog', '2026-08-21 07:23:25'),
+(3, 'KIUDO1109260001', '11/09/2026', 'AUTO DO RUTE JLS dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-11 06:39:34'),
+(4, 'KIUDO1109260002', '11/09/2026', 'AUTO DO RUTE MD-1 dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-11 06:40:24'),
+(5, 'KIUDO2209260001', '22/09/2026', 'AUTO DO RUTE MLG dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-22 04:00:48'),
+(6, 'KIUDO2309260001', '23/09/2026', 'AUTO DO RUTE MD-2 dari faktur Admin SC & Checker oleh admlog', 'admlog', '2026-09-23 06:41:17'),
+(7, 'KIUDO2309260002', '23/09/2026', 'AUTO DO RUTE PRB dari faktur Admin SC & Checker oleh admlog', 'admlog', '2026-09-23 06:41:22'),
+(8, 'KIUDO2309260003', '23/09/2026', 'AUTO DO RUTE JBR dari faktur Admin SC & Checker oleh Admin SC', 'Admin SC', '2026-09-23 06:42:15');
 
 -- --------------------------------------------------------
 
@@ -96009,6 +98489,8 @@ CREATE TABLE `tb_lpb` (
   `no_po` varchar(100) DEFAULT NULL,
   `no_invoice` varchar(50) DEFAULT NULL,
   `gudang_id` int DEFAULT NULL,
+  `kd_suplier` varchar(50) DEFAULT NULL,
+  `nama_suplier` varchar(255) DEFAULT NULL,
   `keterangan` text,
   `input_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `checker_at` datetime DEFAULT NULL,
@@ -96030,10 +98512,18 @@ CREATE TABLE `tb_lpb` (
 -- Dumping data untuk tabel `tb_lpb`
 --
 
-INSERT INTO `tb_lpb` (`id_lpb`, `kd_po`, `nosj`, `tgl_sj`, `no_po`, `no_invoice`, `gudang_id`, `keterangan`, `input_at`, `checker_at`, `checker_by`, `checker_name`, `jenis_lpb`, `kode_faktur_pajak`, `nomor_lpb`, `status_lpb`, `tanggal_faktur_pajak`, `tanggal_invoice`, `tgl_perubahan_invoice`, `tgl_riil_invoice`, `source_type`, `manual_ref_no`) VALUES
-(1, 'SKPO040926PUPUK030001', '001111', '2026-08-03', 'Q001/KIU/IX/2026', '-', 2, 'trial', '2026-09-04 08:34:11', '2026-09-04 08:34:11', 'nando', 'nando', 'LPB CP', NULL, '2600001', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
-(2, 'SKPO040926SYNGE020002', '112221', '2026-08-13', 'Q001/KIU/IX/2026A', '-', 2, 'trial', '2026-09-04 08:42:23', '2026-09-04 08:42:23', 'sholeh', 'sholeh', 'LPB Benih', NULL, '2600001B', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
-(3, 'SKPO040926SYNGE020002', '1410112', '2026-08-12', 'Q001/KIU/IX/2026A', '-', 2, 'trial', '2026-09-04 09:17:53', '2026-09-04 09:17:53', 'rico', 'rico', 'LPB Benih', NULL, '2600002B', 1, NULL, NULL, NULL, NULL, 'PO', NULL);
+INSERT INTO `tb_lpb` (`id_lpb`, `kd_po`, `nosj`, `tgl_sj`, `no_po`, `no_invoice`, `gudang_id`, `kd_suplier`, `nama_suplier`, `keterangan`, `input_at`, `checker_at`, `checker_by`, `checker_name`, `jenis_lpb`, `kode_faktur_pajak`, `nomor_lpb`, `status_lpb`, `tanggal_faktur_pajak`, `tanggal_invoice`, `tgl_perubahan_invoice`, `tgl_riil_invoice`, `source_type`, `manual_ref_no`) VALUES
+(1, 'SKPO210826PUPUK030001', '01010001', '2026-08-03', 'Q001/KIU/VIII/2026', '-', 2, NULL, NULL, 'trial', '2026-08-21 14:09:38', '2026-08-21 14:09:38', 'Soleh', 'Soleh', 'LPB CP', NULL, '2600001', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(2, 'SKPO210826SYNGE020002', '01050', '2026-08-13', 'Q001/KIU/VIII/2026A', '-', 2, NULL, NULL, 'trial', '2026-08-21 14:10:19', '2026-08-21 14:10:19', 'Soleh', 'Soleh', 'LPB Benih', NULL, '2600001B', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(3, 'SKPO210826SYNGE020002', '98580', '2026-08-15', 'Q001/KIU/VIII/2026A', '-', 2, NULL, NULL, 'trial', '2026-08-21 14:12:10', '2026-08-21 14:12:10', 'Soleh', 'Soleh', 'LPB Benih', NULL, '2600002B', 1, NULL, NULL, NULL, NULL, 'PO', NULL),
+(4, 'LPBM2609110001', '20222222', '2026-10-15', 'LPBM2609110001', '0', 2, NULL, NULL, 'Bonus dari MIA', '2026-09-11 14:15:23', '2026-09-11 14:15:23', 'QIUK11111', 'admin', 'LPB Promosi', NULL, 'X2600001', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609110001'),
+(5, 'LPBM2609110002', '-', '2026-08-17', 'LPBM2609110002', '-', 2, NULL, NULL, 'Penerimaan Barang PO LPBM2609110002', '2026-09-11 14:59:56', '2026-09-11 14:59:56', 'QIUK11111', 'admin', 'LPB Benih', NULL, '2600003B', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609110002'),
+(6, 'LPBM2609110003', '11234', '2026-09-11', 'LPBM2609110003', '-', 2, NULL, NULL, 'barang promosi', '2026-09-11 15:14:39', '2026-09-11 15:14:39', 'QIUK11111', 'admin', 'LPB Promosi', NULL, 'X2600002', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609110003'),
+(7, 'LPBM2609120001', '330211', '2026-09-12', 'LPBM2609120001', '-', 10, NULL, NULL, '', '2026-09-12 11:17:28', '2026-09-12 11:17:28', 'QIUK1122', 'admlpb', 'LPB Benih', NULL, '2600004B', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609120001'),
+(8, 'LPBM2609120002', '225151', '2026-09-12', 'LPBM2609120002', '-', 2, NULL, NULL, 'kelebihan kirim', '2026-09-12 11:18:38', '2026-09-12 11:18:38', 'QIUK1122', 'admlpb', 'LPB Benih', NULL, '2600005B', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609120002'),
+(9, 'LPBM2609140001', '-', '2026-09-14', 'LPBM2609140001', '-', 10, 'SYNGE02', 'PT.Syngenta Seed', 'barang titipan petugas', '2026-09-14 14:28:06', '2026-09-14 14:28:06', 'QIUK11111', 'admin', 'LPB Benih', NULL, '2600006B', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609140001'),
+(10, 'LPBM2609140002', '-', '2026-09-14', 'LPBM2609140002', '-', 2, 'SYNGE01', 'PT.Syngenta Indonesia', 'barang titipan petugas 2', '2026-09-14 14:30:18', '2026-09-14 14:30:18', 'QIUK1122', 'admlpb', 'LPB CP', NULL, '2600002', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609140002'),
+(11, 'LPBM2609150001', '11221', '2026-09-15', 'LPBM2609150001', '-', 2, 'PUPUK03', 'Pupuk Karya Polowijo, PT', 'barang masu', '2026-09-15 10:14:47', '2026-09-15 10:14:47', 'QIUK11111', 'admin', 'LPB CP', NULL, '2600003', 1, NULL, NULL, NULL, NULL, 'MANUAL', 'LPBM2609150001');
 
 -- --------------------------------------------------------
 
@@ -96054,12 +98544,20 @@ CREATE TABLE `tb_lpb_batch` (
 --
 
 INSERT INTO `tb_lpb_batch` (`id_batch`, `id_detail_lpb`, `no_lot`, `expired_date`, `qty`) VALUES
-(1, 1, '11231', '2027-01-01', 140.00),
-(2, 2, '1123514', '2027-02-01', 50.00),
-(3, 3, '112233', '2027-02-01', 6000.00),
-(4, 4, '336655', '2027-02-01', 1000.00),
-(5, 5, '556633', '2027-02-01', 70.00),
-(6, 6, '00212', '2027-02-01', 2500.00);
+(1, 1, '101011', '2028-01-21', 50.00),
+(2, 2, '101012', '2027-08-21', 140.00),
+(3, 3, '101013', '2030-04-21', 1000.00),
+(4, 4, '101015', '2028-04-21', 6000.00),
+(5, 5, '101019', '2027-06-21', 70.00),
+(6, 6, '1010101', '2027-11-21', 2500.00),
+(7, 7, '0', '1000-01-01', 50.00),
+(8, 8, '256984ADF', '2028-01-01', 20.00),
+(9, 9, '1111', '1000-09-11', 250.00),
+(10, 10, '1242524', '2027-01-01', 10.00),
+(11, 11, '0454554', '2027-01-01', 90.00),
+(12, 12, '1121404', '2027-01-01', 10.00),
+(13, 13, '2236', '2027-01-01', 10.00),
+(14, 14, '33212', '2026-12-31', 100.00);
 
 -- --------------------------------------------------------
 
@@ -96075,14 +98573,14 @@ CREATE TABLE `tb_lpb_detail` (
   `no_lot` varchar(50) DEFAULT NULL,
   `expired_date` date DEFAULT NULL,
   `input_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `harga_satuan` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `harga_satuan_sebelumnya` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `harga_satuan` decimal(18,4) NOT NULL DEFAULT '0.0000',
+  `harga_satuan_sebelumnya` decimal(18,4) NOT NULL DEFAULT '0.0000',
   `harga_update_at` datetime DEFAULT NULL,
   `harga_update_by` varchar(100) DEFAULT NULL,
   `harga_verified_at` datetime DEFAULT NULL,
   `harga_verified_by` varchar(100) DEFAULT NULL,
-  `total_harga` decimal(20,5) NOT NULL DEFAULT '0.00000',
-  `total_harga_sebelumnya` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `total_harga` decimal(18,4) NOT NULL DEFAULT '0.0000',
+  `total_harga_sebelumnya` decimal(18,4) NOT NULL DEFAULT '0.0000',
   `sales_disc` decimal(15,2) DEFAULT '0.00',
   `cbd` decimal(15,2) DEFAULT '0.00',
   `foc` decimal(15,2) DEFAULT '0.00',
@@ -96098,12 +98596,20 @@ CREATE TABLE `tb_lpb_detail` (
 --
 
 INSERT INTO `tb_lpb_detail` (`id_detail_lpb`, `id_lpb`, `kd_barang`, `qty_diterima`, `no_lot`, `expired_date`, `input_at`, `harga_satuan`, `harga_satuan_sebelumnya`, `harga_update_at`, `harga_update_by`, `harga_verified_at`, `harga_verified_by`, `total_harga`, `total_harga_sebelumnya`, `sales_disc`, `cbd`, `foc`, `insentif_cn`, `dpp`, `ppn_11`, `ppn_12`, `dpp_nilai_lain`) VALUES
-(1, 1, 'QCHAM04', 140.00, '11231', '2027-01-01', '2026-09-04 08:34:11', 180180.18020, 0.00000, NULL, NULL, NULL, NULL, 25225225.22800, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(2, 1, 'QPUPU16', 50.00, '1123514', '2027-02-01', '2026-09-04 08:34:11', 41441.44140, 0.00000, NULL, NULL, NULL, NULL, 2072072.07000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(3, 1, 'QROUN011', 6000.00, '112233', '2027-02-01', '2026-09-04 08:34:11', 63963.96400, 0.00000, NULL, NULL, NULL, NULL, 383783784.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(4, 1, 'QSPON081', 1000.00, '336655', '2027-02-01', '2026-09-04 08:34:11', 75405.40540, 0.00000, NULL, NULL, NULL, NULL, 75405405.40000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(5, 2, 'QTOMA06', 70.00, '556633', '2027-02-01', '2026-09-04 08:42:23', 35000.00000, 0.00000, NULL, NULL, NULL, NULL, 2450000.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
-(6, 3, 'QPADI45', 2500.00, '00212', '2027-02-01', '2026-09-04 09:17:53', 95000.00000, 0.00000, NULL, NULL, NULL, NULL, 237500000.00000, 0.00000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00);
+(1, 1, 'QPUPU16', 50.00, '101011', '2028-01-21', '2026-08-21 14:09:38', 41441.4414, 0.0000, NULL, NULL, NULL, NULL, 2072072.0700, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(2, 1, 'QCHAM04', 140.00, '101012', '2027-08-21', '2026-08-21 14:09:38', 180180.1802, 0.0000, NULL, NULL, NULL, NULL, 25225225.2280, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(3, 1, 'QSPON081', 1000.00, '101013', '2030-04-21', '2026-08-21 14:09:38', 75405.4054, 0.0000, NULL, NULL, NULL, NULL, 75405405.4000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(4, 1, 'QROUN011', 6000.00, '101015', '2028-04-21', '2026-08-21 14:09:38', 63963.9640, 0.0000, NULL, NULL, NULL, NULL, 383783784.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(5, 2, 'QTOMA06', 70.00, '101019', '2027-06-21', '2026-08-21 14:10:19', 40000.0000, 0.0000, NULL, NULL, NULL, NULL, 2800000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(6, 3, 'QPADI45', 2500.00, '1010101', '2027-11-21', '2026-08-21 14:12:10', 95000.0000, 0.0000, NULL, NULL, NULL, NULL, 237500000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(7, 4, 'ZZUMBU05', 50.00, '0', '1000-01-01', '2026-09-11 14:15:23', 0.0000, 0.0000, NULL, NULL, NULL, NULL, 0.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(8, 5, 'QTOMA06', 20.00, '256984ADF', '2028-01-01', '2026-09-11 14:59:56', 50000.0000, 0.0000, NULL, NULL, '2026-09-11 14:59:56', 'admin', 1000000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(9, 6, 'ZZKAOS28', 250.00, '1111', '1000-09-11', '2026-09-11 15:14:39', 15000.0000, 0.0000, NULL, NULL, '2026-09-11 15:14:39', 'admin', 3750000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(10, 7, 'QPADI45', 10.00, '1242524', '2027-01-01', '2026-09-12 11:17:28', 0.0000, 0.0000, NULL, NULL, NULL, NULL, 0.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(11, 8, 'QPADI45', 90.00, '0454554', '2027-01-01', '2026-09-12 11:18:38', 95000.0000, 0.0000, '2026-09-12 11:20:00', 'admin', NULL, NULL, 8550000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(12, 9, 'QPADI45', 10.00, '1121404', '2027-01-01', '2026-09-14 14:28:06', 45000.0000, 0.0000, NULL, NULL, '2026-09-14 14:28:06', 'admin', 450000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(13, 10, 'QPADI45', 10.00, '2236', '2027-01-01', '2026-09-14 14:30:18', 45000.0000, 0.0000, '2026-09-14 14:59:53', 'admin', NULL, NULL, 450000.0000, 0.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00),
+(14, 11, 'QSPON081', 100.00, '33212', '2026-12-31', '2026-09-15 10:14:47', 65000.0000, 6540541.0000, '2026-09-15 10:16:10', 'admin', NULL, NULL, 6500000.0000, 654054100.0000, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -96133,9 +98639,25 @@ CREATE TABLE `tb_lpb_log` (
 --
 
 INSERT INTO `tb_lpb_log` (`id_log`, `kd_po`, `no_invoice`, `action_type`, `keterangan`, `dilakukan_oleh`, `dilakukan_pada`, `checker_by`, `checker_name`, `data_after`, `data_before`, `id_lpb`, `status_after`, `status_before`) VALUES
-(1, 'SKPO040926PUPUK030001', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admin', '2026-09-04 08:34:11', 'nando', 'nando', '{\"id_lpb\":1,\"nomor_lpb\":\"2600001\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"001111\",\"tgl_sj\":\"2026-08-03\",\"status_lpb\":1,\"checker_name\":\"nando\"}', NULL, 1, 'POST', NULL),
-(2, 'SKPO040926SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admin', '2026-09-04 08:42:23', 'sholeh', 'sholeh', '{\"id_lpb\":2,\"nomor_lpb\":\"2600001B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"112221\",\"tgl_sj\":\"2026-08-13\",\"status_lpb\":1,\"checker_name\":\"sholeh\"}', NULL, 2, 'POST', NULL),
-(3, 'SKPO040926SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admin', '2026-09-04 09:17:53', 'rico', 'rico', '{\"id_lpb\":3,\"nomor_lpb\":\"2600002B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"1410112\",\"tgl_sj\":\"2026-08-12\",\"status_lpb\":1,\"checker_name\":\"rico\"}', NULL, 3, 'POST', NULL);
+(1, 'SKPO210826PUPUK030001', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-21 14:09:38', 'Soleh', 'Soleh', '{\"id_lpb\":1,\"nomor_lpb\":\"2600001\",\"jenis_lpb\":\"LPB CP\",\"nosj\":\"01010001\",\"tgl_sj\":\"2026-08-03\",\"status_lpb\":1,\"checker_name\":\"Soleh\"}', NULL, 1, 'POST', NULL),
+(2, 'SKPO210826SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-21 14:10:19', 'Soleh', 'Soleh', '{\"id_lpb\":2,\"nomor_lpb\":\"2600001B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"01050\",\"tgl_sj\":\"2026-08-13\",\"status_lpb\":1,\"checker_name\":\"Soleh\"}', NULL, 2, 'POST', NULL),
+(3, 'SKPO210826SYNGE020002', '-', 'CREATE_LPB', 'Draft temporary penerimaan direkam otomatis menjadi POST', 'admlpb', '2026-08-21 14:12:10', 'Soleh', 'Soleh', '{\"id_lpb\":3,\"nomor_lpb\":\"2600002B\",\"jenis_lpb\":\"LPB Benih\",\"nosj\":\"98580\",\"tgl_sj\":\"2026-08-15\",\"status_lpb\":1,\"checker_name\":\"Soleh\"}', NULL, 3, 'POST', NULL),
+(4, 'LPBM2609110001', '0', 'CREATE_LPB_MANUAL', 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.', 'admin', '2026-09-11 14:15:23', 'QIUK11111', 'admin', '{\"id_lpb\":4,\"manual_ref_no\":\"LPBM2609110001\",\"nomor_lpb\":\"X2600001\",\"jenis_lpb\":\"LPB Promosi\",\"source_type\":\"MANUAL\",\"status_lpb\":1,\"total_detail\":1}', NULL, 4, 'POST', NULL),
+(5, 'LPBM2609110002', '-', 'CREATE_LPB_MANUAL', 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.', 'admin', '2026-09-11 14:59:56', 'QIUK11111', 'admin', '{\"id_lpb\":5,\"manual_ref_no\":\"LPBM2609110002\",\"nomor_lpb\":\"2600003B\",\"jenis_lpb\":\"LPB Benih\",\"source_type\":\"MANUAL\",\"status_lpb\":1,\"total_detail\":1}', NULL, 5, 'POST', NULL),
+(6, 'LPBM2609110003', '-', 'CREATE_LPB_MANUAL', 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.', 'admin', '2026-09-11 15:14:39', 'QIUK11111', 'admin', '{\"id_lpb\":6,\"manual_ref_no\":\"LPBM2609110003\",\"nomor_lpb\":\"X2600002\",\"jenis_lpb\":\"LPB Promosi\",\"source_type\":\"MANUAL\",\"status_lpb\":1,\"total_detail\":1}', NULL, 6, 'POST', NULL),
+(7, 'LPBM2609120001', '-', 'CREATE_LPB_MANUAL_DRAFT', 'LPB Manual dibuat oleh Admin LPB (Logistik) sebagai DRAFT, menunggu pengisian harga dan posting final oleh Purchasing.', 'admlpb', '2026-09-12 11:17:28', 'QIUK1122', 'admlpb', '{\"id_lpb\":7,\"manual_ref_no\":\"LPBM2609120001\",\"nomor_lpb\":\"2600004B\",\"jenis_lpb\":\"LPB Benih\",\"source_type\":\"MANUAL\",\"status_lpb\":0,\"total_detail\":1}', NULL, 7, 'UNPOST', NULL),
+(8, 'LPBM2609120002', '-', 'CREATE_LPB_MANUAL_DRAFT', 'LPB Manual dibuat oleh Admin LPB (Logistik) sebagai DRAFT, menunggu pengisian harga dan posting final oleh Purchasing.', 'admlpb', '2026-09-12 11:18:38', 'QIUK1122', 'admlpb', '{\"id_lpb\":8,\"manual_ref_no\":\"LPBM2609120002\",\"nomor_lpb\":\"2600005B\",\"jenis_lpb\":\"LPB Benih\",\"source_type\":\"MANUAL\",\"status_lpb\":0,\"total_detail\":1}', NULL, 8, 'UNPOST', NULL),
+(9, 'LPBM2609120001', '-', 'POST_LPB', 'Rekam LPB: Status LPB dari \"UNPOST\" menjadi \"POST\". Keterangan: LPB direkam ulang menjadi POST.', 'admin', '2026-09-12 11:19:28', 'QIUK1122', 'admlpb', '{\"status_lpb\":1}', '{\"status_lpb\":\"0\"}', 7, 'POST', 'UNPOST'),
+(10, 'LPBM2609120002', '-', 'UPDATE_LPB_DETAIL_PRICE', 'Update harga detail LPB barang QPADI45: Qty LPB dari \"90\" menjadi \"90\"; Harga Satuan dari \"0\" menjadi \"95000\"; Total Harga dari \"0\" menjadi \"8550000\".', 'admin', '2026-09-12 11:20:00', 'QIUK1122', 'admlpb', '{\"id_detail_lpb\":11,\"kd_barang\":\"QPADI45\",\"qty_diterima\":90,\"harga_satuan\":95000,\"total_harga\":8550000}', '{\"id_detail_lpb\":11,\"kd_barang\":\"QPADI45\",\"qty_diterima\":\"90.00\",\"harga_satuan\":0,\"total_harga\":0}', 8, 'UNPOST', 'UNPOST'),
+(11, 'LPBM2609120002', '-', 'POST_LPB', 'Rekam LPB: Status LPB dari \"UNPOST\" menjadi \"POST\". Keterangan: LPB direkam ulang menjadi POST.', 'admin', '2026-09-12 11:20:06', 'QIUK1122', 'admlpb', '{\"status_lpb\":1}', '{\"status_lpb\":\"0\"}', 8, 'POST', 'UNPOST'),
+(12, 'LPBM2609140001', '-', 'CREATE_LPB_MANUAL', 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.', 'admin', '2026-09-14 14:28:06', 'QIUK11111', 'admin', '{\"id_lpb\":9,\"manual_ref_no\":\"LPBM2609140001\",\"nomor_lpb\":\"2600006B\",\"jenis_lpb\":\"LPB Benih\",\"source_type\":\"MANUAL\",\"status_lpb\":1,\"total_detail\":1}', NULL, 9, 'POST', NULL),
+(13, 'LPBM2609140002', '-', 'CREATE_LPB_MANUAL_DRAFT', 'LPB Manual dibuat oleh Admin LPB (Logistik) sebagai DRAFT, menunggu pengisian harga dan posting final oleh Purchasing.', 'admlpb', '2026-09-14 14:30:18', 'QIUK1122', 'admlpb', '{\"id_lpb\":10,\"manual_ref_no\":\"LPBM2609140002\",\"nomor_lpb\":\"2600002\",\"jenis_lpb\":\"LPB CP\",\"source_type\":\"MANUAL\",\"status_lpb\":0,\"total_detail\":1}', NULL, 10, 'UNPOST', NULL),
+(14, 'LPBM2609140002', '-', 'UPDATE_LPB_DETAIL_PRICE', 'Update harga detail LPB barang QPADI45: Qty LPB dari \"10\" menjadi \"10\"; Harga Satuan dari \"0\" menjadi \"45000\"; Total Harga dari \"0\" menjadi \"450000\".', 'admin', '2026-09-14 14:59:53', 'QIUK1122', 'admlpb', '{\"id_detail_lpb\":13,\"kd_barang\":\"QPADI45\",\"qty_diterima\":10,\"harga_satuan\":45000,\"total_harga\":450000}', '{\"id_detail_lpb\":13,\"kd_barang\":\"QPADI45\",\"qty_diterima\":\"10.00\",\"harga_satuan\":0,\"total_harga\":0}', 10, 'UNPOST', 'UNPOST'),
+(15, 'LPBM2609140002', '-', 'POST_LPB', 'Rekam LPB: Status LPB dari \"UNPOST\" menjadi \"POST\". Keterangan: LPB direkam ulang menjadi POST.', 'admin', '2026-09-14 14:59:59', 'QIUK1122', 'admlpb', '{\"status_lpb\":1}', '{\"status_lpb\":\"0\"}', 10, 'POST', 'UNPOST'),
+(16, 'LPBM2609150001', '-', 'CREATE_LPB_MANUAL', 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.', 'admin', '2026-09-15 10:14:47', 'QIUK11111', 'admin', '{\"id_lpb\":11,\"manual_ref_no\":\"LPBM2609150001\",\"nomor_lpb\":\"2600003\",\"jenis_lpb\":\"LPB CP\",\"source_type\":\"MANUAL\",\"status_lpb\":1,\"total_detail\":1}', NULL, 11, 'POST', NULL),
+(17, 'LPBM2609150001', '-', 'UNPOST_LPB', 'UNPOST LPB: Status LPB dari \"POST\" menjadi \"UNPOST\". Keterangan: revisi harga', 'admin', '2026-09-15 10:15:47', 'QIUK11111', 'admin', '{\"status_lpb\":0}', '{\"status_lpb\":\"1\"}', 11, 'UNPOST', 'POST'),
+(18, 'LPBM2609150001', '-', 'UPDATE_LPB_DETAIL_PRICE', 'Update harga detail LPB barang QSPON081: Qty LPB dari \"100\" menjadi \"100\"; Harga Satuan dari \"6540541\" menjadi \"65000\"; Total Harga dari \"654054100\" menjadi \"6500000\".', 'admin', '2026-09-15 10:16:10', 'QIUK11111', 'admin', '{\"id_detail_lpb\":14,\"kd_barang\":\"QSPON081\",\"qty_diterima\":100,\"harga_satuan\":65000,\"total_harga\":6500000}', '{\"id_detail_lpb\":14,\"kd_barang\":\"QSPON081\",\"qty_diterima\":\"100.00\",\"harga_satuan\":6540541,\"total_harga\":654054100}', 11, 'UNPOST', 'UNPOST'),
+(19, 'LPBM2609150001', '-', 'POST_LPB', 'Rekam LPB: Status LPB dari \"UNPOST\" menjadi \"POST\". Keterangan: LPB direkam ulang menjadi POST.', 'admin', '2026-09-15 10:16:21', 'QIUK11111', 'admin', '{\"status_lpb\":1}', '{\"status_lpb\":\"0\"}', 11, 'POST', 'UNPOST');
 
 -- --------------------------------------------------------
 
@@ -96156,6 +98678,20 @@ CREATE TABLE `tb_lpb_manual_log` (
   `ip_address` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `user_agent` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `tb_lpb_manual_log`
+--
+
+INSERT INTO `tb_lpb_manual_log` (`id_log`, `id_lpb`, `manual_ref_no`, `action_type`, `status`, `message`, `payload`, `created_by`, `created_at`, `ip_address`, `user_agent`) VALUES
+(1, 4, 'LPBM2609110001', 'CREATE_LPB_MANUAL', 'SUCCESS', 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.', '{\"header\":{\"kd_po\":\"LPBM2609110001\",\"no_po\":\"LPBM2609110001\",\"nosj\":\"20222222\",\"tgl_sj\":\"2026-10-15\",\"no_invoice\":\"0\",\"gudang_id\":2,\"keterangan\":\"Bonus dari MIA\",\"input_at\":\"2026-09-11 14:15:23\",\"jenis_lpb\":\"LPB Promosi\",\"nomor_lpb\":\"X2600001\",\"status_lpb\":1,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609110001\",\"checker_name\":\"admin\",\"checker_by\":\"QIUK11111\",\"checker_at\":\"2026-09-11 14:15:23\"},\"detail_rows\":[{\"kd_barang\":\"ZZUMBU05\",\"nama_barang\":\"Umbul-umbul Elazaro\",\"qty_diterima\":50,\"satuan\":\"Pcs\",\"no_lot\":\"0\",\"expired_date\":\"1000-01-01\",\"harga_satuan\":0,\"total_harga\":0}]}', 'admin', '2026-09-11 14:15:23', NULL, NULL),
+(2, 5, 'LPBM2609110002', 'CREATE_LPB_MANUAL', 'SUCCESS', 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.', '{\"header\":{\"kd_po\":\"LPBM2609110002\",\"no_po\":\"LPBM2609110002\",\"nosj\":\"-\",\"tgl_sj\":\"2026-08-17\",\"no_invoice\":\"-\",\"gudang_id\":2,\"keterangan\":\"\",\"input_at\":\"2026-09-11 14:59:56\",\"jenis_lpb\":\"LPB Benih\",\"nomor_lpb\":\"2600003B\",\"status_lpb\":1,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609110002\",\"checker_name\":\"admin\",\"checker_by\":\"QIUK11111\",\"checker_at\":\"2026-09-11 14:59:56\"},\"detail_rows\":[{\"kd_barang\":\"QTOMA06\",\"nama_barang\":\"Tomat Saviro 18 X 25 X 5 gr\",\"qty_diterima\":20,\"satuan\":\"Pack\",\"no_lot\":\"256984ADF\",\"expired_date\":\"2028-01-01\",\"harga_satuan\":45000,\"total_harga\":900000}]}', 'admin', '2026-09-11 14:59:56', NULL, NULL),
+(3, 6, 'LPBM2609110003', 'CREATE_LPB_MANUAL', 'SUCCESS', 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.', '{\"header\":{\"kd_po\":\"LPBM2609110003\",\"no_po\":\"LPBM2609110003\",\"nosj\":\"11234\",\"tgl_sj\":\"2026-09-11\",\"no_invoice\":\"-\",\"gudang_id\":2,\"keterangan\":\"barang promosi\",\"input_at\":\"2026-09-11 15:14:39\",\"jenis_lpb\":\"LPB Promosi\",\"nomor_lpb\":\"X2600002\",\"status_lpb\":1,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609110003\",\"checker_name\":\"admin\",\"checker_by\":\"QIUK11111\",\"checker_at\":\"2026-09-11 15:14:39\"},\"detail_rows\":[{\"kd_barang\":\"ZZKAOS28\",\"nama_barang\":\"Kaos Jialing\",\"qty_diterima\":250,\"satuan\":\"Pcs\",\"no_lot\":\"1111\",\"expired_date\":\"1000-09-11\",\"harga_satuan\":15000,\"total_harga\":3750000}]}', 'admin', '2026-09-11 15:14:39', NULL, NULL),
+(4, 7, 'LPBM2609120001', 'CREATE_LPB_MANUAL_DRAFT', 'SUCCESS', 'LPB Manual berhasil disimpan sebagai DRAFT oleh Admin LPB (stok tercatat di gudang fisik, status UNPOST menunggu pengisian harga Purchasing).', '{\"header\":{\"kd_po\":\"LPBM2609120001\",\"no_po\":\"LPBM2609120001\",\"nosj\":\"330211\",\"tgl_sj\":\"2026-09-12\",\"no_invoice\":\"-\",\"gudang_id\":10,\"keterangan\":\"\",\"input_at\":\"2026-09-12 11:17:28\",\"jenis_lpb\":\"LPB Benih\",\"nomor_lpb\":\"2600004B\",\"status_lpb\":0,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609120001\",\"checker_name\":\"admlpb\",\"checker_by\":\"QIUK1122\",\"checker_at\":\"2026-09-12 11:17:28\"},\"detail_rows\":[{\"kd_barang\":\"QPADI45\",\"nama_barang\":\"Padi NK 2133 20 X 1 kg\",\"qty_diterima\":10,\"satuan\":\"Pack\",\"no_lot\":\"1242524\",\"expired_date\":\"2027-01-01\",\"harga_satuan\":0,\"total_harga\":0}]}', 'admlpb', '2026-09-12 11:17:28', NULL, NULL),
+(5, 8, 'LPBM2609120002', 'CREATE_LPB_MANUAL_DRAFT', 'SUCCESS', 'LPB Manual berhasil disimpan sebagai DRAFT oleh Admin LPB (stok tercatat di gudang fisik, status UNPOST menunggu pengisian harga Purchasing).', '{\"header\":{\"kd_po\":\"LPBM2609120002\",\"no_po\":\"LPBM2609120002\",\"nosj\":\"225151\",\"tgl_sj\":\"2026-09-12\",\"no_invoice\":\"-\",\"gudang_id\":2,\"keterangan\":\"kelebihan kirim\",\"input_at\":\"2026-09-12 11:18:38\",\"jenis_lpb\":\"LPB Benih\",\"nomor_lpb\":\"2600005B\",\"status_lpb\":0,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609120002\",\"checker_name\":\"admlpb\",\"checker_by\":\"QIUK1122\",\"checker_at\":\"2026-09-12 11:18:38\"},\"detail_rows\":[{\"kd_barang\":\"QPADI45\",\"nama_barang\":\"Padi NK 2133 20 X 1 kg\",\"qty_diterima\":90,\"satuan\":\"Pack\",\"no_lot\":\"0454554\",\"expired_date\":\"2027-01-01\",\"harga_satuan\":0,\"total_harga\":0}]}', 'admlpb', '2026-09-12 11:18:38', NULL, NULL),
+(6, 9, 'LPBM2609140001', 'CREATE_LPB_MANUAL', 'SUCCESS', 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.', '{\"header\":{\"kd_po\":\"LPBM2609140001\",\"no_po\":\"LPBM2609140001\",\"nosj\":\"-\",\"tgl_sj\":\"2026-09-14\",\"no_invoice\":\"-\",\"gudang_id\":10,\"keterangan\":\"barang titipan petugas\",\"input_at\":\"2026-09-14 14:28:06\",\"jenis_lpb\":\"LPB Benih\",\"nomor_lpb\":\"2600006B\",\"status_lpb\":1,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609140001\",\"kd_suplier\":\"SYNGE02\",\"nama_suplier\":\"PT.Syngenta Seed\",\"checker_name\":\"admin\",\"checker_by\":\"QIUK11111\",\"checker_at\":\"2026-09-14 14:28:06\"},\"detail_rows\":[{\"kd_barang\":\"QPADI45\",\"nama_barang\":\"Padi NK 2133 20 X 1 kg\",\"qty_diterima\":10,\"satuan\":\"Pack\",\"no_lot\":\"1121404\",\"expired_date\":\"2027-01-01\",\"harga_satuan\":45000,\"total_harga\":450000}]}', 'admin', '2026-09-14 14:28:06', NULL, NULL),
+(7, 10, 'LPBM2609140002', 'CREATE_LPB_MANUAL_DRAFT', 'SUCCESS', 'LPB Manual berhasil disimpan sebagai DRAFT oleh Admin LPB (stok tercatat di gudang fisik, status UNPOST menunggu pengisian harga Purchasing).', '{\"header\":{\"kd_po\":\"LPBM2609140002\",\"no_po\":\"LPBM2609140002\",\"nosj\":\"-\",\"tgl_sj\":\"2026-09-14\",\"no_invoice\":\"-\",\"gudang_id\":2,\"keterangan\":\"barang titipan petugas 2\",\"input_at\":\"2026-09-14 14:30:18\",\"jenis_lpb\":\"LPB CP\",\"nomor_lpb\":\"2600002\",\"status_lpb\":0,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609140002\",\"kd_suplier\":\"SYNGE01\",\"nama_suplier\":\"PT.Syngenta Indonesia\",\"checker_name\":\"admlpb\",\"checker_by\":\"QIUK1122\",\"checker_at\":\"2026-09-14 14:30:18\"},\"detail_rows\":[{\"kd_barang\":\"QPADI45\",\"nama_barang\":\"Padi NK 2133 20 X 1 kg\",\"qty_diterima\":10,\"satuan\":\"Pack\",\"no_lot\":\"2236\",\"expired_date\":\"2027-01-01\",\"harga_satuan\":0,\"total_harga\":0}]}', 'admlpb', '2026-09-14 14:30:18', NULL, NULL),
+(8, 11, 'LPBM2609150001', 'CREATE_LPB_MANUAL', 'SUCCESS', 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.', '{\"header\":{\"kd_po\":\"LPBM2609150001\",\"no_po\":\"LPBM2609150001\",\"nosj\":\"11221\",\"tgl_sj\":\"2026-09-15\",\"no_invoice\":\"-\",\"gudang_id\":2,\"keterangan\":\"barang masu\",\"input_at\":\"2026-09-15 10:14:47\",\"jenis_lpb\":\"LPB CP\",\"nomor_lpb\":\"2600003\",\"status_lpb\":1,\"source_type\":\"MANUAL\",\"manual_ref_no\":\"LPBM2609150001\",\"kd_suplier\":\"PUPUK03\",\"nama_suplier\":\"Pupuk Karya Polowijo, PT\",\"checker_name\":\"admin\",\"checker_by\":\"QIUK11111\",\"checker_at\":\"2026-09-15 10:14:47\"},\"detail_rows\":[{\"kd_barang\":\"QSPON081\",\"nama_barang\":\"Spontas 450 SL 10 X 1 ltr\",\"qty_diterima\":100,\"satuan\":\"PCS\",\"no_lot\":\"33212\",\"expired_date\":\"2026-12-31\",\"harga_satuan\":6540541,\"total_harga\":654054100}]}', 'admin', '2026-09-15 10:14:47', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -111487,7 +114023,7 @@ CREATE TABLE `tb_retur_pembelian` (
 --
 
 INSERT INTO `tb_retur_pembelian` (`id_retur_pembelian`, `no_retur_pembelian`, `id_lpb`, `kd_po`, `no_po`, `kd_supplier`, `tanggal_retur`, `gudang_id`, `status`, `status_persiapan`, `jenis_penyelesaian`, `alasan_retur`, `catatan_purchasing`, `catatan_accounting`, `catatan_persiapan`, `total_dpp`, `total_ppn`, `grand_total`, `id_jurnal`, `id_jurnal_reversal`, `created_by`, `created_at`, `updated_by`, `updated_at`, `submitted_by`, `submitted_at`, `purchasing_verified_by`, `purchasing_verified_at`, `accounting_verified_by`, `accounting_verified_at`, `posted_by`, `posted_at`, `reversed_by`, `reversed_at`, `disiapkan_oleh`, `disiapkan_at`) VALUES
-(1, 'RBELI-20260904-0001', 2, 'SKPO040926SYNGE020002', 'Q001/KIU/IX/2026A', 'SYNGE02', '2026-08-26', '2', 'DRAFT', 'BELUM_DISIAPKAN', 'POTONG_HUTANG', '', NULL, NULL, NULL, 1225000.0000, 0.0000, 1225000.0000, NULL, NULL, 'deva', '2026-09-04 12:56:53', 'deva', '2026-09-04 12:56:53', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(1, 'RBELI-20260821-0001', 2, 'SKPO210826SYNGE020002', 'Q001/KIU/VIII/2026A', 'SYNGE02', '2026-08-26', '2', 'POSTED', 'BELUM_DISIAPKAN', 'POTONG_HUTANG', 'trial', '', '', NULL, 1225000.0000, 0.0000, 1225000.0000, 13, NULL, 'admin', '2026-08-21 14:30:03', 'admin', '2026-08-21 14:30:25', 'admin', '2026-08-21 14:30:07', 'admin', '2026-08-21 14:30:12', 'admin', '2026-08-21 14:30:20', 'admin', '2026-08-21 14:30:25', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -111520,7 +114056,7 @@ CREATE TABLE `tb_retur_pembelian_detail` (
 --
 
 INSERT INTO `tb_retur_pembelian_detail` (`id_detail_retur_pembelian`, `id_retur_pembelian`, `id_detail_lpb`, `kd_barang`, `no_lot`, `expired_date`, `qty_retur`, `harga_satuan`, `dpp`, `ppn`, `total`, `kelompok_dagang`, `alasan_retur`, `is_disiapkan`, `disiapkan_at`, `disiapkan_oleh`, `created_at`) VALUES
-(1, 1, 5, 'QTOMA06', '556633', '2027-02-01', 35.00, 35000.0000, 1225000.0000, 0.0000, 1225000.0000, '3', '', 0, NULL, NULL, '2026-09-04 12:56:53');
+(1, 1, 5, 'QTOMA06', '101019', '2027-06-21', 35.00, 35000.0000, 1225000.0000, 0.0000, 1225000.0000, '3', 'trial', 0, NULL, NULL, '2026-08-21 14:30:03');
 
 -- --------------------------------------------------------
 
@@ -111547,7 +114083,12 @@ CREATE TABLE `tb_retur_pembelian_log` (
 --
 
 INSERT INTO `tb_retur_pembelian_log` (`id_log`, `id_retur_pembelian`, `no_retur_pembelian`, `action_type`, `status_before`, `status_after`, `data_before`, `data_after`, `keterangan`, `dilakukan_oleh`, `dilakukan_pada`) VALUES
-(1, 1, 'RBELI-20260904-0001', 'CREATE_DRAFT', NULL, 'DRAFT', NULL, '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260904-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO040926SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/IX\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"DRAFT\",\"status_persiapan\":\"BELUM_DISIAPKAN\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"catatan_persiapan\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"deva\",\"created_at\":\"2026-09-04 12:56:53\",\"updated_by\":\"deva\",\"updated_at\":\"2026-09-04 12:56:53\",\"submitted_by\":null,\"submitted_at\":null,\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null,\"disiapkan_oleh\":null,\"disiapkan_at\":null}', 'Draft retur pembelian dibuat.', 'deva', '2026-09-04 12:56:53');
+(1, 1, 'RBELI-20260821-0001', 'CREATE_DRAFT', NULL, 'DRAFT', NULL, '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"DRAFT\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:03\",\"submitted_by\":null,\"submitted_at\":null,\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Draft retur pembelian dibuat.', 'admin', '2026-08-21 14:30:03'),
+(2, 1, 'RBELI-20260821-0001', 'SUBMIT', 'DRAFT', 'SUBMITTED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"DRAFT\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:03\",\"submitted_by\":null,\"submitted_at\":null,\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"SUBMITTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:07\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Draft retur pembelian diajukan.', 'admin', '2026-08-21 14:30:07'),
+(3, 1, 'RBELI-20260821-0001', 'VERIFY_PURCHASING', 'SUBMITTED', 'PURCHASING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"SUBMITTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":null,\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:07\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":null,\"purchasing_verified_at\":null,\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"PURCHASING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:12\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Purchasing memverifikasi harga, supplier, alasan retur, dan penyelesaian.', 'admin', '2026-08-21 14:30:12'),
+(4, 1, 'RBELI-20260821-0001', 'VERIFY_ACCOUNTING', 'PURCHASING_VERIFIED', 'ACCOUNTING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"PURCHASING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":null,\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:12\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":null,\"accounting_verified_at\":null,\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-21 14:30:20\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Accounting memverifikasi dampak hutang dan PPN.', 'admin', '2026-08-21 14:30:20'),
+(5, 1, 'RBELI-20260821-0001', 'APPROVE', 'ACCOUNTING_VERIFIED', 'ACCOUNTING_VERIFIED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-21 14:30:20\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-21 14:30:20\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', 'Retur pembelian disetujui untuk posting.', 'admin', '2026-08-21 14:30:20'),
+(6, 1, 'RBELI-20260821-0001', 'POST', 'ACCOUNTING_VERIFIED', 'POSTED', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"ACCOUNTING_VERIFIED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":null,\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:20\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-21 14:30:20\",\"posted_by\":null,\"posted_at\":null,\"reversed_by\":null,\"reversed_at\":null}', '{\"id_retur_pembelian\":\"1\",\"no_retur_pembelian\":\"RBELI-20260821-0001\",\"id_lpb\":\"2\",\"kd_po\":\"SKPO210826SYNGE020002\",\"no_po\":\"Q001\\/KIU\\/VIII\\/2026A\",\"kd_supplier\":\"SYNGE02\",\"tanggal_retur\":\"2026-08-26\",\"gudang_id\":\"2\",\"status\":\"POSTED\",\"jenis_penyelesaian\":\"POTONG_HUTANG\",\"alasan_retur\":\"trial\",\"catatan_purchasing\":\"\",\"catatan_accounting\":\"\",\"total_dpp\":\"1225000.0000\",\"total_ppn\":\"0.0000\",\"grand_total\":\"1225000.0000\",\"id_jurnal\":\"13\",\"id_jurnal_reversal\":null,\"created_by\":\"admin\",\"created_at\":\"2026-08-21 14:30:03\",\"updated_by\":\"admin\",\"updated_at\":\"2026-08-21 14:30:25\",\"submitted_by\":\"admin\",\"submitted_at\":\"2026-08-21 14:30:07\",\"purchasing_verified_by\":\"admin\",\"purchasing_verified_at\":\"2026-08-21 14:30:12\",\"accounting_verified_by\":\"admin\",\"accounting_verified_at\":\"2026-08-21 14:30:20\",\"posted_by\":\"admin\",\"posted_at\":\"2026-08-21 14:30:25\",\"reversed_by\":null,\"reversed_at\":null}', 'Retur pembelian diposting ke stock ledger RBELI dan jurnal PURCHASE_RETURN.', 'admin', '2026-08-21 14:30:25');
 
 -- --------------------------------------------------------
 
@@ -114160,18 +116701,22 @@ CREATE TABLE `tb_sspoin` (
   `original_deskripsi` text,
   `is_edited` tinyint(1) NOT NULL DEFAULT '0',
   `edited_by` int DEFAULT NULL,
-  `edited_at` datetime DEFAULT NULL
+  `edited_at` datetime DEFAULT NULL,
+  `original_nilai1` text,
+  `original_nilai2` text,
+  `original_nilai3` text,
+  `original_nilai4` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Dumping data untuk tabel `tb_sspoin`
 --
 
-INSERT INTO `tb_sspoin` (`id_sspoin`, `id_user`, `id_ss`, `poinss`, `nilai1`, `nilai2`, `nilai3`, `nilai4`, `nilaiss`, `deskripsi`, `original_poinss`, `original_nilaiss`, `original_deskripsi`, `is_edited`, `edited_by`, `edited_at`) VALUES
-(2, 147, 3, 'Mampu membuat & menerapkan KPI untuk dirinya sendiri', 'Mengisi KPI Sendiri dari bukti pendukung', 'bisa menerapkan', 'Membuat Simulasi & Next Step', 'Membuat Simulasi, Membuat Next Step, bisa menganalisa terkait How atau ada poin yang  sudah tidak sesuai', 2, 'membuat simulasi bulan februari', NULL, NULL, NULL, 0, NULL, NULL),
-(6, 29, 6, 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 'Belum mampu', 'Cukup mampu', 'Mampu', 'Sangat mampu', 3.5, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.', NULL, NULL, NULL, 1, 24, '2026-06-20 08:34:52'),
-(7, 29, 6, 'Mampu memimpin dengan data', 'Belum menggunakan data', 'Kadang menggunakan data', 'Sering menggunakan data', 'Konsisten memimpin berbasis data', 3, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.', NULL, NULL, NULL, 1, 24, '2026-06-20 08:34:52'),
-(8, 29, 7, 'Mampu menyampaikan ide dengan jelas', 'Belum jelas', 'Cukup jelas', 'Jelas', 'Sangat jelas dan terstruktur', 3.4, 'okiok', NULL, NULL, NULL, 0, NULL, NULL);
+INSERT INTO `tb_sspoin` (`id_sspoin`, `id_user`, `id_ss`, `poinss`, `nilai1`, `nilai2`, `nilai3`, `nilai4`, `nilaiss`, `deskripsi`, `original_poinss`, `original_nilaiss`, `original_deskripsi`, `is_edited`, `edited_by`, `edited_at`, `original_nilai1`, `original_nilai2`, `original_nilai3`, `original_nilai4`) VALUES
+(2, 147, 3, 'Mampu membuat & menerapkan KPI untuk dirinya sendiri', 'Mengisi KPI Sendiri dari bukti pendukung', 'bisa menerapkan', 'Membuat Simulasi & Next Step', 'Membuat Simulasi, Membuat Next Step, bisa menganalisa terkait How atau ada poin yang  sudah tidak sesuai', 2, 'membuat simulasi bulan februari', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 29, 6, 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 'Belum mampu', 'Cukup mampu', 'Mampu', 'Sangat mampu', 3.5, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.', NULL, NULL, NULL, 1, 24, '2026-06-20 08:34:52', NULL, NULL, NULL, NULL),
+(7, 29, 6, 'Mampu memimpin dengan data', 'Belum menggunakan data', 'Kadang menggunakan data', 'Sering menggunakan data', 'Konsisten memimpin berbasis data', 3, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.', NULL, NULL, NULL, 1, 24, '2026-06-20 08:34:52', NULL, NULL, NULL, NULL),
+(8, 29, 7, 'Mampu menyampaikan ide dengan jelas', 'Belum jelas', 'Cukup jelas', 'Jelas', 'Sangat jelas dan terstruktur', 3.4, 'okiok', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -114211,7 +116756,10 @@ INSERT INTO `tb_ss_history` (`id`, `id_user`, `id_ss`, `id_sspoin`, `bulan`, `ka
 (96, 29, 7, 8, '2026-06', 'Komunikasi', 'Mampu menyampaikan ide dengan jelas', 3.40, 'okiok', '2026-07-11 07:02:21', '2026-07-11 07:55:16'),
 (142, 29, 6, 6, '2026-07', 'Leadership', 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 3.50, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.', '2026-08-03 01:21:04', '2026-08-03 01:21:04'),
 (143, 29, 6, 7, '2026-07', 'Leadership', 'Mampu memimpin dengan data', 3.00, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.', '2026-08-03 01:21:04', '2026-08-03 01:21:04'),
-(144, 29, 7, 8, '2026-07', 'Komunikasi', 'Mampu menyampaikan ide dengan jelas', 3.40, 'okiok', '2026-08-03 01:21:04', '2026-08-03 01:21:04');
+(144, 29, 7, 8, '2026-07', 'Komunikasi', 'Mampu menyampaikan ide dengan jelas', 3.40, 'okiok', '2026-08-03 01:21:04', '2026-08-03 01:21:04'),
+(178, 29, 6, 6, '2026-08', 'Leadership', 'Mampu membuat dan menerapkan KPI untuk dirinya sendiri', 3.50, 'Sudah mampu membuat simulasi KPI dan menyiapkan next step.', '2026-09-18 03:26:00', '2026-09-18 03:26:00'),
+(179, 29, 6, 7, '2026-08', 'Leadership', 'Mampu memimpin dengan data', 3.00, 'Mulai rutin menggunakan data saat evaluasi pekerjaan.', '2026-09-18 03:26:00', '2026-09-18 03:26:00'),
+(180, 29, 7, 8, '2026-08', 'Komunikasi', 'Mampu menyampaikan ide dengan jelas', 3.40, 'okiok', '2026-09-18 03:26:00', '2026-09-18 03:26:00');
 
 -- --------------------------------------------------------
 
@@ -114244,6 +116792,13 @@ CREATE TABLE `tb_ss_verified` (
   `verified_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `keterangan` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `tb_ss_verified`
+--
+
+INSERT INTO `tb_ss_verified` (`id_ss_verified`, `id_user`, `bulan`, `verified_by`, `verified_at`, `keterangan`) VALUES
+(3, 29, '09/2026', 24, '2026-09-18 14:10:48', '');
 
 -- --------------------------------------------------------
 
@@ -117384,6 +119939,13 @@ CREATE TABLE `tb_tmp_po_received` (
   `total_harga` decimal(18,4) NOT NULL DEFAULT '0.0000'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `tb_tmp_po_received`
+--
+
+INSERT INTO `tb_tmp_po_received` (`id_tmp_recieved`, `kd_po`, `kd_suplier`, `kd_barang`, `qty_diterima`, `satuan`, `no_lot`, `expired_date`, `crete_at`, `harga_satuan`, `harga_satuan_kecil`, `total_harga`) VALUES
+(1, 'SKPO120926SYNGE020002', 'SYNGE02', 'QTOMA06', 35.00, 'Pack', '112402', '2027-01-01', '2026-09-12 03:47:45', 35000.0000, 35000.0000, 1225000.0000);
+
 -- --------------------------------------------------------
 
 --
@@ -117780,7 +120342,7 @@ INSERT INTO `tb_users` (`id`, `username`, `password`, `level`, `jobdesk_hrd`, `n
 (159, 'gunawan', '$2y$10$rUDZRbNoL6kPpK/K698B1unD0hU3txn6YIu92T/uGbhcl8yNdYozi', 1, 'inputer_laporan', 'GUNAWAN', 'QIU2605332', 'MT HELPER DISTRIBUSI', 'LOGISTIC', NULL, 0, 0, NULL, NULL, NULL, 'Karyawan', 'Mu\'amar Kadafi', 'Kurniawan Pratama Arifin', 1, 'AKTIF', 'penilaian_lingkungan', NULL, '2026-06-30 11:48:12', '2026-08-18 14:25:33'),
 (160, 'deli', '$2y$10$rUDZRbNoL6kPpK/K698B1unD0hU3txn6YIu92T/uGbhcl8yNdYozi', 1, 'inputer_laporan', 'DELI ANNISA VIRCA', 'QIU2605333', 'MT SALES COUNTER', 'KEUANGAN & SALES', NULL, 0, 0, NULL, NULL, NULL, 'Karyawan', 'Evi Yulia Purnamasari', 'Vita Ari Puspita', 1, 'AKTIF', 'penilaian_lingkungan', NULL, '2026-06-30 11:48:12', '2026-08-18 14:25:33'),
 (161, 'andrian', '$2y$10$rUDZRbNoL6kPpK/K698B1unD0hU3txn6YIu92T/uGbhcl8yNdYozi', 1, NULL, 'ANDRIAN PUTRA ADE PRATAMA', 'QIU2605335', 'MT ADMIN ACCOUNTING', 'KEUANGAN & SALES', NULL, 0, 0, NULL, NULL, NULL, 'Karyawan', 'Ahmad Syaiti', 'Vita Ari Puspita', 1, 'AKTIF', NULL, NULL, '2026-07-07 10:38:38', '2026-08-18 14:25:33'),
-(162, 'admlog', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin Gudang', 'QIUK00000001', 'LOGISTIK', 'DEP02', '', 0, 0, NULL, NULL, NULL, 'LOGISTIK', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 09:36:49', '2026-08-18 14:57:30', '2026-09-04 09:36:49'),
+(162, 'admlog', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin Gudang', 'QIUK00000001', 'LOGISTIK', 'DEP02', '', 0, 0, NULL, NULL, NULL, 'LOGISTIK', '-', '-', 1, 'AKTIF', NULL, '2026-09-23 13:40:00', '2026-08-18 14:57:30', '2026-09-23 13:40:00'),
 (163, 'adminkeu', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Keuangan', 'QIUK10000000', 'ADMINKEU', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMINKEU', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (164, 'adminga', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin GA', 'QIUK00000002', 'ADMINGA', 'DEP03', '', 0, 0, NULL, NULL, NULL, 'ADMINGA', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (165, 'admtc', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin TC', 'QIUK00000004', 'ADMINKEUTC', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMINKEUTC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
@@ -117823,25 +120385,25 @@ INSERT INTO `tb_users` (`id`, `username`, `password`, `level`, `jobdesk_hrd`, `n
 (202, 'stockopname', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Gudang Opname', 'QIUK12300001', 'ADMIN_STOCKOPNAME', 'DEP02', '', 0, 0, NULL, NULL, NULL, 'ADMIN_STOCKOPNAME', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (203, 'admics5', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 5', 'QIUK00001207', 'ADMINICS', 'DEP01', '', 5, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (204, 'admics6', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 6', 'QIUK00001208', 'ADMINICS', 'DEP01', '', 6, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 13:17:33', '2026-08-18 14:57:30', '2026-09-04 13:17:33'),
+(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-09-23 14:55:08', '2026-08-18 14:57:30', '2026-09-23 14:55:08'),
 (206, 'admdistribusi', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Distribusi', 'QIUK00001211', 'DISTRIBUSI', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'DISTRIBUSI', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(207, 'admlpb', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admlpb', 'QIUK1122', 'ADMINLOGLPB', 'DEP01', '', 0, 0, '', NULL, NULL, 'ADMINLOGLPB', '-', '-', 1, 'AKTIF', NULL, '2026-08-24 10:18:59', '2026-08-18 14:57:30', '2026-08-24 10:18:59'),
+(207, 'admlpb', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admlpb', 'QIUK1122', 'ADMINLOGLPB', 'DEP01', '', 0, 0, '', NULL, NULL, 'ADMINLOGLPB', '-', '-', 1, 'AKTIF', NULL, '2026-09-14 14:28:33', '2026-08-18 14:57:30', '2026-09-14 14:28:33'),
 (208, 'ck1', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'nando', 'QIUK1123', 'CHECKER', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'CHECKER', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (209, 'ck2', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'sholeh', 'QIUK1124', 'CHECKER', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'CHECKER', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (210, 'kiusl', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'kiusl', 'QIUK1127', 'SALESCK', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'SALESCK', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(211, 'kiukeu', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'deva', 'KIUKEU', 'KIUKEU', 'KEUANGAN', '', 0, 0, NULL, NULL, NULL, 'KIUKEU', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 12:57:23', '2026-08-18 14:57:30', '2026-09-04 12:57:23'),
+(211, 'kiukeu', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'deva', 'KIUKEU', 'KIUKEU', 'KEUANGAN', '', 0, 0, NULL, NULL, NULL, 'KIUKEU', '-', '-', 1, 'AKTIF', NULL, '2026-09-11 13:41:02', '2026-08-18 14:57:30', '2026-09-11 13:41:02'),
 (212, 'kiuscc2', '$2y$10$9xITg/WSI65pObLYE8UdoOYTl.METFf1Ws/GaxRH2syeVX7LJaRc6', 1, NULL, 'kiusc2', 'QIUK111112', 'SC', 'DEP012', 'C', 0, 3, NULL, NULL, NULL, 'SC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(213, 'admsc', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'Admin SC', 'ADMINSC', 'ADMINSC', 'SALES', 'D', 0, 0, NULL, NULL, NULL, 'ADMINSC', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 09:38:27', '2026-08-18 14:57:30', '2026-09-04 09:38:27'),
-(214, 'mngsc', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'evi', 'Q1234124', 'MANAGERSC', 'SALES', 'D', 0, 0, '', NULL, NULL, 'MANAGERSC', '-', '-', 1, 'AKTIF', NULL, '2026-08-24 13:30:55', '2026-08-18 14:57:30', '2026-08-24 13:30:55'),
-(215, 'admretur', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'dewi', 'Q12341241', 'ADMRETUR', 'KEUANGAN', 'D', 0, 0, NULL, NULL, NULL, 'ADMRETUR', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 13:11:03', '2026-08-18 14:57:30', '2026-08-20 13:11:03'),
-(216, 'admlpb2', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin LPB2', 'ADM001', 'ADMLPB2', 'Sales', '', 0, 0, NULL, NULL, NULL, 'ADMLPB2', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 13:10:31', '2026-08-18 14:57:30', '2026-09-04 13:10:31'),
+(213, 'admsc', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 1, NULL, 'Admin SC', 'ADMINSC', 'ADMINSC', 'SALES', 'D', 0, 0, NULL, NULL, NULL, 'ADMINSC', '-', '-', 1, 'AKTIF', NULL, '2026-09-23 13:41:47', '2026-08-18 14:57:30', '2026-09-23 13:41:47'),
+(214, 'mngsc', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'evi', 'Q1234124', 'MANAGERSC', 'SALES', 'D', 0, 0, '', NULL, NULL, 'MANAGERSC', '-', '-', 1, 'AKTIF', NULL, '2026-09-17 09:23:15', '2026-08-18 14:57:30', '2026-09-17 09:23:15'),
+(215, 'admretur', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'dewi', 'Q12341241', 'ADMRETUR', 'KEUANGAN', 'D', 0, 0, NULL, NULL, NULL, 'ADMRETUR', '-', '-', 1, 'AKTIF', NULL, '2026-09-11 11:01:19', '2026-08-18 14:57:30', '2026-09-11 11:01:19'),
+(216, 'admlpb2', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Admin LPB2', 'ADM001', 'ADMLPB2', 'Sales', '', 0, 0, NULL, NULL, NULL, 'ADMLPB2', '-', '-', 1, 'AKTIF', NULL, '2026-09-11 10:57:44', '2026-08-18 14:57:30', '2026-09-11 10:57:44'),
 (217, 'collection1', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Team Collection', 'COL001', 'COLLECTION', 'Sales', '', 0, 0, NULL, NULL, NULL, 'COLLECTION', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 13:56:55', '2026-08-18 14:57:30', '2026-08-20 13:56:55'),
 (218, 'kasir1', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 1, NULL, 'Kasir', 'KSR001', 'KASIR', 'Kasir', '', 0, 0, NULL, NULL, NULL, 'KASIR', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (219, 'mngacc', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager ACC', 'QIUK_MNGACC', 'MANAGERACC', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERACC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (220, 'mngse', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager SE', 'QIUK_MNGSE', 'MANAGERSE', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERSE', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (221, 'dirop', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Operasional', 'QIUK_DIROP', 'DIREKTUROP', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTUROP', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(222, 'dirut', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Utama', 'QIUK_DIRUT', 'DIREKTURUTAMA', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTURUTAMA', '-', '-', 1, 'AKTIF', NULL, '2026-09-04 13:16:50', '2026-08-18 14:57:30', '2026-09-04 13:16:50'),
-(223, 'admpnj', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Penjualan', 'QIUK_ADMPNJ', 'ADMPNJ', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMPNJ', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 11:28:25', '2026-08-18 14:57:30', '2026-08-20 11:28:25'),
+(222, 'dirut', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Utama', 'QIUK_DIRUT', 'DIREKTURUTAMA', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTURUTAMA', '-', '-', 1, 'AKTIF', NULL, '2026-09-11 11:07:58', '2026-08-18 14:57:30', '2026-09-11 11:07:58'),
+(223, 'admpnj', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Penjualan', 'QIUK_ADMPNJ', 'ADMPNJ', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMPNJ', '-', '-', 1, 'AKTIF', NULL, '2026-09-12 14:45:36', '2026-08-18 14:57:30', '2026-09-12 14:45:36'),
 (224, 'kadepub', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Kadep Unit Bisnis', 'QIUK_KADEPUB', 'KADEPUB', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'KADEPUB', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (225, 'purchasing', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'purchasing', 'QIUK_PUR', 'admin_purchasing', 'DEP01', '', 0, 0, '', NULL, NULL, 'admin_purchasing', '-', '-', 1, 'AKTIF', NULL, '2026-08-19 12:42:54', '2026-08-18 14:57:30', '2026-08-19 12:42:54');
 
@@ -118771,19 +121333,19 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`, `u
 -- (Lihat di bawah untuk tampilan aktual)
 --
 CREATE TABLE `v_stockbarangnk` (
-`kode_barangs` varchar(25)
-,`kode_barang` varchar(25)
-,`nama_barang` text
-,`deskripsi` text
+`deskripsi` text
 ,`gbr_barang` text
+,`id_brg_nk` int
+,`id_satuan` int
+,`kat_barang` varchar(25)
+,`kode_barang` varchar(25)
+,`kode_barangs` varchar(25)
+,`nama_barang` text
 ,`nama_lokasi` text
 ,`qty_in` double
 ,`qty_out` double
 ,`qty_ready` double
-,`id_satuan` int
 ,`satuan` text
-,`id_brg_nk` int
-,`kat_barang` varchar(25)
 );
 
 --
@@ -118937,10 +121499,100 @@ ALTER TABLE `tbar_sp_archive`
   ADD KEY `id_user` (`id_user`);
 
 --
+-- Indeks untuk tabel `tbar_ss`
+--
+ALTER TABLE `tbar_ss`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_tbar_ss_archive` (`id_ss_archive`),
+  ADD KEY `idx_tbar_ss_user` (`id_user`);
+
+--
+-- Indeks untuk tabel `tbar_sspoin`
+--
+ALTER TABLE `tbar_sspoin`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_tbar_sspoin_ss` (`id_tbar_ss`),
+  ADD KEY `idx_tbar_sspoin_user` (`id_user`);
+
+--
+-- Indeks untuk tabel `tbar_ss_archive`
+--
+ALTER TABLE `tbar_ss_archive`
+  ADD PRIMARY KEY (`id_ss_archive`),
+  ADD UNIQUE KEY `unique_user_bulan_ss` (`id_user`,`bulan`),
+  ADD KEY `idx_ss_archive_user` (`id_user`),
+  ADD KEY `idx_ss_archive_bulan` (`bulan`);
+
+--
 -- Indeks untuk tabel `tbar_whats`
 --
 ALTER TABLE `tbar_whats`
   ADD PRIMARY KEY (`id_what`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_assembly`
+--
+ALTER TABLE `tberp_bundling_assembly`
+  ADD PRIMARY KEY (`id_assembly`),
+  ADD UNIQUE KEY `idx_no_assembly` (`no_assembly`),
+  ADD KEY `idx_assembly_request` (`id_request`),
+  ADD KEY `idx_assembly_paket` (`kode_paket`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_assembly_detail`
+--
+ALTER TABLE `tberp_bundling_assembly_detail`
+  ADD PRIMARY KEY (`id_asm_detail`),
+  ADD KEY `idx_asm_parent` (`id_assembly`),
+  ADD KEY `idx_asm_komponen` (`kode_barang_komponen`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_disassembly`
+--
+ALTER TABLE `tberp_bundling_disassembly`
+  ADD PRIMARY KEY (`id_disassembly`),
+  ADD UNIQUE KEY `idx_no_disassembly` (`no_disassembly`),
+  ADD KEY `idx_dsb_paket` (`kode_paket`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_disassembly_detail`
+--
+ALTER TABLE `tberp_bundling_disassembly_detail`
+  ADD PRIMARY KEY (`id_dsb_detail`),
+  ADD KEY `idx_dsb_parent` (`id_disassembly`),
+  ADD KEY `idx_dsb_komponen` (`kode_barang_komponen`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_formula`
+--
+ALTER TABLE `tberp_bundling_formula`
+  ADD PRIMARY KEY (`id_formula`),
+  ADD UNIQUE KEY `idx_kode_paket` (`kode_paket`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_formula_detail`
+--
+ALTER TABLE `tberp_bundling_formula_detail`
+  ADD PRIMARY KEY (`id_detail`),
+  ADD KEY `idx_formula_id` (`id_formula`),
+  ADD KEY `idx_komponen` (`kode_barang_komponen`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_request`
+--
+ALTER TABLE `tberp_bundling_request`
+  ADD PRIMARY KEY (`id_request`),
+  ADD UNIQUE KEY `idx_no_request` (`no_request`),
+  ADD KEY `idx_kode_paket_req` (`kode_paket`),
+  ADD KEY `idx_status_req` (`status`);
+
+--
+-- Indeks untuk tabel `tberp_bundling_request_detail`
+--
+ALTER TABLE `tberp_bundling_request_detail`
+  ADD PRIMARY KEY (`id_req_detail`),
+  ADD KEY `idx_request_id` (`id_request`),
+  ADD KEY `idx_req_komponen` (`kode_barang_komponen`);
 
 --
 -- Indeks untuk tabel `tberp_stock_batch`
@@ -119837,6 +122489,26 @@ ALTER TABLE `tbso_faktur_penjualan`
   ADD KEY `idx_kd_cust` (`kd_customer`);
 
 --
+-- Indeks untuk tabel `tbso_faktur_z_pecah`
+--
+ALTER TABLE `tbso_faktur_z_pecah`
+  ADD PRIMARY KEY (`id_pecah`),
+  ADD KEY `idx_no_faktur` (`no_faktur`),
+  ADD KEY `idx_parent_id_faktur` (`parent_id_faktur`),
+  ADD KEY `idx_id_so` (`id_so`),
+  ADD KEY `idx_kd_customer` (`kd_customer`);
+
+--
+-- Indeks untuk tabel `tbso_faktur_z_pecah_detail`
+--
+ALTER TABLE `tbso_faktur_z_pecah_detail`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_id_pecah` (`id_pecah`),
+  ADD KEY `idx_no_faktur` (`no_faktur`),
+  ADD KEY `idx_parent_id_faktur` (`parent_id_faktur`),
+  ADD KEY `idx_kd_barang` (`kd_barang`);
+
+--
 -- Indeks untuk tabel `tbso_sales_order`
 --
 ALTER TABLE `tbso_sales_order`
@@ -119948,6 +122620,15 @@ ALTER TABLE `tb_customer`
   ADD PRIMARY KEY (`id`),
   ADD KEY `fk_customer` (`kd_customer`),
   ADD KEY `idx_customer` (`kd_customer`);
+
+--
+-- Indeks untuk tabel `tb_customer_acak`
+--
+ALTER TABLE `tb_customer_acak`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_kd_customer` (`kd_customer`),
+  ADD KEY `idx_nama_toko` (`nama_toko`),
+  ADD KEY `idx_kd_customer_induk` (`kd_customer_induk`);
 
 --
 -- Indeks untuk tabel `tb_customer_bck`
@@ -120949,22 +123630,88 @@ ALTER TABLE `tbar_sp_archive`
   MODIFY `id_sp_archive` int NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT untuk tabel `tbar_ss`
+--
+ALTER TABLE `tbar_ss`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbar_sspoin`
+--
+ALTER TABLE `tbar_sspoin`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbar_ss_archive`
+--
+ALTER TABLE `tbar_ss_archive`
+  MODIFY `id_ss_archive` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT untuk tabel `tbar_whats`
 --
 ALTER TABLE `tbar_whats`
   MODIFY `id_what` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_assembly`
+--
+ALTER TABLE `tberp_bundling_assembly`
+  MODIFY `id_assembly` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_assembly_detail`
+--
+ALTER TABLE `tberp_bundling_assembly_detail`
+  MODIFY `id_asm_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_disassembly`
+--
+ALTER TABLE `tberp_bundling_disassembly`
+  MODIFY `id_disassembly` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_disassembly_detail`
+--
+ALTER TABLE `tberp_bundling_disassembly_detail`
+  MODIFY `id_dsb_detail` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_formula`
+--
+ALTER TABLE `tberp_bundling_formula`
+  MODIFY `id_formula` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_formula_detail`
+--
+ALTER TABLE `tberp_bundling_formula_detail`
+  MODIFY `id_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_request`
+--
+ALTER TABLE `tberp_bundling_request`
+  MODIFY `id_request` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT untuk tabel `tberp_bundling_request_detail`
+--
+ALTER TABLE `tberp_bundling_request_detail`
+  MODIFY `id_req_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
 -- AUTO_INCREMENT untuk tabel `tberp_stock_batch`
 --
 ALTER TABLE `tberp_stock_batch`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT untuk tabel `tberp_stock_ledger`
 --
 ALTER TABLE `tberp_stock_ledger`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbhrd_environment_issues`
@@ -121012,7 +123759,7 @@ ALTER TABLE `tbhrd_nilai_lingkungan`
 -- AUTO_INCREMENT untuk tabel `tbkeu_akun`
 --
 ALTER TABLE `tbkeu_akun`
-  MODIFY `id_akun` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1095;
+  MODIFY `id_akun` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1093;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_akun_karismaerp_ref`
@@ -121036,19 +123783,19 @@ ALTER TABLE `tbkeu_jenis_jurnal`
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal`
 --
 ALTER TABLE `tbkeu_jurnal`
-  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_detail`
 --
 ALTER TABLE `tbkeu_jurnal_detail`
-  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=142;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_log`
 --
 ALTER TABLE `tbkeu_jurnal_log`
-  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_karismaerp_import_batch`
@@ -121108,37 +123855,37 @@ ALTER TABLE `tbkeu_mapping_akun`
 -- AUTO_INCREMENT untuk tabel `tbkeu_nomor_dokumen`
 --
 ALTER TABLE `tbkeu_nomor_dokumen`
-  MODIFY `id_nomor` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id_nomor` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_pembayaran`
 --
 ALTER TABLE `tbkeu_pembayaran`
-  MODIFY `id_pembayaran` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_pembayaran` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_pembayaran_alokasi`
 --
 ALTER TABLE `tbkeu_pembayaran_alokasi`
-  MODIFY `id_alokasi` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_alokasi` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_pembayaran_faktur`
 --
 ALTER TABLE `tbkeu_pembayaran_faktur`
-  MODIFY `id_pembayaran` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_pembayaran` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_penyesuaian_barang`
 --
 ALTER TABLE `tbkeu_penyesuaian_barang`
-  MODIFY `id_penyesuaian` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_penyesuaian` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_penyesuaian_barang_detail`
 --
 ALTER TABLE `tbkeu_penyesuaian_barang_detail`
-  MODIFY `id_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_periode_fiskal`
@@ -121156,7 +123903,7 @@ ALTER TABLE `tbkeu_periode_fiskal_log`
 -- AUTO_INCREMENT untuk tabel `tbkeu_posting_exception`
 --
 ALTER TABLE `tbkeu_posting_exception`
-  MODIFY `id_exception` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id_exception` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_report_rule_akun`
@@ -121270,7 +124017,7 @@ ALTER TABLE `tbpo_akun_tr`
 -- AUTO_INCREMENT untuk tabel `tbpo_barang`
 --
 ALTER TABLE `tbpo_barang`
-  MODIFY `id_barang` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7963;
+  MODIFY `id_barang` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7968;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_barang_nk`
@@ -121294,7 +124041,7 @@ ALTER TABLE `tbpo_barang_packaging`
 -- AUTO_INCREMENT untuk tabel `tbpo_detail_po`
 --
 ALTER TABLE `tbpo_detail_po`
-  MODIFY `id_det_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_det_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_detail_po_nk`
@@ -121384,13 +124131,13 @@ ALTER TABLE `tbpo_notetemplate`
 -- AUTO_INCREMENT untuk tabel `tbpo_note_barang`
 --
 ALTER TABLE `tbpo_note_barang`
-  MODIFY `id_nt_barang` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_nt_barang` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_note_direktur`
 --
 ALTER TABLE `tbpo_note_direktur`
-  MODIFY `id_note` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_note` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_note_pembelian`
@@ -121408,7 +124155,7 @@ ALTER TABLE `tbpo_nt_tmp_pembelian`
 -- AUTO_INCREMENT untuk tabel `tbpo_po`
 --
 ALTER TABLE `tbpo_po`
-  MODIFY `id_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_po` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_po_nk`
@@ -121492,7 +124239,7 @@ ALTER TABLE `tbpo_tmp_diskon`
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_item`
 --
 ALTER TABLE `tbpo_tmp_item`
-  MODIFY `id_tmp` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_tmp` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_item_nk`
@@ -121504,19 +124251,19 @@ ALTER TABLE `tbpo_tmp_item_nk`
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_note_barang`
 --
 ALTER TABLE `tbpo_tmp_note_barang`
-  MODIFY `id_nt_tmp_barang` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_nt_tmp_barang` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_tmp_tax`
 --
 ALTER TABLE `tbpo_tmp_tax`
-  MODIFY `id_tmp_tax` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_tmp_tax` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_tracking_po`
 --
 ALTER TABLE `tbpo_tracking_po`
-  MODIFY `id_po_tracking` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_po_tracking` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbpo_transaksi`
@@ -121570,31 +124317,31 @@ ALTER TABLE `tbq_review_q`
 -- AUTO_INCREMENT untuk tabel `tbrp_activity_log`
 --
 ALTER TABLE `tbrp_activity_log`
-  MODIFY `id_log` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_log` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbrp_retur_penjualan_detail`
 --
 ALTER TABLE `tbrp_retur_penjualan_detail`
-  MODIFY `id_retur_detail` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_retur_detail` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbrp_retur_penjualan_header`
 --
 ALTER TABLE `tbrp_retur_penjualan_header`
-  MODIFY `id_retur` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_retur` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbrp_spr_detail`
 --
 ALTER TABLE `tbrp_spr_detail`
-  MODIFY `id_spr_detail` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_spr_detail` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbrp_spr_header`
 --
 ALTER TABLE `tbrp_spr_header`
-  MODIFY `id_spr` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_spr` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_bobotkpi`
@@ -121636,7 +124383,7 @@ ALTER TABLE `tbsim_whats`
 -- AUTO_INCREMENT untuk tabel `tbso_activity_log`
 --
 ALTER TABLE `tbso_activity_log`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_approval_harga`
@@ -121654,37 +124401,49 @@ ALTER TABLE `tbso_cancel_partial_request`
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_detail`
 --
 ALTER TABLE `tbso_faktur_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_jurnal`
 --
 ALTER TABLE `tbso_faktur_jurnal`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_log`
 --
 ALTER TABLE `tbso_faktur_log`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_faktur_penjualan`
 --
 ALTER TABLE `tbso_faktur_penjualan`
-  MODIFY `id_faktur` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_faktur` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbso_faktur_z_pecah`
+--
+ALTER TABLE `tbso_faktur_z_pecah`
+  MODIFY `id_pecah` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbso_faktur_z_pecah_detail`
+--
+ALTER TABLE `tbso_faktur_z_pecah_detail`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_sales_order`
 --
 ALTER TABLE `tbso_sales_order`
-  MODIFY `id_so` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_so` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbso_sales_order_detail`
 --
 ALTER TABLE `tbso_sales_order_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_akses_level`
@@ -121765,6 +124524,12 @@ ALTER TABLE `tb_customer`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8105;
 
 --
+-- AUTO_INCREMENT untuk tabel `tb_customer_acak`
+--
+ALTER TABLE `tb_customer_acak`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1618;
+
+--
 -- AUTO_INCREMENT untuk tabel `tb_customer_bck`
 --
 ALTER TABLE `tb_customer_bck`
@@ -121798,7 +124563,7 @@ ALTER TABLE `tb_departemen`
 -- AUTO_INCREMENT untuk tabel `tb_detail_do`
 --
 ALTER TABLE `tb_detail_do`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_detail_mutasi`
@@ -121822,7 +124587,7 @@ ALTER TABLE `tb_det_tracking_driver`
 -- AUTO_INCREMENT untuk tabel `tb_do`
 --
 ALTER TABLE `tb_do`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_editlog_faktur`
@@ -121936,7 +124701,7 @@ ALTER TABLE `tb_jobdesk`
 -- AUTO_INCREMENT untuk tabel `tb_karyawan`
 --
 ALTER TABLE `tb_karyawan`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=89;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_karyawan_keluarmasuk`
@@ -122002,7 +124767,7 @@ ALTER TABLE `tb_lap_distribusi`
 -- AUTO_INCREMENT untuk tabel `tb_loading_kk`
 --
 ALTER TABLE `tb_loading_kk`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_loading_kk_bck`
@@ -122014,7 +124779,7 @@ ALTER TABLE `tb_loading_kk_bck`
 -- AUTO_INCREMENT untuk tabel `tb_loading_lk`
 --
 ALTER TABLE `tb_loading_lk`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_loading_lk_bck`
@@ -122026,19 +124791,19 @@ ALTER TABLE `tb_loading_lk_bck`
 -- AUTO_INCREMENT untuk tabel `tb_login_log`
 --
 ALTER TABLE `tb_login_log`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1084;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1131;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_confirm_sales`
 --
 ALTER TABLE `tb_log_confirm_sales`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_do`
 --
 ALTER TABLE `tb_log_do`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_ics`
@@ -122056,31 +124821,31 @@ ALTER TABLE `tb_log_mutasi`
 -- AUTO_INCREMENT untuk tabel `tb_lpb`
 --
 ALTER TABLE `tb_lpb`
-  MODIFY `id_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_batch`
 --
 ALTER TABLE `tb_lpb_batch`
-  MODIFY `id_batch` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_batch` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_detail`
 --
 ALTER TABLE `tb_lpb_detail`
-  MODIFY `id_detail_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_detail_lpb` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_log`
 --
 ALTER TABLE `tb_lpb_log`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_manual_log`
 --
 ALTER TABLE `tb_lpb_manual_log`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_price_adjustment`
@@ -122284,7 +125049,7 @@ ALTER TABLE `tb_retur_pembelian_detail`
 -- AUTO_INCREMENT untuk tabel `tb_retur_pembelian_log`
 --
 ALTER TABLE `tb_retur_pembelian_log`
-  MODIFY `id_log` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_log` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_rutecs`
@@ -122344,7 +125109,7 @@ ALTER TABLE `tb_sspoin`
 -- AUTO_INCREMENT untuk tabel `tb_ss_history`
 --
 ALTER TABLE `tb_ss_history`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=178;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=259;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_ss_simulasi`
@@ -122356,7 +125121,7 @@ ALTER TABLE `tb_ss_simulasi`
 -- AUTO_INCREMENT untuk tabel `tb_ss_verified`
 --
 ALTER TABLE `tb_ss_verified`
-  MODIFY `id_ss_verified` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id_ss_verified` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_stock_hold`

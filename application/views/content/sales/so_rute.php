@@ -534,11 +534,6 @@
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge badge-<?= $badge ?> <?= ($status === 'partial' || $badge === 'warning') ? 'text-white' : '' ?> route-status-badge px-2 py-1"><?= htmlspecialchars($label) ?></span>
-                                                        <?php if ($qty_tidak_terkirim > 0): ?>
-                                                            <br><small class="text-danger font-weight-bold">
-                                                                <?= number_format($qty_tidak_terkirim, 2) ?> tidak ikut faktur
-                                                            </small>
-                                                        <?php endif; ?>
                                                         <?php if ($logistik_note !== ''): ?>
                                                             <div class="small text-left mt-1 p-1 border rounded bg-light" style="white-space:normal; min-width:160px;">
                                                                 <i class="fas fa-sticky-note text-warning mr-1"></i>

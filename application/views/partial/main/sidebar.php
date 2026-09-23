@@ -169,6 +169,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cut"></i>
+                <p>
+                  Pecah Faktur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
                 <i class="nav-icon fas fa-money-bill-wave"></i>
                 <p>
@@ -222,6 +230,22 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Pembayaran Supplier
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'pecah_faktur') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-cut"></i>
+                <p>
+                  Pecah Faktur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'customer_acak') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                  Customer Acak
                 </p>
               </a>
             </li>
@@ -399,6 +423,14 @@
             <a href="<?php echo base_url('sales_order_loby') ?>" class="nav-link">
               <i class="nav-icon fas fa-store"></i>
               <p>Sales Order Loby</p>
+            </a>
+          </li>
+
+          <!-- Pecah Faktur -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link">
+              <i class="nav-icon fas fa-cut"></i>
+              <p>Pecah Faktur</p>
             </a>
           </li>
 
@@ -632,6 +664,14 @@
                 <i class="nav-icon fas fa-store"></i>
                 <p>
                   Sales Order Loby
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cut"></i>
+                <p>
+                  Pecah Faktur
                 </p>
               </a>
             </li>

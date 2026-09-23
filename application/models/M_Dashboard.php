@@ -48,6 +48,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Kas Masuk', 'keuangan/kas_masuk', 'fas fa-cash-register', 'green', 'Kelola transaksi penerimaan kas / bank dan posting jurnal umum.'),
                     $this->menu('Kasir', 'keuangan/kasir', 'fas fa-cash-register', 'brown', 'Kelola transaksi kas masuk & kas keluar kasir harian.'),
                     $this->menu('Piutang Customer', $piutang_customer_route, 'fas fa-cash-register', 'blue', 'Kelola piutang customer dan input pembayaran faktur.'),
+                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'orange', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.'),
                     $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
                     $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),

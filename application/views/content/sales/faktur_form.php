@@ -256,6 +256,14 @@ $faktur_back_url = $is_admin_sc_context
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                 </div>
+                                                <?php if (!empty($d['hrg_awal_so']) && !empty($is_faktur_z)): ?>
+                                                    <small class="text-muted d-block text-right" style="text-decoration: line-through; font-size: 10.5px;">
+                                                        Semula: Rp <?= number_format($d['hrg_awal_so'], 0, ',', '.') ?>
+                                                    </small>
+                                                    <span class="badge badge-warning text-dark float-right mt-1" style="font-size: 10px;">
+                                                        <i class="fas fa-tag mr-1"></i>Potongan 20% (Faktur Z)
+                                                    </span>
+                                                <?php endif; ?>
                                                 <?php if ($d['disc'] > 0): ?>
                                                     <br><small class="text-danger">disc <?= $d['disc'] ?>%</small>
                                                 <?php endif; ?>

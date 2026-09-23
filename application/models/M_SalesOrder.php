@@ -230,6 +230,10 @@ class M_SalesOrder extends CI_Model
                 FROM tbso_faktur_penjualan
                 WHERE no_faktur LIKE ?
                 UNION
+                SELECT no_faktur AS nomor
+                FROM tbso_faktur_z_pecah
+                WHERE no_faktur LIKE ?
+                UNION
                 SELECT kd_faktur AS nomor
                 FROM tb_detail_do
                 WHERE kd_faktur LIKE ?
@@ -240,7 +244,7 @@ class M_SalesOrder extends CI_Model
             ) faktur_terpakai
             ORDER BY nomor DESC
             LIMIT 1
-        ", [$prefix . '%', $prefix . '%', $prefix . '%'])->row();
+        ", [$prefix . '%', $prefix . '%', $prefix . '%', $prefix . '%'])->row();
 
         if ($row) {
             $last = (int)substr($row->nomor, -4);
@@ -2477,8 +2481,201 @@ class M_SalesOrder extends CI_Model
         ]);
     }
 
+    /**
+     * Ambil seluruh faktur yang berawalan Z (atau SO is_faktur_z = 1)
+     * untuk modul Pecah Faktur Z.
+     */
+    public function get_faktur_z_list($filter = [])
+    {
+        $detail_summary = "
+            SELECT
+                id_faktur,
+                COUNT(*) AS total_barang,
+                COALESCE(SUM(qty), 0) AS total_qty,
+                COALESCE(SUM(total_harga / (1 + COALESCE(pajak, 0) / 100)), 0) AS total_nilai_faktur,
+                COALESCE(SUM(total_harga - (total_harga / (1 + COALESCE(pajak, 0) / 100))), 0) AS total_pajak,
+                COALESCE(SUM(total_harga), 0) AS grand_total
+            FROM tbso_faktur_detail
+            GROUP BY id_faktur
+        ";
+
+        $this->db->select('
+            f.*,
+            so.id_so,
+            so.is_faktur_z,
+            so.kd_rute AS so_kd_rute,
+            c.nama_customer,
+            c.nama_kios,
+            c.regional,
+            c.kd_rute AS customer_kd_rute,
+            COALESCE(f.customer_name, c.nama_customer) AS display_customer_name,
+            p.no_faktur AS parent_no_faktur,
+            COALESCE(p.customer_name, pc.nama_customer) AS parent_customer_name,
+            COALESCE(fs.total_barang, 0) AS total_barang,
+            COALESCE(fs.total_qty, 0) AS total_qty,
+            COALESCE(fs.total_nilai_faktur, 0) AS total_nilai_faktur,
+            COALESCE(fs.total_pajak, 0) AS total_pajak,
+            COALESCE(fs.grand_total, 0) AS grand_total
+        ');
+        $this->db->from('tbso_faktur_penjualan f');
+        $this->db->join('tbso_sales_order so', 'so.id_so = f.id_so', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->join('tbso_faktur_penjualan p', 'p.id_faktur = f.parent_id_faktur', 'left');
+        $this->db->join('tb_customer pc', 'pc.kd_customer = p.kd_customer', 'left');
+        $this->db->join('(' . $detail_summary . ') fs', 'fs.id_faktur = f.id_faktur', 'left');
+
+        // Kriteria utama: Faktur yang diawali Z atau SO merupakan Faktur Z
+        $this->db->group_start();
+        $this->db->like('f.no_faktur', 'Z', 'after');
+        $this->db->or_where('so.is_faktur_z', 1);
+        $this->db->group_end();
+
+        if (!empty($filter['date1'])) {
+            $this->db->where('f.tanggal_faktur >=', $filter['date1']);
+        }
+        if (!empty($filter['date2'])) {
+            $this->db->where('f.tanggal_faktur <=', $filter['date2']);
+        }
+        if (!empty($filter['status_faktur']) && $filter['status_faktur'] !== 'all') {
+            $this->db->where('f.status', $filter['status_faktur']);
+        }
+        if (!empty($filter['customer_id'])) {
+            $this->db->where('c.id', $filter['customer_id']);
+        }
+        if (!empty($filter['create_by'])) {
+            $this->db->where('f.create_by', $filter['create_by']);
+        }
+        if (!empty($filter['search'])) {
+            $q = trim((string)$filter['search']);
+            $this->db->group_start();
+            $this->db->like('f.no_faktur', $q);
+            $this->db->or_like('f.no_so', $q);
+            $this->db->or_like('f.customer_name', $q);
+            $this->db->or_like('c.nama_customer', $q);
+            $this->db->group_end();
+        }
+
+        if (!empty($filter['status_pecah'])) {
+            if ($filter['status_pecah'] === 'belum_dipecah') {
+                $this->db->where('f.parent_id_faktur IS NULL', null, false);
+                $this->db->group_start();
+                $this->db->where('f.is_split_parent', 0);
+                $this->db->or_where('f.is_split_parent IS NULL', null, false);
+                $this->db->group_end();
+            } elseif ($filter['status_pecah'] === 'sudah_dipecah') {
+                $this->db->where('f.parent_id_faktur IS NULL', null, false);
+                $this->db->where('f.is_split_parent', 1);
+            } elseif ($filter['status_pecah'] === 'turunan') {
+                $this->db->where('f.parent_id_faktur IS NOT NULL', null, false);
+            }
+        }
+
+        $this->db->order_by('f.id_faktur', 'DESC');
+        $rows = $this->db->get()->result_array();
+
+        // Ambil data child faktur untuk semua parent faktur yang ada di list dari tabel terpisah tbso_faktur_z_pecah
+        $parent_ids = [];
+        foreach ($rows as $r) {
+            if (empty($r['parent_id_faktur'])) {
+                $parent_ids[] = (int)$r['id_faktur'];
+            }
+        }
+
+        $child_map = [];
+        $allocated_map = [];
+        if (!empty($parent_ids)) {
+            $children = $this->db->select('id_pecah, no_faktur, parent_id_faktur, customer_name, status, tanggal_faktur')
+                ->from('tbso_faktur_z_pecah')
+                ->where_in('parent_id_faktur', $parent_ids)
+                ->where('status !=', 'cancelled')
+                ->order_by('id_pecah', 'ASC')
+                ->get()
+                ->result_array();
+
+            foreach ($children as $c) {
+                $pid = (int)$c['parent_id_faktur'];
+                if (!isset($child_map[$pid])) {
+                    $child_map[$pid] = [];
+                }
+                $child_map[$pid][] = $c;
+            }
+
+            // Alokasi qty per parent dari tbso_faktur_z_pecah_detail
+            $child_allocations = $this->db->select('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date, SUM(qty) as qty_allocated')
+                ->from('tbso_faktur_z_pecah_detail')
+                ->where_in('parent_id_faktur', $parent_ids)
+                ->group_by('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date')
+                ->get()
+                ->result_array();
+
+            foreach ($child_allocations as $ca) {
+                $pid = (int)$ca['parent_id_faktur'];
+                $key = implode('|', [
+                    $ca['id_so_detail'],
+                    $ca['kd_barang'],
+                    (string)$ca['no_lot'],
+                    $ca['expired_date']
+                ]);
+                $allocated_map[$pid][$key] = (float)$ca['qty_allocated'];
+            }
+        }
+
+        foreach ($rows as &$r) {
+            $fid = (int)$r['id_faktur'];
+            $r['child_fakturs'] = $child_map[$fid] ?? [];
+            $r['child_count']   = count($r['child_fakturs']);
+
+            if (!empty($r['parent_id_faktur'])) {
+                $r['tipe_faktur'] = 'turunan';
+                $r['can_split']   = false;
+                $r['remaining_split_qty'] = 0;
+            } else {
+                // Faktur Induk
+                if (in_array($r['status'], ['cancelled', 'draft'], true)) {
+                    $r['tipe_faktur'] = empty($r['is_split_parent']) ? 'belum_dipecah' : 'sudah_dipecah';
+                    $r['can_split']   = false;
+                    $r['remaining_split_qty'] = 0;
+                } else {
+                    if (empty($r['is_split_parent'])) {
+                        $r['tipe_faktur'] = 'belum_dipecah';
+                        $r['can_split']   = true;
+                        $r['remaining_split_qty'] = (float)$r['total_qty'];
+                    } else {
+                        // Cek sisa kuantitas
+                        $details = $this->get_faktur_detail($fid);
+                        $total_remaining = 0;
+                        $parent_alloc = $allocated_map[$fid] ?? [];
+                        foreach ($details as $d) {
+                            $key = implode('|', [
+                                $d['id_so_detail'],
+                                $d['kd_barang'],
+                                (string)$d['no_lot'],
+                                $d['expired_date']
+                            ]);
+                            $allocated = $parent_alloc[$key] ?? 0.0;
+                            $remaining = max(0.0, (float)$d['qty'] - $allocated);
+                            $total_remaining += $remaining;
+                        }
+                        $r['remaining_split_qty'] = $total_remaining;
+                        if ($total_remaining > 0.001) {
+                            $r['tipe_faktur'] = 'dipecah_sebagian';
+                            $r['can_split']   = true;
+                        } else {
+                            $r['tipe_faktur'] = 'sudah_dipecah';
+                            $r['can_split']   = false;
+                        }
+                    }
+                }
+            }
+        }
+        unset($r);
+
+        return $rows;
+    }
+
     public function proses_split_faktur($parent_faktur, $parent_details, $splits, $username)
     {
+        $this->ensure_faktur_z_pecah_tables();
         $this->db->trans_start();
 
         // 1. Update parent faktur: tandai telah dipecah
@@ -2497,21 +2694,29 @@ class M_SalesOrder extends CI_Model
             'SPLIT_FAKTUR',
             'Faktur Z ' . $parent_faktur['no_faktur'] . ' dipecah oleh ' . $username,
             $username,
-            'Faktur dipecah menjadi ' . count($splits) . ' faktur turunan.'
+            'Faktur dipecah menjadi ' . count($splits) . ' faktur pecahan (Kode H).'
         );
 
         $generated_numbers = [];
 
-        // 2. Buat child faktur
+        // 2. Buat child faktur di tabel terpisah tbso_faktur_z_pecah (Kode Awalan H)
         foreach ($splits as $idx => $s) {
-            $kd_cust = $s['kd_customer'];
-            $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
-            $customer_name = $cust ? $cust['nama_customer'] : 'Unknown Customer';
+            $kd_cust = trim((string)($s['kd_customer'] ?? ''));
+            $cust_acak = $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_cust])->row_array();
+            if ($cust_acak) {
+                $customer_name = $cust_acak['kontak_person'] . ' (' . $cust_acak['nama_toko'] . ')';
+            } else {
+                $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
+                $customer_name = $cust ? $cust['nama_customer'] : 'Unknown Customer';
+            }
 
-            $no_faktur_child = $this->_generate_and_track_no_faktur('Z', $generated_numbers);
+            // Hasil pecahan menggunakan kode awalan H
+            $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
 
             $fh = [
                 'no_faktur'           => $no_faktur_child,
+                'parent_id_faktur'    => $parent_faktur['id_faktur'],
+                'parent_no_faktur'    => $parent_faktur['no_faktur'],
                 'id_so'               => $parent_faktur['id_so'],
                 'no_so'               => $parent_faktur['no_so'],
                 'kd_customer'         => $kd_cust,
@@ -2525,16 +2730,14 @@ class M_SalesOrder extends CI_Model
                 'tempo'               => $parent_faktur['tempo'],
                 'catatan'             => 'Pecahan dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
                 'status'              => 'confirmed',
-                'parent_id_faktur'    => $parent_faktur['id_faktur'],
-                'is_split_parent'     => 0,
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
                 'total_tonase'        => 0,
                 'total_kubikasi'      => 0
             ];
 
-            $this->db->insert('tbso_faktur_penjualan', $fh);
-            $child_id_faktur = $this->db->insert_id();
+            $this->db->insert('tbso_faktur_z_pecah', $fh);
+            $child_id_pecah = $this->db->insert_id();
 
             $items = $s['items'] ?? [];
             $child_details_logged = [];
@@ -2548,49 +2751,55 @@ class M_SalesOrder extends CI_Model
                     $qty_box = floor($qty_allocated / $isi);
                     $qty_satuan = fmod($qty_allocated, $isi);
 
-                    $subtotal_before_disc = $qty_allocated * (float)$pd['hrg_satuan'];
+                    // Harga satuan pada Faktur Pecahan H terpotong 20% dari harga Faktur Z induk
+                    $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                    $subtotal_before_disc = $qty_allocated * $hrg_satuan_pecah;
                     $subtotal_after_disc  = $subtotal_before_disc * (1 - ((float)($pd['disc'] ?? 0) / 100));
                     $tax_rate             = (float)($pd['pajak'] ?? 0);
                     $total_harga          = $subtotal_after_disc;
 
                     $fd = [
-                        'id_faktur'            => $child_id_faktur,
-                        'no_faktur'            => $no_faktur_child,
-                        'id_so'                => $pd['id_so'],
-                        'id_so_detail'         => $pd['id_so_detail'],
-                        'kd_barang'            => $pd['kd_barang'],
-                        'nama_barang'          => $pd['nama_barang'],
-                        'no_lot'               => $pd['no_lot'],
-                        'expired_date'         => $pd['expired_date'],
-                        'qty'                  => $qty_allocated,
-                        'qty_box'              => $qty_box,
-                        'qty_satuan'           => $qty_satuan,
-                        'isi_per_box'          => $pd['isi_per_box'],
-                        'satuan'               => $pd['satuan'],
-                        'hrg_satuan'           => $pd['hrg_satuan'],
-                        'hrg_pokok'            => $pd['hrg_pokok'],
-                        'disc'                 => $pd['disc'],
-                        'pajak'                => $pd['pajak'],
-                        'subtotal_before_disc' => $subtotal_before_disc,
-                        'subtotal_after_disc'  => $subtotal_after_disc,
-                        'total_harga'          => $total_harga,
-                        'berat_gram'           => $pd['berat_gram'],
-                        'kubikasi_m3'          => $pd['kubikasi_m3'],
-                        'gudang_id'            => $pd['gudang_id'],
-                        'create_by'            => $username
+                        'id_pecah'                => $child_id_pecah,
+                        'no_faktur'               => $no_faktur_child,
+                        'parent_id_faktur'        => $parent_faktur['id_faktur'],
+                        'parent_no_faktur'        => $parent_faktur['no_faktur'],
+                        'id_faktur_detail_parent' => $pd['id'],
+                        'id_so'                   => $pd['id_so'],
+                        'id_so_detail'            => $pd['id_so_detail'],
+                        'kd_barang'               => $pd['kd_barang'],
+                        'nama_barang'             => $pd['nama_barang'],
+                        'no_lot'                  => $pd['no_lot'],
+                        'expired_date'            => $pd['expired_date'],
+                        'qty'                     => $qty_allocated,
+                        'qty_box'                 => $qty_box,
+                        'qty_satuan'              => $qty_satuan,
+                        'isi_per_box'             => $pd['isi_per_box'] ?? 1,
+                        'satuan'                  => $pd['satuan'] ?? 'PCS',
+                        'hrg_satuan'              => $hrg_satuan_pecah,
+                        'hrg_pokok'               => $pd['hrg_pokok'] ?? 0,
+                        'disc'                    => $pd['disc'] ?? 0,
+                        'pajak'                   => $tax_rate,
+                        'subtotal_before_disc'    => $subtotal_before_disc,
+                        'subtotal_after_disc'     => $subtotal_after_disc,
+                        'total_harga'             => $total_harga,
+                        'berat_gram'              => $pd['berat_gram'] ?? 0,
+                        'kubikasi_m3'             => $pd['kubikasi_m3'] ?? 0,
+                        'gudang_id'               => $pd['gudang_id'] ?? $parent_faktur['gudang_id'],
+                        'create_by'               => $username,
+                        'create_at'               => date('Y-m-d H:i:s')
                     ];
 
-                    $this->db->insert('tbso_faktur_detail', $fd);
-                    $child_details_logged[] = $pd['nama_barang'] . " (" . $qty_allocated . " " . $pd['satuan'] . ")";
+                    $this->db->insert('tbso_faktur_z_pecah_detail', $fd);
+                    $child_details_logged[] = $pd['nama_barang'] . " (" . $qty_allocated . " " . ($pd['satuan'] ?? 'PCS') . ")";
                 }
             }
 
             $this->db->select('SUM(qty * berat_gram / 1000000) AS t, SUM(qty * kubikasi_m3) AS k', false);
-            $this->db->where('id_faktur', $child_id_faktur);
-            $sums = $this->db->get('tbso_faktur_detail')->row_array();
+            $this->db->where('id_pecah', $child_id_pecah);
+            $sums = $this->db->get('tbso_faktur_z_pecah_detail')->row_array();
 
-            $this->db->where('id_faktur', $child_id_faktur);
-            $this->db->update('tbso_faktur_penjualan', [
+            $this->db->where('id_pecah', $child_id_pecah);
+            $this->db->update('tbso_faktur_z_pecah', [
                 'total_tonase'   => round((float)($sums['t'] ?? 0), 6),
                 'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
             ]);
@@ -2598,8 +2807,8 @@ class M_SalesOrder extends CI_Model
             $this->M_ActivityLog->log(
                 $parent_faktur['no_so'],
                 $no_faktur_child,
-                'BUAT_FAKTUR_TURUNAN',
-                'Faktur turunan ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari induk ' . $parent_faktur['no_faktur'],
+                'BUAT_FAKTUR_PECAHAN_H',
+                'Faktur pecahan ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari induk ' . $parent_faktur['no_faktur'],
                 $username,
                 "Item:\n" . implode("\n", $child_details_logged)
             );
@@ -2607,6 +2816,484 @@ class M_SalesOrder extends CI_Model
 
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    /**
+     * Memproses pemecahan beberapa Faktur Z sekaligus (Batch Split) menjadi N faktur pecahan (Kode H).
+     *
+     * @param array $parent_fakturs Array of Faktur Z induk yang dipilih (key by id_faktur)
+     * @param array $parent_details Array of detail barang Faktur Z (key by tbso_faktur_detail.id)
+     * @param array $splits Array of slot pecahan dari form
+     * @param string $username Username pemroses
+     * @return array Status proses [success => bool, total_created => int, message => string]
+     */
+    public function proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username)
+    {
+        $this->ensure_faktur_z_pecah_tables();
+        $this->db->trans_start();
+
+        $this->load->model('M_ActivityLog');
+        $generated_numbers = [];
+        $created_fakturs = [];
+        $affected_parent_ids = [];
+
+        // Kumpulkan parent nomor faktur untuk catatan
+        $parent_no_list = array_values(array_unique(array_column($parent_fakturs, 'no_faktur')));
+        $parent_no_str = implode(', ', $parent_no_list);
+
+        foreach ($splits as $split_idx => $s) {
+            $kd_cust = trim((string)($s['kd_customer'] ?? ''));
+            if (empty($kd_cust)) {
+                continue; // Lewati jika customer belum dipilih
+            }
+
+            $items = $s['items'] ?? [];
+            $has_qty = false;
+            foreach ($items as $it) {
+                if ((float)($it['qty'] ?? 0) > 0.0001) {
+                    $has_qty = true;
+                    break;
+                }
+            }
+            if (!$has_qty) {
+                continue; // Lewati jika tidak ada barang yang dialokasikan
+            }
+
+            $cust_acak = $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_cust])->row_array();
+            if ($cust_acak) {
+                $customer_name = $cust_acak['kontak_person'] . ' (' . $cust_acak['nama_toko'] . ')';
+            } else {
+                $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
+                $customer_name = $cust ? $cust['nama_customer'] : ($s['customer_name'] ?? 'Unknown Customer');
+            }
+
+            // Nomor faktur pecahan berawalan kode H
+            $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
+
+            // Tentukan parent default untuk header (ambil parent pertama)
+            $first_parent = reset($parent_fakturs);
+            $parent_id_header = (int)($first_parent['id_faktur'] ?? 0);
+            $parent_no_header = (string)($first_parent['no_faktur'] ?? '');
+
+            $tgl_faktur = !empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : ($first_parent['tanggal_faktur'] ?? date('Y-m-d'));
+            $tgl_tempo  = !empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : ($first_parent['tanggal_jatuh_tempo'] ?? null);
+
+            $fh = [
+                'no_faktur'           => $no_faktur_child,
+                'parent_id_faktur'    => $parent_id_header,
+                'parent_no_faktur'    => count($parent_no_list) > 1 ? $parent_no_str : $parent_no_header,
+                'id_so'               => (int)($first_parent['id_so'] ?? 0),
+                'no_so'               => (string)($first_parent['no_so'] ?? ''),
+                'kd_customer'         => $kd_cust,
+                'customer_name'       => $customer_name,
+                'gudang_id'           => $first_parent['gudang_id'] ?? null,
+                'tanggal_faktur'      => $tgl_faktur,
+                'tanggal_jatuh_tempo' => $tgl_tempo,
+                'salesman'            => $first_parent['salesman'] ?? null,
+                'cara_pembayaran'     => $first_parent['cara_pembayaran'] ?? 'tempo',
+                'jtempo'              => (int)($first_parent['jtempo'] ?? 0),
+                'tempo'               => (int)($first_parent['tempo'] ?? 0),
+                'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_str . "\n" . trim((string)($s['catatan'] ?? '')),
+                'status'              => 'confirmed',
+                'create_by'           => $username,
+                'create_at'           => date('Y-m-d H:i:s'),
+                'total_tonase'        => 0,
+                'total_kubikasi'      => 0
+            ];
+
+            $this->db->insert('tbso_faktur_z_pecah', $fh);
+            $child_id_pecah = $this->db->insert_id();
+
+            $child_details_logged = [];
+
+            foreach ($items as $detail_id => $it) {
+                $qty_allocated = (float)($it['qty'] ?? 0);
+                if ($qty_allocated <= 0.0001) {
+                    continue;
+                }
+
+                if (!isset($parent_details[$detail_id])) {
+                    continue;
+                }
+
+                $pd = $parent_details[$detail_id];
+                $pid = (int)$pd['id_faktur'];
+                $affected_parent_ids[$pid] = true;
+
+                $isi = max(1, (int)($pd['isi_per_box'] ?? 1));
+                $qty_box = floor($qty_allocated / $isi);
+                $qty_satuan = fmod($qty_allocated, $isi);
+
+                // Harga satuan pada faktur pecahan H terpotong 20% dari harga Faktur Z induk
+                $hrg_satuan = isset($it['hrg_satuan']) && is_numeric($it['hrg_satuan'])
+                    ? (float)$it['hrg_satuan']
+                    : round((float)$pd['hrg_satuan'] * 0.8, 2);
+
+                $disc = isset($it['disc']) && is_numeric($it['disc'])
+                    ? (float)$it['disc']
+                    : (float)($pd['disc'] ?? 0);
+
+                $pajak = isset($it['pajak']) && is_numeric($it['pajak'])
+                    ? (float)$it['pajak']
+                    : (float)($pd['pajak'] ?? 0);
+
+                $subtotal_before = $qty_allocated * $hrg_satuan;
+                $subtotal_after  = $subtotal_before * (1 - ($disc / 100));
+                $total_harga     = $subtotal_after;
+
+                $parent_item_faktur_no = $parent_fakturs[$pid]['no_faktur'] ?? $pd['no_faktur'];
+
+                $fd = [
+                    'id_pecah'                => $child_id_pecah,
+                    'no_faktur'               => $no_faktur_child,
+                    'parent_id_faktur'        => $pid,
+                    'parent_no_faktur'        => $parent_item_faktur_no,
+                    'id_faktur_detail_parent' => $pd['id'],
+                    'id_so'                   => $pd['id_so'],
+                    'id_so_detail'            => $pd['id_so_detail'],
+                    'kd_barang'               => $pd['kd_barang'],
+                    'nama_barang'             => $pd['nama_barang'],
+                    'no_lot'                  => $pd['no_lot'],
+                    'expired_date'            => $pd['expired_date'],
+                    'qty'                     => $qty_allocated,
+                    'qty_box'                 => $qty_box,
+                    'qty_satuan'              => $qty_satuan,
+                    'isi_per_box'             => $isi,
+                    'satuan'                  => $pd['satuan'] ?? 'PCS',
+                    'hrg_satuan'              => $hrg_satuan,
+                    'hrg_pokok'               => (float)($pd['hrg_pokok'] ?? 0),
+                    'disc'                    => $disc,
+                    'pajak'                   => $pajak,
+                    'subtotal_before_disc'    => $subtotal_before,
+                    'subtotal_after_disc'     => $subtotal_after,
+                    'total_harga'             => $total_harga,
+                    'berat_gram'              => (float)($pd['berat_gram'] ?? 0),
+                    'kubikasi_m3'             => (float)($pd['kubikasi_m3'] ?? 0),
+                    'gudang_id'               => $pd['gudang_id'] ?? $first_parent['gudang_id'],
+                    'create_by'               => $username,
+                    'create_at'               => date('Y-m-d H:i:s')
+                ];
+
+                $this->db->insert('tbso_faktur_z_pecah_detail', $fd);
+                $child_details_logged[] = $pd['nama_barang'] . " (" . $qty_allocated . " " . ($pd['satuan'] ?? 'PCS') . " @ Rp " . number_format($hrg_satuan, 0, ',', '.') . ")";
+            }
+
+            // Update total tonase dan kubikasi
+            $this->db->select('SUM(qty * berat_gram / 1000000) AS t, SUM(qty * kubikasi_m3) AS k', false);
+            $this->db->where('id_pecah', $child_id_pecah);
+            $sums = $this->db->get('tbso_faktur_z_pecah_detail')->row_array();
+
+            $this->db->where('id_pecah', $child_id_pecah);
+            $this->db->update('tbso_faktur_z_pecah', [
+                'total_tonase'   => round((float)($sums['t'] ?? 0), 6),
+                'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
+            ]);
+
+            $this->M_ActivityLog->log(
+                $first_parent['no_so'] ?? '-',
+                $no_faktur_child,
+                'BUAT_FAKTUR_PECAHAN_H_BATCH',
+                'Faktur pecahan massal ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari Faktur Z: ' . $parent_no_str,
+                $username,
+                "Item:\n" . implode("\n", $child_details_logged)
+            );
+
+            $created_fakturs[] = $no_faktur_child;
+        }
+
+        // Tandai parent faktur yang terpengaruh sebagai telah dipecah
+        if (!empty($affected_parent_ids)) {
+            $this->db->where_in('id_faktur', array_keys($affected_parent_ids));
+            $this->db->update('tbso_faktur_penjualan', [
+                'is_split_parent' => 1,
+                'update_by'       => $username,
+                'update_at'       => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        $this->db->trans_complete();
+
+        return [
+            'success'       => $this->db->trans_status() && !empty($created_fakturs),
+            'total_created' => count($created_fakturs),
+            'created_list'  => $created_fakturs
+        ];
+    }
+
+    public function ensure_faktur_z_pecah_tables()
+    {
+        if (!$this->db->table_exists('tbso_faktur_z_pecah')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbso_faktur_z_pecah` (
+                    `id_pecah` INT AUTO_INCREMENT PRIMARY KEY,
+                    `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Kode Faktur pecahan diawali H',
+                    `parent_id_faktur` INT NOT NULL COMMENT 'ID Faktur Z Induk',
+                    `parent_no_faktur` VARCHAR(50) NOT NULL COMMENT 'No Faktur Z Induk',
+                    `id_so` INT NOT NULL,
+                    `no_so` VARCHAR(50) NOT NULL,
+                    `kd_customer` VARCHAR(50) NOT NULL COMMENT 'Customer Penerima Pecahan',
+                    `customer_name` VARCHAR(255) NOT NULL,
+                    `gudang_id` VARCHAR(50) DEFAULT NULL,
+                    `tanggal_faktur` DATE NOT NULL,
+                    `tanggal_jatuh_tempo` DATE DEFAULT NULL,
+                    `salesman` VARCHAR(100) DEFAULT NULL,
+                    `cara_pembayaran` VARCHAR(20) DEFAULT NULL,
+                    `jtempo` INT DEFAULT 0,
+                    `tempo` INT DEFAULT 0,
+                    `catatan` TEXT DEFAULT NULL,
+                    `status` VARCHAR(20) NOT NULL DEFAULT 'confirmed',
+                    `total_tonase` DECIMAL(12,4) DEFAULT 0,
+                    `total_kubikasi` DECIMAL(12,6) DEFAULT 0,
+                    `create_by` VARCHAR(100) NOT NULL,
+                    `create_at` DATETIME NOT NULL,
+                    `update_by` VARCHAR(100) DEFAULT NULL,
+                    `update_at` DATETIME DEFAULT NULL,
+                    INDEX `idx_no_faktur` (`no_faktur`),
+                    INDEX `idx_parent_id_faktur` (`parent_id_faktur`),
+                    INDEX `idx_id_so` (`id_so`),
+                    INDEX `idx_kd_customer` (`kd_customer`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
+
+        if (!$this->db->table_exists('tbso_faktur_z_pecah_detail')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbso_faktur_z_pecah_detail` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `id_pecah` INT NOT NULL COMMENT 'Relasi ke tbso_faktur_z_pecah.id_pecah',
+                    `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Kode Faktur pecahan H',
+                    `parent_id_faktur` INT NOT NULL,
+                    `parent_no_faktur` VARCHAR(50) NOT NULL,
+                    `id_faktur_detail_parent` INT DEFAULT NULL COMMENT 'ID baris tbso_faktur_detail induk',
+                    `id_so` INT NOT NULL,
+                    `id_so_detail` INT NOT NULL,
+                    `kd_barang` VARCHAR(50) NOT NULL,
+                    `nama_barang` VARCHAR(255) NOT NULL,
+                    `no_lot` VARCHAR(50) DEFAULT NULL,
+                    `expired_date` DATE DEFAULT NULL,
+                    `qty` DECIMAL(15,3) NOT NULL DEFAULT 0,
+                    `qty_box` DECIMAL(15,3) DEFAULT 0,
+                    `qty_satuan` DECIMAL(15,3) DEFAULT 0,
+                    `isi_per_box` INT DEFAULT 1,
+                    `satuan` VARCHAR(20) DEFAULT NULL,
+                    `hrg_satuan` DECIMAL(18,2) DEFAULT 0,
+                    `hrg_pokok` DECIMAL(18,2) DEFAULT 0,
+                    `disc` DECIMAL(5,2) DEFAULT 0,
+                    `pajak` DECIMAL(5,2) DEFAULT 0,
+                    `subtotal_before_disc` DECIMAL(15,2) DEFAULT 0,
+                    `subtotal_after_disc` DECIMAL(15,2) DEFAULT 0,
+                    `total_harga` DECIMAL(18,2) DEFAULT 0,
+                    `berat_gram` DECIMAL(12,4) DEFAULT 0,
+                    `kubikasi_m3` DECIMAL(12,6) DEFAULT 0,
+                    `gudang_id` VARCHAR(50) DEFAULT NULL,
+                    `create_by` VARCHAR(100) NOT NULL,
+                    `create_at` DATETIME NOT NULL,
+                    INDEX `idx_id_pecah` (`id_pecah`),
+                    INDEX `idx_no_faktur` (`no_faktur`),
+                    INDEX `idx_parent_id_faktur` (`parent_id_faktur`),
+                    INDEX `idx_kd_barang` (`kd_barang`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
+    }
+
+    public function get_faktur_pecah_h($id_pecah)
+    {
+        $this->ensure_faktur_z_pecah_tables();
+        $this->ensure_customer_acak_table();
+        $this->db->select('p.*, 
+            COALESCE(ca.kontak_person, c.nama_customer) AS full_customer_name, 
+            ca.nama_toko, ca.alamat AS ca_alamat, ca.kota AS ca_kota, ca.nik AS ca_nik, ca.npwp AS ca_npwp,
+            c.kd_rute AS customer_kd_rute');
+        $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
+        if (is_numeric($id_pecah)) {
+            $this->db->where('p.id_pecah', (int)$id_pecah);
+        } else {
+            $this->db->where('p.no_faktur', $id_pecah);
+        }
+        return $this->db->get()->row_array();
+    }
+
+    public function get_faktur_pecah_h_detail($id_pecah)
+    {
+        $this->ensure_faktur_z_pecah_tables();
+        return $this->db->get_where('tbso_faktur_z_pecah_detail', ['id_pecah' => $id_pecah])->result_array();
+    }
+
+    public function get_all_faktur_pecah_h($filter = [])
+    {
+        $this->ensure_faktur_z_pecah_tables();
+        $this->ensure_customer_acak_table();
+        $this->db->select('p.*, 
+            COALESCE(ca.kontak_person, c.nama_customer) AS nama_customer, 
+            ca.nama_toko, ca.kota AS customer_kota,
+            c.kd_rute AS customer_kd_rute,
+            COALESCE(SUM(pd.qty), 0) AS total_qty,
+            COALESCE(SUM(pd.total_harga), 0) AS grand_total,
+            COUNT(pd.id) AS total_barang');
+        $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
+        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+        if (!empty($filter['date1'])) $this->db->where('p.tanggal_faktur >=', $filter['date1']);
+        if (!empty($filter['date2'])) $this->db->where('p.tanggal_faktur <=', $filter['date2']);
+        if (!empty($filter['create_by'])) $this->db->where('p.create_by', $filter['create_by']);
+        if (!empty($filter['search'])) {
+            $q = trim((string)$filter['search']);
+            $this->db->group_start();
+            $this->db->like('p.no_faktur', $q);
+            $this->db->or_like('p.parent_no_faktur', $q);
+            $this->db->or_like('p.no_so', $q);
+            $this->db->or_like('p.customer_name', $q);
+            $this->db->or_like('ca.kontak_person', $q);
+            $this->db->or_like('ca.nama_toko', $q);
+            $this->db->or_like('c.nama_customer', $q);
+            $this->db->group_end();
+        }
+        $this->db->group_by('p.id_pecah');
+        $this->db->order_by('p.id_pecah', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Memastikan tabel master customer acak tersedia
+     */
+    public function ensure_customer_acak_table()
+    {
+        if (!$this->db->table_exists('tb_customer_acak')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_customer_acak` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `kd_customer` VARCHAR(50) NOT NULL,
+                    `nama_toko` VARCHAR(255) NOT NULL,
+                    `kd_customer_induk` VARCHAR(50) DEFAULT NULL,
+                    `kontak_person` VARCHAR(255) NOT NULL,
+                    `alamat` TEXT DEFAULT NULL,
+                    `kota` VARCHAR(100) DEFAULT NULL,
+                    `nik` VARCHAR(50) DEFAULT NULL,
+                    `npwp` VARCHAR(50) DEFAULT NULL,
+                    `created_at` DATETIME NOT NULL,
+                    `updated_at` DATETIME DEFAULT NULL,
+                    UNIQUE KEY `uk_kd_customer` (`kd_customer`),
+                    INDEX `idx_nama_toko` (`nama_toko`),
+                    INDEX `idx_kd_customer_induk` (`kd_customer_induk`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+    }
+
+    /**
+     * Ambil data customer acak berdasarkan kode acak
+     */
+    public function get_customer_acak_by_kode($kd_customer)
+    {
+        $this->ensure_customer_acak_table();
+        return $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_customer])->row_array();
+    }
+
+    /**
+     * Ambil list customer acak berdasarkan kios induk / kode induk
+     * Pastikan tidak tertukar dengan kios lain, dan diurutkan berdasarkan
+     * beban transaksi historis terendah (yang paling kosong / belum pernah diprioritaskan di awal)
+     */
+    public function get_customers_acak_by_kios($nama_kios = '', $kd_customer_induk = '')
+    {
+        $this->ensure_customer_acak_table();
+        $this->ensure_faktur_z_pecah_tables();
+
+        $this->db->select('ca.*, 
+            COALESCE(COUNT(DISTINCT p.id_pecah), 0) AS total_faktur_pecah,
+            COALESCE(SUM(pd.total_harga), 0) AS total_nominal_pecah');
+        $this->db->from('tb_customer_acak ca');
+        $this->db->join('tbso_faktur_z_pecah p', "p.kd_customer = ca.kd_customer AND p.status != 'cancelled'", 'left');
+        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+
+        $has_condition = false;
+        $this->db->group_start();
+
+        if (!empty($kd_customer_induk)) {
+            $this->db->where('ca.kd_customer_induk', $kd_customer_induk);
+            $has_condition = true;
+        }
+
+        if (!empty($nama_kios)) {
+            $nama_clean = trim($nama_kios);
+            if ($has_condition) {
+                $this->db->or_where('ca.nama_toko', $nama_clean);
+                $this->db->or_like('ca.nama_toko', $nama_clean);
+            } else {
+                $this->db->where('ca.nama_toko', $nama_clean);
+                $this->db->or_like('ca.nama_toko', $nama_clean);
+                $has_condition = true;
+            }
+        }
+
+        $this->db->group_end();
+
+        // Jika tidak ada kriteria sama sekali, jangan kembalikan semua data untuk menjaga isolasi per kios
+        if (!$has_condition) {
+            return [];
+        }
+
+        $this->db->group_by('ca.id');
+        // Prioritaskan: 
+        // 1. Yang akumulasi nominalnya paling sedikit / 0 (paling kosong)
+        // 2. Yang jumlah fakturnya paling sedikit
+        // 3. Urutkan berdasarkan kode customer acak
+        $this->db->order_by('total_nominal_pecah', 'ASC');
+        $this->db->order_by('total_faktur_pecah', 'ASC');
+        $this->db->order_by('ca.kd_customer', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Ambil list semua customer acak dengan filter fleksibel
+     */
+    public function get_all_customers_acak($filter = [])
+    {
+        $this->ensure_customer_acak_table();
+        $this->db->select('ca.*, c.nama_customer as induk_nama_customer, c.nama_kios as induk_nama_kios');
+        $this->db->from('tb_customer_acak ca');
+        $this->db->join('tb_customer c', 'c.kd_customer = ca.kd_customer_induk', 'left');
+
+        if (!empty($filter['nama_toko'])) {
+            $this->db->where('ca.nama_toko', $filter['nama_toko']);
+        }
+        if (!empty($filter['kd_customer_induk'])) {
+            $this->db->where('ca.kd_customer_induk', $filter['kd_customer_induk']);
+        }
+        if (!empty($filter['search'])) {
+            $s = trim($filter['search']);
+            $this->db->group_start();
+            $this->db->like('ca.kd_customer', $s);
+            $this->db->or_like('ca.kontak_person', $s);
+            $this->db->or_like('ca.nama_toko', $s);
+            $this->db->or_like('ca.alamat', $s);
+            $this->db->or_like('ca.kota', $s);
+            $this->db->or_like('ca.nik', $s);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('ca.nama_toko', 'ASC');
+        $this->db->order_by('ca.kd_customer', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Ambil daftar nama toko unik di master customer acak
+     */
+    public function get_unique_tokos_customer_acak()
+    {
+        $this->ensure_customer_acak_table();
+        return $this->db->select('nama_toko, kd_customer_induk, COUNT(*) as total_kontak')
+            ->from('tb_customer_acak')
+            ->group_by('nama_toko')
+            ->order_by('nama_toko', 'ASC')
+            ->get()
+            ->result_array();
     }
 
     private function _generate_and_track_no_faktur($prefix, &$generated_numbers)

@@ -262,25 +262,22 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                 <button class="btn btn-info btn-sm" onclick="window.print()">
                     <i class="fas fa-print"></i> Cetak Faktur
                 </button>
-                <?php if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && (!empty($has_remaining_split_qty) || empty($faktur['is_split_parent'])) && !in_array($faktur['status'], ['cancelled', 'draft'], true)): ?>
-                    <a href="<?= base_url('sales_order/split_faktur/' . $faktur['id_faktur']) ?>"
-                       class="btn btn-warning btn-sm">
-                        <i class="fas fa-cut"></i> Pecah Faktur Z
-                    </a>
-                <?php endif; ?>
             </div>
 
             <?php if (!empty($faktur['is_split_parent'])): ?>
-                <div class="alert alert-warning mb-3 no-print">
-                    <h5><i class="icon fas fa-exclamation-triangle"></i> Faktur Telah Dipecah!</h5>
-                    Faktur ini telah dipecah menjadi faktur turunan berikut:
+                <div class="alert alert-warning mb-3 no-print shadow-sm">
+                    <h5><i class="icon fas fa-exclamation-triangle"></i> Faktur Z Telah Dipecah!</h5>
+                    Faktur Z induk ini telah dipecah ke faktur pecahan (Kode H) pada tabel terpisah:
                     <ul class="mb-0 mt-2">
                         <?php foreach ($child_fakturs as $cf): ?>
+                            <?php 
+                            $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? ''));
+                            ?>
                             <li>
-                                <a href="<?= base_url('sales_order/detail_faktur/' . $cf['id_faktur']) ?>" class="font-weight-bold text-dark" style="text-decoration: underline;">
-                                    <?= htmlspecialchars($cf['no_faktur']) ?>
+                                <a href="<?= $cf_url ?>" class="font-weight-bold text-dark" style="text-decoration: underline;">
+                                    <i class="fas fa-tag mr-1 text-warning"></i><?= htmlspecialchars($cf['no_faktur']) ?>
                                 </a> 
-                                - Customer: <?= htmlspecialchars($cf['customer_name']) ?>
+                                &bull; Customer Penerima: <strong><?= htmlspecialchars($cf['customer_name']) ?></strong>
                             </li>
                         <?php endforeach; ?>
                     </ul>

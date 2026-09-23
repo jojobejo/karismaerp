@@ -104,6 +104,8 @@ class C_SalesOrder extends CI_Controller
             return [];
         }
 
+        $this->load->model('M_pembayaran');
+
         $kdCustomers1000 = [];
         foreach ($customers as $c) {
             if (isset($c['plafon_aktif']) && (float)$c['plafon_aktif'] == 1000 && !empty($c['kd_customer'])) {
@@ -113,16 +115,40 @@ class C_SalesOrder extends CI_Controller
 
         $unpaidKdMap = [];
         if (!empty($kdCustomers1000)) {
-            $this->load->model('M_pembayaran');
             $unpaidKdMap = $this->M_pembayaran->get_unpaid_customer_kd_map($kdCustomers1000);
+        }
+
+        // Ambil rekapitulasi customer yang memiliki piutang (faktur belum lunas)
+        $unpaidSummaryList = $this->M_pembayaran->get_customers_with_unpaid_faktur();
+        $unpaidSummaryMap  = [];
+        foreach ($unpaidSummaryList as $row) {
+            $kdCust = $row['kd_customer'] ?? '';
+            if ($kdCust !== '') {
+                $unpaidSummaryMap[$kdCust] = [
+                    'total_piutang' => (float)($row['sisa_tagihan'] ?? 0),
+                    'total_faktur'  => (int)($row['total_faktur'] ?? 0),
+                ];
+            }
         }
 
         foreach ($customers as &$customer) {
             $customer['plafon_aktif']      = $customer['plafon_aktif']      ?? null;
-            $customer['piutang']           = null;
+            $kd = $customer['kd_customer'] ?? '';
+
+            if (isset($unpaidSummaryMap[$kd])) {
+                $customer['has_piutang']          = true;
+                $customer['total_piutang']        = $unpaidSummaryMap[$kd]['total_piutang'];
+                $customer['total_faktur_piutang'] = $unpaidSummaryMap[$kd]['total_faktur'];
+                $customer['piutang']              = $unpaidSummaryMap[$kd]['total_piutang'];
+            } else {
+                $customer['has_piutang']          = false;
+                $customer['total_piutang']        = 0;
+                $customer['total_faktur_piutang'] = 0;
+                $customer['piutang']              = 0;
+            }
+
             $customer['plafon_status']     = null;
             $customer['plafon_updated_at'] = $customer['plafon_updated_at'] ?? null;
-            $kd = $customer['kd_customer'] ?? '';
             $customer['has_unpaid_1000']   = isset($unpaidKdMap[$kd]);
         }
         unset($customer);
@@ -302,6 +328,57 @@ class C_SalesOrder extends CI_Controller
             'message'    => 'Data plafon customer berhasil diperbarui ke database.',
             'count'      => count($map),
             'updated_at' => date('Y-m-d H:i:s'),
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    public function ajax_customer_piutang()
+    {
+        if (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_customer = trim((string)($this->input->post('kd_customer') ?: $this->input->get('kd_customer')));
+        if ($kd_customer === '') {
+            echo json_encode([
+                'status'        => 'error',
+                'message'       => 'Kode customer tidak valid.',
+                'has_piutang'   => false,
+                'total_piutang' => 0,
+                'total_faktur'  => 0,
+                'faktur_list'   => [],
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        $this->load->model('M_pembayaran');
+        $fakturs = $this->M_pembayaran->get_unpaid_faktur_by_customer($kd_customer);
+
+        $total_piutang = 0;
+        $faktur_list   = [];
+        foreach ($fakturs as $f) {
+            $sisa = (float)($f['sisa_tagihan'] ?? 0);
+            if ($sisa > 0) {
+                $total_piutang += $sisa;
+                $faktur_list[] = [
+                    'no_faktur'           => $f['no_faktur'] ?? '-',
+                    'tanggal_faktur'      => $f['tanggal_faktur'] ?? '-',
+                    'tanggal_jatuh_tempo' => $f['tanggal_jatuh_tempo'] ?? '-',
+                    'total_tagihan'       => (float)($f['total_tagihan'] ?? 0),
+                    'total_pembayaran'    => (float)($f['total_pembayaran'] ?? 0),
+                    'sisa_tagihan'        => $sisa,
+                    'status_overdue'      => $f['status_overdue'] ?? '-',
+                    'hari_overdue'        => (int)($f['hari_overdue'] ?? 0),
+                    'sisa_hari'           => (int)($f['sisa_hari'] ?? 0),
+                ];
+            }
+        }
+
+        echo json_encode([
+            'status'        => 'ok',
+            'kd_customer'   => $kd_customer,
+            'has_piutang'   => $total_piutang > 0,
+            'total_piutang' => $total_piutang,
+            'total_faktur'  => count($faktur_list),
+            'faktur_list'   => $faktur_list,
         ], JSON_UNESCAPED_UNICODE);
     }
 
@@ -1801,11 +1878,14 @@ class C_SalesOrder extends CI_Controller
 
         $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
         $data['so']                = $so;
+        $is_faktur_z               = !empty($so['is_faktur_z']);
+        $data['is_faktur_z']       = $is_faktur_z;
         $data['details']           = array_map(function($item) use ($tax_rate) {
             $item['pajak'] = $tax_rate;
+            // Faktur Z Induk nominal aslinya tetap utuh (potongan 20% baru diterapkan saat dipecah menjadi Faktur H)
             return $item;
         }, array_values($items_outstanding));
-        $faktur_prefix             = !empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix();
+        $faktur_prefix             = $is_faktur_z ? 'Z' : $this->_getFakturUserPrefix();
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
@@ -2053,7 +2133,7 @@ class C_SalesOrder extends CI_Controller
 
         $child_fakturs = [];
         if (!empty($faktur['is_split_parent'])) {
-            $child_fakturs = $this->db->get_where('tbso_faktur_penjualan', ['parent_id_faktur' => $numeric_id_faktur])->result_array();
+            $child_fakturs = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $numeric_id_faktur])->result_array();
         }
 
         $parent_faktur = null;
@@ -2064,10 +2144,8 @@ class C_SalesOrder extends CI_Controller
         $has_remaining_split_qty = false;
         if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && !in_array($faktur['status'], ['cancelled', 'draft'], true)) {
             $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
-                ->from('tbso_faktur_detail fd')
-                ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
-                ->where('fp.parent_id_faktur', $numeric_id_faktur)
-                ->where('fp.status !=', 'cancelled')
+                ->from('tbso_faktur_z_pecah_detail fd')
+                ->where('fd.parent_id_faktur', $numeric_id_faktur)
                 ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
                 ->get()
                 ->result_array();
@@ -2112,6 +2190,63 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    // ================================================================
+    // PECAH FAKTUR Z — MODUL UTAMA LIST FAKTUR Z
+    // ================================================================
+    public function pecah_faktur()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_ensureFakturStatusEnum();
+        $this->_ensureFakturPaymentInfoColumns();
+
+        $filter = [
+            'date1'         => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'         => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'status_pecah'  => $this->input->post('status_pecah') ?: $this->input->get('status_pecah', true) ?: 'all',
+            'status_faktur' => $this->input->post('status_faktur') ?: $this->input->get('status_faktur', true) ?: 'all',
+            'search'        => $this->input->post('search') ?: $this->input->get('search', true),
+        ];
+
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
+        $fakturs_h = $this->M_SalesOrder->get_all_faktur_pecah_h($filter);
+
+        // Ringkasan statistik untuk widget
+        $stat = [
+            'total'          => count($fakturs),
+            'belum_dipecah'  => 0,
+            'sudah_dipecah'  => 0,
+            'turunan'        => count($fakturs_h),
+            'total_nilai'    => 0,
+        ];
+
+        foreach ($fakturs as $f) {
+            $stat['total_nilai'] += (float)($f['grand_total'] ?? 0);
+            if ($f['tipe_faktur'] === 'belum_dipecah') {
+                $stat['belum_dipecah']++;
+            } elseif (in_array($f['tipe_faktur'], ['sudah_dipecah', 'dipecah_sebagian'], true)) {
+                $stat['sudah_dipecah']++;
+            }
+        }
+
+        $data['page_title']  = 'KARISMA - Modul Pecah Faktur Z';
+        $data['fakturs']     = $fakturs;
+        $data['fakturs_h']   = $fakturs_h;
+        $data['stat']        = $stat;
+        $data['filter']      = $filter;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/pecah_faktur_list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function split_faktur($id_faktur)
     {
         $this->_ensureFakturPaymentInfoColumns();
@@ -2127,26 +2262,24 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($so['is_faktur_z'])) {
             $this->session->set_flashdata('error', 'Hanya Faktur Z yang dapat dipecah.');
-            redirect('sales_order/detail_faktur/' . $id_faktur);
+            redirect('sales_order/pecah_faktur');
             return;
         }
         if (!empty($faktur['parent_id_faktur'])) {
             $this->session->set_flashdata('error', 'Faktur turunan tidak dapat dipecah lagi.');
-            redirect('sales_order/detail_faktur/' . $id_faktur);
+            redirect('sales_order/pecah_faktur');
             return;
         }
         if (in_array($faktur['status'], ['cancelled', 'draft'], true)) {
             $this->session->set_flashdata('error', 'Faktur dengan status Draft atau Cancelled tidak dapat dipecah.');
-            redirect('sales_order/detail_faktur/' . $id_faktur);
+            redirect('sales_order/pecah_faktur');
             return;
         }
 
-        // Calculate remaining quantities
+        // Calculate remaining quantities dari tbso_faktur_z_pecah_detail
         $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
-            ->from('tbso_faktur_detail fd')
-            ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
-            ->where('fp.parent_id_faktur', $id_faktur)
-            ->where('fp.status !=', 'cancelled')
+            ->from('tbso_faktur_z_pecah_detail fd')
+            ->where('fd.parent_id_faktur', $id_faktur)
             ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
             ->get()
             ->result_array();
@@ -2180,15 +2313,22 @@ class C_SalesOrder extends CI_Controller
 
         if ($total_remaining <= 0) {
             $this->session->set_flashdata('error', 'Faktur induk ini sudah sepenuhnya dipecah.');
-            redirect('sales_order/detail_faktur/' . $id_faktur);
+            redirect('sales_order/pecah_faktur');
             return;
         }
 
-        $data['page_title'] = 'Pecah Faktur Z - ' . $faktur['no_faktur'];
-        $data['faktur']     = $faktur;
-        $data['so']         = $so;
-        $data['details']    = $details;
-        $data['customers']  = $this->M_SalesOrder->get_customers();
+        $cust_induk = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
+        $nama_kios = !empty($cust_induk['nama_kios']) ? $cust_induk['nama_kios'] : $faktur['customer_name'];
+        $customers_acak = $this->M_SalesOrder->get_customers_acak_by_kios($nama_kios, $faktur['kd_customer']);
+
+        $data['page_title']       = 'Pecah Faktur Z - ' . $faktur['no_faktur'];
+        $data['faktur']           = $faktur;
+        $data['so']               = $so;
+        $data['details']          = $details;
+        $data['customers']        = !empty($customers_acak) ? $customers_acak : $this->M_SalesOrder->get_customers();
+        $data['is_customer_acak'] = !empty($customers_acak);
+        $data['kios_induk_nama']  = $nama_kios;
+        $data['back_url']         = base_url('sales_order/pecah_faktur');
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_split_form.php', $data);
@@ -2223,12 +2363,10 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Calculate remaining quantities
+        // Calculate remaining quantities dari tbso_faktur_z_pecah_detail
         $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
-            ->from('tbso_faktur_detail fd')
-            ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
-            ->where('fp.parent_id_faktur', $id_faktur)
-            ->where('fp.status !=', 'cancelled')
+            ->from('tbso_faktur_z_pecah_detail fd')
+            ->where('fd.parent_id_faktur', $id_faktur)
             ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
             ->get()
             ->result_array();
@@ -2272,6 +2410,14 @@ class C_SalesOrder extends CI_Controller
         $allocated_qtys = [];
         $validation_errors = [];
 
+        $cust_induk = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
+        $nama_kios = !empty($cust_induk['nama_kios']) ? $cust_induk['nama_kios'] : $faktur['customer_name'];
+        $allowed_acak = $this->M_SalesOrder->get_customers_acak_by_kios($nama_kios, $faktur['kd_customer']);
+        $allowed_acak_map = [];
+        foreach ($allowed_acak as $ca) {
+            $allowed_acak_map[$ca['kd_customer']] = $ca;
+        }
+
         foreach ($splits as $idx => $s) {
             $kd_cust = trim((string)($s['kd_customer'] ?? ''));
             if ($kd_cust === '') {
@@ -2279,10 +2425,20 @@ class C_SalesOrder extends CI_Controller
                 continue;
             }
 
-            $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
-            if (!$cust) {
-                $validation_errors[] = "Customer Penerima #" . $idx . " tidak valid.";
-                continue;
+            $customer_display_name = '';
+            if (!empty($allowed_acak_map)) {
+                if (!isset($allowed_acak_map[$kd_cust])) {
+                    $validation_errors[] = "Customer Penerima #" . $idx . " (" . htmlspecialchars($kd_cust) . ") bukan kontak person milik kios " . htmlspecialchars($nama_kios) . ". Pastikan customer tidak tertukar!";
+                    continue;
+                }
+                $customer_display_name = $allowed_acak_map[$kd_cust]['kontak_person'];
+            } else {
+                $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
+                if (!$cust) {
+                    $validation_errors[] = "Customer Penerima #" . $idx . " tidak valid.";
+                    continue;
+                }
+                $customer_display_name = $cust['nama_customer'];
             }
 
             $items = $s['items'] ?? [];
@@ -2290,7 +2446,7 @@ class C_SalesOrder extends CI_Controller
             foreach ($items as $itemId => $qty) {
                 $qty = (float)$qty;
                 if ($qty < 0) {
-                    $validation_errors[] = "Kuantitas untuk customer " . htmlspecialchars($cust['nama_customer']) . " tidak boleh negatif.";
+                    $validation_errors[] = "Kuantitas untuk customer " . htmlspecialchars($customer_display_name) . " tidak boleh negatif.";
                 }
                 if ($qty > 0) {
                     $has_qty = true;
@@ -2332,11 +2488,461 @@ class C_SalesOrder extends CI_Controller
                 $username
             );
             $this->session->set_flashdata('success', 'Faktur Z <b>' . $faktur['no_faktur'] . '</b> berhasil dipecah menjadi faktur turunan.');
-            redirect('sales_order/detail_faktur/' . $id_faktur);
+            redirect('sales_order/pecah_faktur');
         } else {
             $this->session->set_flashdata('error', 'Gagal memproses pemecahan: ' . (is_string($result) ? $result : 'Database error'));
             redirect('sales_order/split_faktur/' . $id_faktur);
         }
+    }
+
+    public function split_faktur_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_ensureFakturPaymentInfoColumns();
+        $this->M_SalesOrder->ensure_faktur_z_pecah_tables();
+
+        $raw_ids = $this->input->post('id_faktur') ?: $this->input->get('id_faktur');
+        $id_fakturs = [];
+        if (is_array($raw_ids)) {
+            $id_fakturs = array_filter(array_map('intval', $raw_ids));
+        } elseif (is_string($raw_ids) && trim($raw_ids) !== '') {
+            $id_fakturs = array_filter(array_map('intval', explode(',', $raw_ids)));
+        }
+
+        if (empty($id_fakturs)) {
+            $this->session->set_flashdata('warning', 'Pilih minimal 1 Faktur Z untuk dipecah.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $jumlah_pecah = (int)($this->input->post('jumlah_pecah') ?: $this->input->get('jumlah_pecah') ?: 2);
+        if ($jumlah_pecah < 1) $jumlah_pecah = 1;
+        if ($jumlah_pecah > 50) $jumlah_pecah = 50;
+
+        // Ambil data Faktur Z
+        $parent_fakturs = [];
+        $invalid_reasons = [];
+
+        foreach ($id_fakturs as $fid) {
+            $f = $this->M_SalesOrder->get_faktur($fid);
+            if (!$f) {
+                $invalid_reasons[] = "Faktur #$fid tidak ditemukan.";
+                continue;
+            }
+            if (!empty($f['parent_id_faktur'])) {
+                $invalid_reasons[] = "Faktur " . $f['no_faktur'] . " adalah faktur turunan dan tidak dapat dipecah lagi.";
+                continue;
+            }
+            if (in_array($f['status'], ['cancelled', 'draft'], true)) {
+                $invalid_reasons[] = "Faktur " . $f['no_faktur'] . " berstatus " . $f['status'] . " sehingga tidak dapat dipecah.";
+                continue;
+            }
+            $parent_fakturs[$fid] = $f;
+        }
+
+        if (empty($parent_fakturs)) {
+            $this->session->set_flashdata('error', 'Tidak ada Faktur Z valid yang dapat diproses.<br>' . implode('<br>', $invalid_reasons));
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        // Ambil alokasi yang sudah tersimpan di tbso_faktur_z_pecah_detail untuk parent-parent ini
+        $child_allocations = $this->db->select('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date, SUM(qty) as qty_allocated')
+            ->from('tbso_faktur_z_pecah_detail')
+            ->where_in('parent_id_faktur', array_keys($parent_fakturs))
+            ->group_by('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date')
+            ->get()
+            ->result_array();
+
+        $allocated_map = [];
+        foreach ($child_allocations as $ca) {
+            $pid = (int)$ca['parent_id_faktur'];
+            $key = implode('|', [
+                $ca['id_so_detail'],
+                $ca['kd_barang'],
+                (string)$ca['no_lot'],
+                $ca['expired_date']
+            ]);
+            $allocated_map[$pid][$key] = (float)$ca['qty_allocated'];
+        }
+
+        // Ambil detail item dari masing-masing Faktur Z
+        $pool_items = [];
+        $total_pool_qty = 0;
+
+        foreach ($parent_fakturs as $pid => $pf) {
+            $details = $this->M_SalesOrder->get_faktur_detail($pid);
+            foreach ($details as $d) {
+                $key = implode('|', [
+                    $d['id_so_detail'],
+                    $d['kd_barang'],
+                    (string)$d['no_lot'],
+                    $d['expired_date']
+                ]);
+                $allocated = $allocated_map[$pid][$key] ?? 0.0;
+                $remaining = max(0.0, (float)$d['qty'] - $allocated);
+
+                // Sertakan item jika masih ada sisa stok yang bisa dipecah
+                if ($remaining > 0.0001) {
+                    $d['parent_id_faktur'] = $pid;
+                    $d['parent_no_faktur'] = $pf['no_faktur'];
+                    $d['remaining_qty']     = $remaining;
+                    $pool_items[$d['id']]  = $d;
+                    $total_pool_qty += $remaining;
+                }
+            }
+        }
+
+        if ($total_pool_qty <= 0) {
+            $this->session->set_flashdata('warning', 'Semua barang pada Faktur Z yang dipilih sudah sepenuhnya dipecah.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        // Kumpulkan data kios induk dari Faktur Z yang dipilih
+        $kios_induk_map = [];
+        $kios_names = [];
+        foreach ($parent_fakturs as $pf) {
+            $kd = $pf['kd_customer'];
+            $c_db = $this->db->get_where('tb_customer', ['kd_customer' => $kd])->row_array();
+            $toko_name = !empty($c_db['nama_kios']) ? $c_db['nama_kios'] : $pf['customer_name'];
+            $kios_induk_map[$kd] = $toko_name;
+            $kios_names[$toko_name] = true;
+        }
+
+        // Ambil customer acak yang terikat pada kios-kios induk ini
+        $customers_acak = [];
+        foreach ($kios_induk_map as $kd => $toko) {
+            $res = $this->M_SalesOrder->get_customers_acak_by_kios($toko, $kd);
+            foreach ($res as $ca) {
+                $customers_acak[$ca['kd_customer']] = $ca;
+            }
+        }
+
+        if (!empty($customers_acak)) {
+            $customers = array_values($customers_acak);
+            $is_customer_acak = true;
+        } else {
+            $customers = $this->M_SalesOrder->get_customers();
+            $is_customer_acak = false;
+        }
+
+        $data['page_title']       = 'KARISMA - Pecah Faktur Z Sekaligus (' . count($parent_fakturs) . ' Faktur)';
+        $data['parent_fakturs']   = $parent_fakturs;
+        $data['pool_items']       = $pool_items;
+        $data['total_pool_qty']   = $total_pool_qty;
+        $data['jumlah_pecah']     = $jumlah_pecah;
+        $data['customers']        = $customers;
+        $data['is_customer_acak'] = $is_customer_acak;
+        $data['kios_induk_names'] = implode(', ', array_keys($kios_names));
+        $data['back_url']         = base_url('sales_order/pecah_faktur');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_split_batch_form.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_split_faktur_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_ensureFakturPaymentInfoColumns();
+        $this->M_SalesOrder->ensure_faktur_z_pecah_tables();
+
+        $post = $this->input->post(null, true);
+        $parent_ids = $post['parent_ids'] ?? [];
+        $splits     = $post['splits'] ?? [];
+
+        if (empty($parent_ids) || empty($splits)) {
+            $this->session->set_flashdata('error', 'Data pemecahan faktur tidak lengkap.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        // Ambil data parent faktur
+        $parent_fakturs = [];
+        foreach ($parent_ids as $pid) {
+            $f = $this->M_SalesOrder->get_faktur($pid);
+            if ($f && empty($f['parent_id_faktur'])) {
+                $parent_fakturs[$pid] = $f;
+            }
+        }
+
+        if (empty($parent_fakturs)) {
+            $this->session->set_flashdata('error', 'Faktur Z sumber tidak valid.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        // Ambil data item detail
+        $parent_details = [];
+        $allocated_map = [];
+
+        $child_allocations = $this->db->select('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date, SUM(qty) as qty_allocated')
+            ->from('tbso_faktur_z_pecah_detail')
+            ->where_in('parent_id_faktur', array_keys($parent_fakturs))
+            ->group_by('parent_id_faktur, id_so_detail, kd_barang, no_lot, expired_date')
+            ->get()
+            ->result_array();
+
+        foreach ($child_allocations as $ca) {
+            $pid = (int)$ca['parent_id_faktur'];
+            $key = implode('|', [
+                $ca['id_so_detail'],
+                $ca['kd_barang'],
+                (string)$ca['no_lot'],
+                $ca['expired_date']
+            ]);
+            $allocated_map[$pid][$key] = (float)$ca['qty_allocated'];
+        }
+
+        foreach ($parent_fakturs as $pid => $pf) {
+            $details = $this->M_SalesOrder->get_faktur_detail($pid);
+            foreach ($details as $d) {
+                $key = implode('|', [
+                    $d['id_so_detail'],
+                    $d['kd_barang'],
+                    (string)$d['no_lot'],
+                    $d['expired_date']
+                ]);
+                $allocated = $allocated_map[$pid][$key] ?? 0.0;
+                $remaining = max(0.0, (float)$d['qty'] - $allocated);
+                $d['parent_no_faktur'] = $pf['no_faktur'];
+                $d['remaining_qty']    = $remaining;
+                $parent_details[$d['id']] = $d;
+            }
+        }
+
+        // Validasi alokasi qty agar tidak melebihi sisa
+        $total_requested_per_item = [];
+        $validation_errors = [];
+
+        // Kumpulkan customer acak yang valid untuk parent faktur terpilih
+        $allowed_acak_map = [];
+        $allowed_kios_names = [];
+        foreach ($parent_fakturs as $pf) {
+            $kd = $pf['kd_customer'];
+            $c_db = $this->db->get_where('tb_customer', ['kd_customer' => $kd])->row_array();
+            $toko_name = !empty($c_db['nama_kios']) ? $c_db['nama_kios'] : $pf['customer_name'];
+            $allowed_kios_names[$toko_name] = true;
+            $res = $this->M_SalesOrder->get_customers_acak_by_kios($toko_name, $kd);
+            foreach ($res as $ca) {
+                $allowed_acak_map[$ca['kd_customer']] = $ca;
+            }
+        }
+
+        foreach ($splits as $s_idx => $s) {
+            $kd_cust = trim((string)($s['kd_customer'] ?? ''));
+            $items = $s['items'] ?? [];
+
+            $has_item = false;
+            foreach ($items as $detail_id => $it) {
+                $qty = (float)($it['qty'] ?? 0);
+                if ($qty > 0.0001) {
+                    $has_item = true;
+                    if (!isset($total_requested_per_item[$detail_id])) {
+                        $total_requested_per_item[$detail_id] = 0.0;
+                    }
+                    $total_requested_per_item[$detail_id] += $qty;
+                }
+            }
+
+            if ($has_item) {
+                if (empty($kd_cust)) {
+                    $validation_errors[] = "Slot Pecahan #" . ($s_idx + 1) . " memiliki alokasi barang namun belum memilih Customer.";
+                } elseif (!empty($allowed_acak_map) && !isset($allowed_acak_map[$kd_cust])) {
+                    $validation_errors[] = "Slot Pecahan #" . ($s_idx + 1) . ": Customer Penerima (" . htmlspecialchars($kd_cust) . ") bukan kontak person milik kios (" . implode(', ', array_keys($allowed_kios_names)) . "). Pastikan customer tidak tertukar!";
+                }
+            }
+        }
+
+        foreach ($total_requested_per_item as $detail_id => $req_qty) {
+            if (isset($parent_details[$detail_id])) {
+                $max_available = (float)$parent_details[$detail_id]['remaining_qty'];
+                if ($req_qty > ($max_available + 0.001)) {
+                    $validation_errors[] = "Total alokasi untuk <b>" . htmlspecialchars($parent_details[$detail_id]['nama_barang']) . "</b> (" . number_format($req_qty) . ") melebihi sisa stok yang tersedia (" . number_format($max_available) . ").";
+                }
+            }
+        }
+
+        if (!empty($validation_errors)) {
+            $this->session->set_flashdata('error', 'Validasi gagal:<br>&bull; ' . implode('<br>&bull; ', $validation_errors));
+            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));
+            return;
+        }
+
+        $username = $this->_getUsername();
+        $result = $this->M_SalesOrder->proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username);
+
+        if (!empty($result['success'])) {
+            $this->session->set_flashdata('success', 'Berhasil membuat <b>' . $result['total_created'] . ' Faktur Pecahan (Kode H)</b> dari Faktur Z yang dipilih.');
+            redirect('sales_order/pecah_faktur');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal memproses pemecahan massal. Pastikan minimal 1 pecahan memiliki alokasi barang dan customer.');
+            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));
+        }
+    }
+
+    public function detail_faktur_pecah($id_pecah)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_pecah_h($id_pecah);
+        if (!$faktur) show_404();
+
+        $details = $this->M_SalesOrder->get_faktur_pecah_h_detail($faktur['id_pecah']);
+        $parent_faktur = $this->M_SalesOrder->get_faktur($faktur['parent_id_faktur']);
+
+        $data['page_title']    = 'KARISMA - Faktur Pecahan ' . $faktur['no_faktur'];
+        $data['faktur']        = $faktur;
+        $data['details']       = $details;
+        $data['parent_faktur'] = $parent_faktur;
+        $data['back_url']      = base_url('sales_order/pecah_faktur');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_pecah_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function customer_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->M_SalesOrder->ensure_customer_acak_table();
+
+        $selected_toko = trim((string)($this->input->get('nama_toko') ?? ''));
+        $search = trim((string)($this->input->get('q') ?? ''));
+
+        $filter = [];
+        if (!empty($selected_toko)) {
+            $filter['nama_toko'] = $selected_toko;
+        }
+        if (!empty($search)) {
+            $filter['search'] = $search;
+        }
+
+        $customers_acak = $this->M_SalesOrder->get_all_customers_acak($filter);
+        $unique_tokos   = $this->M_SalesOrder->get_unique_tokos_customer_acak();
+
+        $data['page_title']     = 'Master Customer Acak (Pecah Faktur)';
+        $data['customers_acak'] = $customers_acak;
+        $data['unique_tokos']   = $unique_tokos;
+        $data['selected_toko']  = $selected_toko;
+        $data['search']         = $search;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/customer_acak_list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function sync_customer_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $file_path = FCPATH . 'cust acak.xlsx';
+        if (!file_exists($file_path)) {
+            $this->session->set_flashdata('error', 'File cust acak.xlsx tidak ditemukan di root aplikasi.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        try {
+            require_once FCPATH . 'vendor/autoload.php';
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+            $spreadsheet = $reader->load($file_path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            $customers_db = $this->M_SalesOrder->get_customers();
+
+            $total_processed = 0;
+            $now = date('Y-m-d H:i:s');
+
+            $this->db->trans_start();
+            foreach ($rows as $idx => $r) {
+                if ($idx == 0) continue;
+
+                $kd_customer = trim((string)($r[1] ?? ''));
+                $nama_toko   = trim((string)($r[2] ?? ''));
+                $kontak      = trim((string)($r[3] ?? ''));
+                $alamat      = trim((string)($r[4] ?? ''));
+                $kota        = trim((string)($r[5] ?? ''));
+                $nik         = trim((string)($r[6] ?? ''));
+                $npwp        = trim((string)($r[7] ?? ''));
+
+                if (empty($kd_customer) || empty($nama_toko)) continue;
+
+                $kd_induk = null;
+                foreach ($customers_db as $c) {
+                    if (!empty($c['nama_kios']) && strcasecmp(trim($c['nama_kios']), $nama_toko) === 0) {
+                        $kd_induk = $c['kd_customer'];
+                        break;
+                    }
+                }
+                if (!$kd_induk) {
+                    foreach ($customers_db as $c) {
+                        if (!empty($c['nama_customer']) && strcasecmp(trim($c['nama_customer']), $nama_toko) === 0) {
+                            $kd_induk = $c['kd_customer'];
+                            break;
+                        }
+                    }
+                }
+
+                $existing = $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_customer])->row_array();
+                if ($existing) {
+                    $this->db->where('kd_customer', $kd_customer)->update('tb_customer_acak', [
+                        'nama_toko'         => $nama_toko,
+                        'kd_customer_induk' => $kd_induk ?: $existing['kd_customer_induk'],
+                        'kontak_person'     => $kontak,
+                        'alamat'            => $alamat,
+                        'kota'              => $kota,
+                        'nik'               => $nik,
+                        'npwp'              => $npwp,
+                        'updated_at'        => $now
+                    ]);
+                } else {
+                    $this->db->insert('tb_customer_acak', [
+                        'kd_customer'       => $kd_customer,
+                        'nama_toko'         => $nama_toko,
+                        'kd_customer_induk' => $kd_induk,
+                        'kontak_person'     => $kontak,
+                        'alamat'            => $alamat,
+                        'kota'              => $kota,
+                        'nik'               => $nik,
+                        'npwp'              => $npwp,
+                        'created_at'        => $now
+                    ]);
+                }
+                $total_processed++;
+            }
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status()) {
+                $this->session->set_flashdata('success', 'Berhasil menyinkronkan <b>' . $total_processed . ' kontak customer acak</b> dari file Excel.');
+            } else {
+                $this->session->set_flashdata('error', 'Terjadi kesalahan saat menyimpan data customer acak.');
+            }
+        } catch (Exception $e) {
+            $this->session->set_flashdata('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+        }
+
+        redirect('sales_order/customer_acak');
     }
 
     // ================================================================

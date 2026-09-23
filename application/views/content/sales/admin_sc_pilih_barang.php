@@ -157,19 +157,21 @@
                                     <tr>
                                         <th>Barang</th>
                                         <th>Lot / Exp</th>
-                                        <th class="text-right">Qty Siap Faktur</th>
-                                        <th class="text-right">Tidak Terkirim</th>
+                                        <th class="text-right">Qty</th>
                                         <th>Catatan Verifikasi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                      <?php foreach ($details as $detail):
                                          $available = (float)($detail['qty_available_faktur'] ?? 0);
-                                         $tidak = (float)($detail['qty_tidak_terkirim'] ?? 0);
                                          $kd_barang = trim((string)($detail['kd_barang'] ?? ''));
                                          $first_char = strtoupper(substr($kd_barang, 0, 1));
                                          $desc = strtoupper(trim((string)($detail['kelompok_dagang_deskripsi'] ?? '')));
                                          $is_bkps = (strpos($desc, 'BKPS') !== false);
+
+                                         $isi = max(1, (int)($detail['isi_per_box'] ?? 1));
+                                         $box = floor($available / $isi);
+                                         $pcs = fmod($available, $isi);
 
                                          $item_category = 'other';
                                          $is_pajak_item = false;
@@ -218,10 +220,18 @@
                                                  </small>
                                              </td>
                                              <td class="text-right font-weight-bold text-success">
-                                                 <?= number_format($available, 2) ?>
-                                             </td>
-                                             <td class="text-right <?= $tidak > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
-                                                 <?= number_format($tidak, 2) ?>
+                                                 <?php if ($box > 0): ?>
+                                                     <?= (int)$box ?> box
+                                                 <?php endif; ?>
+                                                 <?php if ($pcs > 0): ?>
+                                                     <?= ($box > 0 ? ' + ' : '') . (int)$pcs . ' pcs' ?>
+                                                 <?php endif; ?>
+                                                 <?php if ($box == 0 && $pcs == 0): ?>
+                                                     <?= number_format($available, 0) ?> pcs
+                                                 <?php endif; ?>
+                                                 <?php if ($isi > 1 && $box > 0): ?>
+                                                     <br><small class="text-muted">(<?= number_format($available, 0) ?> pcs)</small>
+                                                 <?php endif; ?>
                                              </td>
                                              <td>
                                                  <?= !empty($detail['verifikasi_loading_note'])
