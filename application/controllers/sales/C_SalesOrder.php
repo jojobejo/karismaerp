@@ -2227,24 +2227,223 @@ class C_SalesOrder extends CI_Controller
             'total_nilai'    => 0,
         ];
 
+        // Pisahkan Faktur Z belum dipecah vs sudah dipecah
+        $fakturs_belum_dipecah = [];
+        $fakturs_sudah_dipecah = [];
+
+        // Kelompokkan Faktur Z berdasarkan Nama Kios
+        $kios_grouped = [];
         foreach ($fakturs as $f) {
             $stat['total_nilai'] += (float)($f['grand_total'] ?? 0);
             if ($f['tipe_faktur'] === 'belum_dipecah') {
                 $stat['belum_dipecah']++;
-            } elseif (in_array($f['tipe_faktur'], ['sudah_dipecah', 'dipecah_sebagian'], true)) {
+                $fakturs_belum_dipecah[] = $f;
+            } else {
                 $stat['sudah_dipecah']++;
+                $fakturs_sudah_dipecah[] = $f;
+            }
+
+            // Penentuan nama kios
+            $kios_name = !empty($f['nama_kios']) ? trim($f['nama_kios']) : (!empty($f['display_customer_name']) ? trim($f['display_customer_name']) : (!empty($f['customer_name']) ? trim($f['customer_name']) : 'Tanpa Kios'));
+            if (!isset($kios_grouped[$kios_name])) {
+                $kios_grouped[$kios_name] = [
+                    'nama_kios'          => $kios_name,
+                    'kd_customer'        => $f['kd_customer'] ?? '-',
+                    'nama_customer'      => $f['display_customer_name'] ?? $f['customer_name'] ?? '-',
+                    'kd_rute'            => $f['customer_kd_rute'] ?? $f['so_kd_rute'] ?? '',
+                    'total_faktur'       => 0,
+                    'total_nilai'        => 0,
+                    'total_qty'          => 0,
+                    'total_barang'       => 0,
+                    'belum_dipecah'      => 0,
+                    'sudah_dipecah'      => 0,
+                    'total_nilai_belum'  => 0,
+                    'total_qty_belum'    => 0,
+                    'total_barang_belum' => 0,
+                    'fakturs'            => []
+                ];
+            }
+
+            $kios_grouped[$kios_name]['total_faktur']++;
+            $kios_grouped[$kios_name]['total_nilai'] += (float)($f['grand_total'] ?? 0);
+            $kios_grouped[$kios_name]['total_qty']   += (float)($f['total_qty'] ?? 0);
+            $kios_grouped[$kios_name]['total_barang']+= (int)($f['total_barang'] ?? 0);
+            if ($f['tipe_faktur'] === 'belum_dipecah') {
+                $kios_grouped[$kios_name]['belum_dipecah']++;
+                $kios_grouped[$kios_name]['total_nilai_belum']  += (float)($f['grand_total'] ?? 0);
+                $kios_grouped[$kios_name]['total_qty_belum']    += (float)($f['total_qty'] ?? 0);
+                $kios_grouped[$kios_name]['total_barang_belum'] += (int)($f['total_barang'] ?? 0);
+            } else {
+                $kios_grouped[$kios_name]['sudah_dipecah']++;
+            }
+            $kios_grouped[$kios_name]['fakturs'][] = $f;
+        }
+
+        // Filter kios yang masih memiliki Faktur Z belum dipecah
+        $kios_grouped_belum = [];
+        foreach ($kios_grouped as $kn => $kg) {
+            if ($kg['belum_dipecah'] > 0) {
+                $kios_grouped_belum[$kn] = $kg;
             }
         }
 
-        $data['page_title']  = 'KARISMA - Modul Pecah Faktur Z';
-        $data['fakturs']     = $fakturs;
-        $data['fakturs_h']   = $fakturs_h;
-        $data['stat']        = $stat;
-        $data['filter']      = $filter;
+        // Urutkan grup kios berdasarkan nama kios secara alfabetis
+        ksort($kios_grouped, SORT_NATURAL | SORT_FLAG_CASE);
+        ksort($kios_grouped_belum, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $data['page_title']            = 'KARISMA - Modul Pecah Faktur Z';
+        $data['fakturs']               = $fakturs;
+        $data['fakturs_belum_dipecah'] = $fakturs_belum_dipecah;
+        $data['fakturs_sudah_dipecah'] = $fakturs_sudah_dipecah;
+        $data['fakturs_h']             = $fakturs_h;
+        $data['kios_grouped']          = $kios_grouped;
+        $data['kios_grouped_belum']    = $kios_grouped_belum;
+        $data['stat']                  = $stat;
+        $data['filter']                = $filter;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/pecah_faktur_list.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function pecah_faktur_kios($kd_customer = null)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        if (empty($kd_customer)) {
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $kd_customer = rawurldecode($kd_customer);
+        $this->_ensureFakturStatusEnum();
+        $this->_ensureFakturPaymentInfoColumns();
+
+        // Ambil info customer / kios dari tb_customer
+        $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
+        if (!$customer) {
+            $faktur_sample = $this->db->get_where('tbso_faktur_penjualan', ['kd_customer' => $kd_customer])->row_array();
+            if ($faktur_sample) {
+                $customer = [
+                    'kd_customer'   => $kd_customer,
+                    'nama_kios'     => $faktur_sample['customer_name'] ?? 'Kios ' . $kd_customer,
+                    'nama_customer' => $faktur_sample['customer_name'] ?? '-',
+                    'kd_rute'       => '-',
+                    'alamat_kios'   => '-',
+                    'regional'      => '-'
+                ];
+            } else {
+                $this->session->set_flashdata('error', 'Kios dengan kode customer ' . htmlspecialchars($kd_customer) . ' tidak ditemukan.');
+                redirect('sales_order/pecah_faktur');
+                return;
+            }
+        }
+
+        $filter = [
+            'date1'         => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'         => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'status_pecah'  => $this->input->post('status_pecah') ?: $this->input->get('status_pecah', true) ?: 'all',
+            'status_faktur' => $this->input->post('status_faktur') ?: $this->input->get('status_faktur', true) ?: 'all',
+            'search'        => $this->input->post('search') ?: $this->input->get('search', true),
+        ];
+
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        // Ambil data faktur Z
+        $all_fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
+        $kios_fakturs = [];
+        $stat = [
+            'total'          => 0,
+            'belum_dipecah'  => 0,
+            'sudah_dipecah'  => 0,
+            'total_nilai'    => 0,
+            'total_qty'      => 0,
+            'total_barang'   => 0
+        ];
+
+        $kios_fakturs_belum = [];
+        $kios_fakturs_sudah = [];
+
+        foreach ($all_fakturs as $f) {
+            if ($f['kd_customer'] === $kd_customer) {
+                $kios_fakturs[] = $f;
+                $stat['total']++;
+                $stat['total_nilai']  += (float)($f['grand_total'] ?? 0);
+                $stat['total_qty']    += (float)($f['total_qty'] ?? 0);
+                $stat['total_barang'] += (int)($f['total_barang'] ?? 0);
+                if ($f['tipe_faktur'] === 'belum_dipecah') {
+                    $stat['belum_dipecah']++;
+                    $kios_fakturs_belum[] = $f;
+                } else {
+                    $stat['sudah_dipecah']++;
+                    $kios_fakturs_sudah[] = $f;
+                }
+            }
+        }
+
+        $nama_kios = !empty($customer['nama_kios']) ? $customer['nama_kios'] : (!empty($customer['nama_customer']) ? $customer['nama_customer'] : 'Kios ' . $kd_customer);
+        $data['page_title']         = 'Faktur Z - ' . $nama_kios;
+        $data['customer']           = $customer;
+        $data['nama_kios']          = $nama_kios;
+        $data['kd_customer']        = $kd_customer;
+        $data['kios_fakturs']       = $kios_fakturs;
+        $data['kios_fakturs_belum'] = $kios_fakturs_belum;
+        $data['kios_fakturs_sudah'] = $kios_fakturs_sudah;
+        $data['stat']               = $stat;
+        $data['filter']             = $filter;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/pecah_faktur_kios_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Memproses pemecahan otomatis seluruh Faktur Z pada kios yang dipilih (Auto-Split per Kios).
+     * Maksimal nilai per faktur pecahan H dibatasi (default Rp 25.000.000).
+     */
+    public function auto_split_kios($kd_customer = null)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        if (empty($kd_customer)) {
+            $this->session->set_flashdata('error', 'Kode customer kios tidak valid.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $max_nominal = $this->input->post('max_nominal');
+        if (!empty($max_nominal)) {
+            $clean_max = preg_replace('/[^0-9]/', '', (string)$max_nominal);
+            $max_nominal = (float)$clean_max;
+        }
+        if (empty($max_nominal) || $max_nominal <= 0) {
+            $max_nominal = 25000000;
+        }
+
+        $username = $this->_getUsername();
+        $result = $this->M_SalesOrder->auto_split_faktur_kios($kd_customer, $max_nominal, $username);
+
+        if (!empty($result['success'])) {
+            $this->session->set_flashdata('success', 
+                '<strong>Berhasil Melakukan Pemecahan Otomatis!</strong><br>' .
+                $result['total_parent_processed'] . ' Faktur Z berhasil diproses menjadi ' . 
+                $result['total_created'] . ' Faktur Pecahan (Kode H). Maksimal plafon: Rp ' . 
+                number_format($max_nominal, 0, ',', '.') . ' per faktur.'
+            );
+        } else {
+            $msg = !empty($result['message']) ? $result['message'] : 'Gagal memproses pemecahan otomatis Faktur Z.';
+            $this->session->set_flashdata('error', $msg);
+        }
+
+        redirect('sales_order/pecah_faktur_kios/' . $kd_customer);
     }
 
     public function split_faktur($id_faktur)
@@ -2631,15 +2830,151 @@ class C_SalesOrder extends CI_Controller
             $is_customer_acak = false;
         }
 
-        $data['page_title']       = 'KARISMA - Pecah Faktur Z Sekaligus (' . count($parent_fakturs) . ' Faktur)';
-        $data['parent_fakturs']   = $parent_fakturs;
-        $data['pool_items']       = $pool_items;
-        $data['total_pool_qty']   = $total_pool_qty;
-        $data['jumlah_pecah']     = $jumlah_pecah;
-        $data['customers']        = $customers;
-        $data['is_customer_acak'] = $is_customer_acak;
-        $data['kios_induk_names'] = implode(', ', array_keys($kios_names));
-        $data['back_url']         = base_url('sales_order/pecah_faktur');
+        // Cek apakah mode auto-split aktif (misal dari tombol Pecahkan Semua Kios)
+        $should_auto_prefill = $this->input->post('auto_split') || $this->input->get('auto_split') || $this->input->post('max_nominal') || $this->input->get('max_nominal');
+        $pre_allocated_splits = [];
+        $is_auto_prefilled = false;
+        $max_plafon = (float)($this->input->post('max_nominal') ?: $this->input->get('max_nominal') ?: 25000000);
+        if ($max_plafon <= 0) $max_plafon = 25000000;
+
+        if ($should_auto_prefill) {
+            $contact_idx = 0;
+            // Generate bucket per Faktur Z induk secara TERISOLASI
+            foreach ($parent_fakturs as $pid => $pf) {
+                // Kumpulkan item milik faktur induk ini
+                $pf_items = [];
+                foreach ($pool_items as $d_id => $it) {
+                    if ((int)$it['parent_id_faktur'] === (int)$pid) {
+                        $pf_items[$d_id] = $it;
+                    }
+                }
+                if (empty($pf_items)) continue;
+
+                $current_bucket = [
+                    'items'            => [],
+                    'total_nominal'    => 0.0,
+                    'total_qty'        => 0.0,
+                    'parent_no_faktur' => $pf['no_faktur']
+                ];
+
+                foreach ($pf_items as $d_id => $it) {
+                    $qty_remaining = (float)$it['remaining_qty'];
+                    $hrg_satuan_pecah = round((float)$it['hrg_satuan'] * 0.8, 2);
+                    $disc = (float)($it['disc'] ?? 0);
+                    $effective_unit_price = round($hrg_satuan_pecah * (1 - ($disc / 100)), 2);
+
+                    while ($qty_remaining > 0.0001) {
+                        $remaining_budget = $max_plafon - $current_bucket['total_nominal'];
+                        if ($remaining_budget <= 0.01 && !empty($current_bucket['items'])) {
+                            $pre_allocated_splits[] = $current_bucket;
+                            $current_bucket = [
+                                'items'            => [],
+                                'total_nominal'    => 0.0,
+                                'total_qty'        => 0.0,
+                                'parent_no_faktur' => $pf['no_faktur']
+                            ];
+                            $remaining_budget = $max_plafon;
+                        }
+
+                        $fit_qty = ($effective_unit_price <= 0.01) ? $qty_remaining : floor($remaining_budget / $effective_unit_price);
+
+                        if ($fit_qty >= $qty_remaining) {
+                            $alloc_qty = $qty_remaining;
+                            $subtotal = round($alloc_qty * $effective_unit_price, 2);
+                            $current_bucket['items'][$d_id] = [
+                                'qty'         => $alloc_qty,
+                                'hrg_satuan'  => $hrg_satuan_pecah,
+                                'total_harga' => $subtotal
+                            ];
+                            $current_bucket['total_nominal'] += $subtotal;
+                            $current_bucket['total_qty']     += $alloc_qty;
+                            $qty_remaining = 0;
+                        } elseif ($fit_qty > 0) {
+                            $alloc_qty = $fit_qty;
+                            $subtotal = round($alloc_qty * $effective_unit_price, 2);
+                            $current_bucket['items'][$d_id] = [
+                                'qty'         => $alloc_qty,
+                                'hrg_satuan'  => $hrg_satuan_pecah,
+                                'total_harga' => $subtotal
+                            ];
+                            $current_bucket['total_nominal'] += $subtotal;
+                            $current_bucket['total_qty']     += $alloc_qty;
+                            $qty_remaining -= $alloc_qty;
+
+                            $pre_allocated_splits[] = $current_bucket;
+                            $current_bucket = [
+                                'items'            => [],
+                                'total_nominal'    => 0.0,
+                                'total_qty'        => 0.0,
+                                'parent_no_faktur' => $pf['no_faktur']
+                            ];
+                        } else {
+                            if (!empty($current_bucket['items'])) {
+                                $pre_allocated_splits[] = $current_bucket;
+                                $current_bucket = [
+                                    'items'            => [],
+                                    'total_nominal'    => 0.0,
+                                    'total_qty'        => 0.0,
+                                    'parent_no_faktur' => $pf['no_faktur']
+                                ];
+                            } else {
+                                $alloc_qty = min(1.0, $qty_remaining);
+                                $subtotal = round($alloc_qty * $effective_unit_price, 2);
+                                $current_bucket['items'][$d_id] = [
+                                    'qty'         => $alloc_qty,
+                                    'hrg_satuan'  => $hrg_satuan_pecah,
+                                    'total_harga' => $subtotal
+                                ];
+                                $current_bucket['total_nominal'] += $subtotal;
+                                $current_bucket['total_qty']     += $alloc_qty;
+                                $qty_remaining -= $alloc_qty;
+
+                                $pre_allocated_splits[] = $current_bucket;
+                                $current_bucket = [
+                                    'items'            => [],
+                                    'total_nominal'    => 0.0,
+                                    'total_qty'        => 0.0,
+                                    'parent_no_faktur' => $pf['no_faktur']
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($current_bucket['items'])) {
+                    $pre_allocated_splits[] = $current_bucket;
+                }
+            }
+
+            if (!empty($pre_allocated_splits)) {
+                $is_auto_prefilled = true;
+                $jumlah_pecah = count($pre_allocated_splits);
+                foreach ($pre_allocated_splits as $b_idx => &$bkt) {
+                    if (!empty($customers)) {
+                        $cust_obj = $customers[$contact_idx % count($customers)];
+                        $contact_idx++;
+                        $bkt['kd_customer'] = $cust_obj['kd_customer'];
+                    }
+                }
+                unset($bkt);
+            }
+        }
+
+        $kd_kios = $this->input->post('kd_kios') ?: $this->input->get('kd_kios');
+        $back_url = !empty($kd_kios) ? base_url('sales_order/pecah_faktur_kios/' . $kd_kios) : base_url('sales_order/pecah_faktur');
+
+        $data['page_title']           = 'KARISMA - Pecah Faktur Z Sekaligus (' . count($parent_fakturs) . ' Faktur)';
+        $data['parent_fakturs']       = $parent_fakturs;
+        $data['pool_items']           = $pool_items;
+        $data['total_pool_qty']       = $total_pool_qty;
+        $data['jumlah_pecah']         = $jumlah_pecah;
+        $data['customers']            = $customers;
+        $data['is_customer_acak']     = $is_customer_acak;
+        $data['kios_induk_names']     = implode(', ', array_keys($kios_names));
+        $data['back_url']             = $back_url;
+        $data['pre_allocated_splits'] = $pre_allocated_splits;
+        $data['is_auto_prefilled']     = $is_auto_prefilled;
+        $data['max_plafon']           = $max_plafon;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_split_batch_form.php', $data);
@@ -2814,6 +3149,409 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    /**
+     * Membatalkan / menghapus 1 faktur pecahan (Kode H) dan mengembalikan kuantitas barang ke faktur induk.
+     */
+    public function hapus_faktur_pecah($id_pecah = null)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        if (empty($id_pecah)) {
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $faktur_pecah = $this->M_SalesOrder->get_faktur_pecah_h($id_pecah);
+        if (!$faktur_pecah) {
+            $this->session->set_flashdata('error', 'Faktur pecahan tidak ditemukan.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $parent_id = (int)$faktur_pecah['parent_id_faktur'];
+        $no_pecah  = $faktur_pecah['no_faktur'];
+
+        $this->db->delete('tbso_faktur_z_pecah_detail', ['id_pecah' => $id_pecah]);
+        $this->db->delete('tbso_faktur_z_pecah', ['id_pecah' => $id_pecah]);
+
+        $remaining_child = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $parent_id])->num_rows();
+        if ($remaining_child === 0) {
+            $this->db->where('id_faktur', $parent_id)->update('tbso_faktur_penjualan', ['is_split_parent' => 0]);
+        }
+
+        $this->session->set_flashdata('success', "Faktur pecahan <strong>" . htmlspecialchars($no_pecah) . "</strong> berhasil dibatalkan/dihapus.");
+        if (!empty($faktur_pecah['kd_customer'])) {
+            redirect('sales_order/pecah_faktur_kios/' . $faktur_pecah['kd_customer']);
+        } else {
+            redirect('sales_order/pecah_faktur');
+        }
+    }
+
+    /**
+     * Mereset seluruh pemecahan pada Faktur Z induk sehingga kembali menjadi belum dipecah.
+     */
+    public function reset_pecah_faktur_induk($id_faktur = null)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        if (empty($id_faktur)) {
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur($id_faktur);
+        if (!$faktur) {
+            $this->session->set_flashdata('error', 'Faktur Z tidak ditemukan.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $children = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $id_faktur])->result_array();
+        foreach ($children as $c) {
+            $this->db->delete('tbso_faktur_z_pecah_detail', ['id_pecah' => $c['id_pecah']]);
+            $this->db->delete('tbso_faktur_z_pecah', ['id_pecah' => $c['id_pecah']]);
+        }
+
+        $this->db->where('id_faktur', $id_faktur)->update('tbso_faktur_penjualan', ['is_split_parent' => 0]);
+
+        $this->session->set_flashdata('success', "Seluruh pecahan untuk Faktur Z <strong>" . htmlspecialchars($faktur['no_faktur']) . "</strong> berhasil di-reset. Faktur Z kembali berstatus Belum Dipecah.");
+        if (!empty($faktur['kd_customer'])) {
+            redirect('sales_order/pecah_faktur_kios/' . $faktur['kd_customer']);
+        } else {
+            redirect('sales_order/pecah_faktur');
+        }
+    }
+
+    /**
+     * Export Faktur Z Pecahan (Kode H) ke format Excel (.xlsx)
+     * Mengikuti format dan rumus persis sesuai template format export.xlsx
+     */
+    public function export_faktur_pecah()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        // Pastikan PhpSpreadsheet tersedia
+        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+            if (file_exists(FCPATH . 'vendor/autoload.php')) {
+                require_once FCPATH . 'vendor/autoload.php';
+            } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
+                require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+            }
+        }
+
+        $kd_customer = trim((string)($this->input->get('kd_customer') ?? ''));
+        $id_pecah    = $this->input->get('id_pecah');
+        $id_faktur   = $this->input->get('id_faktur');
+        $date1       = $this->input->get('date1');
+        $date2       = $this->input->get('date2');
+
+        // Query data rincian faktur pecahan
+        $this->db->select('
+            d.id AS id_detail,
+            d.id_pecah,
+            d.no_faktur AS no_faktur_h,
+            d.parent_no_faktur AS no_faktur_z,
+            d.parent_id_faktur,
+            d.kd_barang,
+            d.nama_barang,
+            d.qty,
+            d.hrg_satuan,
+            d.pajak,
+            d.disc,
+            d.total_harga,
+            p.tanggal_faktur,
+            p.salesman,
+            p.kd_customer,
+            p.customer_name,
+            p.catatan AS ket_faktur,
+            ca.kd_customer AS ca_kd_customer,
+            ca.nama_toko AS ca_nama_toko,
+            ca.kontak_person AS ca_kontak_person,
+            ca.alamat AS ca_alamat,
+            ca.kota AS ca_kota,
+            ca.nik AS ca_nik,
+            ca.npwp AS ca_npwp,
+            cust.nama_customer AS master_nama_customer,
+            cust.alamat_kios AS master_alamat,
+            cust.regional AS master_kota,
+            b.kelompok_barang,
+            b.kategori_barang,
+            fd.hrg_satuan AS hrg_satuan_asli
+        ');
+        $this->db->from('tbso_faktur_z_pecah_detail d');
+        $this->db->join('tbso_faktur_z_pecah p', 'p.id_pecah = d.id_pecah', 'inner');
+        $this->db->join('tbso_faktur_penjualan fz', 'fz.id_faktur = p.parent_id_faktur', 'left');
+        $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tb_customer cust', 'cust.kd_customer = fz.kd_customer', 'left');
+        $this->db->join('tbpo_barang b', 'b.kode_barang = d.kd_barang', 'left');
+        $this->db->join('tbso_faktur_detail fd', 'fd.id = d.id_faktur_detail_parent', 'left');
+        $this->db->where('p.status !=', 'cancelled');
+
+        if (!empty($kd_customer)) {
+            $this->db->group_start();
+            $this->db->where('fz.kd_customer', $kd_customer);
+            $this->db->or_where('p.kd_customer', $kd_customer);
+            $this->db->or_where('ca.kd_customer', $kd_customer);
+            $this->db->or_where('ca.kd_customer_induk', $kd_customer);
+            $this->db->group_end();
+        }
+        if (!empty($id_pecah)) {
+            $this->db->where('p.id_pecah', $id_pecah);
+        }
+        if (!empty($id_faktur)) {
+            $this->db->where('p.parent_id_faktur', $id_faktur);
+        }
+        if (!empty($date1)) {
+            $this->db->where('p.tanggal_faktur >=', $date1);
+        }
+        if (!empty($date2)) {
+            $this->db->where('p.tanggal_faktur <=', $date2);
+        }
+
+        $this->db->order_by('p.tanggal_faktur', 'ASC');
+        $this->db->order_by('p.id_pecah', 'ASC');
+        $this->db->order_by('d.id', 'ASC');
+
+        $rows = $this->db->get()->result_array();
+
+        if (empty($rows)) {
+            $this->session->set_flashdata('error', 'Tidak ada data Faktur Pecahan (Kode H) yang ditemukan untuk di-export.');
+            $back_url = !empty($kd_customer) 
+                ? base_url('sales_order/pecah_faktur_kios/' . $kd_customer) 
+                : ($this->input->server('HTTP_REFERER') ?: base_url('sales_order/pecah_faktur'));
+            redirect($back_url);
+            return;
+        }
+
+        // Buat Spreadsheet baru
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Laporan Penjualan Harian');
+
+        // Font default
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri');
+        $spreadsheet->getDefaultStyle()->getFont()->setSize(10);
+
+        // Header Dokumen Baris 1 - 4
+        $sheet->setCellValue('A1', 'Laporan Penjualan Harian');
+        $sheet->setCellValue('A2', 'PT. Karisma Indoagro Universal');
+
+        $minDate = $rows[0]['tanggal_faktur'];
+        $maxDate = end($rows)['tanggal_faktur'];
+        $tglAwal = !empty($date1) ? date('d-M-Y', strtotime($date1)) : (!empty($minDate) ? date('d-M-Y', strtotime($minDate)) : date('01-M-Y'));
+        $tglAkhir = !empty($date2) ? date('d-M-Y', strtotime($date2)) : (!empty($maxDate) ? date('d-M-Y', strtotime($maxDate)) : date('t-M-Y'));
+        $periodeText = "Periode {$tglAwal} - {$tglAkhir}";
+        $sheet->setCellValue('A3', $periodeText);
+
+        $sheet->setCellValue('A4', '( Untuk Nota T tidak lapor pajak, ganti nama acak langsung di Nota I, penjualan diinfo ) Acc bu Diana 06/11/2022');
+
+        // Styling Baris Judul
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(10);
+        $sheet->getStyle('A4')->getFont()->setItalic(true)->setSize(9);
+
+        // Header Kolom di Baris 7 (A7 - AB7)
+        $headers = [
+            'A' => 'No.',
+            'B' => 'Tanggal',
+            'C' => 'F.Acak',
+            'D' => 'Faktur Z',
+            'E' => 'Sales',
+            'F' => 'Kode',
+            'G' => 'Nama Customer',
+            'H' => 'Kontak Person',
+            'I' => 'Alamat',
+            'J' => 'Kota',
+            'K' => 'NIK',
+            'L' => 'NPWP',
+            'M' => 'Jenis',
+            'N' => 'Kode',
+            'O' => 'Nama Barang',
+            'P' => 'Qty',
+            'Q' => 'Harga Jual',
+            'R' => 'Harga Inc PPN',
+            'S' => 'Harga Normal',
+            'T' => 'Disc',
+            'U' => 'Jumlah Harga Jual',
+            'V' => 'DPP Nilai Lain',
+            'W' => 'Pajak %',
+            'X' => 'Pajak ( Rp )',
+            'Y' => 'Penj Icn PPN',
+            'Z' => 'Per Faktur',
+            'AA' => '',
+            'AB' => 'keterangan'
+        ];
+
+        foreach ($headers as $col => $title) {
+            $sheet->setCellValue($col . '7', $title);
+        }
+
+        // Style Header Baris 7
+        $headerRange = 'A7:AB7';
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 10,
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'F2F2F2']
+            ]
+        ]);
+        $sheet->getRowDimension(7)->setRowHeight(24);
+
+        // Grouping items per Faktur H untuk perhitungan grand total Per Faktur (Kolom Z)
+        $fakturGrouped = [];
+        foreach ($rows as $item) {
+            $fakturGrouped[$item['no_faktur_h']][] = $item;
+        }
+
+        $rowNum = 8;
+        $no = 1;
+
+        foreach ($fakturGrouped as $noFakturH => $items) {
+            // Hitung total include PPN untuk faktur pecahan ini
+            $fakturTotalNetto = 0;
+            foreach ($items as $it) {
+                $q = (float)$it['qty'];
+                $h = (float)$it['hrg_satuan'];
+                $d = (float)$it['disc'];
+                $fakturTotalNetto += ($q * $h) - ($q * $h * $d);
+            }
+
+            foreach ($items as $item) {
+                $r = $rowNum;
+
+                $tglFaktur = !empty($item['tanggal_faktur']) ? date('d-M-y', strtotime($item['tanggal_faktur'])) : '';
+                $sales     = !empty($item['salesman']) ? $item['salesman'] : 'Sales';
+                $kdCust    = !empty($item['ca_kd_customer']) ? $item['ca_kd_customer'] : $item['kd_customer'];
+                $namaCust  = !empty($item['ca_nama_toko']) ? $item['ca_nama_toko'] : $item['customer_name'];
+                $kontak    = !empty($item['ca_kontak_person']) ? $item['ca_kontak_person'] : '-';
+                $alamat    = !empty($item['ca_alamat']) ? $item['ca_alamat'] : (!empty($item['master_alamat']) ? $item['master_alamat'] : '-');
+                $kota      = !empty($item['ca_kota']) ? $item['ca_kota'] : (!empty($item['master_kota']) ? $item['master_kota'] : 'Jember');
+                $nik       = !empty($item['ca_nik']) ? (string)$item['ca_nik'] : '';
+                $npwp      = !empty($item['ca_npwp']) ? (string)$item['ca_npwp'] : '000000000000000';
+                $jenis     = !empty($item['kelompok_barang']) ? $item['kelompok_barang'] : (!empty($item['kategori_barang']) ? $item['kategori_barang'] : 'Umum');
+
+                $qty       = (float)$item['qty'];
+                $hrgNormal = ((float)$item['hrg_satuan_asli'] > 0) ? (float)$item['hrg_satuan_asli'] : round((float)$item['hrg_satuan'] / 0.8, 2);
+                $disc      = (float)$item['disc'];
+                $pajakPct  = (float)$item['pajak'];
+
+                // Isi Cell Data
+                $sheet->setCellValue('A' . $r, $no++);
+                $sheet->setCellValue('B' . $r, $tglFaktur);
+                $sheet->setCellValue('C' . $r, $item['no_faktur_h']);
+                $sheet->setCellValue('D' . $r, $item['no_faktur_z']);
+                $sheet->setCellValue('E' . $r, $sales);
+                $sheet->setCellValue('F' . $r, $kdCust);
+                $sheet->setCellValue('G' . $r, $namaCust);
+                $sheet->setCellValue('H' . $r, $kontak);
+                $sheet->setCellValue('I' . $r, $alamat);
+                $sheet->setCellValue('J' . $r, $kota);
+                $sheet->setCellValueExplicit('K' . $r, $nik, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit('L' . $r, $npwp, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                $sheet->setCellValue('M' . $r, $jenis);
+                $sheet->setCellValue('N' . $r, $item['kd_barang']);
+                $sheet->setCellValue('O' . $r, $item['nama_barang']);
+                $sheet->setCellValue('P' . $r, $qty);
+
+                // Rumus Formula Persis Template format export.xlsx
+                $sheet->setCellValue('Q' . $r, "=IF(W{$r}=0,R{$r},R{$r}/1.11)");
+                $sheet->setCellValue('R' . $r, "=+S{$r}*0.8");
+                $sheet->setCellValue('S' . $r, $hrgNormal);
+                $sheet->setCellValue('T' . $r, $disc);
+                $sheet->setCellValue('U' . $r, "=(P{$r}*Q{$r})-(P{$r}*Q{$r}*T{$r})");
+                $sheet->setCellValue('V' . $r, "=+U{$r}*0.916666666666667");
+                $sheet->setCellValue('W' . $r, $pajakPct);
+                $sheet->setCellValue('X' . $r, "=+V{$r}*W{$r}/100");
+                $sheet->setCellValue('Y' . $r, "=(P{$r}*R{$r})-(P{$r}*R{$r}*T{$r})");
+                $sheet->setCellValue('Z' . $r, $fakturTotalNetto);
+                $sheet->setCellValue('AA' . $r, "=Y{$r}/0.8");
+                $sheet->setCellValue('AB' . $r, $item['ket_faktur'] ?? '');
+
+                // Alignment Data
+                $sheet->getStyle('A' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('B' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('C' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('D' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('F' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('K' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('L' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('N' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('W' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+
+                // Number Formats
+                $sheet->getStyle('P' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('Q' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('R' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('S' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('T' . $r)->getNumberFormat()->setFormatCode('0.00');
+                $sheet->getStyle('U' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('V' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('W' . $r)->getNumberFormat()->setFormatCode('0');
+                $sheet->getStyle('X' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('Y' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('Z' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle('AA' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
+
+                // Border per baris data
+                $sheet->getStyle("A{$r}:AB{$r}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+                $rowNum++;
+            }
+        }
+
+        // Set Auto Column Width untuk seluruh kolom A s/d AB
+        foreach (range('A', 'Z') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->getColumnDimension('AA')->setAutoSize(true);
+        $sheet->getColumnDimension('AB')->setAutoSize(true);
+
+        // Header Download Browser
+        $slug = !empty($kd_customer) ? '_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $kd_customer) : '';
+        $filename = 'Export_Faktur_Pecahan' . $slug . '_' . date('Ymd_His') . '.xlsx';
+
+        // Bersihkan output buffer jika ada
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Cache-Control: max-age=1');
+        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+        header('Cache-Control: cache, must-revalidate');
+        header('Pragma: public');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
     public function customer_acak()
     {
         if (!$this->session->userdata('logged_in')) {
@@ -2834,18 +3572,257 @@ class C_SalesOrder extends CI_Controller
             $filter['search'] = $search;
         }
 
-        $customers_acak = $this->M_SalesOrder->get_all_customers_acak($filter);
-        $unique_tokos   = $this->M_SalesOrder->get_unique_tokos_customer_acak();
+        $customers_acak   = $this->M_SalesOrder->get_all_customers_acak($filter);
+        $unique_tokos     = $this->M_SalesOrder->get_unique_tokos_customer_acak();
 
-        $data['page_title']     = 'Master Customer Acak (Pecah Faktur)';
-        $data['customers_acak'] = $customers_acak;
-        $data['unique_tokos']   = $unique_tokos;
-        $data['selected_toko']  = $selected_toko;
-        $data['search']         = $search;
+        $data['page_title']       = 'Master Customer Acak (Pecah Faktur)';
+        $data['customers_acak']   = $customers_acak;
+        $data['unique_tokos']     = $unique_tokos;
+        $data['selected_toko']    = $selected_toko;
+        $data['search']           = $search;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/customer_acak_list.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Simpan penambahan kontak Customer Acak baru
+     */
+    public function simpan_customer_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->M_SalesOrder->ensure_customer_acak_table();
+
+        $kd_customer       = strtoupper(trim((string)$this->input->post('kd_customer')));
+        $nama_toko         = trim((string)$this->input->post('nama_toko'));
+        $kd_customer_induk = strtoupper(trim((string)$this->input->post('kd_customer_induk')));
+        $kontak_person     = trim((string)$this->input->post('kontak_person'));
+        $alamat            = trim((string)$this->input->post('alamat'));
+        $kota              = trim((string)$this->input->post('kota'));
+        $nik               = trim((string)$this->input->post('nik'));
+        $npwp              = trim((string)$this->input->post('npwp'));
+
+        if (empty($kd_customer) || empty($kontak_person) || empty($nama_toko)) {
+            $this->session->set_flashdata('error', 'Kode Customer Acak, Nama Kios / Toko Induk, dan Kontak Person wajib diisi.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        if (empty($npwp)) {
+            $npwp = '000000000000000';
+        }
+
+        // Cek duplikasi kode customer acak
+        $existing = $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_customer])->row_array();
+        if ($existing) {
+            $this->session->set_flashdata('error', 'Kode Customer Acak <b>' . htmlspecialchars($kd_customer) . '</b> sudah digunakan oleh ' . htmlspecialchars($existing['kontak_person']) . ' (' . htmlspecialchars($existing['nama_toko']) . '). Silakan gunakan kode acak lain.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        $insert_data = [
+            'kd_customer'       => $kd_customer,
+            'nama_toko'         => $nama_toko,
+            'kd_customer_induk' => !empty($kd_customer_induk) ? $kd_customer_induk : null,
+            'kontak_person'     => $kontak_person,
+            'alamat'            => $alamat,
+            'kota'              => $kota,
+            'nik'               => $nik,
+            'npwp'              => $npwp,
+            'created_at'        => date('Y-m-d H:i:s')
+        ];
+
+        $insert = $this->db->insert('tb_customer_acak', $insert_data);
+        if ($insert) {
+            $this->session->set_flashdata('success', 'Kontak Customer Acak baru <b>' . htmlspecialchars($kontak_person) . ' (' . htmlspecialchars($kd_customer) . ')</b> berhasil ditambahkan untuk toko ' . htmlspecialchars($nama_toko) . '.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menambahkan data customer acak.');
+        }
+
+        redirect('sales_order/customer_acak?nama_toko=' . rawurlencode($nama_toko));
+    }
+
+    /**
+     * Update data kontak Customer Acak
+     */
+    public function update_customer_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->M_SalesOrder->ensure_customer_acak_table();
+
+        $id = (int)$this->input->post('id');
+        if (!$id) {
+            $this->session->set_flashdata('error', 'ID Customer Acak tidak valid.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        $kd_customer       = strtoupper(trim((string)$this->input->post('kd_customer')));
+        $nama_toko         = trim((string)$this->input->post('nama_toko'));
+        $kd_customer_induk = strtoupper(trim((string)$this->input->post('kd_customer_induk')));
+        $kontak_person     = trim((string)$this->input->post('kontak_person'));
+        $alamat            = trim((string)$this->input->post('alamat'));
+        $kota              = trim((string)$this->input->post('kota'));
+        $nik               = trim((string)$this->input->post('nik'));
+        $npwp              = trim((string)$this->input->post('npwp'));
+
+        if (empty($kd_customer) || empty($kontak_person) || empty($nama_toko)) {
+            $this->session->set_flashdata('error', 'Kode Customer Acak, Nama Kios / Toko Induk, dan Kontak Person wajib diisi.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        // Cek duplikasi kode dengan ID lain
+        $duplicate = $this->db->where('kd_customer', $kd_customer)->where('id !=', $id)->get('tb_customer_acak')->row_array();
+        if ($duplicate) {
+            $this->session->set_flashdata('error', 'Kode Customer Acak <b>' . htmlspecialchars($kd_customer) . '</b> sudah digunakan oleh kontak lain.');
+            redirect('sales_order/customer_acak');
+            return;
+        }
+
+        $update_data = [
+            'kd_customer'       => $kd_customer,
+            'nama_toko'         => $nama_toko,
+            'kd_customer_induk' => !empty($kd_customer_induk) ? $kd_customer_induk : null,
+            'kontak_person'     => $kontak_person,
+            'alamat'            => $alamat,
+            'kota'              => $kota,
+            'nik'               => $nik,
+            'npwp'              => !empty($npwp) ? $npwp : '000000000000000',
+            'updated_at'        => date('Y-m-d H:i:s')
+        ];
+
+        $this->db->where('id', $id)->update('tb_customer_acak', $update_data);
+        $this->session->set_flashdata('success', 'Data Customer Acak <b>' . htmlspecialchars($kontak_person) . ' (' . htmlspecialchars($kd_customer) . ')</b> berhasil diperbarui.');
+        redirect('sales_order/customer_acak?nama_toko=' . rawurlencode($nama_toko));
+    }
+
+    /**
+     * Hapus data kontak Customer Acak
+     */
+    public function hapus_customer_acak($id = null)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->M_SalesOrder->ensure_customer_acak_table();
+
+        $id = (int)$id;
+        $row = $this->db->get_where('tb_customer_acak', ['id' => $id])->row_array();
+        if ($row) {
+            $this->db->delete('tb_customer_acak', ['id' => $id]);
+            $this->session->set_flashdata('success', 'Kontak Customer Acak <b>' . htmlspecialchars($row['kontak_person']) . ' (' . htmlspecialchars($row['kd_customer']) . ')</b> berhasil dihapus.');
+        } else {
+            $this->session->set_flashdata('error', 'Data Customer Acak tidak ditemukan.');
+        }
+        redirect('sales_order/customer_acak');
+    }
+
+    /**
+     * AJAX Helper untuk mengusulkan kode acak berikutnya (misal: AGRO04AC)
+     */
+    public function get_next_kode_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => false, 'message' => 'Unauthorized']);
+            return;
+        }
+
+        $kd_induk  = strtoupper(trim((string)$this->input->get('kd_induk')));
+        $nama_toko = trim((string)$this->input->get('nama_toko'));
+
+        // Cari prefix dari kode induk atau nama toko
+        $prefix = '';
+        if (!empty($kd_induk)) {
+            // Ambil huruf depan dari kd_induk (misal AGRO dari AGRO76)
+            preg_match('/^[A-Z]+/', $kd_induk, $matches);
+            $prefix = !empty($matches[0]) ? substr($matches[0], 0, 4) : substr($kd_induk, 0, 4);
+        } elseif (!empty($nama_toko)) {
+            $clean = preg_replace('/[^A-Za-z0-9]/', '', strtoupper($nama_toko));
+            $prefix = substr($clean, 0, 4);
+        }
+
+        if (empty($prefix)) {
+            $prefix = 'CUST';
+        }
+        $prefix = strtoupper(str_pad($prefix, 4, 'X'));
+
+        // Cari kode acak tertinggi yang berawalan prefix dan berakhiran AC
+        $existing_codes = $this->db->select('kd_customer')
+            ->from('tb_customer_acak')
+            ->like('kd_customer', $prefix, 'after')
+            ->get()
+            ->result_array();
+
+        $max_num = 0;
+        foreach ($existing_codes as $ec) {
+            $code = strtoupper(trim($ec['kd_customer']));
+            // Pola: PREFIX + 2 digit angka + AC, contoh AGRO01AC
+            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d{2})AC$/i', $code, $m)) {
+                $num = (int)$m[1];
+                if ($num > $max_num) {
+                    $max_num = $num;
+                }
+            }
+        }
+
+        $next_num = $max_num + 1;
+        $suggested_code = sprintf('%s%02dAC', $prefix, $next_num);
+
+        echo json_encode([
+            'status' => true,
+            'suggested_code' => $suggested_code
+        ]);
+    }
+
+    /**
+     * AJAX Search Kios dari tb_customer untuk Select2
+     */
+    public function ajax_search_kios()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['results' => []]);
+            return;
+        }
+
+        $q = trim((string)$this->input->get('q'));
+        $this->db->select('kd_customer, nama_kios, nama_customer, regional, alamat_kios');
+        $this->db->from('tb_customer');
+        if (!empty($q)) {
+            $this->db->group_start();
+            $this->db->like('nama_kios', $q);
+            $this->db->or_like('kd_customer', $q);
+            $this->db->or_like('nama_customer', $q);
+            $this->db->group_end();
+        }
+        $this->db->order_by('nama_kios', 'ASC');
+        $this->db->limit(30);
+        $rows = $this->db->get()->result_array();
+
+        $results = [];
+        foreach ($rows as $r) {
+            $results[] = [
+                'id'          => $r['nama_kios'],
+                'text'        => $r['nama_kios'] . ' (' . $r['kd_customer'] . ') - ' . ($r['regional'] ?: '-'),
+                'nama_kios'   => $r['nama_kios'],
+                'kd_customer' => $r['kd_customer'],
+                'kota'        => $r['regional'] ?? '',
+                'alamat'      => $r['alamat_kios'] ?? ''
+            ];
+        }
+
+        echo json_encode(['results' => $results]);
     }
 
     public function sync_customer_acak()

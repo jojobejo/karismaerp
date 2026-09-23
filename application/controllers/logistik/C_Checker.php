@@ -1036,7 +1036,7 @@ class C_Checker extends CI_Controller
             SELECT
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 DATE(so.tanggal_transaksi) AS tgl_transaksi,
-                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                MAX(COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute')) AS nama_rute,
                 COUNT(DISTINCT so.id_so) AS total_so
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer

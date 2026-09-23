@@ -2584,11 +2584,13 @@ class M_SalesOrder extends CI_Model
         $child_map = [];
         $allocated_map = [];
         if (!empty($parent_ids)) {
-            $children = $this->db->select('id_pecah, no_faktur, parent_id_faktur, customer_name, status, tanggal_faktur')
-                ->from('tbso_faktur_z_pecah')
-                ->where_in('parent_id_faktur', $parent_ids)
-                ->where('status !=', 'cancelled')
-                ->order_by('id_pecah', 'ASC')
+            $children = $this->db->select('p.id_pecah, p.no_faktur, p.parent_id_faktur, p.customer_name, p.status, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS grand_total')
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+                ->where_in('p.parent_id_faktur', $parent_ids)
+                ->where('p.status !=', 'cancelled')
+                ->group_by('p.id_pecah, p.no_faktur, p.parent_id_faktur, p.customer_name, p.status, p.tanggal_faktur')
+                ->order_by('p.id_pecah', 'ASC')
                 ->get()
                 ->result_array();
 
@@ -2636,15 +2638,14 @@ class M_SalesOrder extends CI_Model
                     $r['can_split']   = false;
                     $r['remaining_split_qty'] = 0;
                 } else {
-                    if (empty($r['is_split_parent'])) {
-                        $r['tipe_faktur'] = 'belum_dipecah';
-                        $r['can_split']   = true;
-                        $r['remaining_split_qty'] = (float)$r['total_qty'];
-                    } else {
-                        // Cek sisa kuantitas
+                    // Cek sisa kuantitas riil berdasarkan alokasi child pecahan yang sudah ada
+                    $parent_alloc = $allocated_map[$fid] ?? [];
+                    $has_existing_split = !empty($parent_alloc) || !empty($r['is_split_parent']) || !empty($r['child_fakturs']);
+
+                    if ($has_existing_split) {
                         $details = $this->get_faktur_detail($fid);
                         $total_remaining = 0;
-                        $parent_alloc = $allocated_map[$fid] ?? [];
+                        $has_any_allocation = false;
                         foreach ($details as $d) {
                             $key = implode('|', [
                                 $d['id_so_detail'],
@@ -2653,17 +2654,33 @@ class M_SalesOrder extends CI_Model
                                 $d['expired_date']
                             ]);
                             $allocated = $parent_alloc[$key] ?? 0.0;
+                            if ($allocated > 0) {
+                                $has_any_allocation = true;
+                            }
                             $remaining = max(0.0, (float)$d['qty'] - $allocated);
                             $total_remaining += $remaining;
                         }
                         $r['remaining_split_qty'] = $total_remaining;
-                        if ($total_remaining > 0.001) {
+
+                        if ($total_remaining <= 0.001) {
+                            $r['tipe_faktur'] = 'sudah_dipecah';
+                            $r['can_split']   = false;
+                            // Sinkronkan flag is_split_parent di database jika belum 1
+                            if (empty($r['is_split_parent'])) {
+                                $this->db->where('id_faktur', $fid)->update('tbso_faktur_penjualan', ['is_split_parent' => 1]);
+                            }
+                        } elseif ($has_any_allocation) {
                             $r['tipe_faktur'] = 'dipecah_sebagian';
                             $r['can_split']   = true;
                         } else {
-                            $r['tipe_faktur'] = 'sudah_dipecah';
-                            $r['can_split']   = false;
+                            $r['tipe_faktur'] = 'belum_dipecah';
+                            $r['can_split']   = true;
+                            $r['remaining_split_qty'] = (float)$r['total_qty'];
                         }
+                    } else {
+                        $r['tipe_faktur'] = 'belum_dipecah';
+                        $r['can_split']   = true;
+                        $r['remaining_split_qty'] = (float)$r['total_qty'];
                     }
                 }
             }
@@ -3020,6 +3037,309 @@ class M_SalesOrder extends CI_Model
         ];
     }
 
+    /**
+     * Memproses pemecahan otomatis seluruh Faktur Z milik satu kios sekaligus (Auto-Split per Kios).
+     * Aturan:
+     * 1. Maksimal nilai nominal per Faktur H adalah $max_nominal_per_faktur (default Rp 25.000.000).
+     * 2. Faktur Z dengan nilai <= 25 juta hanya dipecah menjadi 1 Faktur H.
+     * 3. Faktur Z dengan nilai > 25 juta dipecah proporsional menjadi multiple Faktur H.
+     * 4. Setiap Faktur Z terisolasi (barang tidak bercampur antar Faktur Z).
+     * 5. Customer acak dialokasikan secara merata dari master customer acak kios tersebut.
+     *
+     * @param string $kd_customer Kode customer induk / kios
+     * @param float $max_nominal_per_faktur Batas maksimal nilai per Faktur H (default 25.000.000)
+     * @param string $username Username pemroses
+     * @return array Hasil pemrosesan
+     */
+    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system')
+    {
+        $this->ensure_customer_acak_table();
+        $this->ensure_faktur_z_pecah_tables();
+
+        $max_nominal_per_faktur = (float)$max_nominal_per_faktur;
+        if ($max_nominal_per_faktur <= 0) {
+            $max_nominal_per_faktur = 25000000;
+        }
+
+        // 1. Ambil data customer induk
+        $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
+        $nama_kios = !empty($customer['nama_kios']) ? $customer['nama_kios'] : ($customer['nama_customer'] ?? '');
+
+        // 2. Ambil kontak acak kios ini
+        $contacts = $this->get_customers_acak_by_kios($nama_kios, $kd_customer);
+
+        // 3. Ambil seluruh Faktur Z milik kios ini yang belum dipecah
+        $this->db->select('*');
+        $this->db->from('tbso_faktur_penjualan');
+        $this->db->where('kd_customer', $kd_customer);
+        $this->db->like('no_faktur', 'Z', 'after');
+        $this->db->where('is_split_parent', 0);
+        $this->db->where_in('status', ['confirmed', 'selesai', 'selesai_do', 'proses_do']);
+        $this->db->order_by('id_faktur', 'ASC');
+        $fakturs = $this->db->get()->result_array();
+
+        if (empty($fakturs)) {
+            return [
+                'success' => false,
+                'message' => 'Tidak ada Faktur Z yang siap dipecah untuk kios ini (semua sudah dipecah atau belum confirmed).'
+            ];
+        }
+
+        $this->db->trans_start();
+        $this->load->model('M_ActivityLog');
+
+        $generated_numbers        = [];
+        $created_fakturs          = [];
+        $processed_parent_fakturs = [];
+        $contact_idx              = 0;
+
+        // 4. Proses masing-masing Faktur Z secara TERISOLASI
+        foreach ($fakturs as $parent_faktur) {
+            $details = $this->get_faktur_detail($parent_faktur['id_faktur']);
+            if (empty($details)) {
+                continue;
+            }
+
+            // Kumpulkan bucket pecahan H HANYA untuk Faktur Z ini
+            $h_buckets = [];
+            $current_bucket = [
+                'items'         => [],
+                'total_nominal' => 0.0,
+                'total_qty'     => 0.0
+            ];
+
+            foreach ($details as $pd) {
+                $qty_remaining = (float)($pd['qty'] ?? 0);
+                if ($qty_remaining <= 0.0001) {
+                    continue;
+                }
+
+                // Harga satuan pada faktur pecahan H terpotong 20% dari harga Faktur Z induk
+                $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                $disc                 = (float)($pd['disc'] ?? 0);
+                $effective_unit_price = round($hrg_satuan_pecah * (1 - ($disc / 100)), 2);
+
+                while ($qty_remaining > 0.0001) {
+                    $remaining_budget = $max_nominal_per_faktur - $current_bucket['total_nominal'];
+
+                    // Jika budget pada bucket berjalan sudah penuh / habis
+                    if ($remaining_budget <= 0.01 && !empty($current_bucket['items'])) {
+                        $h_buckets[] = $current_bucket;
+                        $current_bucket = ['items' => [], 'total_nominal' => 0.0, 'total_qty' => 0.0];
+                        $remaining_budget = $max_nominal_per_faktur;
+                    }
+
+                    // Hitung jumlah kuantitas yang muat dalam sisa plafon
+                    if ($effective_unit_price <= 0.01) {
+                        $fit_qty = $qty_remaining;
+                    } else {
+                        $fit_qty = floor($remaining_budget / $effective_unit_price);
+                    }
+
+                    if ($fit_qty >= $qty_remaining) {
+                        // Seluruh sisa qty muat pada bucket saat ini
+                        $alloc_qty = $qty_remaining;
+                        $subtotal  = round($alloc_qty * $effective_unit_price, 2);
+
+                        $current_bucket['items'][] = [
+                            'detail'      => $pd,
+                            'qty'         => $alloc_qty,
+                            'hrg_satuan'  => $hrg_satuan_pecah,
+                            'total_harga' => $subtotal
+                        ];
+                        $current_bucket['total_nominal'] += $subtotal;
+                        $current_bucket['total_qty']     += $alloc_qty;
+                        $qty_remaining = 0;
+                    } elseif ($fit_qty > 0) {
+                        // Sebagian qty muat pada bucket saat ini
+                        $alloc_qty = $fit_qty;
+                        $subtotal  = round($alloc_qty * $effective_unit_price, 2);
+
+                        $current_bucket['items'][] = [
+                            'detail'      => $pd,
+                            'qty'         => $alloc_qty,
+                            'hrg_satuan'  => $hrg_satuan_pecah,
+                            'total_harga' => $subtotal
+                        ];
+                        $current_bucket['total_nominal'] += $subtotal;
+                        $current_bucket['total_qty']     += $alloc_qty;
+                        $qty_remaining -= $alloc_qty;
+
+                        // Tutup bucket saat ini karena sudah penuh
+                        $h_buckets[] = $current_bucket;
+                        $current_bucket = ['items' => [], 'total_nominal' => 0.0, 'total_qty' => 0.0];
+                    } else {
+                        // fit_qty == 0: sisa plafon tidak cukup untuk 1 pcs
+                        if (!empty($current_bucket['items'])) {
+                            // Tutup bucket yang sedang berjalan dan buka bucket baru
+                            $h_buckets[] = $current_bucket;
+                            $current_bucket = ['items' => [], 'total_nominal' => 0.0, 'total_qty' => 0.0];
+                        } else {
+                            // Bucket kosong tetapi harga 1 pcs barang melebihi $max_nominal_per_faktur
+                            $alloc_qty = min(1.0, $qty_remaining);
+                            $subtotal  = round($alloc_qty * $effective_unit_price, 2);
+
+                            $current_bucket['items'][] = [
+                                'detail'      => $pd,
+                                'qty'         => $alloc_qty,
+                                'hrg_satuan'  => $hrg_satuan_pecah,
+                                'total_harga' => $subtotal
+                            ];
+                            $current_bucket['total_nominal'] += $subtotal;
+                            $current_bucket['total_qty']     += $alloc_qty;
+                            $qty_remaining -= $alloc_qty;
+
+                            $h_buckets[] = $current_bucket;
+                            $current_bucket = ['items' => [], 'total_nominal' => 0.0, 'total_qty' => 0.0];
+                        }
+                    }
+                }
+            }
+
+            // Simpan bucket terakhir jika masih ada item
+            if (!empty($current_bucket['items'])) {
+                $h_buckets[] = $current_bucket;
+            }
+
+            // 5. Buat Faktur H dari masing-masing bucket untuk Faktur Z ini
+            foreach ($h_buckets as $bucket) {
+                if (empty($bucket['items'])) {
+                    continue;
+                }
+
+                // Tentukan kontak acak penerima
+                if (!empty($contacts)) {
+                    $selected_contact = $contacts[$contact_idx % count($contacts)];
+                    $contact_idx++;
+                    $kd_cust_h       = $selected_contact['kd_customer'];
+                    $customer_name_h = $selected_contact['kontak_person'] . ' (' . $selected_contact['nama_toko'] . ')';
+                } else {
+                    $kd_cust_h       = $parent_faktur['kd_customer'];
+                    $customer_name_h = !empty($customer['nama_customer']) ? $customer['nama_customer'] : ($parent_faktur['nama_customer'] ?? 'Customer Induk');
+                }
+
+                $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
+
+                $fh = [
+                    'no_faktur'           => $no_faktur_child,
+                    'parent_id_faktur'    => $parent_faktur['id_faktur'],
+                    'parent_no_faktur'    => $parent_faktur['no_faktur'],
+                    'id_so'               => $parent_faktur['id_so'],
+                    'no_so'               => $parent_faktur['no_so'],
+                    'kd_customer'         => $kd_cust_h,
+                    'customer_name'       => $customer_name_h,
+                    'gudang_id'           => $parent_faktur['gudang_id'],
+                    'tanggal_faktur'      => $parent_faktur['tanggal_faktur'],
+                    'tanggal_jatuh_tempo' => $parent_faktur['tanggal_jatuh_tempo'],
+                    'salesman'            => $parent_faktur['salesman'],
+                    'cara_pembayaran'     => $parent_faktur['cara_pembayaran'],
+                    'jtempo'              => $parent_faktur['jtempo'],
+                    'tempo'               => $parent_faktur['tempo'],
+                    'catatan'             => 'Pecahan Otomatis dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
+                    'status'              => 'confirmed',
+                    'create_by'           => $username,
+                    'create_at'           => date('Y-m-d H:i:s'),
+                    'total_tonase'        => 0,
+                    'total_kubikasi'      => 0
+                ];
+
+                $this->db->insert('tbso_faktur_z_pecah', $fh);
+                $child_id_pecah = $this->db->insert_id();
+
+                $child_details_logged = [];
+
+                foreach ($bucket['items'] as $b_item) {
+                    $pd        = $b_item['detail'];
+                    $alloc_qty = (float)$b_item['qty'];
+                    $isi       = max(1, (int)($pd['isi_per_box'] ?? 1));
+                    $qty_box   = floor($alloc_qty / $isi);
+                    $qty_satuan = fmod($alloc_qty, $isi);
+
+                    $subtotal_before = round($alloc_qty * $b_item['hrg_satuan'], 2);
+                    $subtotal_after  = round($subtotal_before * (1 - ((float)($pd['disc'] ?? 0) / 100)), 2);
+                    $total_harga     = $subtotal_after;
+
+                    $fd = [
+                        'id_pecah'                => $child_id_pecah,
+                        'no_faktur'               => $no_faktur_child,
+                        'parent_id_faktur'        => $parent_faktur['id_faktur'],
+                        'parent_no_faktur'        => $parent_faktur['no_faktur'],
+                        'id_faktur_detail_parent' => $pd['id'],
+                        'id_so'                   => $pd['id_so'],
+                        'id_so_detail'            => $pd['id_so_detail'],
+                        'kd_barang'               => $pd['kd_barang'],
+                        'nama_barang'             => $pd['nama_barang'],
+                        'no_lot'                  => $pd['no_lot'],
+                        'expired_date'            => $pd['expired_date'],
+                        'qty'                     => $alloc_qty,
+                        'qty_box'                 => $qty_box,
+                        'qty_satuan'              => $qty_satuan,
+                        'isi_per_box'             => $isi,
+                        'satuan'                  => $pd['satuan'] ?? 'PCS',
+                        'hrg_satuan'              => $b_item['hrg_satuan'],
+                        'hrg_pokok'               => $pd['hrg_pokok'] ?? 0,
+                        'disc'                    => $pd['disc'] ?? 0,
+                        'pajak'                   => $pd['pajak'] ?? 0,
+                        'subtotal_before_disc'    => $subtotal_before,
+                        'subtotal_after_disc'     => $subtotal_after,
+                        'total_harga'             => $total_harga,
+                        'berat_gram'              => $pd['berat_gram'] ?? 0,
+                        'kubikasi_m3'             => $pd['kubikasi_m3'] ?? 0,
+                        'gudang_id'               => $pd['gudang_id'] ?? $parent_faktur['gudang_id'],
+                        'create_by'               => $username,
+                        'create_at'               => date('Y-m-d H:i:s')
+                    ];
+
+                    $this->db->insert('tbso_faktur_z_pecah_detail', $fd);
+                    $child_details_logged[] = $pd['nama_barang'] . " (" . $alloc_qty . " " . ($pd['satuan'] ?? 'PCS') . " @ Rp " . number_format($b_item['hrg_satuan'], 0, ',', '.') . ")";
+                }
+
+                // Update total tonase dan kubikasi
+                $this->db->select('SUM(qty * berat_gram / 1000000) AS t, SUM(qty * kubikasi_m3) AS k', false);
+                $this->db->where('id_pecah', $child_id_pecah);
+                $sums = $this->db->get('tbso_faktur_z_pecah_detail')->row_array();
+
+                $this->db->where('id_pecah', $child_id_pecah);
+                $this->db->update('tbso_faktur_z_pecah', [
+                    'total_tonase'   => round((float)($sums['t'] ?? 0), 6),
+                    'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
+                ]);
+
+                // Catat log aktivitas
+                $this->M_ActivityLog->log(
+                    $parent_faktur['no_so'],
+                    $no_faktur_child,
+                    'AUTO_SPLIT_FAKTUR_H',
+                    'Faktur pecahan otomatis ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name_h . ' dari Faktur Z: ' . $parent_faktur['no_faktur'] . ' (Total Netto: Rp ' . number_format($bucket['total_nominal'], 0, ',', '.') . ')',
+                    $username,
+                    "Item:\n" . implode("\n", $child_details_logged)
+                );
+
+                $created_fakturs[] = $no_faktur_child;
+            }
+
+            // Tandai Faktur Z induk ini sebagai telah dipecah
+            $this->db->where('id_faktur', $parent_faktur['id_faktur']);
+            $this->db->update('tbso_faktur_penjualan', [
+                'is_split_parent' => 1,
+                'update_by'       => $username,
+                'update_at'       => date('Y-m-d H:i:s')
+            ]);
+
+            $processed_parent_fakturs[] = $parent_faktur['no_faktur'];
+        }
+
+        $this->db->trans_complete();
+
+        return [
+            'success'                => $this->db->trans_status() && !empty($created_fakturs),
+            'total_parent_processed' => count($processed_parent_fakturs),
+            'total_created'          => count($created_fakturs),
+            'created_list'           => $created_fakturs,
+            'processed_parents'      => $processed_parent_fakturs
+        ];
+    }
+
     public function ensure_faktur_z_pecah_tables()
     {
         if (!$this->db->table_exists('tbso_faktur_z_pecah')) {
@@ -3127,9 +3447,10 @@ class M_SalesOrder extends CI_Model
         $this->ensure_faktur_z_pecah_tables();
         $this->ensure_customer_acak_table();
         $this->db->select('p.*, 
-            COALESCE(ca.kontak_person, c.nama_customer) AS nama_customer, 
-            ca.nama_toko, ca.kota AS customer_kota,
-            c.kd_rute AS customer_kd_rute,
+            COALESCE(MAX(ca.kontak_person), MAX(c.nama_customer)) AS nama_customer, 
+            MAX(ca.nama_toko) AS nama_toko, 
+            MAX(ca.kota) AS customer_kota,
+            MAX(c.kd_rute) AS customer_kd_rute,
             COALESCE(SUM(pd.qty), 0) AS total_qty,
             COALESCE(SUM(pd.total_harga), 0) AS grand_total,
             COUNT(pd.id) AS total_barang');
@@ -3288,7 +3609,7 @@ class M_SalesOrder extends CI_Model
     public function get_unique_tokos_customer_acak()
     {
         $this->ensure_customer_acak_table();
-        return $this->db->select('nama_toko, kd_customer_induk, COUNT(*) as total_kontak')
+        return $this->db->select('nama_toko, MAX(kd_customer_induk) as kd_customer_induk, COUNT(*) as total_kontak')
             ->from('tb_customer_acak')
             ->group_by('nama_toko')
             ->order_by('nama_toko', 'ASC')

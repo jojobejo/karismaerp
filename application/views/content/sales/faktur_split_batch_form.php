@@ -184,6 +184,26 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
                     <?php endif; ?>
                 <?php endforeach; ?>
 
+                <?php if (!empty($is_auto_prefilled)): ?>
+                    <div class="alert alert-info border-info shadow-sm mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clipboard-check fa-2x text-info mr-3"></i>
+                            <div>
+                                <h6 class="font-weight-bold mb-1 text-dark">
+                                    <i class="fas fa-magic text-warning mr-1"></i> Rancangan Pemecahan Otomatis Siap Diperiksa
+                                </h6>
+                                <div class="small text-dark">
+                                    Sistem telah menyusun rancangan pembagian menjadi <strong><?= (int)$jumlah_pecah ?> Faktur Pecahan (Kode H)</strong> dengan batas maksimal <strong>Rp <?= number_format($max_plafon ?? 25000000, 0, ',', '.') ?></strong> per faktur. Barang antar Faktur Z <strong>terisolasi (tidak bercampur)</strong>.
+                                    <br>
+                                    <span class="text-primary font-weight-bold">
+                                        <i class="fas fa-search mr-1"></i> Silakan periksa kembali kuantitas barang, customer penerima, dan nominal di bawah ini. Anda dapat mengeditnya sebelum menekan tombol simpan di bawah.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <form action="<?= base_url('sales_order/simpan_split_faktur_batch') ?>" method="post" id="formBatchSplit">
                     <!-- Hidden Parent IDs -->
                     <?php foreach ($parent_fakturs as $pid => $pf): ?>
@@ -390,9 +410,24 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                         <?php for ($slot_idx = 0; $slot_idx < $jumlah_pecah; $slot_idx++): ?>
                             <?php 
                             $slot_no = $slot_idx + 1; 
-                            // Otomatis tentukan customer penerima dari urutan prioritas beban terendah
-                            $auto_c = $customers[$slot_idx] ?? null;
-                            $auto_cust_kd = $auto_c ? $auto_c['kd_customer'] : '';
+                            // Tentukan customer penerima dari pre_allocated_splits atau urutan prioritas
+                            $pre_slot = $pre_allocated_splits[$slot_idx] ?? null;
+                            $auto_cust_kd = $pre_slot['kd_customer'] ?? ($customers[$slot_idx]['kd_customer'] ?? '');
+                            $slot_parent_no = $pre_slot['parent_no_faktur'] ?? '';
+
+                            // Cari objek customer
+                            $auto_c = null;
+                            foreach ($customers as $c_item) {
+                                if ($c_item['kd_customer'] === $auto_cust_kd) {
+                                    $auto_c = $c_item;
+                                    break;
+                                }
+                            }
+                            if (!$auto_c && !empty($customers[$slot_idx])) {
+                                $auto_c = $customers[$slot_idx];
+                                $auto_cust_kd = $auto_c['kd_customer'];
+                            }
+
                             $auto_display_name = '';
                             if ($auto_c) {
                                 if (!empty($is_customer_acak)) {
@@ -410,6 +445,11 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                             <span class="badge badge-warning badge-faktur-h mr-1">
                                                 #<?= $slot_no ?> (H)
                                             </span>
+                                            <?php if (!empty($slot_parent_no)): ?>
+                                                <span class="badge badge-info mr-1" style="font-size: 10px;" title="Faktur Z Induk: <?= htmlspecialchars($slot_parent_no) ?>">
+                                                    <i class="fas fa-file-invoice mr-1"></i><?= htmlspecialchars($slot_parent_no) ?>
+                                                </span>
+                                            <?php endif; ?>
                                             <span class="font-weight-bold text-dark small text-truncate slot-customer-display" id="slotCustDisplay_<?= $slot_idx ?>">
                                                 <?php if (!empty($auto_display_name)): ?>
                                                     <i class="fas fa-store text-success mr-1"></i> <?= htmlspecialchars($auto_display_name) ?>
@@ -512,13 +552,16 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                                     </small>
                                                                 </td>
                                                                 <td class="text-right align-middle p-1">
+                                                                    <?php 
+                                                                    $val_qty = isset($pre_allocated_splits[$slot_idx]['items'][$d_id]['qty']) ? (float)$pre_allocated_splits[$slot_idx]['items'][$d_id]['qty'] : 0;
+                                                                    ?>
                                                                     <input type="number" 
                                                                            name="splits[<?= $slot_idx ?>][items][<?= $d_id ?>][qty]" 
                                                                            class="form-control form-control-sm input-qty-split input-calc" 
                                                                            min="0" 
                                                                            max="<?= (float)$it['remaining_qty'] ?>" 
                                                                            step="any"
-                                                                           value="0" 
+                                                                           value="<?= $val_qty > 0 ? (float)$val_qty : 0 ?>" 
                                                                            data-detail-id="<?= $d_id ?>"
                                                                            data-slot-idx="<?= $slot_idx ?>">
                                                                 </td>
@@ -1046,13 +1089,16 @@ $(document).ready(function() {
         return confirm('Konfirmasi: Terbitkan seluruh Faktur Pecahan (Kode H) sekarang?');
     });
 
-    // Inisialisasi awal: jika semua Qty masih 0, otomatis bagi rata agar langsung terisi seimbang
+    // Inisialisasi awal: jika mode auto-split terisi, langsung hitung subtotal & pantau alokasi
+    var isAutoPrefilled = <?= !empty($is_auto_prefilled) ? 'true' : 'false' ?>;
     var totalExistingQty = 0;
     $('.input-qty-split').each(function() {
         totalExistingQty += parseFloat($(this).val()) || 0;
     });
 
-    if (totalExistingQty === 0 && $('.slot-column').length > 0) {
+    if (isAutoPrefilled) {
+        recalculateAll();
+    } else if (totalExistingQty === 0 && $('.slot-column').length > 0) {
         autoDistributeAll();
     } else {
         recalculateAll();

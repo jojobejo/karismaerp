@@ -77,6 +77,19 @@
         border-radius: 4px;
         padding: 3px 8px;
     }
+
+    /* Kios Grouping Styles */
+    .kios-group-card {
+        border: 1px solid #dbe2ea;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        background: #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        transition: all 0.2s ease-in-out;
+        overflow: hidden;
+    .table td, .table th {
+        vertical-align: middle;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -238,8 +251,13 @@
                                     <button type="submit" class="btn btn-primary btn-sm mr-1">
                                         <i class="fas fa-search mr-1"></i> Terapkan
                                     </button>
-                                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-default btn-sm">
+                                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-default btn-sm mr-1">
                                         <i class="fas fa-undo mr-1"></i> Reset
+                                    </a>
+                                    <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query($filter ?? [])) ?>" 
+                                       class="btn btn-outline-success btn-sm font-weight-bold" 
+                                       title="Export Faktur Pecahan sesuai filter ini">
+                                        <i class="fas fa-file-excel mr-1"></i> Export
                                     </a>
                                 </div>
                             </div>
@@ -253,182 +271,254 @@
                         <ul class="nav nav-tabs" id="custom-tabs-faktur" role="tablist">
                             <li class="nav-item">
                                 <a class="nav-link active font-weight-bold" id="tab-faktur-z" data-toggle="pill" href="#content-faktur-z" role="tab" aria-controls="content-faktur-z" aria-selected="true">
-                                    <i class="fas fa-file-invoice text-primary mr-1"></i> Faktur Z Induk (Stok & Jurnal)
-                                    <span class="badge badge-primary ml-1"><?= count($fakturs) ?></span>
+                                    <i class="fas fa-hourglass-start text-warning mr-1"></i> Faktur Z Induk (Belum Dipecah)
+                                    <span class="badge badge-warning ml-1"><?= count($fakturs_belum_dipecah ?? []) ?></span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" id="tab-faktur-z-selesai" data-toggle="pill" href="#content-faktur-z-selesai" role="tab" aria-controls="content-faktur-z-selesai" aria-selected="false">
+                                    <i class="fas fa-check-circle text-success mr-1"></i> Faktur Z Selesai Dipecah
+                                    <span class="badge badge-success ml-1"><?= count($fakturs_sudah_dipecah ?? []) ?></span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link font-weight-bold" id="tab-faktur-h" data-toggle="pill" href="#content-faktur-h" role="tab" aria-controls="content-faktur-h" aria-selected="false">
-                                    <i class="fas fa-cut text-warning mr-1"></i> Faktur Pecahan Kode H (Tabel Terpisah)
-                                    <span class="badge badge-warning ml-1"><?= count($fakturs_h) ?></span>
+                                    <i class="fas fa-tag text-info mr-1"></i> Faktur Pecahan Kode H (Tabel Terpisah)
+                                    <span class="badge badge-info ml-1"><?= count($fakturs_h) ?></span>
                                 </a>
                             </li>
                         </ul>
                     </div>
                     <div class="card-body p-0">
                         <div class="tab-content" id="custom-tabs-faktur-content">
-                            <!-- TAB 1: FAKTUR Z INDUK -->
+                            <!-- TAB 1: DAFTAR KIOS DENGAN FAKTUR Z BELUM DIPECAS -->
                             <div class="tab-pane fade show active" id="content-faktur-z" role="tabpanel" aria-labelledby="tab-faktur-z">
                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
                                     <div>
-                                        <span class="font-weight-bold text-dark">
-                                            <i class="fas fa-file-invoice text-primary mr-1"></i> Daftar Faktur Z Induk
+                                        <span class="font-weight-bold text-dark" style="font-size: 15px;">
+                                            <i class="fas fa-store text-warning mr-1"></i> Daftar Kios Pemilik Faktur Z (Belum Dipecah)
                                         </span>
                                         <span class="text-muted small ml-2 d-none d-md-inline">
-                                            Klik tombol <strong>Pecah</strong> pada kolom aksi untuk memecah Faktur Z.
+                                            Hanya menampilkan kios-kios yang masih memiliki Faktur Z induk belum dipecah.
                                         </span>
                                     </div>
                                     <div>
-                                        <span class="badge badge-light border font-weight-bold">
-                                            Total: <strong><?= count($fakturs) ?></strong> Faktur Z
+                                        <span class="badge badge-warning font-weight-bold p-2 border text-dark" style="font-size: 12px;">
+                                            Total: <strong><?= count($kios_grouped_belum ?? []) ?></strong> Kios (<strong><?= count($fakturs_belum_dipecah ?? []) ?></strong> Faktur Z Belum Dipecah)
                                         </span>
                                     </div>
                                 </div>
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturZ">
+
+                                <div class="table-responsive p-3">
+                                    <table class="table table-hover table-striped mb-0 text-nowrap" id="tableKiosList">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th width="40" class="text-center">No</th>
+                                                <th>Nama Kios</th>
+                                                <th>Kode Customer & Pemilik</th>
+                                                <th>Rute</th>
+                                                <th class="text-center">Faktur Z Belum Dipecah</th>
+                                                <th class="text-right">Total Nilai (Belum Dipecah)</th>
+                                                <th>Status</th>
+                                                <th width="150" class="text-center no-sort">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($kios_grouped_belum)): ?>
+                                                <tr>
+                                                    <td colspan="8" class="text-center py-5 text-muted">
+                                                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>
+                                                        <h5 class="font-weight-bold text-success">Tidak Ada Faktur Z yang Belum Dipecah</h5>
+                                                        <span class="text-muted">Seluruh Faktur Z induk telah selesai dipecah. Silakan periksa tab <strong>Faktur Z Selesai Dipecah</strong>.</span>
+                                                    </td>
+                                                </tr>
+                                            <?php else: ?>
+                                                <?php $no = 1; foreach ($kios_grouped_belum as $kios_name => $kg): ?>
+                                                    <tr>
+                                                        <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
+                                                        <td class="align-middle">
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="bg-warning text-white rounded p-2 mr-2 text-center" style="width: 34px; height: 34px; line-height: 18px;">
+                                                                    <i class="fas fa-store"></i>
+                                                                </div>
+                                                                <div>
+                                                                    <a href="<?= base_url('sales_order/pecah_faktur_kios/' . $kg['kd_customer']) ?>" 
+                                                                       class="font-weight-bold text-dark" style="font-size: 15px;"
+                                                                       title="Buka Faktur Z Kios <?= htmlspecialchars($kg['nama_kios']) ?>">
+                                                                        <?= htmlspecialchars($kg['nama_kios']) ?>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <span class="font-weight-bold text-dark d-block">
+                                                                <?= htmlspecialchars($kg['nama_customer']) ?>
+                                                            </span>
+                                                            <span class="text-muted small">
+                                                                Kode: <strong class="text-primary"><?= htmlspecialchars($kg['kd_customer']) ?></strong>
+                                                            </span>
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <?php if (!empty($kg['kd_rute'])): ?>
+                                                                <span class="badge badge-light border text-muted">
+                                                                    <i class="fas fa-route mr-1 text-info"></i><?= htmlspecialchars($kg['kd_rute']) ?>
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <span class="text-muted small">-</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <span class="badge badge-warning badge-pill font-weight-bold px-3 py-1 text-dark" style="font-size: 12px;">
+                                                                <i class="fas fa-file-invoice mr-1"></i> <?= (int)$kg['belum_dipecah'] ?> Faktur Z
+                                                            </span>
+                                                            <div class="small text-muted mt-1">
+                                                                <?= number_format($kg['total_qty_belum'] ?? $kg['total_qty']) ?> pcs (<?= (int)($kg['total_barang_belum'] ?? $kg['total_barang']) ?> item)
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-right align-middle font-weight-bold" style="font-size: 14px;">
+                                                            Rp <?= number_format((float)($kg['total_nilai_belum'] ?? $kg['total_nilai']), 0, ',', '.') ?>
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            <span class="badge badge-warning badge-status-pecah d-inline-block">
+                                                                <i class="fas fa-hourglass-start mr-1"></i> <?= $kg['belum_dipecah'] ?> Belum Dipecah
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <a href="<?= base_url('sales_order/pecah_faktur_kios/' . $kg['kd_customer']) ?>" 
+                                                               class="btn btn-warning btn-sm font-weight-bold shadow-sm"
+                                                               title="Buka Halaman Faktur Z Kios <?= htmlspecialchars($kg['nama_kios']) ?>">
+                                                                <i class="fas fa-folder-open mr-1"></i> Buka Faktur Z
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- TAB 2: DAFTAR FAKTUR Z YANG TELAH SELESAI DI PECAH -->
+                            <div class="tab-pane fade" id="content-faktur-z-selesai" role="tabpanel" aria-labelledby="tab-faktur-z-selesai">
+                                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
+                                    <div>
+                                        <span class="font-weight-bold text-dark" style="font-size: 15px;">
+                                            <i class="fas fa-check-circle text-success mr-1"></i> Daftar Faktur Z yang Telah Selesai Dipecah
+                                        </span>
+                                        <span class="text-muted small ml-2 d-none d-md-inline">
+                                            Seluruh Faktur Z induk yang sudah tuntas dipecah menjadi faktur turunan (Kode H).
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="badge badge-success font-weight-bold p-2 border" style="font-size: 12px;">
+                                            Total: <strong><?= count($fakturs_sudah_dipecah ?? []) ?></strong> Faktur Z Selesai Dipecah
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive p-3">
+                                    <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturZSudahPecah">
                                         <thead class="thead-light">
                                             <tr>
                                                 <th width="40" class="text-center">No</th>
                                                 <th>No. Faktur Z</th>
                                                 <th>Tanggal</th>
                                                 <th>No. SO</th>
-                                                <th>Customer Asal</th>
+                                                <th>Kios / Customer</th>
                                                 <th class="text-center">Total Item</th>
-                                                <th class="text-right">Grand Total</th>
-                                                <th>Status Pemecahan</th>
-                                                <th class="text-center">Status Faktur</th>
-                                                <th width="140" class="text-center no-sort">Aksi</th>
+                                                <th class="text-right">Grand Total (Awal)</th>
+                                                <th class="text-right bg-light">Netto (-20%)</th>
+                                                <th>Faktur Turunan (Kode H)</th>
+                                                <th class="text-center">Status</th>
+                                                <th width="120" class="text-center no-sort">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php if (empty($fakturs)): ?>
+                                            <?php if (empty($fakturs_sudah_dipecah)): ?>
                                                 <tr>
-                                                    <td colspan="10" class="text-center py-5 text-muted">
-                                                        <i class="fas fa-info-circle fa-2x mb-2 text-info"></i><br>
-                                                        Belum ada data Faktur Z yang sesuai dengan filter.
+                                                    <td colspan="11" class="text-center py-5 text-muted">
+                                                        <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i><br>
+                                                        Belum ada Faktur Z yang selesai dipecah.
                                                     </td>
                                                 </tr>
                                             <?php else: ?>
-                                                <?php $no = 1; foreach ($fakturs as $f): ?>
-                                                    <?php 
-                                                    $is_child = !empty($f['parent_id_faktur']);
-                                                    $is_split_parent = !empty($f['is_split_parent']);
-                                                    $can_split = !empty($f['can_split']);
+                                                <?php $no = 1; foreach ($fakturs_sudah_dipecah as $fs): ?>
+                                                    <?php
+                                                    $gt_asli = (float)($fs['grand_total'] ?? 0);
+                                                    $netto_20 = round($gt_asli * 0.8, 2);
                                                     ?>
                                                     <tr>
                                                         <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
                                                         <td class="align-middle">
-                                                            <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>" 
+                                                            <a href="<?= base_url('sales_order/detail_faktur/' . $fs['id_faktur']) ?>" 
                                                                class="badge badge-primary badge-faktur-z text-white shadow-sm"
                                                                title="Klik untuk melihat Detail Faktur Z">
-                                                                <i class="fas fa-file-invoice mr-1"></i> <?= htmlspecialchars($f['no_faktur']) ?>
+                                                                <i class="fas fa-file-invoice mr-1"></i> <?= htmlspecialchars($fs['no_faktur']) ?>
                                                             </a>
                                                         </td>
                                                         <td class="align-middle">
-                                                            <?= !empty($f['tanggal_faktur']) ? date('d/m/Y', strtotime($f['tanggal_faktur'])) : '-' ?>
+                                                            <?= !empty($fs['tanggal_faktur']) ? date('d/m/Y', strtotime($fs['tanggal_faktur'])) : '-' ?>
                                                         </td>
-                                                        <td class="align-middle">
-                                                            <span class="text-dark font-weight-bold">
-                                                                <?= htmlspecialchars($f['no_so']) ?>
-                                                            </span>
+                                                        <td class="align-middle font-weight-bold text-dark">
+                                                            <?= htmlspecialchars($fs['no_so']) ?>
                                                         </td>
                                                         <td class="align-middle">
                                                             <span class="font-weight-bold text-dark d-block">
-                                                                <?= htmlspecialchars($f['display_customer_name'] ?? $f['customer_name'] ?? '-') ?>
+                                                                <?= htmlspecialchars(!empty($fs['nama_kios']) ? $fs['nama_kios'] : ($fs['display_customer_name'] ?? $fs['customer_name'] ?? '-')) ?>
                                                             </span>
                                                             <span class="text-muted small">
-                                                                Kode: <?= htmlspecialchars($f['kd_customer'] ?? '-') ?>
-                                                                <?= !empty($f['customer_kd_rute']) ? ' &bull; Rute: ' . htmlspecialchars($f['customer_kd_rute']) : '' ?>
+                                                                Kode: <strong class="text-primary"><?= htmlspecialchars($fs['kd_customer'] ?? '-') ?></strong>
                                                             </span>
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <span class="badge badge-light border font-weight-bold">
-                                                                <?= (int)$f['total_barang'] ?> item (<?= number_format((float)$f['total_qty']) ?> pcs)
+                                                                <?= (int)$fs['total_barang'] ?> item (<?= number_format((float)$fs['total_qty']) ?> pcs)
                                                             </span>
                                                         </td>
-                                                        <td class="text-right align-middle font-weight-bold">
-                                                            Rp <?= number_format((float)$f['grand_total'], 0, ',', '.') ?>
+                                                        <td class="text-right align-middle font-weight-bold text-dark">
+                                                            Rp <?= number_format($gt_asli, 0, ',', '.') ?>
+                                                        </td>
+                                                        <td class="text-right align-middle bg-light font-weight-bold text-success">
+                                                            Rp <?= number_format($netto_20, 0, ',', '.') ?>
                                                         </td>
                                                         <td class="align-middle">
-                                                            <?php if ($f['tipe_faktur'] === 'dipecah_sebagian'): ?>
-                                                                <span class="badge badge-warning badge-status-pecah d-inline-block mb-1">
-                                                                    <i class="fas fa-cut mr-1"></i> Dipecah Sebagian
-                                                                </span>
-                                                                <div class="small text-muted">
-                                                                    Sisa: <strong><?= number_format($f['remaining_split_qty']) ?> pcs</strong>
+                                                            <?php if (!empty($fs['child_fakturs'])): ?>
+                                                                <div>
+                                                                    <?php foreach ($fs['child_fakturs'] as $cf): ?>
+                                                                        <?php $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? '')); ?>
+                                                                        <a href="<?= $cf_url ?>" 
+                                                                           class="child-faktur-pill" 
+                                                                           title="Customer: <?= htmlspecialchars($cf['customer_name'] ?? '-') ?><?= !empty($cf['grand_total']) ? ' (Rp ' . number_format((float)$cf['grand_total'], 0, ',', '.') . ')' : '' ?>">
+                                                                            <i class="fas fa-tag mr-1 text-warning"></i><?= htmlspecialchars($cf['no_faktur']) ?>
+                                                                        </a>
+                                                                    <?php endforeach; ?>
                                                                 </div>
-                                                                <?php if (!empty($f['child_fakturs'])): ?>
-                                                                    <div class="mt-1">
-                                                                        <span class="text-muted small">Turunan (H):</span>
-                                                                        <?php foreach ($f['child_fakturs'] as $cf): ?>
-                                                                            <?php $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? '')); ?>
-                                                                            <a href="<?= $cf_url ?>" 
-                                                                               class="child-faktur-pill" 
-                                                                               title="Customer: <?= htmlspecialchars($cf['customer_name']) ?>">
-                                                                                <?= htmlspecialchars($cf['no_faktur']) ?>
-                                                                            </a>
-                                                                        <?php endforeach; ?>
-                                                                    </div>
-                                                                <?php endif; ?>
-                                                            <?php elseif ($f['tipe_faktur'] === 'sudah_dipecah'): ?>
-                                                                <span class="badge badge-success badge-status-pecah d-inline-block mb-1">
-                                                                    <i class="fas fa-check-circle mr-1"></i> Selesai Dipecah
-                                                                </span>
-                                                                <?php if (!empty($f['child_fakturs'])): ?>
-                                                                    <div class="mt-1">
-                                                                        <span class="text-muted small"><?= count($f['child_fakturs']) ?> Pecahan (Kode H):</span>
-                                                                        <?php foreach ($f['child_fakturs'] as $cf): ?>
-                                                                            <?php $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? '')); ?>
-                                                                            <a href="<?= $cf_url ?>" 
-                                                                               class="child-faktur-pill" 
-                                                                               title="Customer: <?= htmlspecialchars($cf['customer_name']) ?>">
-                                                                                <?= htmlspecialchars($cf['no_faktur']) ?>
-                                                                            </a>
-                                                                        <?php endforeach; ?>
-                                                                    </div>
-                                                                <?php endif; ?>
                                                             <?php else: ?>
-                                                                <span class="badge badge-secondary badge-status-pecah">
-                                                                    <i class="fas fa-hourglass-start mr-1"></i> Belum Dipecah
-                                                                </span>
+                                                                <span class="text-muted small">-</span>
                                                             <?php endif; ?>
                                                         </td>
                                                         <td class="text-center align-middle">
-                                                            <?php 
-                                                            $st = strtolower((string)$f['status']);
-                                                            $stClass = 'secondary';
-                                                            if ($st === 'confirmed') $stClass = 'primary';
-                                                            elseif ($st === 'selesai' || $st === 'selesai_do') $stClass = 'success';
-                                                            elseif ($st === 'proses_do') $stClass = 'warning';
-                                                            elseif ($st === 'cancelled') $stClass = 'danger';
-                                                            ?>
-                                                            <span class="badge badge-<?= $stClass ?> text-uppercase" style="font-size: 11px;">
-                                                                <?= htmlspecialchars($f['status']) ?>
+                                                            <span class="badge badge-success badge-status-pecah font-weight-bold">
+                                                                <i class="fas fa-check-circle mr-1"></i> Selesai Dipecah
                                                             </span>
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <div class="btn-group btn-group-sm">
-                                                                <?php if ($can_split): ?>
-                                                                    <?php 
-                                                                    $grand_total_asli = (float)($f['grand_total'] ?? 0); 
-                                                                    $tot_netto_h      = round($grand_total_asli * 0.8, 2);
-                                                                    $tot_qty          = (float)($f['total_qty'] ?? 0);
-                                                                    ?>
-                                                                    <button type="button"
-                                                                            class="btn btn-warning btn-sm font-weight-bold shadow-sm btn-pecah-faktur"
-                                                                            data-id="<?= (int)$f['id_faktur'] ?>"
-                                                                            data-no-faktur="<?= htmlspecialchars($f['no_faktur']) ?>"
-                                                                            data-total-nilai="<?= $tot_netto_h ?>"
-                                                                            data-nominal-awal="<?= $grand_total_asli ?>"
-                                                                            data-total-qty="<?= $tot_qty ?>"
-                                                                            title="Pecah Faktur Z ini">
-                                                                        <i class="fas fa-cut mr-1"></i> Pecah
-                                                                    </button>
-                                                                <?php endif; ?>
-                                                                <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>"
+                                                                <a href="<?= base_url('sales_order/detail_faktur/' . $fs['id_faktur']) ?>"
                                                                    class="btn btn-default btn-sm border"
                                                                    title="Lihat Detail Faktur Z">
                                                                     <i class="fas fa-eye text-primary"></i>
+                                                                </a>
+                                                                <a href="<?= base_url('sales_order/pecah_faktur_kios/' . $fs['kd_customer']) ?>"
+                                                                   class="btn btn-outline-secondary btn-sm"
+                                                                   title="Buka Kios">
+                                                                    <i class="fas fa-store"></i>
+                                                                </a>
+                                                                <a href="<?= base_url('sales_order/reset_pecah_faktur_induk/' . $fs['id_faktur']) ?>"
+                                                                   class="btn btn-outline-danger btn-sm"
+                                                                   title="Reset Pemecahan (Kembalikan ke status Belum Dipecah)"
+                                                                   onclick="return confirm('Apakah Anda yakin ingin mereset pemecahan Faktur Z <?= htmlspecialchars($fs['no_faktur']) ?>? Seluruh faktur pecahan Kode H dari faktur ini akan dihapus dan kuantitas barang dikembalikan.')">
+                                                                    <i class="fas fa-undo"></i>
                                                                 </a>
                                                             </div>
                                                         </td>
@@ -451,9 +541,16 @@
                                             Faktur hasil pecahan berawalan <strong>kode H</strong> murni bersifat administratif pembagian pengiriman/customer, <strong>tidak terjurnal</strong> dan <strong>tidak memotong stok</strong> ulang.
                                         </span>
                                     </div>
-                                    <span class="badge badge-warning">
-                                        Total: <strong><?= count($fakturs_h) ?></strong> Faktur Pecahan H
-                                    </span>
+                                    <div class="d-flex align-items-center mt-2 mt-md-0">
+                                        <span class="badge badge-warning p-2 mr-2">
+                                            Total: <strong><?= count($fakturs_h) ?></strong> Faktur Pecahan H
+                                        </span>
+                                        <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query($filter ?? [])) ?>" 
+                                           class="btn btn-success btn-sm font-weight-bold shadow-sm"
+                                           title="Export Faktur Pecahan Kode H ke Excel (.xlsx)">
+                                            <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                                        </a>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturH">
@@ -839,7 +936,7 @@ function setupDataTablesFaktur() {
                 { "orderable": false, "targets": "no-sort" }
             ],
             "language": {
-                "search": "Cari data:",
+                "search": "Cari kios / data:",
                 "lengthMenu": "Tampilkan _MENU_ data",
                 "zeroRecords": "Tidak ada data yang cocok",
                 "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
@@ -855,8 +952,12 @@ function setupDataTablesFaktur() {
             "order": [[0, "asc"]]
         };
 
-        if (!$.fn.DataTable.isDataTable('#tableFakturZ')) {
-            $('#tableFakturZ').DataTable(dataTableConfig);
+        if (!$.fn.DataTable.isDataTable('#tableKiosList')) {
+            $('#tableKiosList').DataTable(dataTableConfig);
+        }
+
+        if (!$.fn.DataTable.isDataTable('#tableFakturZSudahPecah')) {
+            $('#tableFakturZSudahPecah').DataTable(dataTableConfig);
         }
 
         if (!$.fn.DataTable.isDataTable('#tableFakturH')) {
