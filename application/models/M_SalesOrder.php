@@ -92,6 +92,7 @@ class M_SalesOrder extends CI_Model
 {
     const BATAS_TONASE   = 7;
     const BATAS_KUBIKASI = 9;
+    const LIMIT_KONTAK_PERSON_FAKTUR_H = 250000000; // Maksimal akumulasi nominal Faktur H per Kontak Person (Rp 250.000.000)
 
     public function __construct()
     {
@@ -3065,8 +3066,23 @@ class M_SalesOrder extends CI_Model
         $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
         $nama_kios = !empty($customer['nama_kios']) ? $customer['nama_kios'] : ($customer['nama_customer'] ?? '');
 
-        // 2. Ambil kontak acak kios ini
-        $contacts = $this->get_customers_acak_by_kios($nama_kios, $kd_customer);
+        // 2. Ambil kontak acak kios ini (hanya yang belum mencapai limit 250 juta)
+        $all_contacts = $this->get_customers_acak_by_kios($nama_kios, $kd_customer);
+        $contacts = [];
+        if (!empty($all_contacts)) {
+            foreach ($all_contacts as $c) {
+                if (empty($c['is_limit_reached']) && (float)($c['total_nominal_pecah'] ?? 0) < self::LIMIT_KONTAK_PERSON_FAKTUR_H) {
+                    $contacts[] = $c;
+                }
+            }
+
+            if (empty($contacts)) {
+                return [
+                    'success' => false,
+                    'message' => 'Semua kontak person customer acak untuk kios <b>' . htmlspecialchars($nama_kios) . '</b> telah mencapai batas maksimal limit transaksi Rp 250.000.000. Silakan tambahkan kontak person baru.'
+                ];
+            }
+        }
 
         // 3. Ambil seluruh Faktur Z milik kios ini yang belum dipecah
         $this->db->select('*');
@@ -3524,9 +3540,13 @@ class M_SalesOrder extends CI_Model
         $this->ensure_customer_acak_table();
         $this->ensure_faktur_z_pecah_tables();
 
-        $this->db->select('ca.*, 
+        $limit_nominal = self::LIMIT_KONTAK_PERSON_FAKTUR_H;
+
+        $this->db->select("ca.*, 
             COALESCE(COUNT(DISTINCT p.id_pecah), 0) AS total_faktur_pecah,
-            COALESCE(SUM(pd.total_harga), 0) AS total_nominal_pecah');
+            COALESCE(SUM(pd.total_harga), 0) AS total_nominal_pecah,
+            CASE WHEN COALESCE(SUM(pd.total_harga), 0) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
+            GREATEST(0, {$limit_nominal} - COALESCE(SUM(pd.total_harga), 0)) AS sisa_limit_h");
         $this->db->from('tb_customer_acak ca');
         $this->db->join('tbso_faktur_z_pecah p', "p.kd_customer = ca.kd_customer AND p.status != 'cancelled'", 'left');
         $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
@@ -3560,9 +3580,11 @@ class M_SalesOrder extends CI_Model
 
         $this->db->group_by('ca.id');
         // Prioritaskan: 
-        // 1. Yang akumulasi nominalnya paling sedikit / 0 (paling kosong)
-        // 2. Yang jumlah fakturnya paling sedikit
-        // 3. Urutkan berdasarkan kode customer acak
+        // 1. Yang belum mencapai limit 250 juta di awal
+        // 2. Yang akumulasi nominalnya paling sedikit / 0 (paling kosong)
+        // 3. Yang jumlah fakturnya paling sedikit
+        // 4. Urutkan berdasarkan kode customer acak
+        $this->db->order_by('is_limit_reached', 'ASC');
         $this->db->order_by('total_nominal_pecah', 'ASC');
         $this->db->order_by('total_faktur_pecah', 'ASC');
         $this->db->order_by('ca.kd_customer', 'ASC');
@@ -3571,14 +3593,35 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Ambil list semua customer acak dengan filter fleksibel
+     * Ambil list semua customer acak dengan filter fleksibel beserta akumulasi nominal Faktur H
      */
     public function get_all_customers_acak($filter = [])
     {
         $this->ensure_customer_acak_table();
-        $this->db->select('ca.*, c.nama_customer as induk_nama_customer, c.nama_kios as induk_nama_kios');
+        $this->ensure_faktur_z_pecah_tables();
+
+        $limit_nominal = self::LIMIT_KONTAK_PERSON_FAKTUR_H;
+
+        $subquery = "(
+            SELECT p.kd_customer, 
+                   COUNT(DISTINCT p.id_pecah) AS total_faktur_h,
+                   SUM(pd.total_harga) AS total_nominal_h
+            FROM tbso_faktur_z_pecah p
+            JOIN tbso_faktur_z_pecah_detail pd ON pd.id_pecah = p.id_pecah
+            WHERE p.status != 'cancelled'
+            GROUP BY p.kd_customer
+        ) sub";
+
+        $this->db->select("ca.*, 
+            c.nama_customer as induk_nama_customer, 
+            c.nama_kios as induk_nama_kios,
+            COALESCE(sub.total_nominal_h, 0) AS total_nominal_h,
+            COALESCE(sub.total_faktur_h, 0) AS total_faktur_h,
+            CASE WHEN COALESCE(sub.total_nominal_h, 0) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
+            GREATEST(0, {$limit_nominal} - COALESCE(sub.total_nominal_h, 0)) AS sisa_limit_h");
         $this->db->from('tb_customer_acak ca');
         $this->db->join('tb_customer c', 'c.kd_customer = ca.kd_customer_induk', 'left');
+        $this->db->join($subquery, 'sub.kd_customer = ca.kd_customer', 'left');
 
         if (!empty($filter['nama_toko'])) {
             $this->db->where('ca.nama_toko', $filter['nama_toko']);
@@ -3601,6 +3644,68 @@ class M_SalesOrder extends CI_Model
         $this->db->order_by('ca.nama_toko', 'ASC');
         $this->db->order_by('ca.kd_customer', 'ASC');
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Cek apakah kontak person customer acak sudah mencapai limit atau penambahan nominal baru akan melebihi limit
+     * 
+     * @param string $kd_customer
+     * @param float $nominal_tambahan
+     * @return array
+     */
+    public function check_kontak_person_limit($kd_customer, $nominal_tambahan = 0)
+    {
+        $this->ensure_customer_acak_table();
+        $this->ensure_faktur_z_pecah_tables();
+
+        $cust = $this->db->get_where('tb_customer_acak', ['kd_customer' => $kd_customer])->row_array();
+        if (!$cust) {
+            return [
+                'is_allowed'    => true,
+                'current_total' => 0,
+                'new_total'     => (float)$nominal_tambahan,
+                'limit'         => self::LIMIT_KONTAK_PERSON_FAKTUR_H,
+                'sisa'          => self::LIMIT_KONTAK_PERSON_FAKTUR_H,
+                'kontak_person' => '',
+                'nama_toko'     => '',
+                'message'       => ''
+            ];
+        }
+
+        $row = $this->db->select('COALESCE(SUM(pd.total_harga), 0) AS total')
+            ->from('tbso_faktur_z_pecah p')
+            ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'inner')
+            ->where('p.kd_customer', $kd_customer)
+            ->where('p.status !=', 'cancelled')
+            ->get()
+            ->row_array();
+
+        $current_total = (float)($row['total'] ?? 0);
+        $limit         = (float)self::LIMIT_KONTAK_PERSON_FAKTUR_H;
+        $new_total     = $current_total + (float)$nominal_tambahan;
+        $sisa          = max(0.0, $limit - $current_total);
+
+        $is_allowed = ($current_total < $limit) && ($new_total <= ($limit + 0.01));
+
+        $msg = '';
+        if (!$is_allowed) {
+            if ($current_total >= $limit) {
+                $msg = "Kontak person <b>" . htmlspecialchars($cust['kontak_person']) . "</b> (" . htmlspecialchars($cust['kd_customer']) . " - " . htmlspecialchars($cust['nama_toko']) . ") telah mencapai batas maksimal transaksi Rp " . number_format($limit, 0, ',', '.') . " (Total akumulasi: Rp " . number_format($current_total, 0, ',', '.') . "). Kontak person ini tidak dapat digunakan lagi.";
+            } else {
+                $msg = "Alokasi Faktur H untuk kontak person <b>" . htmlspecialchars($cust['kontak_person']) . "</b> (" . htmlspecialchars($cust['kd_customer']) . ") sebesar Rp " . number_format($nominal_tambahan, 0, ',', '.') . " melebihi sisa kuota limit (Sisa Kuota: Rp " . number_format($sisa, 0, ',', '.') . " dari batas maksimal Rp " . number_format($limit, 0, ',', '.') . ").";
+            }
+        }
+
+        return [
+            'is_allowed'    => $is_allowed,
+            'current_total' => $current_total,
+            'new_total'     => $new_total,
+            'limit'         => $limit,
+            'sisa'          => $sisa,
+            'kontak_person' => $cust['kontak_person'],
+            'nama_toko'     => $cust['nama_toko'],
+            'message'       => $msg
+        ];
     }
 
     /**

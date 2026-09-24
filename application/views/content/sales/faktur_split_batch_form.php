@@ -395,6 +395,9 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 </span>
                             </div>
                             <div class="my-1 d-flex align-items-center">
+                                <button type="button" class="btn btn-outline-info btn-sm font-weight-bold shadow-sm mr-2" id="btnToggleAllZeroQty" title="Sembunyikan atau tampilkan baris barang dengan kuantitas 0">
+                                    <i class="fas fa-eye mr-1"></i> <span id="lblToggleAllZero">Tampilkan Semua Qty 0</span>
+                                </button>
                                 <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
                                     <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
                                 </button>
@@ -488,15 +491,22 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                     <option value="">-- Pilih Customer Penerima (<?= count($customers) ?> Kontak) --</option>
                                                     <?php foreach ($customers as $c_idx => $c): ?>
                                                         <?php 
-                                                        $is_selected = ($c['kd_customer'] === $auto_cust_kd);
-                                                        $nominal_riwayat = (float)($c['total_nominal_pecah'] ?? 0);
-                                                        $faktur_riwayat  = (int)($c['total_faktur_pecah'] ?? 0);
-                                                        $badge_info = ($nominal_riwayat <= 0 && $faktur_riwayat <= 0)
-                                                            ? 'Belum Ada Riwayat (Prioritas ' . ($c_idx + 1) . ')'
-                                                            : 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (' . $faktur_riwayat . ' Faktur)';
+                                                        $is_selected      = ($c['kd_customer'] === $auto_cust_kd);
+                                                        $nominal_riwayat  = (float)($c['total_nominal_pecah'] ?? 0);
+                                                        $faktur_riwayat   = (int)($c['total_faktur_pecah'] ?? 0);
+                                                        $is_limit_reached = !empty($c['is_limit_reached']) || ($nominal_riwayat >= 250000000);
+                                                        $sisa_limit       = max(0.0, 250000000 - $nominal_riwayat);
+
+                                                        if ($is_limit_reached) {
+                                                            $badge_info = 'LIMIT PENUH: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (Maksimal 250 Jt - Tidak Dapat Digunakan)';
+                                                        } elseif ($nominal_riwayat <= 0 && $faktur_riwayat <= 0) {
+                                                            $badge_info = 'Sisa Kuota: Rp 250.000.000 (Prioritas ' . ($c_idx + 1) . ')';
+                                                        } else {
+                                                            $badge_info = 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' | Sisa: Rp ' . number_format($sisa_limit, 0, ',', '.');
+                                                        }
                                                         ?>
                                                         <?php if (!empty($is_customer_acak)): ?>
-                                                            <option value="<?= htmlspecialchars($c['kd_customer']) ?>" <?= $is_selected ? 'selected' : '' ?>>
+                                                            <option value="<?= htmlspecialchars($c['kd_customer']) ?>" <?= $is_selected ? 'selected' : '' ?> <?= $is_limit_reached ? 'disabled class="text-danger font-weight-bold"' : '' ?>>
                                                                 [<?= htmlspecialchars($c['kd_customer']) ?>] <?= htmlspecialchars($c['kontak_person']) ?> (<?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kota']) ? ' - '.$c['kota'] : '' ?>) - [<?= $badge_info ?>]
                                                             </option>
                                                         <?php else: ?>
@@ -535,14 +545,29 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
+                                                        <?php 
+                                                        $has_pos_qty = false;
+                                                        $zero_qty_count = 0;
+                                                        foreach ($pool_items as $check_id => $check_it) {
+                                                            $q = isset($pre_allocated_splits[$slot_idx]['items'][$check_id]['qty']) ? (float)$pre_allocated_splits[$slot_idx]['items'][$check_id]['qty'] : 0;
+                                                            if ($q > 0.0001) {
+                                                                $has_pos_qty = true;
+                                                            } else {
+                                                                $zero_qty_count++;
+                                                            }
+                                                        }
+                                                        ?>
                                                         <?php foreach ($pool_items as $d_id => $it): ?>
                                                             <?php 
                                                             $hrg_asli = (float)$it['hrg_satuan'];
                                                             $default_hrg = round($hrg_asli * 0.8, 2);
                                                             $default_disc = (float)($it['disc'] ?? 0);
                                                             $default_pajak = (float)($it['pajak'] ?? 0);
+                                                            $val_qty = isset($pre_allocated_splits[$slot_idx]['items'][$d_id]['qty']) ? (float)$pre_allocated_splits[$slot_idx]['items'][$d_id]['qty'] : 0;
+                                                            $is_zero = ($val_qty <= 0.0001);
+                                                            $hide_row = $has_pos_qty && $is_zero;
                                                             ?>
-                                                            <tr class="row-item-split" data-detail-id="<?= $d_id ?>" data-hrg="<?= $default_hrg ?>">
+                                                            <tr class="row-item-split <?= $is_zero ? 'row-zero-qty' : '' ?>" data-detail-id="<?= $d_id ?>" data-hrg="<?= $default_hrg ?>" <?= $hide_row ? 'style="display: none;"' : '' ?>>
                                                                 <td>
                                                                     <strong class="text-dark d-block text-truncate" style="max-width: 140px;" title="<?= htmlspecialchars($it['nama_barang']) ?>">
                                                                         <?= htmlspecialchars($it['nama_barang']) ?>
@@ -586,6 +611,11 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         <?php endforeach; ?>
                                                     </tbody>
                                                 </table>
+                                                <div class="px-2 py-1 bg-light border-top text-center slot-zero-toggle-box" style="<?= ($has_pos_qty && $zero_qty_count > 0) ? '' : 'display: none;' ?>">
+                                                    <a href="javascript:void(0)" class="btn-toggle-slot-zero small text-muted font-weight-bold" style="font-size: 10.5px; text-decoration: none;">
+                                                        <span class="lbl-zero-text"><i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan <?= $zero_qty_count ?> barang lainnya (Qty 0)</span>
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -667,14 +697,21 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                             <option value="">-- Pilih Customer Penerima (<?= count($customers) ?> Kontak) --</option>
                             <?php foreach ($customers as $c_idx => $c): ?>
                                 <?php 
-                                $nominal_riwayat = (float)($c['total_nominal_pecah'] ?? 0);
-                                $faktur_riwayat  = (int)($c['total_faktur_pecah'] ?? 0);
-                                $badge_info = ($nominal_riwayat <= 0 && $faktur_riwayat <= 0)
-                                    ? 'Belum Ada Riwayat (Prioritas ' . ($c_idx + 1) . ')'
-                                    : 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (' . $faktur_riwayat . ' Faktur)';
+                                $nominal_riwayat  = (float)($c['total_nominal_pecah'] ?? 0);
+                                $faktur_riwayat   = (int)($c['total_faktur_pecah'] ?? 0);
+                                $is_limit_reached = !empty($c['is_limit_reached']) || ($nominal_riwayat >= 250000000);
+                                $sisa_limit       = max(0.0, 250000000 - $nominal_riwayat);
+
+                                if ($is_limit_reached) {
+                                    $badge_info = 'LIMIT PENUH: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (Maksimal 250 Jt - Tidak Dapat Digunakan)';
+                                } elseif ($nominal_riwayat <= 0 && $faktur_riwayat <= 0) {
+                                    $badge_info = 'Sisa Kuota: Rp 250.000.000 (Prioritas ' . ($c_idx + 1) . ')';
+                                } else {
+                                    $badge_info = 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' | Sisa: Rp ' . number_format($sisa_limit, 0, ',', '.');
+                                }
                                 ?>
                                 <?php if (!empty($is_customer_acak)): ?>
-                                    <option value="<?= htmlspecialchars($c['kd_customer']) ?>">
+                                    <option value="<?= htmlspecialchars($c['kd_customer']) ?>" <?= $is_limit_reached ? 'disabled class="text-danger font-weight-bold"' : '' ?>>
                                         [<?= htmlspecialchars($c['kd_customer']) ?>] <?= htmlspecialchars($c['kontak_person']) ?> (<?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kota']) ? ' - '.$c['kota'] : '' ?>) - [<?= $badge_info ?>]
                                     </option>
                                 <?php else: ?>
@@ -760,6 +797,11 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                        <div class="px-2 py-1 bg-light border-top text-center slot-zero-toggle-box" style="display: none;">
+                            <a href="javascript:void(0)" class="btn-toggle-slot-zero small text-muted font-weight-bold" style="font-size: 10.5px; text-decoration: none;">
+                                <span class="lbl-zero-text"><i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan barang lainnya (Qty 0)</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -796,6 +838,96 @@ $(document).ready(function() {
     // Inisialisasi Select2 untuk semua slot yang ada saat halaman dimuat
     initCustomerSelect2($('.select-customer'));
 
+    var hideZeroQtyActive = true;
+
+    // Helper untuk update visibilitas baris dengan kuantitas 0 pada slot card
+    function updateSlotZeroRows($card) {
+        var $rows = $card.find('.row-item-split');
+        var positiveCount = 0;
+        var zeroCount = 0;
+
+        $rows.each(function() {
+            var qty = parseFloat($(this).find('.input-qty-split').val()) || 0;
+            if (qty > 0.0001) {
+                positiveCount++;
+                $(this).removeClass('row-zero-qty');
+            } else {
+                zeroCount++;
+                $(this).addClass('row-zero-qty');
+            }
+        });
+
+        var isSlotExpanded = $card.data('show-zero') === true;
+        var $toggleBox = $card.find('.slot-zero-toggle-box');
+
+        if (hideZeroQtyActive && !isSlotExpanded) {
+            if (positiveCount > 0) {
+                $rows.each(function() {
+                    var qty = parseFloat($(this).find('.input-qty-split').val()) || 0;
+                    var isFocused = $(this).find('.input-qty-split').is(':focus');
+                    if (qty <= 0.0001 && !isFocused) {
+                        $(this).hide();
+                    } else {
+                        $(this).show();
+                    }
+                });
+                if (zeroCount > 0) {
+                    $toggleBox.show();
+                    $toggleBox.find('.lbl-zero-text').html('<i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan ' + zeroCount + ' barang lainnya (Qty 0)');
+                } else {
+                    $toggleBox.hide();
+                }
+            } else {
+                // Jika semua barang masih 0 (slot kosong), tampilkan semua agar user bisa input
+                $rows.show();
+                $toggleBox.hide();
+            }
+        } else {
+            // Tampilkan semua baris
+            $rows.show();
+            if (zeroCount > 0 && positiveCount > 0) {
+                $toggleBox.show();
+                $toggleBox.find('.lbl-zero-text').html('<i class="fas fa-minus-circle text-warning mr-1"></i> - Sembunyikan barang Qty 0 (' + zeroCount + ')');
+            } else {
+                $toggleBox.hide();
+            }
+        }
+    }
+
+    // Toggle visibilitas baris Qty 0 per slot
+    $(document).on('click', '.btn-toggle-slot-zero', function(e) {
+        e.preventDefault();
+        var $card = $(this).closest('.split-slot-card');
+        var current = $card.data('show-zero') === true;
+        $card.data('show-zero', !current);
+        updateSlotZeroRows($card);
+    });
+
+    // Toggle global di toolbar
+    $('#btnToggleAllZeroQty').on('click', function() {
+        hideZeroQtyActive = !hideZeroQtyActive;
+        if (hideZeroQtyActive) {
+            $(this).removeClass('btn-info text-white').addClass('btn-outline-info');
+            $('#lblToggleAllZero').text('Tampilkan Semua Qty 0');
+            $(this).find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+            $('.split-slot-card').data('show-zero', false);
+        } else {
+            $(this).removeClass('btn-outline-info').addClass('btn-info text-white');
+            $('#lblToggleAllZero').text('Sembunyikan Qty 0');
+            $(this).find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+            $('.split-slot-card').data('show-zero', true);
+        }
+        $('.split-slot-card').each(function() {
+            updateSlotZeroRows($(this));
+        });
+    });
+
+    // Saat input kuantitas kehilangan fokus, sembunyikan kembali jika kuantitasnya 0 dan filter aktif
+    $(document).on('blur', '.input-qty-split', function() {
+        var $card = $(this).closest('.split-slot-card');
+        updateSlotZeroRows($card);
+    });
+
     // Helper untuk mencari customer prioritas berikutnya yang belum terpilih di slot mana pun
     function getNextAvailableCustomer() {
         var selectedKodes = {};
@@ -808,8 +940,16 @@ $(document).ready(function() {
 
         for (var i = 0; i < availableCustomers.length; i++) {
             var c = availableCustomers[i];
-            if (!selectedKodes[c.kd_customer]) {
+            var isLimit = (c.is_limit_reached == 1 || c.is_limit_reached === true || (parseFloat(c.total_nominal_pecah) || 0) >= 250000000);
+            if (!selectedKodes[c.kd_customer] && !isLimit) {
                 return c;
+            }
+        }
+        for (var j = 0; j < availableCustomers.length; j++) {
+            var c2 = availableCustomers[j];
+            var isLimit2 = (c2.is_limit_reached == 1 || c2.is_limit_reached === true || (parseFloat(c2.total_nominal_pecah) || 0) >= 250000000);
+            if (!isLimit2) {
+                return c2;
             }
         }
         return availableCustomers.length > 0 ? availableCustomers[0] : null;
@@ -907,6 +1047,9 @@ $(document).ready(function() {
                 if (!poolAllocations[dId]) poolAllocations[dId] = 0;
                 poolAllocations[dId] += qty;
             });
+
+            // Update baris zero-qty pada slot ini
+            updateSlotZeroRows($(this));
 
             // Update badge total per slot
             var $totalBadge = $('#slotTotalNominal_' + slotIdx);

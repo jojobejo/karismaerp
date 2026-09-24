@@ -2583,8 +2583,10 @@ class C_SalesOrder extends CI_Controller
 
         $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
         $parent_qtys = [];
+        $parent_details_by_id = [];
         $total_remaining = 0;
         foreach ($details as $d) {
+            $parent_details_by_id[$d['id']] = $d;
             $key = implode('|', [
                 $d['id_so_detail'],
                 $d['kd_barang'],
@@ -2642,6 +2644,7 @@ class C_SalesOrder extends CI_Controller
 
             $items = $s['items'] ?? [];
             $has_qty = false;
+            $slot_nominal = 0.0;
             foreach ($items as $itemId => $qty) {
                 $qty = (float)$qty;
                 if ($qty < 0) {
@@ -2653,11 +2656,25 @@ class C_SalesOrder extends CI_Controller
                         $allocated_qtys[$itemId] = 0.0;
                     }
                     $allocated_qtys[$itemId] += $qty;
+
+                    // Hitung estimasi nominal transaksi pecahan (diskon 20% dari harga induk)
+                    if (isset($parent_details_by_id[$itemId])) {
+                        $pd_item = $parent_details_by_id[$itemId];
+                        $hrg_pecah = round((float)$pd_item['hrg_satuan'] * 0.8, 2);
+                        $disc_rate = (float)($pd_item['disc'] ?? 0);
+                        $slot_nominal += round($qty * $hrg_pecah * (1 - ($disc_rate / 100)), 2);
+                    }
                 }
             }
 
             if (!$has_qty) {
-                $validation_errors[] = "Harap masukkan kuantitas barang minimal 1 item untuk customer " . htmlspecialchars($cust['nama_customer']) . ".";
+                $validation_errors[] = "Harap masukkan kuantitas barang minimal 1 item untuk customer " . htmlspecialchars($customer_display_name) . ".";
+            } else {
+                // Cek validasi batas limit 250 Juta per kontak person
+                $limit_check = $this->M_SalesOrder->check_kontak_person_limit($kd_cust, $slot_nominal);
+                if (!$limit_check['is_allowed']) {
+                    $validation_errors[] = $limit_check['message'];
+                }
             }
         }
 
@@ -2949,9 +2966,17 @@ class C_SalesOrder extends CI_Controller
             if (!empty($pre_allocated_splits)) {
                 $is_auto_prefilled = true;
                 $jumlah_pecah = count($pre_allocated_splits);
+                // Prioritaskan kontak person yang belum mencapai limit 250 juta untuk rotasi auto-fill
+                $available_customers = array_values(array_filter($customers, function($c) {
+                    return empty($c['is_limit_reached']) && (float)($c['total_nominal_pecah'] ?? 0) < M_SalesOrder::LIMIT_KONTAK_PERSON_FAKTUR_H;
+                }));
+                if (empty($available_customers)) {
+                    $available_customers = $customers;
+                }
+
                 foreach ($pre_allocated_splits as $b_idx => &$bkt) {
-                    if (!empty($customers)) {
-                        $cust_obj = $customers[$contact_idx % count($customers)];
+                    if (!empty($available_customers)) {
+                        $cust_obj = $available_customers[$contact_idx % count($available_customers)];
                         $contact_idx++;
                         $bkt['kd_customer'] = $cust_obj['kd_customer'];
                     }
@@ -3055,8 +3080,8 @@ class C_SalesOrder extends CI_Controller
             }
         }
 
-        // Validasi alokasi qty agar tidak melebihi sisa
         $total_requested_per_item = [];
+        $batch_allocated_nominal_per_cust = [];
         $validation_errors = [];
 
         // Kumpulkan customer acak yang valid untuk parent faktur terpilih
@@ -3078,6 +3103,7 @@ class C_SalesOrder extends CI_Controller
             $items = $s['items'] ?? [];
 
             $has_item = false;
+            $slot_nominal = 0.0;
             foreach ($items as $detail_id => $it) {
                 $qty = (float)($it['qty'] ?? 0);
                 if ($qty > 0.0001) {
@@ -3086,6 +3112,14 @@ class C_SalesOrder extends CI_Controller
                         $total_requested_per_item[$detail_id] = 0.0;
                     }
                     $total_requested_per_item[$detail_id] += $qty;
+
+                    if (isset($parent_details[$detail_id])) {
+                        $pd = $parent_details[$detail_id];
+                        $hrg_satuan_pecah = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                        $disc = (float)($pd['disc'] ?? 0);
+                        $effective_unit_price = round($hrg_satuan_pecah * (1 - ($disc / 100)), 2);
+                        $slot_nominal += round($qty * $effective_unit_price, 2);
+                    }
                 }
             }
 
@@ -3094,7 +3128,20 @@ class C_SalesOrder extends CI_Controller
                     $validation_errors[] = "Slot Pecahan #" . ($s_idx + 1) . " memiliki alokasi barang namun belum memilih Customer.";
                 } elseif (!empty($allowed_acak_map) && !isset($allowed_acak_map[$kd_cust])) {
                     $validation_errors[] = "Slot Pecahan #" . ($s_idx + 1) . ": Customer Penerima (" . htmlspecialchars($kd_cust) . ") bukan kontak person milik kios (" . implode(', ', array_keys($allowed_kios_names)) . "). Pastikan customer tidak tertukar!";
+                } else {
+                    if (!isset($batch_allocated_nominal_per_cust[$kd_cust])) {
+                        $batch_allocated_nominal_per_cust[$kd_cust] = 0.0;
+                    }
+                    $batch_allocated_nominal_per_cust[$kd_cust] += $slot_nominal;
                 }
+            }
+        }
+
+        // Cek validasi batas maksimal limit 250 Juta per kontak person
+        foreach ($batch_allocated_nominal_per_cust as $kd_c => $nom_added) {
+            $limit_check = $this->M_SalesOrder->check_kontak_person_limit($kd_c, $nom_added);
+            if (!$limit_check['is_allowed']) {
+                $validation_errors[] = $limit_check['message'];
             }
         }
 

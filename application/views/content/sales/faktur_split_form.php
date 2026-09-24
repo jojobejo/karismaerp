@@ -197,14 +197,21 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
                         <option value="">-- Pilih Customer Penerima (<?= count($customers) ?> Kontak Tersedia) --</option>
                         <?php foreach ($customers as $c_idx => $c): ?>
                             <?php 
-                            $nominal_riwayat = (float)($c['total_nominal_pecah'] ?? 0);
-                            $faktur_riwayat  = (int)($c['total_faktur_pecah'] ?? 0);
-                            $badge_info = ($nominal_riwayat <= 0 && $faktur_riwayat <= 0)
-                                ? 'Belum Ada Riwayat (Prioritas ' . ($c_idx + 1) . ')'
-                                : 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (' . $faktur_riwayat . ' Faktur)';
+                            $nominal_riwayat  = (float)($c['total_nominal_pecah'] ?? 0);
+                            $faktur_riwayat   = (int)($c['total_faktur_pecah'] ?? 0);
+                            $is_limit_reached = !empty($c['is_limit_reached']) || ($nominal_riwayat >= 250000000);
+                            $sisa_limit       = max(0.0, 250000000 - $nominal_riwayat);
+
+                            if ($is_limit_reached) {
+                                $badge_info = 'LIMIT PENUH: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' (Maksimal 250 Jt - Tidak Dapat Digunakan)';
+                            } elseif ($nominal_riwayat <= 0 && $faktur_riwayat <= 0) {
+                                $badge_info = 'Sisa Kuota: Rp 250.000.000 (Prioritas ' . ($c_idx + 1) . ')';
+                            } else {
+                                $badge_info = 'Riwayat: Rp ' . number_format($nominal_riwayat, 0, ',', '.') . ' | Sisa: Rp ' . number_format($sisa_limit, 0, ',', '.');
+                            }
                             ?>
                             <?php if (!empty($is_customer_acak)): ?>
-                                <option value="<?= htmlspecialchars($c['kd_customer']) ?>">
+                                <option value="<?= htmlspecialchars($c['kd_customer']) ?>" <?= $is_limit_reached ? 'disabled class="text-danger font-weight-bold"' : '' ?>>
                                     [<?= htmlspecialchars($c['kd_customer']) ?>] <?= htmlspecialchars($c['kontak_person']) ?> (<?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kota']) ? ' - '.$c['kota'] : '' ?>) - [<?= $badge_info ?>]
                                 </option>
                             <?php else: ?>
@@ -296,8 +303,17 @@ $(document).ready(function () {
 
         for (var i = 0; i < availableCustomers.length; i++) {
             var c = availableCustomers[i];
-            if (!selectedKodes[c.kd_customer]) {
+            var isLimit = (c.is_limit_reached == 1 || c.is_limit_reached === true || (parseFloat(c.total_nominal_pecah) || 0) >= 250000000);
+            if (!selectedKodes[c.kd_customer] && !isLimit) {
                 return c;
+            }
+        }
+        // Jika semua yang belum dipilih ternyata limit, cari yang belum limit
+        for (var j = 0; j < availableCustomers.length; j++) {
+            var c2 = availableCustomers[j];
+            var isLimit2 = (c2.is_limit_reached == 1 || c2.is_limit_reached === true || (parseFloat(c2.total_nominal_pecah) || 0) >= 250000000);
+            if (!isLimit2) {
+                return c2;
             }
         }
         return availableCustomers.length > 0 ? availableCustomers[0] : null;

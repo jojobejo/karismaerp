@@ -81,9 +81,29 @@
                             </div>
                         </div>
                         <div class="col-md-3 text-md-right mt-2 mt-md-4">
-                            <span class="badge badge-info p-2 font-weight-bold" style="font-size: 13px;">
-                                Total: <?= number_format(count($customers_acak)) ?> Kontak Person
-                            </span>
+                            <?php 
+                                $total_nom_all = 0;
+                                $total_limit_cnt = 0;
+                                foreach ($customers_acak as $ca_item) {
+                                    $total_nom_all += (float)($ca_item['total_nominal_h'] ?? 0);
+                                    if (!empty($ca_item['is_limit_reached'])) {
+                                        $total_limit_cnt++;
+                                    }
+                                }
+                            ?>
+                            <div class="d-flex flex-column align-items-md-end">
+                                <span class="badge badge-info px-2 py-1 font-weight-bold mb-1" style="font-size: 12.5px;">
+                                    <i class="fas fa-users mr-1"></i> Total: <?= number_format(count($customers_acak)) ?> Kontak
+                                </span>
+                                <span class="badge badge-secondary px-2 py-1 font-weight-bold" style="font-size: 11.5px;">
+                                    <i class="fas fa-file-invoice-dollar mr-1"></i> Terfaktur: Rp <?= number_format($total_nom_all, 0, ',', '.') ?>
+                                </span>
+                                <?php if ($total_limit_cnt > 0): ?>
+                                    <span class="badge badge-danger px-2 py-1 font-weight-bold mt-1" style="font-size: 11.5px;">
+                                        <i class="fas fa-ban mr-1"></i> <?= $total_limit_cnt ?> Kontak Limit Penuh (250 Jt)
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -97,26 +117,38 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th width="40" class="text-center">No</th>
-                                    <th width="120">Kode Acak</th>
-                                    <th width="200">Kios / Toko Induk</th>
+                                    <th width="110">Kode Acak</th>
+                                    <th width="190">Kios / Toko Induk</th>
                                     <th>Kontak Person (Penerima)</th>
+                                    <th width="190">
+                                        Nominal Faktur H
+                                        <br><small class="text-muted font-weight-normal">Maks. 250 Jt/Kontak</small>
+                                    </th>
                                     <th>Alamat Lengkap</th>
-                                    <th width="120">Kota</th>
-                                    <th width="140">NIK</th>
-                                    <th width="130">NPWP</th>
-                                    <th width="90" class="text-center no-sort">Aksi</th>
+                                    <th width="110">Kota</th>
+                                    <th width="130">NIK</th>
+                                    <th width="120">NPWP</th>
+                                    <th width="80" class="text-center no-sort">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($customers_acak)): ?>
                                     <tr>
-                                        <td colspan="9" class="text-center py-4 text-muted">
+                                        <td colspan="10" class="text-center py-4 text-muted">
                                             <i class="fas fa-info-circle mr-1"></i> Tidak ada data kontak person customer acak ditemukan.
                                         </td>
                                     </tr>
                                 <?php else: ?>
                                     <?php $no = 1; foreach ($customers_acak as $ca): ?>
-                                        <tr>
+                                        <?php 
+                                            $nom_h = (float)($ca['total_nominal_h'] ?? 0);
+                                            $faktur_cnt = (int)($ca['total_faktur_h'] ?? 0);
+                                            $is_limit = !empty($ca['is_limit_reached']) || ($nom_h >= 250000000);
+                                            $sisa_limit = max(0.0, 250000000 - $nom_h);
+                                            $pct_limit = min(100, round(($nom_h / 250000000) * 100, 1));
+                                            $row_class = $is_limit ? 'table-danger' : '';
+                                        ?>
+                                        <tr class="<?= $row_class ?>">
                                             <td class="text-center align-middle text-muted"><?= $no++ ?></td>
                                             <td class="align-middle">
                                                 <span class="badge badge-warning text-dark font-weight-bold px-2 py-1" style="font-family: monospace; font-size: 12px;">
@@ -133,8 +165,38 @@
                                             </td>
                                             <td class="align-middle font-weight-bold text-dark">
                                                 <?= htmlspecialchars($ca['kontak_person']) ?>
+                                                <?php if ($is_limit): ?>
+                                                    <br><span class="badge badge-danger px-1 py-0 font-weight-normal" style="font-size: 10px;"><i class="fas fa-ban mr-1"></i>Maksimal 250 Jt Tercapai</span>
+                                                <?php endif; ?>
                                             </td>
-                                            <td class="align-middle" style="white-space: normal; max-width: 250px;">
+                                            <td class="align-middle" data-order="<?= $nom_h ?>">
+                                                <div class="font-weight-bold <?= $is_limit ? 'text-danger' : ($nom_h > 0 ? 'text-dark' : 'text-muted') ?>" style="font-size: 13px;">
+                                                    Rp <?= number_format($nom_h, 0, ',', '.') ?>
+                                                </div>
+                                                <small class="text-muted"><i class="fas fa-receipt mr-1"></i><?= $faktur_cnt ?> Faktur H</small>
+
+                                                <?php if ($is_limit): ?>
+                                                    <div class="mt-1">
+                                                        <span class="badge badge-danger px-2 py-1" style="font-size: 10px;" title="Total akumulasi telah mencapai batas limit Rp 250.000.000">
+                                                            <i class="fas fa-times-circle mr-1"></i> Tidak Dapat Digunakan
+                                                        </span>
+                                                    </div>
+                                                <?php elseif ($nom_h > 0): ?>
+                                                    <div class="progress mt-1" style="height: 5px; width: 120px;" title="Terpakai <?= $pct_limit ?>% dari batas 250 Juta">
+                                                        <div class="progress-bar <?= ($pct_limit >= 80) ? 'bg-warning' : 'bg-info' ?>" role="progressbar" style="width: <?= $pct_limit ?>%;"></div>
+                                                    </div>
+                                                    <small class="text-muted font-weight-bold" style="font-size: 10px;">
+                                                        Sisa: Rp <?= number_format($sisa_limit, 0, ',', '.') ?> (<?= $pct_limit ?>%)
+                                                    </small>
+                                                <?php else: ?>
+                                                    <div>
+                                                        <span class="badge badge-light border text-success px-1 py-0" style="font-size: 10px;">
+                                                            <i class="fas fa-check mr-1"></i> Tersedia (250 Jt)
+                                                        </span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="align-middle" style="white-space: normal; max-width: 230px;">
                                                 <small class="text-muted"><?= htmlspecialchars($ca['alamat'] ?: '-') ?></small>
                                             </td>
                                             <td class="align-middle">
