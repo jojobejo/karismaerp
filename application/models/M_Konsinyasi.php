@@ -3,10 +3,11 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * Model M_Konsinyasi
- * Mengelola siklus transaksi barang konsinyasi:
- * 1. Pelacakan barang konsinyasi terjual dari Gudang Konsinyasi
- * 2. Penyelesaian & pengakuan harga resmi dari supplier (Settlement)
- * 3. Integrasi jurnal otomatis ke Hutang Konsinyasi & HPP
+ * Mengelola siklus penuh barang konsinyasi (titipan supplier):
+ * 1. Penerimaan Barang Konsinyasi dari Supplier → tabel tb_konsinyasi_masuk
+ * 2. Stok masuk ke gudang konsinyasi (tanpa LPB, tanpa hutang)
+ * 3. Sinkronisasi barang terjual dari SO/Faktur → tb_konsinyasi_settlement
+ * 4. Penyelesaian (Settlement): input harga + invoice → jurnal Hutang + HPP
  */
 class M_Konsinyasi extends CI_Model
 {
@@ -67,6 +68,49 @@ class M_Konsinyasi extends CI_Model
                   KEY `idx_suplier` (`kd_suplier`),
                   KEY `idx_so` (`no_so`),
                   KEY `idx_faktur` (`no_faktur`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+
+        if (!$this->db->table_exists('tb_konsinyasi_masuk')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_konsinyasi_masuk` (
+                  `id_masuk` int(11) NOT NULL AUTO_INCREMENT,
+                  `nomor_masuk` varchar(50) NOT NULL,
+                  `tanggal_masuk` date NOT NULL,
+                  `kd_suplier` varchar(50) NOT NULL,
+                  `nama_suplier` varchar(150) NOT NULL,
+                  `gudang_id` int(11) NOT NULL DEFAULT 13,
+                  `no_surat_jalan` varchar(100) DEFAULT NULL,
+                  `tgl_surat_jalan` date DEFAULT NULL,
+                  `keterangan` text DEFAULT NULL,
+                  `status` enum('RECEIVED','CANCELLED') NOT NULL DEFAULT 'RECEIVED',
+                  `created_by` varchar(50) DEFAULT NULL,
+                  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_masuk`),
+                  UNIQUE KEY `idx_nomor_masuk` (`nomor_masuk`),
+                  KEY `idx_suplier` (`kd_suplier`),
+                  KEY `idx_tgl` (`tanggal_masuk`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+
+        if (!$this->db->table_exists('tb_konsinyasi_masuk_detail')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_konsinyasi_masuk_detail` (
+                  `id_detail` int(11) NOT NULL AUTO_INCREMENT,
+                  `id_masuk` int(11) NOT NULL,
+                  `kd_barang` varchar(50) NOT NULL,
+                  `nama_barang` varchar(200) NOT NULL,
+                  `satuan` varchar(30) DEFAULT NULL,
+                  `qty` decimal(15,3) NOT NULL DEFAULT 0.000,
+                  `no_lot` varchar(100) DEFAULT NULL,
+                  `expired_date` date DEFAULT NULL,
+                  `keterangan` varchar(255) DEFAULT NULL,
+                  PRIMARY KEY (`id_detail`),
+                  KEY `idx_id_masuk` (`id_masuk`),
+                  KEY `idx_kd_barang` (`kd_barang`),
+                  KEY `idx_no_lot` (`no_lot`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
         }
@@ -236,10 +280,40 @@ class M_Konsinyasi extends CI_Model
     }
 
     /**
-     * Mencari data LPB Konsinyasi asal untuk mengetahui pemilik/supplier barang
+     * Mencari data penerimaan asal untuk mengetahui pemilik/supplier barang titipan
+     * Prioritas:
+     * 1. tb_konsinyasi_masuk (penerimaan konsinyasi mandiri)
+     * 2. tb_lpb (data historis sebelum pemisahan modul)
+     * 3. tbpo_barang (supplier default barang)
      */
     private function find_origin_consignment_lpb($kdBarang, $gudangId, $noLot = '')
     {
+        // 1. Cek dari penerimaan mandiri konsinyasi (tb_konsinyasi_masuk)
+        if ($this->db->table_exists('tb_konsinyasi_masuk') && $this->db->table_exists('tb_konsinyasi_masuk_detail')) {
+            $this->db->select('km.id_masuk, km.nomor_masuk, km.kd_suplier, km.nama_suplier');
+            $this->db->from('tb_konsinyasi_masuk km');
+            $this->db->join('tb_konsinyasi_masuk_detail kmd', 'kmd.id_masuk = km.id_masuk', 'inner');
+            $this->db->where('kmd.kd_barang', $kdBarang);
+            $this->db->where('km.gudang_id', (int) $gudangId);
+            $this->db->where('km.status', 'RECEIVED');
+            if (!empty($noLot)) {
+                $this->db->where('kmd.no_lot', trim((string) $noLot));
+            }
+            $this->db->order_by('km.id_masuk', 'DESC');
+            $this->db->limit(1);
+            $rowKm = $this->db->get()->row_array();
+
+            if ($rowKm && !empty($rowKm['kd_suplier'])) {
+                return [
+                    'id_lpb'       => (int) $rowKm['id_masuk'],
+                    'nomor_lpb'    => $rowKm['nomor_masuk'],
+                    'kd_suplier'   => $rowKm['kd_suplier'],
+                    'nama_suplier' => $rowKm['nama_suplier']
+                ];
+            }
+        }
+
+        // 2. Cek dari LPB Historis (jika barang diterima sebelum update modul)
         $this->db->select('h.id_lpb, h.nomor_lpb, h.kd_suplier, h.nama_suplier');
         $this->db->from('tb_lpb h');
         $this->db->join('tb_lpb_detail d', 'd.id_lpb = h.id_lpb', 'inner');
@@ -256,7 +330,7 @@ class M_Konsinyasi extends CI_Model
             return $row;
         }
 
-        // Fallback: cari di tbpo_barang supplier default
+        // 3. Fallback: cari di tbpo_barang supplier default
         $barang = $this->db->select('kd_suplier, nama_suplier')->where('kode_barang', $kdBarang)->get('tbpo_barang')->row_array();
         if ($barang && !empty($barang['kd_suplier'])) {
             return [
@@ -361,7 +435,7 @@ class M_Konsinyasi extends CI_Model
         }
 
         $tglInvoiceSupplier = !empty($payload['tgl_invoice_supplier']) ? $payload['tgl_invoice_supplier'] : date('Y-m-d');
-        $ppnPersen = ($tipePajak === 'NON_PPN') ? 0.00 : (isset($payload['ppn_persen']) ? (float) $payload['ppn_persen'] : 0.00);
+        $ppnPersen = ($tipePajak === 'NON_PPN') ? 0.00 : (!empty($payload['ppn_persen']) ? (float) $payload['ppn_persen'] : 11.00);
         $qtyNet = (float) $settlement['qty_net'];
 
         if ($tipePajak === 'INCLUDE') {
@@ -492,4 +566,226 @@ class M_Konsinyasi extends CI_Model
             ->get('tb_konsinyasi_settlement')
             ->result_array();
     }
+
+    /**
+     * Menghasilkan nomor transaksi penerimaan konsinyasi unik
+     * Format: KONS-IN-YYMMDD-XXXX
+     */
+    public function generate_masuk_no()
+    {
+        $prefix = 'KONS-IN-' . date('ymd') . '-';
+        $lastRow = $this->db
+            ->select('nomor_masuk')
+            ->like('nomor_masuk', $prefix, 'after')
+            ->order_by('id_masuk', 'DESC')
+            ->limit(1)
+            ->get('tb_konsinyasi_masuk')
+            ->row_array();
+
+        $seq = 1;
+        if (!empty($lastRow['nomor_masuk'])) {
+            $lastNum = (int) substr($lastRow['nomor_masuk'], strlen($prefix));
+            $seq = $lastNum + 1;
+        }
+
+        return $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Mengambil daftar dokumen penerimaan konsinyasi
+     */
+    public function get_penerimaan_list(array $filters = [])
+    {
+        $this->db->select("
+            m.*,
+            g.nama_gudang,
+            COALESCE(d.total_item, 0) AS total_item,
+            COALESCE(d.total_qty, 0) AS total_qty
+        ");
+        $this->db->from('tb_konsinyasi_masuk m');
+        $this->db->join('tb_gudang g', 'g.id_gudang = m.gudang_id', 'left');
+        $this->db->join("
+            (SELECT id_masuk, COUNT(*) AS total_item, SUM(qty) AS total_qty
+             FROM tb_konsinyasi_masuk_detail
+             GROUP BY id_masuk) d
+        ", 'd.id_masuk = m.id_masuk', 'left');
+
+        if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
+            $this->db->where('m.kd_suplier', $filters['kd_suplier']);
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('m.tanggal_masuk >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('m.tanggal_masuk <=', $filters['date_to']);
+        }
+        if (!empty($filters['search'])) {
+            $s = trim((string) $filters['search']);
+            $this->db->group_start();
+            $this->db->like('m.nomor_masuk', $s);
+            $this->db->or_like('m.nama_suplier', $s);
+            $this->db->or_like('m.no_surat_jalan', $s);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('m.tanggal_masuk', 'DESC');
+        $this->db->order_by('m.id_masuk', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Mengambil detail satu dokumen penerimaan konsinyasi beserta item barangnya
+     */
+    public function get_penerimaan_by_id($idMasuk)
+    {
+        $header = $this->db
+            ->select('m.*, g.nama_gudang')
+            ->from('tb_konsinyasi_masuk m')
+            ->join('tb_gudang g', 'g.id_gudang = m.gudang_id', 'left')
+            ->where('m.id_masuk', (int) $idMasuk)
+            ->get()
+            ->row_array();
+
+        if (!$header) {
+            return null;
+        }
+
+        $items = $this->db
+            ->where('id_masuk', (int) $idMasuk)
+            ->order_by('id_detail', 'ASC')
+            ->get('tb_konsinyasi_masuk_detail')
+            ->result_array();
+
+        $header['items'] = $items;
+        return $header;
+    }
+
+    /**
+     * Simpan transaksi penerimaan barang konsinyasi mandiri:
+     * - Masuk ke tabel tb_konsinyasi_masuk & tb_konsinyasi_masuk_detail (TIDAK menyentuh tb_lpb)
+     * - Menambah kuantitas stok fisik pada tberp_stock_batch (Gudang Konsinyasi)
+     * - Mencatat mutasi kartu stok pada tberp_stock_ledger (ref_type = 'KONSINYASI_IN')
+     * - Tanpa jurnal hutang / tanpa LPB
+     */
+    public function create_penerimaan_konsinyasi(array $headerData, array $itemsData, $userName = 'PURCHASING')
+    {
+        if (empty($headerData['kd_suplier']) || empty($itemsData)) {
+            return [
+                'status'  => false,
+                'message' => 'Supplier dan minimal 1 item barang konsinyasi wajib diisi.'
+            ];
+        }
+
+        $gudangId = !empty($headerData['gudang_id']) ? (int) $headerData['gudang_id'] : 13;
+        $nomorMasuk = $this->generate_masuk_no();
+        $tanggalMasuk = !empty($headerData['tanggal_masuk']) ? $headerData['tanggal_masuk'] : date('Y-m-d');
+
+        $this->db->trans_begin();
+
+        $insertHeader = [
+            'nomor_masuk'     => $nomorMasuk,
+            'tanggal_masuk'   => $tanggalMasuk,
+            'kd_suplier'      => trim((string) $headerData['kd_suplier']),
+            'nama_suplier'    => trim((string) $headerData['nama_suplier']),
+            'gudang_id'       => $gudangId,
+            'no_surat_jalan'  => trim((string) ($headerData['no_surat_jalan'] ?? '')),
+            'tgl_surat_jalan' => !empty($headerData['tgl_surat_jalan']) ? $headerData['tgl_surat_jalan'] : null,
+            'keterangan'      => trim((string) ($headerData['keterangan'] ?? '')),
+            'status'          => 'RECEIVED',
+            'created_by'      => $userName,
+            'created_at'      => date('Y-m-d H:i:s')
+        ];
+
+        $this->db->insert('tb_konsinyasi_masuk', $insertHeader);
+        $idMasuk = (int) $this->db->insert_id();
+
+        foreach ($itemsData as $item) {
+            $kdBarang = trim((string) $item['kd_barang']);
+            $namaBarang = trim((string) $item['nama_barang']);
+            $qty = (float) $item['qty'];
+            $satuan = trim((string) ($item['satuan'] ?? 'PCS'));
+            $noLot = trim((string) ($item['no_lot'] ?? ''));
+            $expiredDate = !empty($item['expired_date']) ? $item['expired_date'] : null;
+
+            if ($qty <= 0 || empty($kdBarang)) {
+                continue;
+            }
+
+            // Simpan detail item
+            $this->db->insert('tb_konsinyasi_masuk_detail', [
+                'id_masuk'     => $idMasuk,
+                'kd_barang'    => $kdBarang,
+                'nama_barang'  => $namaBarang,
+                'satuan'       => $satuan,
+                'qty'          => $qty,
+                'no_lot'       => $noLot,
+                'expired_date' => $expiredDate,
+                'keterangan'   => trim((string) ($item['keterangan'] ?? ''))
+            ]);
+
+            // Update kuantitas fisik batch di gudang konsinyasi
+            if ($this->db->table_exists('tberp_stock_batch')) {
+                $this->db->where('kd_barang', $kdBarang);
+                $this->db->where('gudang_id', (string) $gudangId);
+                $this->db->where('no_lot', $noLot);
+                if ($expiredDate !== null) {
+                    $this->db->where('expired_date', $expiredDate);
+                } else {
+                    $this->db->where('expired_date IS NULL', null, false);
+                }
+                $existingBatch = $this->db->get('tberp_stock_batch')->row_array();
+
+                if ($existingBatch) {
+                    $this->db->where('id', $existingBatch['id']);
+                    $this->db->set('qty_on_hand', 'qty_on_hand + ' . $qty, FALSE);
+                    $this->db->set('update_at', date('Y-m-d H:i:s'));
+                    $this->db->update('tberp_stock_batch');
+                } else {
+                    $this->db->insert('tberp_stock_batch', [
+                        'kd_barang'    => $kdBarang,
+                        'gudang_id'    => (string) $gudangId,
+                        'no_lot'       => $noLot,
+                        'expired_date' => $expiredDate,
+                        'qty_on_hand'  => $qty,
+                        'qty_reserved' => 0,
+                        'created_at'   => date('Y-m-d H:i:s'),
+                        'update_at'    => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+
+            // Catat log ledger mutasi stok masuk
+            if ($this->db->table_exists('tberp_stock_ledger')) {
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $kdBarang,
+                    'gudang_id'    => (string) $gudangId,
+                    'no_lot'       => $noLot,
+                    'expired_date' => $expiredDate,
+                    'qty'          => $qty,
+                    'tipe'         => 'IN',
+                    'ref_no'       => $nomorMasuk,
+                    'ref_type'     => 'KONSINYASI_IN',
+                    'created_at'   => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return [
+                'status'  => false,
+                'message' => 'Gagal menyimpan transaksi penerimaan konsinyasi.'
+            ];
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'status'      => true,
+            'message'     => 'Penerimaan barang konsinyasi berhasil disimpan. Stok fisik gudang telah bertambah.',
+            'id_masuk'    => $idMasuk,
+            'nomor_masuk' => $nomorMasuk
+        ];
+    }
 }
+

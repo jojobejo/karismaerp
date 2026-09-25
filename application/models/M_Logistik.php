@@ -4114,6 +4114,8 @@ FROM (
             : "'PO' AS source_type";
         $manualRefGroup = $this->db->field_exists('manual_ref_no', 'tb_lpb') ? ", h.manual_ref_no" : "";
         $sourceTypeGroup = $this->db->field_exists('source_type', 'tb_lpb') ? ", h.source_type" : "";
+        $namaSuplierLpbGroup = $this->db->field_exists('nama_suplier', 'tb_lpb') ? ", h.nama_suplier" : "";
+        $kdSuplierLpbGroup = $this->db->field_exists('kd_suplier', 'tb_lpb') ? ", h.kd_suplier" : "";
 
         $sql = "SELECT
                 h.id_lpb,
@@ -4247,6 +4249,7 @@ FROM (
                 h.nosj,
                 h.tgl_sj,
                 s.nama_suplier,
+                sm.nama_suplier,
                 p.kd_suplier,
                 g.nama_gudang,
                 ds.total_detail,
@@ -4264,6 +4267,8 @@ FROM (
                 {$checkerGroup}
                 {$manualRefGroup}
                 {$sourceTypeGroup}
+                {$namaSuplierLpbGroup}
+                {$kdSuplierLpbGroup}
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
         return $this->append_lpb_operational_alerts($this->db->query($sql, $params)->result_array());

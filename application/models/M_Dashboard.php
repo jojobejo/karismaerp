@@ -101,7 +101,7 @@ class M_Dashboard extends CI_Model
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Request Paket Bundling', 'purchasing/bundling/request', 'fas fa-boxes', 'blue', 'Permintaan dan monitoring perakitan paket bundling ke Logistik.'),
-                    $this->menu('Penyelesaian Konsinyasi', 'purchasing/konsinyasi_settlement', 'fas fa-handshake', 'purple', 'Rekonsiliasi barang konsinyasi terjual dan pengakuan hutang/invoice supplier.'),
+                    $this->menu('Barang Konsinyasi', 'purchasing/konsinyasi', 'fas fa-handshake', 'purple', 'Penerimaan barang titipan supplier dan penyelesaian tagihan konsinyasi yang terjual.'),
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.'),
                     $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau data LPB dan progress penerimaan barang dari PO.'),
                     $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.'),

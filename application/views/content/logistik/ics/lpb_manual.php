@@ -76,6 +76,10 @@
                         <form id="lpbManualForm" autocomplete="off">
                             <div class="card-body">
                                 <div class="alert d-none" id="lpbManualAlert"></div>
+                                <div class="alert alert-info py-2 px-3 small mb-3 border-0 shadow-xs" style="background:#e0f2fe; color:#0369a1; border-left:4px solid #0284c7 !important;">
+                                    <i class="fas fa-handshake mr-1 font-weight-bold"></i>
+                                    <strong>Informasi Barang Titipan / Konsinyasi:</strong> Penerimaan barang konsinyasi kini telah dipisahkan ke modul mandiri di menu <strong>Purchasing &rarr; <a href="<?= base_url('purchasing/konsinyasi?tab=penerimaan') ?>" class="font-weight-bold text-primary">Barang Konsinyasi</a></strong> agar tidak mengotori tabel LPB dan tidak membentuk hutang fiktif di awal.
+                                </div>
                                 <div class="row">
                                     <div class="col-md-3">
                                         <div class="form-group">
