@@ -2133,7 +2133,14 @@ class C_SalesOrder extends CI_Controller
 
         $child_fakturs = [];
         if (!empty($faktur['is_split_parent'])) {
-            $child_fakturs = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $numeric_id_faktur])->result_array();
+            $child_fakturs = $this->db->query("
+                SELECT DISTINCT p.* 
+                FROM tbso_faktur_z_pecah p
+                LEFT JOIN tbso_faktur_z_pecah_detail pd ON pd.id_pecah = p.id_pecah
+                WHERE (pd.parent_id_faktur = ? OR (pd.id_pecah IS NULL AND p.parent_id_faktur = ?))
+                  AND p.status != 'cancelled'
+                ORDER BY p.id_pecah ASC
+            ", [(int)$numeric_id_faktur, (int)$numeric_id_faktur])->result_array();
         }
 
         $parent_faktur = null;
@@ -3401,6 +3408,12 @@ class C_SalesOrder extends CI_Controller
 
         $sheet->setCellValue('A4', '( Untuk Nota T tidak lapor pajak, ganti nama acak langsung di Nota I, penjualan diinfo ) Acc bu Diana 06/11/2022');
 
+        // Merge Header Dokumen agar tidak melebarkan kolom A
+        $sheet->mergeCells('A1:G1');
+        $sheet->mergeCells('A2:G2');
+        $sheet->mergeCells('A3:G3');
+        $sheet->mergeCells('A4:G4');
+
         // Styling Baris Judul
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
@@ -3569,8 +3582,12 @@ class C_SalesOrder extends CI_Controller
             }
         }
 
-        // Set Auto Column Width untuk seluruh kolom A s/d AB
-        foreach (range('A', 'Z') as $col) {
+        // Set Lebar Kolom A secara spesifik dan pas untuk Nomor Urut (tidak melebar karena judul)
+        $sheet->getColumnDimension('A')->setAutoSize(false);
+        $sheet->getColumnDimension('A')->setWidth(6);
+
+        // Set Auto Column Width untuk kolom B s/d AB
+        foreach (range('B', 'Z') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
         $sheet->getColumnDimension('AA')->setAutoSize(true);
@@ -3581,6 +3598,227 @@ class C_SalesOrder extends CI_Controller
         $filename = 'Export_Faktur_Pecahan' . $slug . '_' . date('Ymd_His') . '.xlsx';
 
         // Bersihkan output buffer jika ada
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        header('Cache-Control: max-age=1');
+        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+        header('Cache-Control: cache, must-revalidate');
+        header('Pragma: public');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Export Excel (.xlsx) untuk Daftar Faktur Z yang Telah Selesai Dipecah.
+     * Hasil export berisi kolom yang sesuai dengan yang ditampilkan di tabel tab Faktur Z Selesai Dipecah.
+     */
+    public function export_faktur_z_selesai()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        // Pastikan PhpSpreadsheet tersedia
+        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+            if (file_exists(FCPATH . 'vendor/autoload.php')) {
+                require_once FCPATH . 'vendor/autoload.php';
+            } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
+                require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+            }
+        }
+
+        $filter = [
+            'date1'         => $this->input->get('date1', true),
+            'date2'         => $this->input->get('date2', true),
+            'status_pecah'  => 'sudah_dipecah',
+            'status_faktur' => $this->input->get('status_faktur', true) ?: 'all',
+            'search'        => $this->input->get('search', true),
+        ];
+
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $kd_customer = trim((string)($this->input->get('kd_customer') ?? ''));
+
+        $fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
+        $rows = [];
+        foreach ($fakturs as $f) {
+            if ($f['tipe_faktur'] !== 'belum_dipecah') {
+                if (!empty($kd_customer) && $f['kd_customer'] !== $kd_customer) {
+                    continue;
+                }
+                $rows[] = $f;
+            }
+        }
+
+        if (empty($rows)) {
+            $this->session->set_flashdata('error', 'Tidak ada data Faktur Z Selesai Dipecah yang ditemukan untuk di-export.');
+            $back_url = !empty($kd_customer) 
+                ? base_url('sales_order/pecah_faktur_kios/' . $kd_customer) 
+                : base_url('sales_order/pecah_faktur');
+            redirect($back_url);
+            return;
+        }
+
+        // Buat Dokumen Spreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Faktur Z Selesai Dipecah');
+
+        // Font default Calibri 10
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri');
+        $spreadsheet->getDefaultStyle()->getFont()->setSize(10);
+
+        // Header Dokumen
+        $sheet->setCellValue('A1', 'DAFTAR FAKTUR Z YANG TELAH SELESAI DIPECAS');
+        $sheet->setCellValue('A2', 'PT. Karisma Indoagro Universal');
+
+        $tglAwal = !empty($filter['date1']) ? date('d-M-Y', strtotime($filter['date1'])) : '-';
+        $tglAkhir = !empty($filter['date2']) ? date('d-M-Y', strtotime($filter['date2'])) : '-';
+        $periodeText = ($tglAwal !== '-' || $tglAkhir !== '-') ? "Periode: {$tglAwal} s/d {$tglAkhir}" : "Semua Periode Data";
+        $sheet->setCellValue('A3', $periodeText);
+
+        // Merge Header Dokumen agar tidak melebarkan kolom A
+        $sheet->mergeCells('A1:G1');
+        $sheet->mergeCells('A2:G2');
+        $sheet->mergeCells('A3:G3');
+
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A3')->getFont()->setItalic(true)->setSize(10);
+
+        // Header Kolom di Baris 5 (A5 - K5)
+        $headers = [
+            'A' => 'No',
+            'B' => 'No. Faktur Z',
+            'C' => 'Tanggal Faktur',
+            'D' => 'No. SO',
+            'E' => 'Kios / Customer',
+            'F' => 'Kode Customer',
+            'G' => 'Total Item',
+            'H' => 'Total Qty (Pcs)',
+            'I' => 'Grand Total (Awal)',
+            'J' => 'Netto (-20%)',
+            'K' => 'Status Faktur'
+        ];
+
+        foreach ($headers as $col => $title) {
+            $sheet->setCellValue($col . '5', $title);
+        }
+
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '28A745'] // Hijau Success
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ];
+        $sheet->getStyle('A5:K5')->applyFromArray($headerStyle);
+        $sheet->getRowDimension('5')->setRowHeight(25);
+
+        // Render Baris Data
+        $r = 6;
+        $no = 1;
+        $grandTotalAwalSum = 0;
+        $nettoSum = 0;
+        $qtySum = 0;
+
+        foreach ($rows as $item) {
+            $gt_asli = (float)($item['grand_total'] ?? 0);
+            $netto_20 = round($gt_asli * 0.8, 2);
+            $tot_qty = (float)($item['total_qty'] ?? 0);
+            $tot_barang = (int)($item['total_barang'] ?? 0);
+
+            $grandTotalAwalSum += $gt_asli;
+            $nettoSum += $netto_20;
+            $qtySum += $tot_qty;
+
+            $nama_kios = !empty($item['nama_kios']) ? $item['nama_kios'] : ($item['display_customer_name'] ?? $item['customer_name'] ?? '-');
+            $tglFaktur = !empty($item['tanggal_faktur']) ? date('d/m/Y', strtotime($item['tanggal_faktur'])) : '-';
+
+            $sheet->setCellValue('A' . $r, $no++);
+            $sheet->setCellValue('B' . $r, $item['no_faktur']);
+            $sheet->setCellValue('C' . $r, $tglFaktur);
+            $sheet->setCellValue('D' . $r, $item['no_so']);
+            $sheet->setCellValue('E' . $r, $nama_kios);
+            $sheet->setCellValue('F' . $r, $item['kd_customer'] ?? '-');
+            $sheet->setCellValue('G' . $r, $tot_barang . ' item');
+            $sheet->setCellValue('H' . $r, $tot_qty);
+            $sheet->setCellValue('I' . $r, $gt_asli);
+            $sheet->setCellValue('J' . $r, $netto_20);
+            $sheet->setCellValue('K' . $r, strtoupper((string)$item['status']));
+
+            // Alignment
+            $sheet->getStyle('A' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('B' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('C' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('D' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('F' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('G' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('K' . $r)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+            // Format Angka
+            $sheet->getStyle('H' . $r)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('I' . $r)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('J' . $r)->getNumberFormat()->setFormatCode('#,##0');
+
+            // Border per baris
+            $sheet->getStyle("A{$r}:K{$r}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+            $r++;
+        }
+
+        // Baris Total di paling bawah
+        $sheet->setCellValue('A' . $r, 'TOTAL');
+        $sheet->mergeCells("A{$r}:G{$r}");
+        $sheet->setCellValue('H' . $r, $qtySum);
+        $sheet->setCellValue('I' . $r, $grandTotalAwalSum);
+        $sheet->setCellValue('J' . $r, $nettoSum);
+
+        $sheet->getStyle("A{$r}:K{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle("H{$r}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("I{$r}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("J{$r}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("A{$r}:K{$r}")->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $sheet->getStyle("A{$r}:K{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E9ECEF');
+
+        // Set Lebar Kolom A secara spesifik dan pas untuk Nomor Urut (tidak melebar karena judul)
+        $sheet->getColumnDimension('A')->setAutoSize(false);
+        $sheet->getColumnDimension('A')->setWidth(6);
+
+        // Auto width kolom B s/d K
+        foreach (range('B', 'K') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Header Download Browser
+        $slug = !empty($kd_customer) ? '_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $kd_customer) : '';
+        $filename = 'Export_Faktur_Z_Selesai_Dipecah' . $slug . '_' . date('Ymd_His') . '.xlsx';
+
         if (ob_get_length()) {
             ob_end_clean();
         }

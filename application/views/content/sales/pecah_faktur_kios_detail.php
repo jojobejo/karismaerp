@@ -351,7 +351,6 @@
                                                 <th class="text-center">Total Item</th>
                                                 <th class="text-right">Grand Total (Awal)</th>
                                                 <th class="text-right bg-light">Netto (-20%)</th>
-                                                <th>Faktur Turunan (Kode H)</th>
                                                 <th class="text-center">Status</th>
                                                 <th width="100" class="text-center no-sort">Aksi</th>
                                             </tr>
@@ -359,7 +358,7 @@
                                         <tbody>
                                             <?php if (empty($kios_fakturs_sudah)): ?>
                                                 <tr>
-                                                    <td colspan="10" class="text-center py-5 text-muted">
+                                                    <td colspan="9" class="text-center py-5 text-muted">
                                                         <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i><br>
                                                         Belum ada Faktur Z milik kios ini yang selesai dipecah.
                                                     </td>
@@ -396,22 +395,7 @@
                                                         <td class="text-right align-middle bg-light font-weight-bold text-success">
                                                             Rp <?= number_format($tot_netto_h, 0, ',', '.') ?>
                                                         </td>
-                                                        <td class="align-middle">
-                                                            <?php if (!empty($fs['child_fakturs'])): ?>
-                                                                <div>
-                                                                    <?php foreach ($fs['child_fakturs'] as $cf): ?>
-                                                                        <?php $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? '')); ?>
-                                                                        <a href="<?= $cf_url ?>" 
-                                                                           class="child-faktur-pill" 
-                                                                           title="Customer: <?= htmlspecialchars($cf['customer_name'] ?? '-') ?><?= !empty($cf['grand_total']) ? ' (Rp ' . number_format((float)$cf['grand_total'], 0, ',', '.') . ')' : '' ?>">
-                                                                            <i class="fas fa-tag mr-1 text-warning"></i><?= htmlspecialchars($cf['no_faktur']) ?>
-                                                                        </a>
-                                                                    <?php endforeach; ?>
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">-</span>
-                                                            <?php endif; ?>
-                                                        </td>
+
                                                         <td class="text-center align-middle">
                                                             <span class="badge badge-success badge-status-pecah font-weight-bold">
                                                                 <i class="fas fa-check-circle mr-1"></i> Selesai Dipecah
@@ -499,27 +483,24 @@
                             </div>
                         </div>
 
-                        <!-- Batas Maksimal Nilai Faktur H -->
-                        <div class="form-group mb-3">
-                            <label class="font-weight-bold text-dark mb-1">
-                                <i class="fas fa-money-bill-wave text-success mr-1"></i> Maksimal Nilai per Faktur Pecahan (Kode H): <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text font-weight-bold">Rp</span>
+                        <!-- Informasi Plafon Maksimal Nilai Faktur H (Tetap Rp 25 Juta, Tanpa Kolom Input) -->
+                        <input type="hidden" name="max_nominal" id="inputMaxNominal" value="25000000">
+                        <div class="card border-0 mb-3" style="background-color: #f0f7ff; border-left: 4px solid #007bff !important;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small font-weight-bold text-uppercase">
+                                            <i class="fas fa-shield-alt text-primary mr-1"></i> Maksimal Nilai per Faktur Pecahan (Kode H)
+                                        </div>
+                                        <div class="font-weight-bold text-primary mt-1" style="font-size: 17px;">
+                                            Rp 25.000.000 <span class="badge badge-primary font-weight-normal ml-1" style="font-size: 11px;">Tetap / Otomatis</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="badge badge-light border text-muted px-2 py-1">Plafon Maksimal</span>
+                                    </div>
                                 </div>
-                                <input type="number" 
-                                       name="max_nominal" 
-                                       id="inputMaxNominal" 
-                                       class="form-control form-control-lg font-weight-bold text-right text-primary" 
-                                       value="25000000" 
-                                       min="1000000" 
-                                       step="500000" 
-                                       required>
                             </div>
-                            <small class="text-muted">
-                                Plafon standar: <strong>Rp 25.000.000</strong> per lembar Faktur H (hasil pecahan).
-                            </small>
                         </div>
 
                         <!-- Rangkuman Aturan Sistem -->

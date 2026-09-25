@@ -2585,12 +2585,12 @@ class M_SalesOrder extends CI_Model
         $child_map = [];
         $allocated_map = [];
         if (!empty($parent_ids)) {
-            $children = $this->db->select('p.id_pecah, p.no_faktur, p.parent_id_faktur, p.customer_name, p.status, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS grand_total')
+            $children = $this->db->select('p.id_pecah, p.no_faktur, COALESCE(pd.parent_id_faktur, p.parent_id_faktur) AS parent_id_faktur, p.customer_name, p.status, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS grand_total')
                 ->from('tbso_faktur_z_pecah p')
                 ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
-                ->where_in('p.parent_id_faktur', $parent_ids)
+                ->where('(pd.parent_id_faktur IN (' . implode(',', $parent_ids) . ') OR p.parent_id_faktur IN (' . implode(',', $parent_ids) . '))', null, false)
                 ->where('p.status !=', 'cancelled')
-                ->group_by('p.id_pecah, p.no_faktur, p.parent_id_faktur, p.customer_name, p.status, p.tanggal_faktur')
+                ->group_by('p.id_pecah, p.no_faktur, COALESCE(pd.parent_id_faktur, p.parent_id_faktur), p.customer_name, p.status, p.tanggal_faktur')
                 ->order_by('p.id_pecah', 'ASC')
                 ->get()
                 ->result_array();
@@ -2888,30 +2888,47 @@ class M_SalesOrder extends CI_Model
             // Nomor faktur pecahan berawalan kode H
             $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
 
-            // Tentukan parent default untuk header (ambil parent pertama)
-            $first_parent = reset($parent_fakturs);
-            $parent_id_header = (int)($first_parent['id_faktur'] ?? 0);
-            $parent_no_header = (string)($first_parent['no_faktur'] ?? '');
+            // Identifikasi parent faktur dari item-item yang dialokasikan pada slot ini
+            $slot_parent_ids = [];
+            foreach ($items as $detail_id => $it) {
+                if ((float)($it['qty'] ?? 0) > 0.0001 && isset($parent_details[$detail_id])) {
+                    $pid = (int)$parent_details[$detail_id]['id_faktur'];
+                    $slot_parent_ids[$pid] = true;
+                }
+            }
 
-            $tgl_faktur = !empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : ($first_parent['tanggal_faktur'] ?? date('Y-m-d'));
-            $tgl_tempo  = !empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : ($first_parent['tanggal_jatuh_tempo'] ?? null);
+            $primary_pid = !empty($slot_parent_ids) ? array_keys($slot_parent_ids)[0] : 0;
+            $slot_parent = $parent_fakturs[$primary_pid] ?? reset($parent_fakturs);
+            $parent_id_header = (int)($slot_parent['id_faktur'] ?? 0);
+
+            // Jika item berasal dari Faktur Z tertentu, gunakan nomor Faktur Z tersebut
+            $slot_parent_nos = [];
+            foreach (array_keys($slot_parent_ids) as $pid_in_slot) {
+                if (isset($parent_fakturs[$pid_in_slot]['no_faktur'])) {
+                    $slot_parent_nos[] = $parent_fakturs[$pid_in_slot]['no_faktur'];
+                }
+            }
+            $parent_no_header = !empty($slot_parent_nos) ? implode(', ', array_unique($slot_parent_nos)) : (string)($slot_parent['no_faktur'] ?? '');
+
+            $tgl_faktur = !empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : ($slot_parent['tanggal_faktur'] ?? date('Y-m-d'));
+            $tgl_tempo  = !empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : ($slot_parent['tanggal_jatuh_tempo'] ?? null);
 
             $fh = [
                 'no_faktur'           => $no_faktur_child,
                 'parent_id_faktur'    => $parent_id_header,
-                'parent_no_faktur'    => count($parent_no_list) > 1 ? $parent_no_str : $parent_no_header,
-                'id_so'               => (int)($first_parent['id_so'] ?? 0),
-                'no_so'               => (string)($first_parent['no_so'] ?? ''),
+                'parent_no_faktur'    => $parent_no_header,
+                'id_so'               => (int)($slot_parent['id_so'] ?? 0),
+                'no_so'               => (string)($slot_parent['no_so'] ?? ''),
                 'kd_customer'         => $kd_cust,
                 'customer_name'       => $customer_name,
-                'gudang_id'           => $first_parent['gudang_id'] ?? null,
+                'gudang_id'           => $slot_parent['gudang_id'] ?? null,
                 'tanggal_faktur'      => $tgl_faktur,
                 'tanggal_jatuh_tempo' => $tgl_tempo,
-                'salesman'            => $first_parent['salesman'] ?? null,
-                'cara_pembayaran'     => $first_parent['cara_pembayaran'] ?? 'tempo',
-                'jtempo'              => (int)($first_parent['jtempo'] ?? 0),
-                'tempo'               => (int)($first_parent['tempo'] ?? 0),
-                'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_str . "\n" . trim((string)($s['catatan'] ?? '')),
+                'salesman'            => $slot_parent['salesman'] ?? null,
+                'cara_pembayaran'     => $slot_parent['cara_pembayaran'] ?? 'tempo',
+                'jtempo'              => (int)($slot_parent['jtempo'] ?? 0),
+                'tempo'               => (int)($slot_parent['tempo'] ?? 0),
+                'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_header . "\n" . trim((string)($s['catatan'] ?? '')),
                 'status'              => 'confirmed',
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
@@ -3008,10 +3025,10 @@ class M_SalesOrder extends CI_Model
             ]);
 
             $this->M_ActivityLog->log(
-                $first_parent['no_so'] ?? '-',
+                $slot_parent['no_so'] ?? '-',
                 $no_faktur_child,
                 'BUAT_FAKTUR_PECAHAN_H_BATCH',
-                'Faktur pecahan massal ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari Faktur Z: ' . $parent_no_str,
+                'Faktur pecahan massal ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari Faktur Z: ' . $parent_no_header,
                 $username,
                 "Item:\n" . implode("\n", $child_details_logged)
             );

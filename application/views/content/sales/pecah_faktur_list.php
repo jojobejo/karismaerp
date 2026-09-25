@@ -254,11 +254,6 @@
                                     <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-default btn-sm mr-1">
                                         <i class="fas fa-undo mr-1"></i> Reset
                                     </a>
-                                    <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query($filter ?? [])) ?>" 
-                                       class="btn btn-outline-success btn-sm font-weight-bold" 
-                                       title="Export Faktur Pecahan sesuai filter ini">
-                                        <i class="fas fa-file-excel mr-1"></i> Export
-                                    </a>
                                 </div>
                             </div>
                         </form>
@@ -409,10 +404,15 @@
                                             Seluruh Faktur Z induk yang sudah tuntas dipecah menjadi faktur turunan (Kode H).
                                         </span>
                                     </div>
-                                    <div>
-                                        <span class="badge badge-success font-weight-bold p-2 border" style="font-size: 12px;">
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="badge badge-success font-weight-bold p-2 border mr-2" style="font-size: 12px;">
                                             Total: <strong><?= count($fakturs_sudah_dipecah ?? []) ?></strong> Faktur Z Selesai Dipecah
                                         </span>
+                                        <a href="<?= base_url('sales_order/export_faktur_z_selesai?' . http_build_query($filter ?? [])) ?>" 
+                                           class="btn btn-success btn-sm font-weight-bold shadow-sm"
+                                           title="Export Daftar Faktur Z yang Telah Selesai Dipecah ke Excel (.xlsx)">
+                                            <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                                        </a>
                                     </div>
                                 </div>
 
@@ -428,7 +428,6 @@
                                                 <th class="text-center">Total Item</th>
                                                 <th class="text-right">Grand Total (Awal)</th>
                                                 <th class="text-right bg-light">Netto (-20%)</th>
-                                                <th>Faktur Turunan (Kode H)</th>
                                                 <th class="text-center">Status</th>
                                                 <th width="120" class="text-center no-sort">Aksi</th>
                                             </tr>
@@ -436,7 +435,7 @@
                                         <tbody>
                                             <?php if (empty($fakturs_sudah_dipecah)): ?>
                                                 <tr>
-                                                    <td colspan="11" class="text-center py-5 text-muted">
+                                                    <td colspan="10" class="text-center py-5 text-muted">
                                                         <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i><br>
                                                         Belum ada Faktur Z yang selesai dipecah.
                                                     </td>
@@ -480,22 +479,6 @@
                                                         </td>
                                                         <td class="text-right align-middle bg-light font-weight-bold text-success">
                                                             Rp <?= number_format($netto_20, 0, ',', '.') ?>
-                                                        </td>
-                                                        <td class="align-middle">
-                                                            <?php if (!empty($fs['child_fakturs'])): ?>
-                                                                <div>
-                                                                    <?php foreach ($fs['child_fakturs'] as $cf): ?>
-                                                                        <?php $cf_url = !empty($cf['id_pecah']) ? base_url('sales_order/detail_faktur_pecah/' . $cf['id_pecah']) : base_url('sales_order/detail_faktur/' . ($cf['id_faktur'] ?? '')); ?>
-                                                                        <a href="<?= $cf_url ?>" 
-                                                                           class="child-faktur-pill" 
-                                                                           title="Customer: <?= htmlspecialchars($cf['customer_name'] ?? '-') ?><?= !empty($cf['grand_total']) ? ' (Rp ' . number_format((float)$cf['grand_total'], 0, ',', '.') . ')' : '' ?>">
-                                                                            <i class="fas fa-tag mr-1 text-warning"></i><?= htmlspecialchars($cf['no_faktur']) ?>
-                                                                        </a>
-                                                                    <?php endforeach; ?>
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <span class="text-muted small">-</span>
-                                                            <?php endif; ?>
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <span class="badge badge-success badge-status-pecah font-weight-bold">
