@@ -395,9 +395,6 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 </span>
                             </div>
                             <div class="my-1 d-flex align-items-center">
-                                <button type="button" class="btn btn-outline-info btn-sm font-weight-bold shadow-sm mr-2" id="btnToggleAllZeroQty" title="Sembunyikan atau tampilkan baris barang dengan kuantitas 0">
-                                    <i class="fas fa-eye mr-1"></i> <span id="lblToggleAllZero">Tampilkan Semua Qty 0</span>
-                                </button>
                                 <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
                                     <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
                                 </button>
@@ -611,11 +608,6 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         <?php endforeach; ?>
                                                     </tbody>
                                                 </table>
-                                                <div class="px-2 py-1 bg-light border-top text-center slot-zero-toggle-box" style="<?= ($has_pos_qty && $zero_qty_count > 0) ? '' : 'display: none;' ?>">
-                                                    <a href="javascript:void(0)" class="btn-toggle-slot-zero small text-muted font-weight-bold" style="font-size: 10.5px; text-decoration: none;">
-                                                        <span class="lbl-zero-text"><i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan <?= $zero_qty_count ?> barang lainnya (Qty 0)</span>
-                                                    </a>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -797,11 +789,6 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                        <div class="px-2 py-1 bg-light border-top text-center slot-zero-toggle-box" style="display: none;">
-                            <a href="javascript:void(0)" class="btn-toggle-slot-zero small text-muted font-weight-bold" style="font-size: 10.5px; text-decoration: none;">
-                                <span class="lbl-zero-text"><i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan barang lainnya (Qty 0)</span>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -838,13 +825,10 @@ $(document).ready(function() {
     // Inisialisasi Select2 untuk semua slot yang ada saat halaman dimuat
     initCustomerSelect2($('.select-customer'));
 
-    var hideZeroQtyActive = true;
-
-    // Helper untuk update visibilitas baris dengan kuantitas 0 pada slot card
+    // Helper untuk menyembunyikan baris barang dengan kuantitas 0 jika slot sudah memiliki alokasi barang
     function updateSlotZeroRows($card) {
         var $rows = $card.find('.row-item-split');
         var positiveCount = 0;
-        var zeroCount = 0;
 
         $rows.each(function() {
             var qty = parseFloat($(this).find('.input-qty-split').val()) || 0;
@@ -852,77 +836,27 @@ $(document).ready(function() {
                 positiveCount++;
                 $(this).removeClass('row-zero-qty');
             } else {
-                zeroCount++;
                 $(this).addClass('row-zero-qty');
             }
         });
 
-        var isSlotExpanded = $card.data('show-zero') === true;
-        var $toggleBox = $card.find('.slot-zero-toggle-box');
-
-        if (hideZeroQtyActive && !isSlotExpanded) {
-            if (positiveCount > 0) {
-                $rows.each(function() {
-                    var qty = parseFloat($(this).find('.input-qty-split').val()) || 0;
-                    var isFocused = $(this).find('.input-qty-split').is(':focus');
-                    if (qty <= 0.0001 && !isFocused) {
-                        $(this).hide();
-                    } else {
-                        $(this).show();
-                    }
-                });
-                if (zeroCount > 0) {
-                    $toggleBox.show();
-                    $toggleBox.find('.lbl-zero-text').html('<i class="fas fa-plus-circle text-primary mr-1"></i> + Tampilkan ' + zeroCount + ' barang lainnya (Qty 0)');
+        if (positiveCount > 0) {
+            $rows.each(function() {
+                var qty = parseFloat($(this).find('.input-qty-split').val()) || 0;
+                var isFocused = $(this).find('.input-qty-split').is(':focus');
+                if (qty <= 0.0001 && !isFocused) {
+                    $(this).hide();
                 } else {
-                    $toggleBox.hide();
+                    $(this).show();
                 }
-            } else {
-                // Jika semua barang masih 0 (slot kosong), tampilkan semua agar user bisa input
-                $rows.show();
-                $toggleBox.hide();
-            }
+            });
         } else {
-            // Tampilkan semua baris
+            // Jika semua barang masih 0 (slot baru/kosong), tampilkan semua agar user bisa input
             $rows.show();
-            if (zeroCount > 0 && positiveCount > 0) {
-                $toggleBox.show();
-                $toggleBox.find('.lbl-zero-text').html('<i class="fas fa-minus-circle text-warning mr-1"></i> - Sembunyikan barang Qty 0 (' + zeroCount + ')');
-            } else {
-                $toggleBox.hide();
-            }
         }
     }
 
-    // Toggle visibilitas baris Qty 0 per slot
-    $(document).on('click', '.btn-toggle-slot-zero', function(e) {
-        e.preventDefault();
-        var $card = $(this).closest('.split-slot-card');
-        var current = $card.data('show-zero') === true;
-        $card.data('show-zero', !current);
-        updateSlotZeroRows($card);
-    });
-
-    // Toggle global di toolbar
-    $('#btnToggleAllZeroQty').on('click', function() {
-        hideZeroQtyActive = !hideZeroQtyActive;
-        if (hideZeroQtyActive) {
-            $(this).removeClass('btn-info text-white').addClass('btn-outline-info');
-            $('#lblToggleAllZero').text('Tampilkan Semua Qty 0');
-            $(this).find('i').removeClass('fa-eye-slash').addClass('fa-eye');
-            $('.split-slot-card').data('show-zero', false);
-        } else {
-            $(this).removeClass('btn-outline-info').addClass('btn-info text-white');
-            $('#lblToggleAllZero').text('Sembunyikan Qty 0');
-            $(this).find('i').removeClass('fa-eye').addClass('fa-eye-slash');
-            $('.split-slot-card').data('show-zero', true);
-        }
-        $('.split-slot-card').each(function() {
-            updateSlotZeroRows($(this));
-        });
-    });
-
-    // Saat input kuantitas kehilangan fokus, sembunyikan kembali jika kuantitasnya 0 dan filter aktif
+    // Saat input kuantitas kehilangan fokus, sembunyikan kembali jika kuantitasnya 0
     $(document).on('blur', '.input-qty-split', function() {
         var $card = $(this).closest('.split-slot-card');
         updateSlotZeroRows($card);
