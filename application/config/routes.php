@@ -1128,3 +1128,12 @@ $route['logistik/bundling/save_assembly']           = 'logistik/C_BundlingLogist
 $route['logistik/bundling/history']                 = 'logistik/C_BundlingLogistik/history';
 $route['logistik/bundling/assembly_detail/(:num)']  = 'logistik/C_BundlingLogistik/detail_assembly/$1';
 
+// =========================================================================
+// MODUL PENYELESAIAN KONSINYASI (PURCHASING)
+// =========================================================================
+$route['purchasing/konsinyasi_settlement']          = 'purchasing/C_Konsinyasi/index';
+$route['purchasing/konsinyasi_settlement/detail']   = 'purchasing/C_Konsinyasi/ajax_detail';
+$route['purchasing/konsinyasi_settlement/post']     = 'purchasing/C_Konsinyasi/ajax_post_settlement';
+$route['purchasing/konsinyasi_settlement/sync']     = 'purchasing/C_Konsinyasi/ajax_sync';
+
+

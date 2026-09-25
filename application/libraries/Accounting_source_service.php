@@ -443,6 +443,92 @@ class Accounting_source_service
         return $this->CI->accounting_service->post_auto('GOODS_RECEIPT', $payload, $userId);
     }
 
+    public function post_consignment_settlement($idSettlement, $userId = null)
+    {
+        $idSettlement = (int)$idSettlement;
+        $settlement = $this->CI->db
+            ->where('id_settlement', $idSettlement)
+            ->get('tb_konsinyasi_settlement')
+            ->row();
+
+        if (!$settlement) {
+            return $this->fail('Data settlement konsinyasi tidak ditemukan.', ['SOURCE_NOT_FOUND']);
+        }
+
+        $sourceNo = trim((string)$settlement->no_settlement);
+        $totalTagihan = $this->money($settlement->total_tagihan_beli);
+        $subtotalBeli = $this->money($settlement->subtotal_beli);
+        $nilaiPpn = $this->money($settlement->nilai_ppn);
+
+        if (bccomp($totalTagihan, '0', 4) <= 0) {
+            return $this->fail('Nilai tagihan pembelian konsinyasi tidak boleh 0.', ['AMOUNT_INVALID']);
+        }
+
+        $supRow = $this->CI->db
+            ->select('id_suplier')
+            ->where('kd_suplier', $settlement->kd_suplier)
+            ->get('tbpo_suplier')
+            ->row();
+        $idSupplier = $supRow ? (int)$supRow->id_suplier : 0;
+
+        $payload = [
+            'tanggal_transaksi' => $settlement->tgl_invoice_supplier ?: date('Y-m-d'),
+            'journal_type'      => 'PJ',
+            'keterangan'        => 'Pembelian Konsinyasi: ' . $settlement->nama_barang . ' (' . (float)$settlement->qty_net . ' ' . $settlement->satuan . '), Supplier: ' . $settlement->nama_suplier . ' [Inv: ' . ($settlement->no_invoice_supplier ?: '-') . ']',
+            'source_module'     => 'PURCHASING',
+            'source_type'       => 'CONSIGNMENT_SETTLEMENT',
+            'source_id'         => (string)$idSettlement,
+            'source_no'         => $sourceNo,
+            'idempotency_key'   => 'CONSIGNMENT_SETTLEMENT-' . $idSettlement,
+            'scope_type'        => 'WAREHOUSE',
+            'scope_key'         => (string)$settlement->gudang_id,
+            'id_supplier'       => $idSupplier,
+            'id_gudang'         => (int)$settlement->gudang_id,
+        ];
+
+        $barangRow = $this->CI->db
+            ->select('kode_akun_harga_pokok, kelompok_dagang')
+            ->where('kode_barang', $settlement->kd_barang)
+            ->get('tbpo_barang')
+            ->row();
+        $kodeHpp = (!empty($barangRow->kode_akun_harga_pokok)) ? trim($barangRow->kode_akun_harga_pokok) : '51010';
+
+        $kodeHutang = '21920'; // Utang Konsinyasi
+        if ($this->account_id_by_code($kodeHutang) <= 0) {
+            $kodeHutang = '21019'; // Q Hutang Konsinyasi
+            if ($this->account_id_by_code($kodeHutang) <= 0) {
+                $kodeHutang = '21098'; // Hutang Usaha Fallback
+            }
+        }
+
+        $lines = [];
+        $lines[] = $this->purchase_line_by_code($kodeHpp, 'Beban Pokok Penjualan (Konsinyasi)', $subtotalBeli, '0.0000', $payload);
+
+        if (bccomp($nilaiPpn, '0', 4) === 1) {
+            $lines[] = $this->purchase_line_by_code('13017', 'Q PPN M Ymh Diterima', $nilaiPpn, '0.0000', $payload);
+        }
+
+        $lines[] = $this->purchase_line_by_code($kodeHutang, 'Utang Konsinyasi', '0.0000', $totalTagihan, $payload);
+
+        foreach ($lines as $line) {
+            if (empty($line['id_akun'])) {
+                return $this->record_failure(
+                    'CONSIGNMENT_SETTLEMENT',
+                    $payload,
+                    'Akun jurnal pembelian konsinyasi belum valid di Chart of Accounts.',
+                    ['CONSIGNMENT_ACCOUNT_NOT_FOUND']
+                );
+            }
+        }
+
+        $payload['amount'] = $subtotalBeli;
+        $payload['tax'] = $nilaiPpn;
+        $payload['cogs'] = '0.0000';
+        $payload['lines'] = $lines;
+
+        return $this->CI->accounting_service->post_auto('CONSIGNMENT_SETTLEMENT', $payload, $userId);
+    }
+
     private function purchase_line_by_code($kodeAkun, $label, $debit, $kredit, $payload)
     {
         return [
