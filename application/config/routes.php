@@ -1130,10 +1130,13 @@ $route['logistik/bundling/assembly_detail/(:num)']  = 'logistik/C_BundlingLogist
 
 
 // =========================================================================
-// MODUL BARANG KONSINYASI (PURCHASING) — Penerimaan + Penyelesaian
+// MODUL BARANG KONSINYASI (PURCHASING) — Penyelesaian Tagihan (Settlement)
 // =========================================================================
-// Halaman utama (2 tab: Penerimaan & Penyelesaian)
 $route['purchasing/konsinyasi']                              = 'purchasing/C_Konsinyasi/index';
+$route['purchasing/konsinyasi/ajax_detail']                  = 'purchasing/C_Konsinyasi/ajax_detail';
+$route['purchasing/konsinyasi/ajax_post_settlement']         = 'purchasing/C_Konsinyasi/ajax_post_settlement';
+$route['purchasing/konsinyasi/ajax_sync']                    = 'purchasing/C_Konsinyasi/ajax_sync';
+$route['purchasing/konsinyasi/ajax_view_journal']            = 'purchasing/C_Konsinyasi/ajax_view_journal';
 $route['purchasing/konsinyasi/(:any)']                       = 'purchasing/C_Konsinyasi/$1';
 
 // Backward-compat: URL lama tetap berfungsi
@@ -1141,4 +1144,6 @@ $route['purchasing/konsinyasi_settlement']                   = 'purchasing/C_Kon
 $route['purchasing/konsinyasi_settlement/detail']            = 'purchasing/C_Konsinyasi/ajax_detail';
 $route['purchasing/konsinyasi_settlement/post']              = 'purchasing/C_Konsinyasi/ajax_post_settlement';
 $route['purchasing/konsinyasi_settlement/sync']              = 'purchasing/C_Konsinyasi/ajax_sync';
+$route['purchasing/konsinyasi_settlement/journal']           = 'purchasing/C_Konsinyasi/ajax_view_journal';
+
 

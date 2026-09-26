@@ -321,6 +321,19 @@ class Accounting_source_service
             return $this->fail('LPB final tidak ditemukan.', ['SOURCE_NOT_FOUND']);
         }
 
+        // LPB Konsinyasi adalah titipan fisik (Off-balance sheet), tidak menimbulkan jurnal hutang/pembelian saat penerimaan fisik
+        $jenisLpb = trim((string)($header->jenis_lpb ?? ''));
+        $nomorLpbCheck = trim((string)($header->nomor_lpb ?? ''));
+        $isConsignment = (stripos($jenisLpb, 'konsinyasi') !== false) || (strtoupper(substr($nomorLpbCheck, -1)) === 'K' && strlen($nomorLpbCheck) >= 5);
+        if ($isConsignment) {
+            return [
+                'success' => true,
+                'message' => 'LPB Konsinyasi (titipan fisik) dilewati dari jurnal hutang/pembelian. Jurnal hutang & HPP diterbitkan saat Penyelesaian (Settlement) setelah barang laku/dibayar customer.',
+                'data'    => null,
+                'errors'  => []
+            ];
+        }
+
         $nomorLpb = trim((string)($header->nomor_lpb ?? ''));
         $sourceNo = $nomorLpb !== '' ? $nomorLpb : trim((string)$header->no_po);
         $payload = [

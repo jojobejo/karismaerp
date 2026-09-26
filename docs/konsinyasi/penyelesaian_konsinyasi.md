@@ -73,19 +73,39 @@ User tidak perlu menghitung manual di kalkulator saat menerima tagihan dari supp
 
 ---
 
-## 5. Cara Penggunaan oleh User
-1. Buka menu **Purchasing -> Penyelesaian Konsinyasi** atau URL: `https://karismaerp.test/purchasing/konsinyasi_settlement`.
-2. Klik tombol **"Input Tagihan"** pada baris barang konsinyasi yang ingin diproses.
-3. Masukkan:
+## 5. Alur Penerimaan Barang Konsinyasi (Melalui PO & LPB di Logistik)
+Sesuai SOP operasional Karisma ERP, penerimaan fisik barang konsinyasi **terpusat di Logistik melalui alur resmi PO dan LPB**:
+1. **Purchase Order (PO)**:
+   - Purchasing membuat PO resmi ke supplier konsinyasi (terekam di tabel `tbpo_po`).
+2. **Penerimaan Fisik di Logistik ([Data LPB](file:///C:/laragon/www/karismaerp/application/views/content/logistik/ics/lpb_report.php))**:
+   - Bagian gudang/logistik memproses penerimaan barang dari PO tersebut melalui menu **Logistik -> Data LPB** (`https://karismaerp.test/ics/data_lpb`).
+   - Pilih jenis LPB: **LPB Konsinyasi** (dengan penomoran otomatis berakhiran huruf `K`, misal: `2600002K`).
+   - Stok fisik masuk ke kartu stok gudang konsinyasi, batch/lot, dan expired date tervalidasi.
+3. **Proteksi Akuntansi Otomatis**:
+   - Pada [`Accounting_source_service.php`](file:///C:/laragon/www/karismaerp/application/libraries/Accounting_source_service.php), sistem secara otomatis **melewati (skip) jurnal Hutang Usaha** untuk jenis `LPB Konsinyasi`.
+   - Penerimaan fisik berstatus *Off-balance sheet* (Rp 0 hutang) sehingga tidak menimbulkan kewajiban bayar sebelum barang terjual.
+
+---
+
+## 6. Alur Penyelesaian Tagihan Supplier (Settlement di Purchasing)
+1. Buka menu **Purchasing -> Barang Konsinyasi** atau URL: `https://karismaerp.test/purchasing/konsinyasi`.
+2. Antrean menampilkan barang konsinyasi yang telah terjual / dibayar oleh pelanggan.
+3. Klik tombol **"Input Tagihan"** pada baris yang ingin diselesaikan.
+4. Masukkan:
    - Nomor Invoice / Faktur dari Supplier.
    - Tanggal Invoice Supplier.
    - Pilih **Tipe Harga Supplier**: `Include PPN`, `Exclude PPN`, atau `Non-PPN`.
-   - Ketik **Harga Satuan Supplier (Rp)** persis seperti yang tertulis di invoice supplier.
+   - Ketik **Harga Satuan Supplier (Rp)** persis sesuai invoice supplier.
    - Pilih tarif PPN (11%, 12%, atau 0%).
-4. Kotak **Rincian Otomatis Sistem** di bawahnya akan menghitung secara live:
+5. Kotak **Rincian Otomatis Sistem** di bawahnya akan menghitung secara live:
    - Subtotal DPP (yang masuk ke HPP)
    - Nilai PPN Masukan
    - Total Hutang ke Supplier
-5. Klik **"Posting Jurnal Pembelian"**.
-6. Sistem otomatis menjurnal hutang dan HPP tanpa selisih sen.
+6. Klik **"Posting Jurnal Pembelian"**.
+7. Sistem otomatis menerbitkan jurnal:
+   - `[Debit]  HPP Konsinyasi` (sebesar DPP)
+   - `[Debit]  PPN Masukan` (jika ada PPN)
+   - `[Kredit] Utang Konsinyasi Supplier` (sebesar Total Tagihan)
+
+
 

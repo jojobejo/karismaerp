@@ -11,16 +11,13 @@
             <div class="row mb-3 align-items-center">
                 <div class="col-sm-6">
                     <h1 class="m-0 font-weight-bold" style="color: #0f172a; font-size: 1.5rem;">
-                        <i class="fas fa-handshake text-primary mr-2"></i> Barang Konsinyasi
+                        <i class="fas fa-handshake text-primary mr-2"></i> Penyelesaian Barang Konsinyasi
                     </h1>
-                    <p class="text-muted mb-0 small">Pengelolaan menyeluruh barang titipan supplier: penerimaan barang fisik ke gudang & penyelesaian tagihan terjual</p>
+                    <p class="text-muted mb-0 small">Pengelolaan penyelesaian tagihan konsinyasi: pengakuan hutang dan HPP atas barang titipan supplier yang telah laku/dibayar pelanggan (Penerimaan fisik barang melalui PO &amp; LPB di Logistik)</p>
                 </div>
                 <div class="col-sm-6 text-right">
-                    <button type="button" class="btn btn-outline-primary shadow-sm font-weight-bold mr-2" id="btnSyncKonsinyasi">
-                        <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan
-                    </button>
-                    <button type="button" class="btn btn-success shadow-sm font-weight-bold" id="btnTambahPenerimaan">
-                        <i class="fas fa-plus-circle mr-1"></i> Penerimaan Konsinyasi Baru
+                    <button type="button" class="btn btn-primary shadow-sm font-weight-bold" id="btnSyncKonsinyasi">
+                        <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan Konsinyasi
                     </button>
                 </div>
             </div>
@@ -71,12 +68,12 @@
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">Lokasi Gudang Fisik</span>
-                                    <h4 class="mb-0 font-weight-bold text-primary mt-1">Gdg. Konsiyasi</h4>
-                                    <small class="text-muted">Stok fisik titipan terisolasi (Non-Neraca di awal)</small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">Alur Penerimaan Fisik</span>
+                                    <h5 class="mb-0 font-weight-bold text-primary mt-1">PO &amp; LPB Konsinyasi</h5>
+                                    <small class="text-muted">Masuk melalui Logistik (Data LPB: ics/data_lpb)</small>
                                 </div>
                                 <div class="p-3 rounded-circle text-primary" style="background: #dbeafe;">
-                                    <i class="fas fa-warehouse fa-2x"></i>
+                                    <i class="fas fa-dolly-flatbed fa-2x"></i>
                                 </div>
                             </div>
                         </div>
@@ -84,142 +81,9 @@
                 </div>
             </div>
 
-            <!-- 2 TAB UTAMA MODUL BARANG KONSINYASI -->
-            <ul class="nav nav-pills mb-3 p-2 bg-white rounded shadow-sm border" style="gap: 8px;">
-                <li class="nav-item">
-                    <a class="nav-link font-weight-bold px-4 py-2 <?= ($active_tab === 'penerimaan') ? 'active bg-success text-white shadow-sm' : 'text-dark' ?>" 
-                       href="<?= site_url('purchasing/konsinyasi?tab=penerimaan') ?>" style="border-radius: 8px;">
-                        <i class="fas fa-boxes mr-2"></i> 1. Penerimaan Barang Konsinyasi (Stok Fisik)
-                        <span class="badge <?= ($active_tab === 'penerimaan') ? 'badge-light text-success' : 'badge-secondary' ?> ml-2"><?= count($penerimaan_list) ?></span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link font-weight-bold px-4 py-2 <?= ($active_tab === 'penyelesaian') ? 'active bg-primary text-white shadow-sm' : 'text-dark' ?>" 
-                       href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>" style="border-radius: 8px;">
-                        <i class="fas fa-file-invoice-dollar mr-2"></i> 2. Penyelesaian Tagihan Terjual (Settlement)
-                        <span class="badge <?= ($active_tab === 'penyelesaian') ? 'badge-light text-primary' : 'badge-warning text-dark' ?> ml-2"><?= $stats['pending_count'] ?></span>
-                    </a>
-                </li>
-            </ul>
-
-            <?php if ($active_tab === 'penerimaan'): ?>
             <!-- ========================================================================= -->
-            <!-- TAB 1: DAFTAR PENERIMAAN BARANG KONSINYASI (INVENTORY FISIK) -->
+            <!-- DAFTAR PENYELESAIAN TAGIHAN BARANG KONSINYASI (SETTLEMENT) -->
             <!-- ========================================================================= -->
-            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
-                <div class="card-body p-3">
-                    <form method="get" action="<?= site_url('purchasing/konsinyasi') ?>" class="row align-items-end">
-                        <input type="hidden" name="tab" value="penerimaan">
-                        <div class="col-md-4">
-                            <label class="small font-weight-bold text-muted mb-1">Filter Supplier Konsinyasi</label>
-                            <select name="p_kd_suplier" class="form-control form-control-sm font-weight-bold" onchange="this.form.submit()">
-                                <option value="SEMUA">Semua Supplier</option>
-                                <?php foreach ($all_suppliers as $sup): ?>
-                                    <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" <?= ($filters_p['kd_suplier'] == $sup['kd_suplier']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($sup['nama_suplier']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="small font-weight-bold text-muted mb-1">Cari No. Penerimaan / Surat Jalan</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" name="p_search" class="form-control" placeholder="Cari nomor tanda terima, surat jalan, supplier..." value="<?= htmlspecialchars($filters_p['search']) ?>">
-                                <div class="input-group-append">
-                                    <button class="btn btn-success" type="submit"><i class="fas fa-search"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-2 text-right pt-2">
-                            <?php if (!empty($filters_p['search']) || $filters_p['kd_suplier'] !== 'SEMUA'): ?>
-                                <a href="<?= site_url('purchasing/konsinyasi?tab=penerimaan') ?>" class="btn btn-sm btn-outline-danger btn-block">
-                                    <i class="fas fa-times-circle mr-1"></i> Reset
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden;">
-                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-dark">
-                        <i class="fas fa-dolly-flatbed text-success mr-2"></i> Riwayat Penerimaan Barang Konsinyasi dari Supplier
-                    </h6>
-                    <button type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm" onclick="$('#btnTambahPenerimaan').click()">
-                        <i class="fas fa-plus mr-1"></i> Penerimaan Baru
-                    </button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
-                            <thead style="background: #f1f5f9; color: #475569;">
-                                <tr>
-                                    <th class="py-3 px-3">No. Penerimaan</th>
-                                    <th class="py-3">Tgl Masuk</th>
-                                    <th class="py-3">Supplier Konsinyasi</th>
-                                    <th class="py-3">Gudang</th>
-                                    <th class="py-3">Surat Jalan</th>
-                                    <th class="py-3 text-center">Jml Item</th>
-                                    <th class="py-3 text-right">Total Qty Fisik</th>
-                                    <th class="py-3 text-center">Status Stok</th>
-                                    <th class="py-3 text-center" style="width: 110px;">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($penerimaan_list)): ?>
-                                    <tr>
-                                        <td colspan="9" class="text-center py-5 text-muted">
-                                            <i class="fas fa-box-open fa-3x mb-3 text-black-50 d-block"></i>
-                                            Belum ada dokumen penerimaan barang konsinyasi mandiri. Silakan klik <strong>Penerimaan Konsinyasi Baru</strong> untuk input.
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($penerimaan_list as $pm): ?>
-                                        <tr>
-                                            <td class="px-3 font-weight-bold text-success">
-                                                <?= htmlspecialchars($pm['nomor_masuk']) ?>
-                                            </td>
-                                            <td><?= date('d/m/Y', strtotime($pm['tanggal_masuk'])) ?></td>
-                                            <td>
-                                                <strong class="text-dark"><?= htmlspecialchars($pm['nama_suplier']) ?></strong>
-                                                <br><small class="text-muted"><?= htmlspecialchars($pm['kd_suplier']) ?></small>
-                                            </td>
-                                            <td>
-                                                <span class="badge badge-light border text-dark"><?= htmlspecialchars($pm['nama_gudang'] ?: 'Gdg. Konsinyasi') ?></span>
-                                            </td>
-                                            <td>
-                                                <?= !empty($pm['no_surat_jalan']) ? htmlspecialchars($pm['no_surat_jalan']) : '-' ?>
-                                                <?php if (!empty($pm['tgl_surat_jalan'])): ?>
-                                                    <br><small class="text-muted"><?= date('d/m/Y', strtotime($pm['tgl_surat_jalan'])) ?></small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center font-weight-bold"><?= (int) $pm['total_item'] ?> item</td>
-                                            <td class="text-right font-weight-bold text-primary"><?= number_format($pm['total_qty'], 2) ?></td>
-                                            <td class="text-center">
-                                                <span class="badge badge-success px-2 py-1 shadow-xs">
-                                                    <i class="fas fa-check mr-1"></i> Fisik Masuk
-                                                </span>
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-outline-info btn-sm btnViewPenerimaan" data-id="<?= $pm['id_masuk'] ?>">
-                                                    <i class="fas fa-eye mr-1"></i> Detail
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <?php else: ?>
-            <!-- ========================================================================= -->
-            <!-- TAB 2: PENYELESAIAN TAGIHAN BARANG TERJUAL (SETTLEMENT) -->
-            <!-- ========================================================================= -->
-            <!-- Tab Navigasi Status & Filter Settlement -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
                 <div class="card-body p-0">
                     <!-- Tab header -->
@@ -327,7 +191,13 @@
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($settlements as $s): ?>
-                                        <tr>
+                                        <tr class="context-settlement-row" 
+                                            data-id="<?= (int) $s['id_settlement'] ?>" 
+                                            data-status="<?= htmlspecialchars($s['status']) ?>"
+                                            data-no-settle="<?= htmlspecialchars($s['no_settlement']) ?>"
+                                            data-has-journal="<?= (!empty($s['id_jurnal_pembelian']) || !empty($s['nomor_jurnal'])) ? '1' : '0' ?>"
+                                            data-no-jurnal="<?= htmlspecialchars($s['nomor_jurnal'] ?? '') ?>"
+                                            title="Klik kanan baris ini untuk opsi transaksi / lihat jurnal">
                                             <td class="px-3 font-weight-bold text-primary">
                                                 <?= htmlspecialchars($s['no_settlement']) ?>
                                                 <?php if (!empty($s['nomor_lpb_asal'])): ?>
@@ -375,7 +245,7 @@
                                                     <div class="small">
                                                         <strong class="text-success" style="font-size: 0.95rem;">Rp <?= number_format($s['total_tagihan_beli'], 2) ?></strong>
                                                         <?php if ($s['tipe_pajak'] === 'INCLUDE'): ?>
-                                                            <span class="badge badge-success-light text-success font-weight-bold ml-1" style="background:#d1fae5;">Inc. PPN</span>
+                                                             <span class="badge badge-success-light text-success font-weight-bold ml-1" style="background:#d1fae5;">Inc. PPN</span>
                                                         <?php elseif ($s['tipe_pajak'] === 'EXCLUDE'): ?>
                                                             <span class="badge badge-primary-light text-primary font-weight-bold ml-1" style="background:#dbeafe;">Exc. PPN</span>
                                                         <?php else: ?>
@@ -384,7 +254,7 @@
                                                         <br><span class="text-dark">Inv: <?= htmlspecialchars($s['no_invoice_supplier']) ?></span>
                                                         <br><span class="text-muted">DPP: Rp <?= number_format($s['subtotal_beli'], 2) ?> | PPN: Rp <?= number_format($s['nilai_ppn'], 2) ?></span>
                                                         <?php if (!empty($s['nomor_jurnal'])): ?>
-                                                            <br><span class="badge badge-info mt-1"><i class="fas fa-book mr-1"></i><?= htmlspecialchars($s['nomor_jurnal']) ?></span>
+                                                            <br><a href="javascript:void(0)" class="badge badge-info mt-1 py-1 px-2 text-white shadow-xs" onclick="openModalViewJournal(<?= (int) $s['id_settlement'] ?>)" title="Klik untuk lihat voucher jurnal (Bisa juga Klik Kanan baris ini)"><i class="fas fa-book mr-1"></i><?= htmlspecialchars($s['nomor_jurnal']) ?></a>
                                                         <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
@@ -393,13 +263,18 @@
                                             </td>
                                             <td class="text-center">
                                                 <?php if ($s['status'] === 'PENDING'): ?>
-                                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm btnProcessSettlement" data-id="<?= $s['id_settlement'] ?>">
+                                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm btnProcessSettlement" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>)">
                                                         <i class="fas fa-file-invoice-dollar mr-1"></i> Input Tagihan
                                                     </button>
                                                 <?php else: ?>
-                                                    <button type="button" class="btn btn-outline-secondary btn-sm btnViewSettlement" data-id="<?= $s['id_settlement'] ?>">
-                                                        <i class="fas fa-eye mr-1"></i> Detail
-                                                    </button>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat Detail Settlement">
+                                                            <i class="fas fa-eye mr-1"></i> Detail
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-info font-weight-bold" onclick="openModalViewJournal(<?= (int) $s['id_settlement'] ?>)" title="Lihat Jurnal Pembelian (Atau Klik Kanan baris)">
+                                                            <i class="fas fa-book"></i> Jurnal
+                                                        </button>
+                                                    </div>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
@@ -410,7 +285,11 @@
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
+
+            <!-- Hint Klik Kanan untuk pengguna -->
+            <div class="text-muted small text-right mt-1 mb-3">
+                <i class="fas fa-mouse text-primary mr-1"></i> <em>Tip: Klik kanan pada baris tabel barang yang sudah ditagih untuk langsung membuka menu <strong>Lihat Jurnal Pembelian</strong>.</em>
+            </div>
 
         </div>
     </section>
@@ -548,7 +427,7 @@
                 <h5 class="modal-title font-weight-bold text-white">
                     <i class="fas fa-history mr-2"></i> Detail Riwayat Settlement Konsinyasi
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -565,174 +444,477 @@
     </div>
 </div>
 
-<!-- Modal Tambah Penerimaan Barang Konsinyasi Baru (Mandiri Non-LPB) -->
-<div class="modal fade" id="modalTambahPenerimaan" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
-            <div class="modal-header border-0 bg-success text-white" style="border-radius: 14px 14px 0 0;">
-                <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-boxes mr-2"></i> Penerimaan Barang Titipan Konsinyasi Baru
-                </h5>
+<!-- Modal Lihat Jurnal Pembelian Konsinyasi -->
+<div class="modal fade" id="modalViewJournal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 14px 14px 0 0;">
+                <div class="d-flex align-items-center">
+                    <div class="p-2 rounded mr-3" style="background: rgba(255,255,255,0.1);">
+                        <i class="fas fa-book fa-lg text-info"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title font-weight-bold mb-0">Voucher Jurnal Pembelian Konsinyasi</h5>
+                        <small class="text-white-50">Pengakuan Beban Pokok Pendapatan (HPP) &amp; Hutang Supplier Konsinyasi</small>
+                    </div>
+                </div>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="formTambahPenerimaan">
-                <div class="modal-body p-4">
-                    <div class="alert alert-info py-2 px-3 small mb-3">
-                        <i class="fas fa-info-circle mr-1"></i> Form ini digunakan untuk mencatat <strong>fisik barang titipan supplier</strong> yang masuk ke Gudang Konsinyasi secara mandiri. Transaksi ini <strong>TIDAK masuk ke tabel LPB</strong> dan <strong>TIDAK menimbulkan hutang</strong> sampai barang tersebut terjual ke customer.
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">Supplier Konsinyasi <span class="text-danger">*</span></label>
-                            <select name="kd_suplier" id="in_kd_suplier" class="form-control select2bs4" required>
-                                <option value="">-- Pilih Supplier --</option>
-                                <?php foreach ($all_suppliers as $sup): ?>
-                                    <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" data-nama="<?= htmlspecialchars($sup['nama_suplier']) ?>">
-                                        <?= htmlspecialchars($sup['nama_suplier']) ?> (<?= htmlspecialchars($sup['kd_suplier']) ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <input type="hidden" name="nama_suplier" id="in_nama_suplier">
-                        </div>
-                        <div class="col-md-3 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">Tanggal Penerimaan Fisik <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal_masuk" class="form-control" value="<?= date('Y-m-d') ?>" required>
-                        </div>
-                        <div class="col-md-3 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">Lokasi Gudang</label>
-                            <input type="text" class="form-control" value="Gdg. Konsiyasi (ID: 13)" readonly style="background: #f1f5f9;">
-                            <input type="hidden" name="gudang_id" value="13">
-                        </div>
-                        <div class="col-md-2 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">No. Surat Jalan</label>
-                            <input type="text" name="no_surat_jalan" class="form-control" placeholder="Contoh: SJ-0012/SUPP">
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4 form-group mb-0">
-                            <label class="small font-weight-bold text-dark">Tgl Surat Jalan</label>
-                            <input type="date" name="tgl_surat_jalan" class="form-control" value="<?= date('Y-m-d') ?>">
-                        </div>
-                        <div class="col-md-8 form-group mb-0">
-                            <label class="small font-weight-bold text-dark">Catatan / Keterangan Penerimaan</label>
-                            <input type="text" name="keterangan" class="form-control" placeholder="Catatan tambahan tanda terima konsinyasi...">
-                        </div>
-                    </div>
-
-                    <hr class="my-3">
-
-                    <!-- Tabel Item Barang Masuk -->
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="font-weight-bold text-dark mb-0">
-                            <i class="fas fa-list-ol mr-1 text-success"></i> Rincian Barang Konsinyasi yang Diterima
-                        </label>
-                        <button type="button" class="btn btn-sm btn-outline-success font-weight-bold" id="btnAddItemRow">
-                            <i class="fas fa-plus mr-1"></i> Tambah Baris Barang
-                        </button>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm align-middle" id="tableItemPenerimaan" style="font-size: 0.9rem;">
-                            <thead class="bg-light text-dark font-weight-bold">
-                                <tr>
-                                    <th style="width: 35%;">Pilih Barang <span class="text-danger">*</span></th>
-                                    <th style="width: 15%;">Jumlah (Qty) <span class="text-danger">*</span></th>
-                                    <th style="width: 12%;">Satuan</th>
-                                    <th style="width: 18%;">No. Lot / Batch</th>
-                                    <th style="width: 15%;">Expired Date</th>
-                                    <th style="width: 5%;" class="text-center">Hapus</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyItemPenerimaan">
-                                <tr class="item-row">
-                                    <td>
-                                        <select name="items[0][kd_barang]" class="form-control form-control-sm select-barang" required>
-                                            <option value="">-- Pilih Barang --</option>
-                                            <?php foreach ($all_barangs as $brg): ?>
-                                                <option value="<?= htmlspecialchars($brg['kode_barang']) ?>"
-                                                        data-nama="<?= htmlspecialchars($brg['nama_barang']) ?>"
-                                                        data-satuan="<?= htmlspecialchars($brg['satuan'] ?: 'PCS') ?>">
-                                                    <?= htmlspecialchars($brg['nama_barang']) ?> (<?= htmlspecialchars($brg['kode_barang']) ?>)
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <input type="hidden" name="items[0][nama_barang]" class="in-nama-barang">
-                                    </td>
-                                    <td>
-                                        <input type="number" step="any" min="0.001" name="items[0][qty]" class="form-control form-control-sm text-right font-weight-bold" placeholder="0.00" required>
-                                    </td>
-                                    <td>
-                                        <input type="text" name="items[0][satuan]" class="form-control form-control-sm in-satuan" value="PCS" readonly style="background: #f8fafc;">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="items[0][no_lot]" class="form-control form-control-sm" placeholder="No. Batch / Lot">
-                                    </td>
-                                    <td>
-                                        <input type="date" name="items[0][expired_date]" class="form-control form-control-sm">
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow" disabled><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            <div class="modal-body p-4" id="modalViewJournalBody">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="text-muted mt-2">Memuat voucher jurnal...</p>
                 </div>
-                <div class="modal-footer bg-light border-0">
-                    <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success font-weight-bold px-4" id="btnSubmitPenerimaan">
-                        <i class="fas fa-save mr-1"></i> Simpan Penerimaan Fisik
-                    </button>
-                </div>
-            </form>
+            </div>
+            <div class="modal-footer bg-light border-0 d-flex justify-content-between">
+                <small class="text-muted">
+                    <i class="fas fa-check-circle text-success mr-1"></i> Transaksi terdaftar sah pada General Ledger (GL) Karisma ERP
+                </small>
+                <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">Tutup</button>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Detail Dokumen Penerimaan Konsinyasi -->
-<div class="modal fade" id="modalDetailPenerimaan" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
-            <div class="modal-header border-0 bg-info text-white" style="border-radius: 14px 14px 0 0;">
-                <h5 class="modal-title font-weight-bold">
-                    <i class="fas fa-file-alt mr-2"></i> Detail Dokumen Penerimaan Konsinyasi
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-4" id="modalDetailPenerimaanBody">
-                <div class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                    <p class="text-muted mt-2">Memuat data dokumen...</p>
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
-        </div>
+<!-- Context Menu Klik Kanan Transaksi Konsinyasi -->
+<div id="settlementContextMenu" class="shadow-lg" style="display: none; position: absolute; z-index: 1055; min-width: 230px; background: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 10px 30px rgba(15,23,42,0.18);">
+    <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between" style="background: #f8fafc; border-radius: 10px 10px 0 0;">
+        <span class="font-weight-bold text-dark small text-truncate mr-2" id="ctxMenuHeader">
+            <i class="fas fa-receipt text-primary mr-1"></i> Opsi Transaksi
+        </span>
+        <span class="badge badge-success px-2 py-1" id="ctxMenuStatus">BILLED</span>
+    </div>
+    <div class="py-1">
+        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-journal text-info font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerViewJournal()" style="font-size: 0.90rem;">
+            <i class="fas fa-book mr-2 fa-fw"></i> Lihat Jurnal Pembelian
+        </a>
+        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-detail text-dark" href="javascript:void(0)" onclick="ctxTriggerViewDetail()" style="font-size: 0.90rem;">
+            <i class="fas fa-eye mr-2 fa-fw text-secondary"></i> Detail Settlement
+        </a>
+        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-input text-warning font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerInputTagihan()" style="display: none; font-size: 0.90rem;">
+            <i class="fas fa-file-invoice-dollar mr-2 fa-fw text-warning"></i> Input Tagihan Supplier
+        </a>
     </div>
 </div>
 
 <script>
-$(document).ready(function() {
-    var currentQtyNet = 0;
-    var currentSatuan = '';
+// Helper modal aman
+function showModalSafe(modalId) {
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal === 'function') {
+        jQuery('#' + modalId).modal('show');
+    } else {
+        var el = document.getElementById(modalId);
+        if (el) {
+            el.classList.add('show');
+            el.style.display = 'block';
+            el.removeAttribute('aria-hidden');
+            el.setAttribute('aria-modal', 'true');
+            if (!document.querySelector('.modal-backdrop')) {
+                var bd = document.createElement('div');
+                bd.className = 'modal-backdrop fade show';
+                document.body.appendChild(bd);
+            }
+        }
+    }
+}
 
+function hideModalSafe(modalId) {
+    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal === 'function') {
+        jQuery('#' + modalId).modal('hide');
+    } else {
+        var el = document.getElementById(modalId);
+        if (el) {
+            el.classList.remove('show');
+            el.style.display = 'none';
+            el.setAttribute('aria-hidden', 'true');
+            el.removeAttribute('aria-modal');
+            var bds = document.querySelectorAll('.modal-backdrop');
+            bds.forEach(function(b) { b.remove(); });
+        }
+    }
+}
+
+// Global state
+var currentQtyNet = 0;
+var currentSatuan = '';
+var selectedContextId = null;
+var selectedContextStatus = null;
+
+// Fungsi kalkulasi rincian live
+window.calculateSettlementLive = function() {
+    var tipe = $('input[name="tipe_pajak"]:checked').val() || 'EXCLUDE';
+    var hrg = parseFloat($('#hrg_satuan_input').val()) || 0;
+    var ppnPersen = (tipe === 'NON_PPN') ? 0 : 11;
+    $('#ppn_persen').val(ppnPersen);
+
+    var satuanText = currentSatuan ? ' / ' + currentSatuan : '';
+
+    if (tipe === 'NON_PPN') {
+        $('#label_hrg_satuan').text('Harga Satuan Non-PPN (Rp) *');
+        $('#tipe_pajak_help').html('Harga murni tanpa PPN. Jurnal HPP dan Utang dicatat sebesar harga ini.');
+        $('#box_preview_hrg_dpp span:first').text('Harga Satuan (Non-PPN):');
+        $('#box_preview_hrg_inc').hide();
+    } else if (tipe === 'INCLUDE') {
+        $('#label_hrg_satuan').text('Harga Satuan Include PPN (Rp) *');
+        $('#tipe_pajak_help').html('Ketikkan harga include di faktur supplier. <strong>Sistem otomatis mengekstrak DPP dan PPN Masukan</strong>.');
+        $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
+        $('#box_preview_hrg_inc').show();
+    } else {
+        // EXCLUDE
+        $('#label_hrg_satuan').text('Harga Satuan Exclude PPN (Rp) *');
+        $('#tipe_pajak_help').html('Ketikkan harga DPP sebelum PPN. PPN akan ditambahkan otomatis ke total tagihan.');
+        $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
+        $('#box_preview_hrg_inc').show();
+    }
+
+    var hrgSatuanDpp = 0;
+    var hrgSatuanInc = 0;
+    var totalTagihan = 0;
+    var subtotalDpp = 0;
+    var nilaiPpn = 0;
+
+    if (tipe === 'INCLUDE') {
+        hrgSatuanInc = hrg;
+        var divider = 1 + (ppnPersen / 100);
+        hrgSatuanDpp = (ppnPersen > 0) ? (hrg / divider) : hrg;
+
+        totalTagihan = currentQtyNet * hrgSatuanInc;
+        subtotalDpp = (ppnPersen > 0) ? (totalTagihan / divider) : totalTagihan;
+        nilaiPpn = totalTagihan - subtotalDpp;
+    } else if (tipe === 'NON_PPN') {
+        hrgSatuanDpp = hrg;
+        hrgSatuanInc = hrg;
+        subtotalDpp = currentQtyNet * hrg;
+        nilaiPpn = 0;
+        totalTagihan = subtotalDpp;
+    } else {
+        // EXCLUDE
+        hrgSatuanDpp = hrg;
+        hrgSatuanInc = hrg * (1 + (ppnPersen / 100));
+
+        subtotalDpp = currentQtyNet * hrgSatuanDpp;
+        nilaiPpn = (subtotalDpp * ppnPersen) / 100;
+        totalTagihan = subtotalDpp + nilaiPpn;
+    }
+
+    $('#preview_hrg_satuan_dpp').text('Rp ' + hrgSatuanDpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + satuanText);
+    $('#preview_hrg_satuan_inc').text('Rp ' + hrgSatuanInc.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + satuanText);
+    $('#preview_dpp').text('Rp ' + subtotalDpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    $('#preview_ppn').text('Rp ' + nilaiPpn.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    $('#preview_total_tagihan').text('Rp ' + totalTagihan.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+};
+
+// Global function untuk tombol "Input Tagihan"
+window.openModalInputTagihan = function(id) {
+    var $btn = $('#btn-settle-' + id);
+    var oldHtml = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...');
+
+    $.ajax({
+        url: '<?= site_url("purchasing/konsinyasi/ajax_detail") ?>',
+        type: 'GET',
+        data: { id_settlement: id },
+        dataType: 'json',
+        success: function(res) {
+            $btn.prop('disabled', false).html(oldHtml);
+            if (res && res.status && res.data) {
+                var d = res.data;
+                $('#set_id_settlement').val(d.id_settlement);
+                $('#txt_nama_barang').text(d.nama_barang + ' (' + (d.no_lot || '-') + ')');
+                $('#txt_nama_suplier').text(d.nama_suplier);
+                $('#txt_qty_terjual').text(parseFloat(d.qty_net).toFixed(2) + ' ' + d.satuan);
+                $('#txt_customer_name').text(d.customer_name + ' (SO: ' + d.no_so + ')');
+
+                currentQtyNet = parseFloat(d.qty_net) || 0;
+                currentSatuan = d.satuan || '';
+                $('#hrg_satuan_input').val('');
+                $('#no_invoice_supplier').val('');
+
+                // Reset ke default Exclude PPN
+                $('input[name="tipe_pajak"][value="EXCLUDE"]').prop('checked', true);
+                $('#lbl_tipe_exclude').addClass('active').siblings().removeClass('active');
+                $('#ppn_persen').val('11');
+
+                window.calculateSettlementLive();
+                $('#catatan').val('');
+
+                showModalSafe('modalSettlement');
+            } else {
+                var msg = (res && res.message) ? res.message : 'Gagal mengambil data transaksi settlement.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg });
+                } else {
+                    alert(msg);
+                }
+            }
+        },
+        error: function(xhr, status, error) {
+            $btn.prop('disabled', false).html(oldHtml);
+            var errMsg = 'Terjadi kesalahan sistem saat mengambil data tagihan (' + status + ').';
+            if (xhr.status === 401) {
+                errMsg = 'Sesi login telah berakhir. Silakan login kembali.';
+            }
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: errMsg });
+            } else {
+                alert(errMsg);
+            }
+        }
+    });
+};
+
+// Global function untuk tombol "Detail"
+window.openModalDetailSettlement = function(id) {
+    $('#modalDetailBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="text-muted mt-2">Memuat data...</p></div>');
+    showModalSafe('modalDetailSettlement');
+
+    $.ajax({
+        url: '<?= site_url("purchasing/konsinyasi/ajax_detail") ?>',
+        type: 'GET',
+        data: { id_settlement: id },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.status && res.data) {
+                var d = res.data;
+                var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+                var tipeBadge = '';
+                if (d.tipe_pajak === 'INCLUDE') tipeBadge = '<span class="badge badge-success ml-1">Include PPN</span>';
+                else if (d.tipe_pajak === 'EXCLUDE') tipeBadge = '<span class="badge badge-primary ml-1">Exclude PPN</span>';
+                else tipeBadge = '<span class="badge badge-secondary ml-1">Non-PPN</span>';
+
+                var html = '';
+                html += '<div class="row mb-3">';
+                html += '<div class="col-md-6">';
+                html += '<div class="card border-0 bg-light" style="border-radius:10px;">';
+                html += '<div class="card-body p-3">';
+                html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-shopping-cart text-primary mr-2"></i>Info Penjualan</h6>';
+                html += '<table class="table table-sm table-borderless mb-0 small">';
+                html += '<tr><td class="text-muted" style="width:45%">No. Settlement:</td><td class="font-weight-bold text-primary">' + (d.no_settlement || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">Barang:</td><td class="font-weight-bold">' + (d.nama_barang || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. Lot / Batch:</td><td>' + (d.no_lot || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">Customer:</td><td>' + (d.customer_name || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. SO:</td><td>' + (d.no_so || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. Faktur:</td><td>' + (d.no_faktur || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-primary">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
+                html += '<tr><td class="text-muted">Harga Jual:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
+                html += '</table>';
+                html += '</div></div>';
+                html += '</div>';
+
+                html += '<div class="col-md-6">';
+                html += '<div class="card border-0 bg-light" style="border-radius:10px;">';
+                html += '<div class="card-body p-3">';
+                html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-file-invoice-dollar text-success mr-2"></i>Tagihan Supplier ' + tipeBadge + '</h6>';
+                html += '<table class="table table-sm table-borderless mb-0 small">';
+                html += '<tr><td class="text-muted" style="width:50%">Supplier:</td><td class="font-weight-bold">' + (d.nama_suplier || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. Invoice Supplier:</td><td class="font-weight-bold text-dark">' + (d.no_invoice_supplier || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">Tgl. Invoice:</td><td>' + (d.tgl_invoice_supplier ? new Date(d.tgl_invoice_supplier).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) : '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">Harga Satuan (Input):</td><td class="font-weight-bold">' + fmt(d.hrg_satuan_input) + '</td></tr>';
+                html += '<tr><td class="text-muted">Harga Satuan DPP:</td><td>' + fmt(d.hrg_beli_satuan) + '</td></tr>';
+                html += '<tr><td class="text-muted">PPN (' + parseFloat(d.ppn_persen || 0).toFixed(0) + '%):</td><td>' + fmt(d.nilai_ppn) + '</td></tr>';
+                html += '</table>';
+                html += '</div></div>';
+                html += '</div>';
+                html += '</div>';
+
+                html += '<div class="p-3 rounded" style="background: #f0fdf4; border: 1px solid #a7f3d0;">';
+                html += '<div class="row">';
+                html += '<div class="col-md-4 text-center">';
+                html += '<div class="small text-muted">Subtotal DPP (Masuk HPP)</div>';
+                html += '<div class="font-weight-bold text-dark" style="font-size:1.05rem;">' + fmt(d.subtotal_beli) + '</div>';
+                html += '</div>';
+                html += '<div class="col-md-4 text-center">';
+                html += '<div class="small text-muted">Nilai PPN Masukan</div>';
+                html += '<div class="font-weight-bold text-dark" style="font-size:1.05rem;">' + fmt(d.nilai_ppn) + '</div>';
+                html += '</div>';
+                html += '<div class="col-md-4 text-center border-left">';
+                html += '<div class="small text-muted font-weight-bold text-uppercase">Total Tagihan</div>';
+                html += '<div class="font-weight-bold text-success" style="font-size:1.3rem;">' + fmt(d.total_tagihan_beli) + '</div>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
+                if (d.nomor_jurnal) {
+                    html += '<div class="mt-3 d-flex align-items-center justify-content-between p-2 rounded bg-light border">';
+                    html += '<span class="badge badge-info px-3 py-2" style="font-size:0.9rem; cursor:pointer;" onclick="openModalViewJournal(' + d.id_settlement + ')"><i class="fas fa-book mr-1"></i>Jurnal: ' + d.nomor_jurnal + ' <small>(Klik untuk rincian)</small></span>';
+                    if (d.settled_at) {
+                        html += '<small class="text-muted ml-3"><i class="fas fa-user-check mr-1"></i>Diposting oleh <strong>' + (d.settled_by || '-') + '</strong> pada ' + new Date(d.settled_at).toLocaleString("id-ID") + '</small>';
+                    }
+                    html += '</div>';
+                }
+                if (d.catatan) {
+                    html += '<div class="mt-2 p-2 bg-light rounded small text-muted"><i class="fas fa-sticky-note mr-1"></i>' + d.catatan + '</div>';
+                }
+
+                $('#modalDetailBody').html(html);
+            } else {
+                $('#modalDetailBody').html('<div class="alert alert-danger">Gagal memuat data detail settlement.</div>');
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#modalDetailBody').html('<div class="alert alert-danger">Terjadi kesalahan koneksi (' + status + ').</div>');
+        }
+    });
+};
+
+// Global function untuk tombol "Lihat Jurnal"
+window.openModalViewJournal = function(id) {
+    $('#settlementContextMenu').hide();
+    $('#modalViewJournalBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i><p class="text-muted mt-2">Memuat rincian voucher jurnal...</p></div>');
+    showModalSafe('modalViewJournal');
+
+    $.ajax({
+        url: '<?= site_url("purchasing/konsinyasi/ajax_view_journal") ?>',
+        type: 'GET',
+        data: { id_settlement: id },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.status && res.header) {
+                var h = res.header;
+                var s = res.settlement || {};
+                var details = res.details || [];
+                var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+                var html = '';
+
+                // Header Card Ringkasan Jurnal
+                html += '<div class="card border-0 bg-light mb-3" style="border-radius:10px;">';
+                html += '<div class="card-body p-3">';
+                html += '<div class="row align-items-center">';
+                html += '<div class="col-md-6">';
+                html += '<span class="text-muted small text-uppercase font-weight-bold">Nomor Jurnal Akuntansi</span>';
+                html += '<h4 class="font-weight-bold text-primary mb-1"><i class="fas fa-file-invoice mr-2"></i>' + (h.nomor_jurnal || '-') + '</h4>';
+                html += '<small class="text-muted">Tipe: <strong>' + (h.journal_type || 'PJ') + ' (Pembelian)</strong> | Tanggal: <strong>' + (h.tanggal_transaksi ? new Date(h.tanggal_transaksi).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) : '-') + '</strong></small>';
+                html += '</div>';
+                html += '<div class="col-md-6 text-md-right mt-2 mt-md-0">';
+                html += '<span class="text-muted small text-uppercase font-weight-bold">Status Jurnal</span><br>';
+                html += '<span class="badge badge-success px-3 py-1 font-weight-bold shadow-xs"><i class="fas fa-check-double mr-1"></i>POSTED (Terposting)</span>';
+                html += '<div class="small text-muted mt-1">Source: <strong>' + (h.source_type || 'CONSIGNMENT_SETTLEMENT') + '</strong></div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Keterangan Jurnal
+                html += '<div class="mt-2 pt-2 border-top small text-muted">';
+                html += '<i class="fas fa-align-left mr-1"></i> <strong>Keterangan:</strong> ' + (h.keterangan || '-') + '<br>';
+                html += '<i class="fas fa-link mr-1"></i> Ref: Settlement <strong>' + (s.no_settlement || '-') + '</strong> | Inv Supplier: <strong>' + (s.no_invoice_supplier || '-') + '</strong> | Supplier: <strong>' + (s.nama_suplier || '-') + '</strong>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Tabel Rincian Debit / Kredit
+                html += '<div class="table-responsive">';
+                html += '<table class="table table-bordered table-striped align-middle mb-0" style="font-size:0.88rem;">';
+                html += '<thead style="background:#1e293b; color:#fff;">';
+                html += '<tr>';
+                html += '<th class="text-center py-2" style="width:40px;">No</th>';
+                html += '<th class="py-2" style="width:110px;">Kode Akun</th>';
+                html += '<th class="py-2">Nama Akun & Keterangan</th>';
+                html += '<th class="text-right py-2" style="width:150px;">Debit (Rp)</th>';
+                html += '<th class="text-right py-2" style="width:150px;">Kredit (Rp)</th>';
+                html += '</tr>';
+                html += '</thead>';
+                html += '<tbody>';
+
+                var totalDebit = 0;
+                var totalKredit = 0;
+
+                if (details.length > 0) {
+                    $.each(details, function(idx, row) {
+                        var d = parseFloat(row.debit || 0);
+                        var k = parseFloat(row.kredit || 0);
+                        totalDebit += d;
+                        totalKredit += k;
+
+                        html += '<tr>';
+                        html += '<td class="text-center font-weight-bold text-muted">' + (row.nomor_baris || (idx + 1)) + '</td>';
+                        html += '<td><span class="badge badge-light border font-weight-bold px-2 py-1 text-dark">' + (row.kode_akun || '-') + '</span></td>';
+                        html += '<td>';
+                        html += '<strong class="text-dark">' + (row.nama_akun || row.keterangan || '-') + '</strong>';
+                        if (row.keterangan && row.keterangan !== row.nama_akun) {
+                            html += '<br><small class="text-muted">' + row.keterangan + '</small>';
+                        }
+                        html += '</td>';
+                        html += '<td class="text-right font-weight-bold text-dark">' + (d > 0 ? fmt(d) : '-') + '</td>';
+                        html += '<td class="text-right font-weight-bold text-dark">' + (k > 0 ? fmt(k) : '-') + '</td>';
+                        html += '</tr>';
+                    });
+                } else {
+                    html += '<tr><td colspan="5" class="text-center py-3 text-muted">Detail baris jurnal tidak ditemukan.</td></tr>';
+                }
+
+                html += '</tbody>';
+                html += '<tfoot style="background:#f8fafc; font-size:0.95rem;">';
+                html += '<tr>';
+                html += '<th colspan="3" class="text-right font-weight-bold text-dark">TOTAL:</th>';
+                html += '<th class="text-right font-weight-bold text-primary">' + fmt(totalDebit) + '</th>';
+                html += '<th class="text-right font-weight-bold text-primary">' + fmt(totalKredit) + '</th>';
+                html += '</tr>';
+
+                var isBalanced = Math.abs(totalDebit - totalKredit) < 0.01;
+                html += '<tr>';
+                html += '<th colspan="3" class="text-right small text-muted">Status Keseimbangan:</th>';
+                html += '<th colspan="2" class="text-right">';
+                if (isBalanced) {
+                    html += '<span class="badge badge-success px-3 py-1 font-weight-bold"><i class="fas fa-check mr-1"></i>BALANCE (Seimbang)</span>';
+                } else {
+                    html += '<span class="badge badge-danger px-3 py-1 font-weight-bold"><i class="fas fa-exclamation-triangle mr-1"></i>SELISIH (Unbalanced)</span>';
+                }
+                html += '</th>';
+                html += '</tr>';
+
+                html += '</tfoot>';
+                html += '</table>';
+                html += '</div>';
+
+                $('#modalViewJournalBody').html(html);
+            } else {
+                var errMsg = (res && res.message) ? res.message : 'Voucher jurnal belum terbentuk untuk transaksi ini.';
+                $('#modalViewJournalBody').html('<div class="alert alert-warning py-3 text-center"><i class="fas fa-info-circle fa-2x mb-2 d-block text-warning"></i><strong>' + errMsg + '</strong></div>');
+            }
+        },
+        error: function(xhr, status, error) {
+            var msg = xhr.status === 401 ? 'Sesi berakhir, silakan login kembali.' : 'Terjadi kesalahan sistem saat memuat jurnal.';
+            $('#modalViewJournalBody').html('<div class="alert alert-danger py-3 text-center"><i class="fas fa-exclamation-circle fa-2x mb-2 d-block"></i>' + msg + '</div>');
+        }
+    });
+};
+
+// Handlers untuk Context Menu
+window.ctxTriggerViewJournal = function() {
+    if (selectedContextId) {
+        window.openModalViewJournal(selectedContextId);
+    }
+};
+
+window.ctxTriggerViewDetail = function() {
+    if (selectedContextId) {
+        $('#settlementContextMenu').hide();
+        window.openModalDetailSettlement(selectedContextId);
+    }
+};
+
+window.ctxTriggerInputTagihan = function() {
+    if (selectedContextId) {
+        $('#settlementContextMenu').hide();
+        window.openModalInputTagihan(selectedContextId);
+    }
+};
+
+// Event bindings saat DOM siap
+$(document).ready(function() {
     // Tombol Sinkronisasi Penjualan Konsinyasi
     $('#btnSyncKonsinyasi').on('click', function() {
         var $btn = $(this);
         $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyinkronkan...');
 
         $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi_settlement/sync") ?>',
+            url: '<?= site_url("purchasing/konsinyasi/ajax_sync") ?>',
             type: 'POST',
             dataType: 'json',
             success: function(res) {
-                $btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan');
+                $btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan Konsinyasi');
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'success',
@@ -748,220 +930,118 @@ $(document).ready(function() {
                     location.reload();
                 }
             },
-            error: function() {
-                $btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan');
-                alert('Terjadi kesalahan saat sinkronisasi.');
-            }
-        });
-    });
-
-    // Buka Modal Input Tagihan (PENDING)
-    $('.btnProcessSettlement').on('click', function() {
-        var id = $(this).data('id');
-        $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi_settlement/detail") ?>',
-            type: 'GET',
-            data: { id_settlement: id },
-            dataType: 'json',
-            success: function(res) {
-                if (res.status && res.data) {
-                    var d = res.data;
-                    $('#set_id_settlement').val(d.id_settlement);
-                    $('#txt_nama_barang').text(d.nama_barang + ' (' + (d.no_lot || '-') + ')');
-                    $('#txt_nama_suplier').text(d.nama_suplier);
-                    $('#txt_qty_terjual').text(parseFloat(d.qty_net).toFixed(2) + ' ' + d.satuan);
-                    $('#txt_customer_name').text(d.customer_name + ' (SO: ' + d.no_so + ')');
-
-                    currentQtyNet = parseFloat(d.qty_net) || 0;
-                    currentSatuan = d.satuan || '';
-                    $('#hrg_satuan_input').val('');
-                    $('#no_invoice_supplier').val('');
-
-                    // Reset ke default Exclude PPN
-                    $('input[name="tipe_pajak"][value="EXCLUDE"]').prop('checked', true);
-                    $('#lbl_tipe_exclude').addClass('active').siblings().removeClass('active');
-                    $('#ppn_persen').val('11');
-
-                    calculateSettlementLive();
-                    $('#catatan').val('');
-
-                    $('#modalSettlement').modal('show');
+            error: function(xhr) {
+                $btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Penjualan Konsinyasi');
+                var msg = xhr.status === 401 ? 'Sesi berakhir, silakan login kembali.' : 'Terjadi kesalahan saat sinkronisasi.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Error', text: msg });
                 } else {
-                    alert(res.message || 'Gagal mengambil data.');
+                    alert(msg);
                 }
             }
         });
     });
 
-    // Buka Modal Detail Riwayat (BILLED)
-    $('.btnViewSettlement').on('click', function() {
+    // Delegation click untuk tombol Input Tagihan & Detail
+    $(document).on('click', '.btnProcessSettlement', function(e) {
+        e.preventDefault();
         var id = $(this).data('id');
-        $('#modalDetailBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="text-muted mt-2">Memuat data...</p></div>');
-        $('#modalDetailSettlement').modal('show');
+        if (id) {
+            window.openModalInputTagihan(id);
+        }
+    });
 
-        $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi_settlement/detail") ?>',
-            type: 'GET',
-            data: { id_settlement: id },
-            dataType: 'json',
-            success: function(res) {
-                if (res.status && res.data) {
-                    var d = res.data;
-                    var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-                    var tipeBadge = '';
-                    if (d.tipe_pajak === 'INCLUDE') tipeBadge = '<span class="badge badge-success ml-1">Include PPN</span>';
-                    else if (d.tipe_pajak === 'EXCLUDE') tipeBadge = '<span class="badge badge-primary ml-1">Exclude PPN</span>';
-                    else tipeBadge = '<span class="badge badge-secondary ml-1">Non-PPN</span>';
+    $(document).on('click', '.btnViewSettlement', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        if (id) {
+            window.openModalDetailSettlement(id);
+        }
+    });
 
-                    var html = '';
-                    // Informasi Penjualan
-                    html += '<div class="row mb-3">';
-                    html += '<div class="col-md-6">';
-                    html += '<div class="card border-0 bg-light" style="border-radius:10px;">';
-                    html += '<div class="card-body p-3">';
-                    html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-shopping-cart text-primary mr-2"></i>Info Penjualan</h6>';
-                    html += '<table class="table table-sm table-borderless mb-0 small">';
-                    html += '<tr><td class="text-muted" style="width:45%">No. Settlement:</td><td class="font-weight-bold text-primary">' + (d.no_settlement || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Barang:</td><td class="font-weight-bold">' + (d.nama_barang || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">No. Lot / Batch:</td><td>' + (d.no_lot || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Customer:</td><td>' + (d.customer_name || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">No. SO:</td><td>' + (d.no_so || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">No. Faktur:</td><td>' + (d.no_faktur || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-primary">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Harga Jual:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
-                    html += '</table>';
-                    html += '</div></div>';
-                    html += '</div>';
+    // =========================================================================
+    // CONTEXT MENU (KLIK KANAN PADA BARIS BARANG KONSINYASI)
+    // =========================================================================
+    $(document).on('contextmenu', 'tr.context-settlement-row', function(e) {
+        e.preventDefault();
+        var $tr = $(this);
+        var id = $tr.data('id');
+        var status = $tr.data('status');
+        var noSettle = $tr.data('no-settle');
+        var hasJournal = $tr.data('has-journal');
+        var noJurnal = $tr.data('no-jurnal');
 
-                    // Informasi Tagihan Supplier
-                    html += '<div class="col-md-6">';
-                    html += '<div class="card border-0 bg-light" style="border-radius:10px;">';
-                    html += '<div class="card-body p-3">';
-                    html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-file-invoice-dollar text-success mr-2"></i>Tagihan Supplier ' + tipeBadge + '</h6>';
-                    html += '<table class="table table-sm table-borderless mb-0 small">';
-                    html += '<tr><td class="text-muted" style="width:50%">Supplier:</td><td class="font-weight-bold">' + (d.nama_suplier || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">No. Invoice Supplier:</td><td class="font-weight-bold text-dark">' + (d.no_invoice_supplier || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Tgl. Invoice:</td><td>' + (d.tgl_invoice_supplier ? new Date(d.tgl_invoice_supplier).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) : '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Harga Satuan (Input):</td><td class="font-weight-bold">' + fmt(d.hrg_satuan_input) + '</td></tr>';
-                    html += '<tr><td class="text-muted">Harga Satuan DPP:</td><td>' + fmt(d.hrg_beli_satuan) + '</td></tr>';
-                    html += '<tr><td class="text-muted">PPN (' + parseFloat(d.ppn_persen || 0).toFixed(0) + '%):</td><td>' + fmt(d.nilai_ppn) + '</td></tr>';
-                    html += '</table>';
-                    html += '</div></div>';
-                    html += '</div>';
-                    html += '</div>';
+        selectedContextId = id;
+        selectedContextStatus = status;
 
-                    // Ringkasan Total
-                    html += '<div class="p-3 rounded" style="background: #f0fdf4; border: 1px solid #a7f3d0;">';
-                    html += '<div class="row">';
-                    html += '<div class="col-md-4 text-center">';
-                    html += '<div class="small text-muted">Subtotal DPP (Masuk HPP)</div>';
-                    html += '<div class="font-weight-bold text-dark" style="font-size:1.05rem;">' + fmt(d.subtotal_beli) + '</div>';
-                    html += '</div>';
-                    html += '<div class="col-md-4 text-center">';
-                    html += '<div class="small text-muted">Nilai PPN Masukan</div>';
-                    html += '<div class="font-weight-bold text-dark" style="font-size:1.05rem;">' + fmt(d.nilai_ppn) + '</div>';
-                    html += '</div>';
-                    html += '<div class="col-md-4 text-center border-left">';
-                    html += '<div class="small text-muted font-weight-bold text-uppercase">Total Tagihan</div>';
-                    html += '<div class="font-weight-bold text-success" style="font-size:1.3rem;">' + fmt(d.total_tagihan_beli) + '</div>';
-                    html += '</div>';
-                    html += '</div>';
-                    html += '</div>';
-
-                    // Jurnal & Info Posting
-                    if (d.nomor_jurnal) {
-                        html += '<div class="mt-3 d-flex align-items-center">';
-                        html += '<span class="badge badge-info px-3 py-2"><i class="fas fa-book mr-1"></i>Jurnal: ' + d.nomor_jurnal + '</span>';
-                        if (d.settled_at) {
-                            html += '<small class="text-muted ml-3"><i class="fas fa-user-check mr-1"></i>Diposting oleh <strong>' + (d.settled_by || '-') + '</strong> pada ' + new Date(d.settled_at).toLocaleString("id-ID") + '</small>';
-                        }
-                        html += '</div>';
-                    }
-                    if (d.catatan) {
-                        html += '<div class="mt-2 p-2 bg-light rounded small text-muted"><i class="fas fa-sticky-note mr-1"></i>' + d.catatan + '</div>';
-                    }
-
-                    $('#modalDetailBody').html(html);
-                } else {
-                    $('#modalDetailBody').html('<div class="alert alert-danger">Gagal memuat data detail.</div>');
-                }
-            },
-            error: function() {
-                $('#modalDetailBody').html('<div class="alert alert-danger">Terjadi kesalahan koneksi.</div>');
+        // Atur header context menu
+        $('#ctxMenuHeader').html('<i class="fas fa-receipt mr-1 text-primary"></i> ' + (noSettle || 'Opsi'));
+        if (status === 'BILLED') {
+            $('#ctxMenuStatus').removeClass('badge-warning').addClass('badge-success').text('BILLED');
+            $('.ctx-item-journal').show();
+            if (noJurnal) {
+                $('.ctx-item-journal').html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal: <strong>' + noJurnal + '</strong>');
+            } else {
+                $('.ctx-item-journal').html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal Pembelian');
             }
+            $('.ctx-item-input').hide();
+        } else {
+            $('#ctxMenuStatus').removeClass('badge-success').addClass('badge-warning').text('PENDING');
+            if (hasJournal == '1') {
+                $('.ctx-item-journal').show().html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal Pembelian');
+            } else {
+                $('.ctx-item-journal').hide();
+            }
+            $('.ctx-item-input').show();
+        }
+
+        // Posisi menu pada koordinat mouse
+        var x = e.pageX;
+        var y = e.pageY;
+
+        // Deteksi batas layar kanan & bawah agar tidak terpotong
+        var menuW = 240;
+        var menuH = 140;
+        var winW = $(window).width();
+        var winH = $(window).height();
+
+        if (x + menuW > winW) {
+            x = winW - menuW - 15;
+        }
+
+        $('#settlementContextMenu').css({
+            top: y + 'px',
+            left: x + 'px',
+            display: 'block'
         });
+    });
+
+    // Sembunyikan context menu saat klik kiri di sembarang tempat atau saat scroll
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#settlementContextMenu').length) {
+            $('#settlementContextMenu').hide();
+        }
+    });
+
+    $(window).on('scroll', function() {
+        $('#settlementContextMenu').hide();
+    });
+
+    // Close modal listener untuk data-dismiss
+    $(document).on('click', '[data-dismiss="modal"]', function() {
+        var $m = $(this).closest('.modal');
+        if ($m.length) {
+            hideModalSafe($m.attr('id'));
+        }
     });
 
     // Event ganti tipe pajak atau ketik harga satuan
-    $('input[name="tipe_pajak"]').on('change', function() {
-        calculateSettlementLive();
+    $(document).on('change', 'input[name="tipe_pajak"]', function() {
+        window.calculateSettlementLive();
     });
-    $('#hrg_satuan_input').on('input change', function() {
-        calculateSettlementLive();
+    $(document).on('input change', '#hrg_satuan_input', function() {
+        window.calculateSettlementLive();
     });
-
-    function calculateSettlementLive() {
-        var tipe = $('input[name="tipe_pajak"]:checked').val() || 'EXCLUDE';
-        var hrg = parseFloat($('#hrg_satuan_input').val()) || 0;
-        var ppnPersen = (tipe === 'NON_PPN') ? 0 : 11;
-        $('#ppn_persen').val(ppnPersen);
-
-        var satuanText = currentSatuan ? ' / ' + currentSatuan : '';
-
-        if (tipe === 'NON_PPN') {
-            $('#label_hrg_satuan').text('Harga Satuan Non-PPN (Rp) *');
-            $('#tipe_pajak_help').html('Harga murni tanpa PPN. Jurnal HPP dan Utang dicatat sebesar harga ini.');
-            $('#box_preview_hrg_dpp span:first').text('Harga Satuan (Non-PPN):');
-            $('#box_preview_hrg_inc').hide();
-        } else if (tipe === 'INCLUDE') {
-            $('#label_hrg_satuan').text('Harga Satuan Include PPN (Rp) *');
-            $('#tipe_pajak_help').html('Ketikkan harga include di faktur supplier. <strong>Sistem otomatis mengekstrak DPP dan PPN Masukan</strong>.');
-            $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
-            $('#box_preview_hrg_inc').show();
-        } else {
-            // EXCLUDE
-            $('#label_hrg_satuan').text('Harga Satuan Exclude PPN (Rp) *');
-            $('#tipe_pajak_help').html('Ketikkan harga DPP sebelum PPN. PPN akan ditambahkan otomatis ke total tagihan.');
-            $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
-            $('#box_preview_hrg_inc').show();
-        }
-
-        var hrgSatuanDpp = 0;
-        var hrgSatuanInc = 0;
-        var totalTagihan = 0;
-        var subtotalDpp = 0;
-        var nilaiPpn = 0;
-
-        if (tipe === 'INCLUDE') {
-            hrgSatuanInc = hrg;
-            var divider = 1 + (ppnPersen / 100);
-            hrgSatuanDpp = (ppnPersen > 0) ? (hrg / divider) : hrg;
-
-            totalTagihan = currentQtyNet * hrgSatuanInc;
-            subtotalDpp = (ppnPersen > 0) ? (totalTagihan / divider) : totalTagihan;
-            nilaiPpn = totalTagihan - subtotalDpp;
-        } else if (tipe === 'NON_PPN') {
-            hrgSatuanDpp = hrg;
-            hrgSatuanInc = hrg;
-            subtotalDpp = currentQtyNet * hrg;
-            nilaiPpn = 0;
-            totalTagihan = subtotalDpp;
-        } else {
-            // EXCLUDE
-            hrgSatuanDpp = hrg;
-            hrgSatuanInc = hrg * (1 + (ppnPersen / 100));
-
-            subtotalDpp = currentQtyNet * hrgSatuanDpp;
-            nilaiPpn = (subtotalDpp * ppnPersen) / 100;
-            totalTagihan = subtotalDpp + nilaiPpn;
-        }
-
-        $('#preview_hrg_satuan_dpp').text('Rp ' + hrgSatuanDpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + satuanText);
-        $('#preview_hrg_satuan_inc').text('Rp ' + hrgSatuanInc.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + satuanText);
-        $('#preview_dpp').text('Rp ' + subtotalDpp.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-        $('#preview_ppn').text('Rp ' + nilaiPpn.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-        $('#preview_total_tagihan').text('Rp ' + totalTagihan.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    }
 
     // Submit Form Settlement
     $('#formSettlement').on('submit', function(e) {
@@ -970,14 +1050,14 @@ $(document).ready(function() {
         $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...');
 
         $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi_settlement/post") ?>',
+            url: '<?= site_url("purchasing/konsinyasi/ajax_post_settlement") ?>',
             type: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
             success: function(res) {
                 $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i> Posting Jurnal Pembelian');
-                if (res.status) {
-                    $('#modalSettlement').modal('hide');
+                if (res && res.status) {
+                    hideModalSafe('modalSettlement');
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'success',
@@ -992,203 +1072,26 @@ $(document).ready(function() {
                         location.reload();
                     }
                 } else {
+                    var errMsg = (res && res.message) ? res.message : 'Gagal memproses jurnal pembelian.';
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal Posting',
-                            text: res.message
+                            text: errMsg
                         });
                     } else {
-                        alert(res.message);
+                        alert(errMsg);
                     }
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
                 $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i> Posting Jurnal Pembelian');
-                alert('Terjadi kesalahan koneksi.');
-            }
-        });
-    });
-
-    // =========================================================================
-    // HANDLER PENERIMAAN BARANG KONSINYASI MANDIRI
-    // =========================================================================
-    var barangsData = <?= json_encode($all_barangs) ?>;
-    var rowIdx = 1;
-
-    // Buka Modal Penerimaan Baru
-    $('#btnTambahPenerimaan').on('click', function() {
-        $('#formTambahPenerimaan')[0].reset();
-        $('#tbodyItemPenerimaan').find('tr:gt(0)').remove();
-        $('#in_nama_suplier').val('');
-        $('#modalTambahPenerimaan').modal('show');
-    });
-
-    // Otomatis isi hidden input nama_suplier saat pilih supplier
-    $('#in_kd_suplier').on('change', function() {
-        var opt = $(this).find('option:selected');
-        $('#in_nama_suplier').val(opt.data('nama') || '');
-    });
-
-    // Otomatis isi satuan dan nama_barang saat memilih barang di baris
-    $(document).on('change', '.select-barang', function() {
-        var $row = $(this).closest('tr');
-        var opt = $(this).find('option:selected');
-        $row.find('.in-nama-barang').val(opt.data('nama') || '');
-        $row.find('.in-satuan').val(opt.data('satuan') || 'PCS');
-    });
-
-    // Tambah baris barang baru
-    $('#btnAddItemRow').on('click', function() {
-        var optionsHtml = '<option value="">-- Pilih Barang --</option>';
-        for (var i = 0; i < barangsData.length; i++) {
-            var b = barangsData[i];
-            optionsHtml += '<option value="' + b.kode_barang + '" data-nama="' + b.nama_barang + '" data-satuan="' + (b.satuan || 'PCS') + '">' + b.nama_barang + ' (' + b.kode_barang + ')</option>';
-        }
-
-        var newRow = '<tr class="item-row">' +
-            '<td>' +
-                '<select name="items[' + rowIdx + '][kd_barang]" class="form-control form-control-sm select-barang" required>' +
-                    optionsHtml +
-                '</select>' +
-                '<input type="hidden" name="items[' + rowIdx + '][nama_barang]" class="in-nama-barang">' +
-            '</td>' +
-            '<td><input type="number" step="any" min="0.001" name="items[' + rowIdx + '][qty]" class="form-control form-control-sm text-right font-weight-bold" placeholder="0.00" required></td>' +
-            '<td><input type="text" name="items[' + rowIdx + '][satuan]" class="form-control form-control-sm in-satuan" value="PCS" readonly style="background: #f8fafc;"></td>' +
-            '<td><input type="text" name="items[' + rowIdx + '][no_lot]" class="form-control form-control-sm" placeholder="No. Batch / Lot"></td>' +
-            '<td><input type="date" name="items[' + rowIdx + '][expired_date]" class="form-control form-control-sm"></td>' +
-            '<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btnRemoveRow"><i class="fas fa-trash"></i></button></td>' +
-        '</tr>';
-
-        $('#tbodyItemPenerimaan').append(newRow);
-        rowIdx++;
-        updateRemoveButtons();
-    });
-
-    // Hapus baris item
-    $(document).on('click', '.btnRemoveRow', function() {
-        if ($('#tbodyItemPenerimaan tr').length > 1) {
-            $(this).closest('tr').remove();
-            updateRemoveButtons();
-        }
-    });
-
-    function updateRemoveButtons() {
-        var rows = $('#tbodyItemPenerimaan tr');
-        if (rows.length <= 1) {
-            rows.find('.btnRemoveRow').prop('disabled', true);
-        } else {
-            rows.find('.btnRemoveRow').prop('disabled', false);
-        }
-    }
-
-    // Submit Simpan Penerimaan Baru
-    $('#formTambahPenerimaan').on('submit', function(e) {
-        e.preventDefault();
-        var $btn = $('#btnSubmitPenerimaan');
-        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
-
-        $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi/ajax_save_penerimaan") ?>',
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(res) {
-                $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Penerimaan Fisik');
-                if (res.status) {
-                    $('#modalTambahPenerimaan').modal('hide');
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Penerimaan Disimpan!',
-                            text: res.message,
-                            confirmButtonText: 'OK'
-                        }).then(function() {
-                            window.location.href = '<?= site_url("purchasing/konsinyasi?tab=penerimaan") ?>';
-                        });
-                    } else {
-                        alert(res.message);
-                        window.location.href = '<?= site_url("purchasing/konsinyasi?tab=penerimaan") ?>';
-                    }
+                var errMsg = xhr.status === 401 ? 'Sesi login telah berakhir.' : 'Terjadi kesalahan sistem (' + status + ').';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: errMsg });
                 } else {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal Menyimpan',
-                            text: res.message
-                        });
-                    } else {
-                        alert(res.message);
-                    }
+                    alert(errMsg);
                 }
-            },
-            error: function() {
-                $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Penerimaan Fisik');
-                alert('Terjadi kesalahan koneksi.');
-            }
-        });
-    });
-
-    // Detail Dokumen Penerimaan Konsinyasi
-    $(document).on('click', '.btnViewPenerimaan', function() {
-        var id = $(this).data('id');
-        $('#modalDetailPenerimaanBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="text-muted mt-2">Memuat data dokumen...</p></div>');
-        $('#modalDetailPenerimaan').modal('show');
-
-        $.ajax({
-            url: '<?= site_url("purchasing/konsinyasi/ajax_detail_penerimaan") ?>',
-            type: 'GET',
-            data: { id_masuk: id },
-            dataType: 'json',
-            success: function(res) {
-                if (res.status) {
-                    var d = res.data;
-                    var html = '';
-                    html += '<div class="row mb-3">';
-                    html += '<div class="col-md-6">';
-                    html += '<table class="table table-sm table-borderless small mb-0">';
-                    html += '<tr><td class="text-muted" style="width:40%;">No. Penerimaan:</td><td class="font-weight-bold text-success">' + d.nomor_masuk + '</td></tr>';
-                    html += '<tr><td class="text-muted">Tanggal Masuk:</td><td class="font-weight-bold">' + new Date(d.tanggal_masuk).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) + '</td></tr>';
-                    html += '<tr><td class="text-muted">Gudang Penyimpanan:</td><td><span class="badge badge-light border">' + (d.nama_gudang || 'Gdg. Konsinyasi') + '</span></td></tr>';
-                    html += '</table></div>';
-                    html += '<div class="col-md-6">';
-                    html += '<table class="table table-sm table-borderless small mb-0">';
-                    html += '<tr><td class="text-muted" style="width:40%;">Supplier:</td><td class="font-weight-bold text-dark">' + d.nama_suplier + ' (' + d.kd_suplier + ')</td></tr>';
-                    html += '<tr><td class="text-muted">Surat Jalan:</td><td>' + (d.no_surat_jalan || '-') + '</td></tr>';
-                    html += '<tr><td class="text-muted">Dicatat oleh:</td><td>' + (d.created_by || '-') + ' pada ' + new Date(d.created_at).toLocaleString("id-ID") + '</td></tr>';
-                    html += '</table></div></div>';
-
-                    html += '<h6 class="font-weight-bold text-dark mb-2"><i class="fas fa-boxes text-success mr-1"></i> Rincian Barang Fisik yang Masuk</h6>';
-                    html += '<div class="table-responsive">';
-                    html += '<table class="table table-sm table-bordered mb-0 small">';
-                    html += '<thead class="bg-light font-weight-bold"><tr><th>Kode</th><th>Nama Barang</th><th class="text-right">Qty</th><th>Satuan</th><th>Batch/Lot</th><th>Expired Date</th></tr></thead>';
-                    html += '<tbody>';
-                    if (d.items && d.items.length > 0) {
-                        for (var j = 0; j < d.items.length; j++) {
-                            var it = d.items[j];
-                            html += '<tr>';
-                            html += '<td class="font-weight-bold">' + it.kd_barang + '</td>';
-                            html += '<td>' + it.nama_barang + '</td>';
-                            html += '<td class="text-right font-weight-bold text-primary">' + parseFloat(it.qty).toLocaleString("id-ID", {minimumFractionDigits: 2}) + '</td>';
-                            html += '<td>' + (it.satuan || 'PCS') + '</td>';
-                            html += '<td>' + (it.no_lot || '-') + '</td>';
-                            html += '<td>' + (it.expired_date ? new Date(it.expired_date).toLocaleDateString("id-ID") : '-') + '</td>';
-                            html += '</tr>';
-                        }
-                    }
-                    html += '</tbody></table></div>';
-
-                    if (d.keterangan) {
-                        html += '<div class="mt-3 p-2 bg-light rounded small text-muted"><i class="fas fa-sticky-note mr-1"></i>Catatan: ' + d.keterangan + '</div>';
-                    }
-
-                    $('#modalDetailPenerimaanBody').html(html);
-                } else {
-                    $('#modalDetailPenerimaanBody').html('<div class="alert alert-danger">' + res.message + '</div>');
-                }
-            },
-            error: function() {
-                $('#modalDetailPenerimaanBody').html('<div class="alert alert-danger">Terjadi kesalahan koneksi.</div>');
             }
         });
     });
