@@ -51,1099 +51,168 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Portal';
+$route['default_controller'] = 'Auth';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
-// Portal Dashboard
-$route['portal'] = 'Portal/index';
-$route['auth'] = 'Auth/index';
-
 //Auth Login
-$route['process']                                   = 'Auth/process';
-$route['logout']                                    = 'Auth/logout';
-$route['dashboard']                                 = 'Dashboard/index';
-$route['dashboad']                                  = 'Dashboard/index';
-$route['dasboard']                                  = 'Dashboard/index';
+$route['process']   = 'Auth/process';
+$route['logout']    = 'Auth/logout';
 
-// MODUL SEMUA TRANSAKSI (ADMIN & ADMPNJ)
-$route['admin/transaksi']                                    = 'admin/C_Transaksi/index';
-$route['admin/transaksi/data']                               = 'admin/C_Transaksi/ajax_get_transactions';
-$route['admin/transaksi/detail/(:any)/(:any)']               = 'admin/C_Transaksi/ajax_get_detail/$1/$2';
-$route['admin/transaksi/journal-preview/(:any)/(:any)']      = 'admin/C_Transaksi/ajax_get_journal_preview/$1/$2';
-$route['admin/transaksi/edit-data/(:any)/(:any)']            = 'admin/C_Transaksi/ajax_get_edit_data/$1/$2';
-$route['admin/transaksi/update']                             = 'admin/C_Transaksi/ajax_update_transaction';
-$route['admin/transaksi/repost']                             = 'admin/C_Transaksi/ajax_repost_transaction';
-$route['admin/transaksi/unpost']                             = 'admin/C_Transaksi/ajax_unpost_transaction';
-$route['admin/transaksi/delete']                             = 'admin/C_Transaksi/ajax_delete_transaction';
-$route['admin/transaksi/activity-logs']                      = 'admin/C_Transaksi/ajax_get_activity_logs';
-$route['transaksi']                                          = 'admin/C_Transaksi/index';
+//Dashboard
+$route['dashboard'] = 'Dashboard';
+$route['konfirm_tamu'] = 'Dashboard/konfirm_tamu';
 
-// STOCKOPNAME
-$route['admin/stockopname']                        = 'admin/C_Stockopname/index';
-$route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
-$route['admin/stockopname/monitoring/activity-log'] = 'admin/C_Stockopname/monitoring_activity_log';
-$route['admin/stockopname/monitoring/pending-opname'] = 'admin/C_Stockopname/monitoring_pending_opname';
-$route['admin/stockopname/monitoring/request-opname'] = 'admin/C_Stockopname/monitoring_request_opname';
-$route['admin/stockopname/ajax-affirm-request-opname-bulk'] = 'admin/C_Stockopname/ajax_affirm_request_opname_bulk';
-$route['admin/stockopname/monitoring/manual-opname'] = 'admin/C_Stockopname/monitoring_manual_opname';
-$route['admin/stockopname/ajax-affirm-manual-opname-bulk'] = 'admin/C_Stockopname/ajax_affirm_manual_opname_bulk';
-$route['admin/stockopname/monitoring/summary']     = 'admin/C_Stockopname/monitoring_summary';
-$route['admin/stockopname/monitoring/activity']    = 'admin/C_Stockopname/monitoring_activity';
-$route['admin/stockopname/monitoring/compare-all'] = 'admin/C_Stockopname/monitoring_compare_all';
-$route['admin/stockopname/monitoring/compare-lot'] = 'admin/C_Stockopname/monitoring_compare_lot';
-$route['admin/stockopname/pending-mode']           = 'admin/C_Stockopname/ajax_set_pending_calculation_mode';
-$route['admin/stockopname/monitoring/export-excel/(:any)'] = 'admin/C_Stockopname/monitoring_export_excel/$1';
-$route['admin/stockopname/monitoring/export-excel'] = 'admin/C_Stockopname/monitoring_export_excel';
-$route['admin/stockopname/detail_input_opname/update'] = 'admin/C_Stockopname/ajax_update_input_opname';
-$route['admin/stockopname/detail_input_opname/delete'] = 'admin/C_Stockopname/ajax_delete_input_opname';
-$route['admin/stockopname/detail_input_opname/repost'] = 'admin/C_Stockopname/ajax_repost_input_opname';
-$route['admin/stockopname/detail_input_opname/add_request'] = 'admin/C_Stockopname/ajax_add_request_item';
-$route['admin/stockopname/detail_input_opname/delete_request'] = 'admin/C_Stockopname/ajax_delete_request_item';
-$route['admin/stockopname/detail_input_opname/add_input'] = 'admin/C_Stockopname/ajax_add_input_opname_detail';
-$route['admin/stockopname/detail_input_opname/delete_master_item'] = 'admin/C_Stockopname/ajax_delete_master_item_detail';
-$route['admin/stockopname/detail_input_opname/update_dimensi'] = 'admin/C_Stockopname/ajax_update_detail_dimensi';
-$route['admin/stockopname/detail_input_opname'] = 'admin/C_Stockopname/detail_input_opname';
-$route['admin/stockopname/detail_input_opname/(:any)'] = 'admin/C_Stockopname/detail_input_opname/$1';
-$route['admin/stockopname/widgets']                = 'admin/C_Stockopname/widgets';
-$route['admin/stockopname/list']                   = 'admin/C_Stockopname/list';
-$route['admin/stockopname/demo-preview']           = 'admin/C_Stockopname/demo_preview';
-$route['admin/stockopname/input']                  = 'admin/C_Stockopname/input_opname';
-$route['admin/stockopname/input/lookup']           = 'admin/C_Stockopname/ajax_input_lookup';
-$route['admin/stockopname/input/save']             = 'admin/C_Stockopname/ajax_input_save';
-$route['admin/stockopname/input/manual/barang']    = 'admin/C_Stockopname/ajax_manual_barang';
-$route['admin/stockopname/input/manual/lot']       = 'admin/C_Stockopname/ajax_manual_lot';
-$route['admin/stockopname/input/manual/expired']   = 'admin/C_Stockopname/ajax_manual_expired';
-$route['admin/stockopname/input/manual/save']      = 'admin/C_Stockopname/ajax_manual_save';
-$route['admin/stockopname/input/request/save']     = 'admin/C_Stockopname/ajax_request_save';
-$route['stockopname/input']                        = 'admin/C_Stockopname/input_opname';
-$route['stockopname/history-input']                = 'admin/C_Stockopname/history_input';
-$route['stockopname/history-input/delete']         = 'admin/C_Stockopname/ajax_delete_history_input';
-$route['supervisi-opname']                         = 'admin/C_Stockopname/supervisor_opname';
-$route['supervisi-opname/afirmasi']                = 'admin/C_Stockopname/ajax_supervisor_affirm_request';
-$route['supervisi-opname/tracking']                = 'admin/C_Stockopname/supervisor_tracking';
-$route['supervisi-opname/tracking/list']           = 'admin/C_Stockopname/ajax_supervisor_tracking_list';
-$route['admin/stockopname/history-input']          = 'admin/C_Stockopname/history_input';
-$route['admin/stockopname/history-input/delete']   = 'admin/C_Stockopname/ajax_delete_history_input';
-$route['admin/stockopname/master_opname']          = 'admin/C_Stockopname/master_barang';
-$route['admin/stockopname/master_opname/widgets']  = 'admin/C_Stockopname/master_barang_widgets';
-$route['admin/stockopname/master_opname/list']     = 'admin/C_Stockopname/ajax_master_barang_list';
-$route['admin/stockopname/master_opname/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_list';
-$route['admin/stockopname/master_opname/detail']   = 'admin/C_Stockopname/ajax_master_barang_detail';
-$route['admin/stockopname/master_opname/update']   = 'admin/C_Stockopname/ajax_update_master_barang';
-$route['admin/stockopname/master_opname/item-search'] = 'admin/C_Stockopname/ajax_master_barang_source_search';
-$route['admin/stockopname/master_opname/create']   = 'admin/C_Stockopname/ajax_create_master_barang';
-$route['admin/stockopname/master_barang']          = 'admin/C_Stockopname/master_barang_catalog';
-$route['admin/stockopname/master_barang/list']     = 'admin/C_Stockopname/ajax_master_barang_catalog_list';
-$route['admin/stockopname/master_barang/create']   = 'admin/C_Stockopname/ajax_create_master_barang_catalog';
-$route['admin/stockopname/master_barang/update']   = 'admin/C_Stockopname/ajax_update_master_barang_catalog';
-$route['admin/stockopname/barang-pending']         = 'admin/C_Stockopname/barang_pending';
-$route['admin/stockopname/barang-pending/list']    = 'admin/C_Stockopname/ajax_barang_pending_list';
-$route['admin/stockopname/barang-pending/detail']  = 'admin/C_Stockopname/ajax_barang_pending_detail';
-$route['admin/stockopname/barang-pending/save']    = 'admin/C_Stockopname/ajax_save_barang_pending';
-$route['admin/stockopname/barang-pending/delete']  = 'admin/C_Stockopname/ajax_delete_barang_pending';
-$route['admin/stockopname/barang-pending/export-csv'] = 'admin/C_Stockopname/barang_pending_export_csv';
-$route['admin/stockopname/master_opname/qty-zero'] = 'admin/C_Stockopname/master_barang_qty_zero';
-$route['admin/stockopname/master_opname/qty-zero/list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';
-$route['admin/stockopname/master_opname/qty-zero/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';
-$route['admin/stockopname/master_opname/qty-zero/detail'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_detail';
-$route['admin/stockopname/master_opname/qty-zero/generate-qrcode'] = 'admin/C_Stockopname/ajax_generate_qrcode_qty_zero';
-$route['admin/stockopname/master_opname/qty-zero/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset_qty_zero';
-$route['admin/stockopname/master_opname/qty-zero/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset_qty_zero';
-$route['admin/stockopname/master_opname/qty-zero/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode_qty_zero/$1';
-$route['admin/stockopname/qrcode/summary']         = 'admin/C_Stockopname/qrcode_summary';
-$route['admin/stockopname/qrcode/generate_batch']  = 'admin/C_Stockopname/qrcode_generate_batch';
-$route['admin/stockopname/qrcode/retry_failed']    = 'admin/C_Stockopname/qrcode_retry_failed';
-$route['admin/stockopname/qrcode/failed_list']     = 'admin/C_Stockopname/qrcode_failed_list';
-$route['admin/stockopname/qrcode/reset']           = 'admin/C_Stockopname/qrcode_reset';
-$route['admin/stockopname/qrcode/qty-zero/summary'] = 'admin/C_Stockopname/qrcode_qty_zero_summary';
-$route['admin/stockopname/qrcode/qty-zero/generate_batch'] = 'admin/C_Stockopname/qrcode_qty_zero_generate_batch';
-$route['admin/stockopname/qrcode/qty-zero/retry_failed'] = 'admin/C_Stockopname/qrcode_qty_zero_retry_failed';
-$route['admin/stockopname/qrcode/qty-zero/failed_list'] = 'admin/C_Stockopname/qrcode_qty_zero_failed_list';
-$route['admin/stockopname/master_opname/generate-qrcode'] = 'admin/C_Stockopname/ajax_generate_qrcode';
-$route['admin/stockopname/master_opname/generate-qrcode-all'] = 'admin/C_Stockopname/ajax_generate_all_qrcode';
-$route['admin/stockopname/master_opname/generate-barcode'] = 'admin/C_Stockopname/ajax_generate_barcode';
-$route['admin/stockopname/master_opname/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset';
-$route['admin/stockopname/master_opname/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset';
-$route['admin/stockopname/master_opname/positive-qty-pcs-ids'] = 'admin/C_Stockopname/ajax_master_barang_positive_qty_pcs_ids';
-$route['admin/stockopname/master_opname/print-sebagian'] = 'admin/C_Stockopname/print_kartu_stock_sebagian';
-$route['admin/stockopname/master_opname/print-kartu-stock-3075-3267'] = 'admin/C_Stockopname/print_kartu_stock_3075_3267';
-$route['admin/stockopname/master_opname/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode/$1';
+//inventaris
+$route['inventaris']                            = 'inventaris/C_Inventaris';
+$route['addinventaris']                         = 'inventaris/C_Inventaris/addinventaris';
+$route['editinventaris']                        = 'inventaris/C_Inventaris/editinventaris';
+$route['hapusinventaris1']                      = 'inventaris/C_Inventaris/hapusinventaris';
+$route['changeowner']                           = 'inventaris/C_Inventaris/changeowner';
+$route['selectowner']                           = 'inventaris/C_Inventaris/selectowner';
 
-// Penilaian Lingkungan Kantor alias route
-$route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingkungan';
+//LOGISTIK - TRUK SETTING
+$route['truckoprational']                       = 'logistik/C_Logistik';
+$route['opplat']                                = 'logistik/C_Logistik/op_plat';
+$route['addplat']                               = 'logistik/C_Logistik/addplat';
+$route['editplat']                              = 'logistik/C_Logistik/editplat';
+$route['hapusplat']                             = 'logistik/C_Logistik/hapusplat';
+$route['driverop']                              = 'logistik/C_Logistik/driverop';
+$route['tambahdriver']                          = 'logistik/C_Logistik/addriver';
+$route['editdriver']                            = 'logistik/C_Logistik/editdriver';
+$route['hapusdriver']                           = 'logistik/C_Logistik/hapusdriver';
+$route['activedrver/(:any)']                    = 'logistik/C_Logistik/activedrver/$1';
+$route['nonactivedriver/(:any)']                = 'logistik/C_Logistik/nonactivedriver/$1';
+$route['tambahpenggunadriver']                  = 'logistik/C_Logistik/tambahpenggunadriver';
+$route['editnorut']                             = 'logistik/C_Logistik/editnorut';
+$route['tambahhelper']                          = 'logistik/C_Logistik/tambahhelper';
+$route['edithelper']                            = 'logistik/C_Logistik/edithelper';
+$route['hapushelper']                           = 'logistik/C_Logistik/hapushelper';
+$route['nonactivehelper/(:any)']                = 'logistik/C_Logistik/nonactivehelper/$1';
+$route['activehelper/(:any)']                   = 'logistik/C_Logistik/activehelper/$1';
 
-//DAILY STOCK AHMAD & PENDINGPO
-$route['keuangan']                                  = 'keuangan/C_Keuangan';
-$route['keuangan/pembelian']                         = 'keuangan/C_Keuangan/menu_pembelian';
-$route['keuangan/penjualan']                         = 'keuangan/C_Keuangan/menu_penjualan';
-$route['keuangan/pembayaran']                       = 'keuangan/C_pembayaran';
-$route['keuangan/pembayaran/collection']            = 'keuangan/C_pembayaran/collection';
-$route['keuangan/pembayaran/export-excel']          = 'keuangan/C_pembayaran/export_excel';
-$route['keuangan/pembayaran/get_payment_history_json'] = 'keuangan/C_pembayaran/get_payment_history_json';
-$route['keuangan/pembayaran/history']               = 'keuangan/C_pembayaran/history';
-$route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/customer/$1';
-$route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
-$route['keuangan/pembayaran/simpan/(:num)']         = 'keuangan/C_pembayaran/simpan/$1';
-$route['keuangan/pembayaran/cair/(:num)']           = 'keuangan/C_pembayaran/cair/$1';
-$route['keuangan/pembayaran/kasir']                 = 'keuangan/C_pembayaran/kasir';
-$route['keuangan/pembayaran/kasir_customer/(:any)'] = 'keuangan/C_pembayaran/kasir_customer/$1';
-$route['keuangan/pembayaran/kasir_bayar/(:any)']    = 'keuangan/C_pembayaran/kasir_bayar/$1';
-$route['keuangan/pembayaran/kasir_simpan/(:any)']   = 'keuangan/C_pembayaran/kasir_simpan/$1';
-$route['keuangan/pembayaran-supplier']              = 'keuangan/C_PembayaranSupplier';
-$route['keuangan/pembayaran-supplier/supplier/(:num)'] = 'keuangan/C_PembayaranSupplier/supplier/$1';
-$route['keuangan/pembayaran-supplier/form/(:num)']  = 'keuangan/C_PembayaranSupplier/form/$1';
-$route['keuangan/pembayaran-supplier/post']         = 'keuangan/C_PembayaranSupplier/post';
-$route['keuangan/pembayaran-supplier/potong-retur/(:num)'] = 'keuangan/C_PembayaranSupplier/form_potong_retur/$1';
-$route['keuangan/pembayaran-supplier/post-potong-retur'] = 'keuangan/C_PembayaranSupplier/post_potong_retur';
-$route['keuangan/pembayaran-supplier/history']      = 'keuangan/C_PembayaranSupplier/history';
-$route['keuangan/pembayaran-supplier/void/(:num)']  = 'keuangan/C_PembayaranSupplier/void/$1';
-$route['keuangan/pembayaran/bayar/(:any)']          = 'keuangan/C_pembayaran/bayar/$1';
-$route['keuangan/pembayaran/simpan/(:any)']         = 'keuangan/C_pembayaran/simpan/$1';
-$route['keuangan/pembayaran/cair/(:any)']           = 'keuangan/C_pembayaran/cair/$1';
-$route['keuangan/pembayaran/ajax_unpost_pembayaran'] = 'keuangan/C_pembayaran/ajax_unpost_pembayaran';
-$route['keuangan/pembayaran/ajax_post_pembayaran']   = 'keuangan/C_pembayaran/ajax_post_pembayaran';
-$route['keuangan/pembayaran/ajax_delete_pembayaran'] = 'keuangan/C_pembayaran/ajax_delete_pembayaran';
-$route['keuangan/pembayaran/print_bukti/(:any)']     = 'keuangan/C_pembayaran/print_bukti/$1';
-$route['keuangan/pembayaran/print_bukti']            = 'keuangan/C_pembayaran/print_bukti';
-$route['laporan']                                   = 'keuangan/C_Laporan/index';
-$route['laporan/keuangan']                          = 'keuangan/C_Laporan/keuangan';
-$route['laporan/keuangan/jurnal-transaksi']         = 'keuangan/C_Laporan/jurnal_transaksi_report';
-$route['laporan/keuangan/jurnal-transaksi-data']    = 'keuangan/C_Laporan/jurnal_transaksi_data';
-$route['laporan/penjualan']                         = 'keuangan/C_Laporan/penjualan';
-$route['laporan/pembelian']                         = 'keuangan/C_Laporan/pembelian';
-$route['laporan/barang']                            = 'keuangan/C_Laporan/barang';
-$route['laporan/barang/kartu-stock-gudang']         = 'keuangan/C_Laporan/kartu_stock_gudang_report';
-$route['laporan/barang/kartu-stock-gudang-data']    = 'keuangan/C_Laporan/kartu_stock_gudang_data';
-$route['laporan/lainnya']                           = 'keuangan/C_Laporan/lainnya';
-$route['laporan/penjualan/jurnal-penjualan']          = 'keuangan/C_Laporan/jurnal_penjualan_report';
-$route['jurnal']                                    = 'keuangan/C_Keuangan/jurnal';
-$route['jurnal/pembelian']                          = 'keuangan/C_Keuangan/jurnal_pembelian';
-$route['jurnal/penjualan']                          = 'keuangan/C_Keuangan/jurnal_penjualan';
-$route['jurnal/pembayaran']                         = 'keuangan/C_Keuangan/jurnal_pembayaran';
-$route['jurnal/retur-penjualan']                    = 'keuangan/C_Keuangan/jurnal_retur_penjualan';
-$route['jurnal/retur-pembelian']                    = 'keuangan/C_Keuangan/jurnal_retur_pembelian';
-$route['jurnal/pelunasan-utang']                    = 'keuangan/C_Keuangan/jurnal_pelunasan_utang';
-$route['jurnal/retur-list']                         = 'keuangan/C_Keuangan/jurnal_retur_list';
-$route['jurnal/neraca']                             = 'keuangan/C_Keuangan/jurnal_neraca';
-$route['jurnal/laba-rugi']                          = 'keuangan/C_Keuangan/jurnal_laba_rugi';
-$route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
-$route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
-$route['jurnal/account-journal']                    = 'keuangan/C_Keuangan/jurnal_account_journal';
-$route['jurnal/purchase-list']                      = 'keuangan/C_Keuangan/jurnal_purchase_list';
-$route['jurnal/purchase-detail']                    = 'keuangan/C_Keuangan/jurnal_purchase_detail';
-$route['jurnal/sales-list']                         = 'keuangan/C_Keuangan/jurnal_sales_list';
-$route['jurnal/sales-report-data']                  = 'keuangan/C_Keuangan/jurnal_sales_report_data';
-$route['jurnal/payment-list']                       = 'keuangan/C_Keuangan/jurnal_payment_list';
-$route['jurnal/purchase-return-list']               = 'keuangan/C_Keuangan/jurnal_purchase_return_list';
-$route['jurnal/supplier-payment-list']              = 'keuangan/C_Keuangan/jurnal_supplier_payment_list';
-$route['jurnal/general-detail']                     = 'keuangan/C_Keuangan/jurnal_general_detail';
-$route['jurnal/sales-detail']                       = 'keuangan/C_Keuangan/jurnal_sales_detail';
+$route['tambahhelper']                          = 'logistik/C_Logistik/tambahhelper';
 
-$route['jurnal/store']                              = 'keuangan/C_Keuangan/jurnal_store';
-$route['jurnal/update']                             = 'keuangan/C_Keuangan/jurnal_update';
-$route['jurnal/deactivate']                         = 'keuangan/C_Keuangan/jurnal_deactivate';
-$route['jurnal/delete']                             = 'keuangan/C_Keuangan/jurnal_delete';
-$route['jurnal/master/(:any)/list']                 = 'keuangan/C_Keuangan/jurnal_master_list/$1';
-$route['jurnal/master/(:any)/detail']               = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
-$route['jurnal/master/(:any)/store']                = 'keuangan/C_Keuangan/jurnal_master_store/$1';
-$route['jurnal/master/(:any)/update']               = 'keuangan/C_Keuangan/jurnal_master_update/$1';
-$route['jurnal/master/(:any)/delete']               = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
-$route['jurnal/period-store']                       = 'keuangan/C_Keuangan/jurnal_period_store';
-$route['jurnal/period-action']                      = 'keuangan/C_Keuangan/jurnal_period_action';
-$route['keuangan/buku_besar']                           = 'keuangan/C_BukuBesar/index';
-$route['keuangan/buku_besar/data']                      = 'keuangan/C_BukuBesar/get_ledger_data';
-$route['keuangan/buku_besar/accounts']                  = 'keuangan/C_BukuBesar/get_accounts_lookup';
-$route['keuangan/kas_keluar']                           = 'keuangan/C_KasKeluar/index';
-$route['keuangan/kas_keluar/get_data']                  = 'keuangan/C_KasKeluar/get_data';
-$route['keuangan/kas_keluar/form']                      = 'keuangan/C_KasKeluar/form';
-$route['keuangan/kas_keluar/form/(:num)']                = 'keuangan/C_KasKeluar/form/$1';
-$route['keuangan/kas_keluar/save']                      = 'keuangan/C_KasKeluar/save';
-$route['keuangan/kas_keluar/delete']                    = 'keuangan/C_KasKeluar/delete';
-$route['keuangan/kas_keluar/terbilang_ajax']            = 'keuangan/C_KasKeluar/terbilang_ajax';
-$route['keuangan/kas_keluar/accounts_lookup']            = 'keuangan/C_KasKeluar/accounts_lookup';
-$route['keuangan/kas_keluar/ref_no_ajax']                 = 'keuangan/C_KasKeluar/ref_no_ajax';
-$route['keuangan/kas_keluar/print_receipt/(:num)']      = 'keuangan/C_KasKeluar/print_receipt/$1';
-$route['keuangan/kas_keluar/detail_jurnal_ajax/(:num)'] = 'keuangan/C_KasKeluar/detail_jurnal_ajax/$1';
-$route['keuangan/kas_masuk']                            = 'keuangan/C_KasMasuk/index';
-$route['keuangan/kas_masuk/get_data']                   = 'keuangan/C_KasMasuk/get_data';
-$route['keuangan/kas_masuk/form']                       = 'keuangan/C_KasMasuk/form';
-$route['keuangan/kas_masuk/form/(:num)']                 = 'keuangan/C_KasMasuk/form/$1';
-$route['keuangan/kas_masuk/save']                       = 'keuangan/C_KasMasuk/save';
-$route['keuangan/kas_masuk/delete']                     = 'keuangan/C_KasMasuk/delete';
-$route['keuangan/kas_masuk/terbilang_ajax']             = 'keuangan/C_KasMasuk/terbilang_ajax';
-$route['keuangan/kas_masuk/accounts_lookup']             = 'keuangan/C_KasMasuk/accounts_lookup';
-$route['keuangan/kas_masuk/ref_no_ajax']                 = 'keuangan/C_KasMasuk/ref_no_ajax';
-$route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/print_receipt/$1';
-$route['keuangan/kas_masuk/detail_jurnal_ajax/(:num)']  = 'keuangan/C_KasMasuk/detail_jurnal_ajax/$1';
+//LOGISTIK DELIVERI ORDER
+$route['deliveriorder']                         = 'logistik/C_Logistik/deleveriorder';
+$route['tambahorderdriver']                     = 'logistik/C_Logistik/tambahorderdriver';
+$route['editorderdeliver/(:any)']               = 'logistik/C_Logistik/editdeliv/$1';
+$route['addorderdeliv']                         = 'logistik/C_Logistik/addorderdeliv';
+$route['select2driver']                         = 'logistik/C_Logistik/select2driver';
+$route['detail_deliveri/(:any)']                = 'logistik/C_Logistik/det_deliveri/$1';
+$route['detail_deliveri/(:any)/(:any)']         = 'logistik/C_Logistik/det_driver/$1/$2';
+$route['add_pending_driver']                    = 'logistik/C_Logistik/add_pending_driver';
+$route['driver_pending']                        = 'logistik/C_Logistik/driver_pending';
+$route['det_pnd_driver/(:any)/(:any)']          = 'logistik/C_Logistik/det_pnd_driver/$1/$2';
+$route['get_kd_truk_order']                     = 'logistik/C_Logistik/select_kd_truk';
+$route['tracking_driver']                       = 'logistik/C_Logistik/tracking_driver';
+$route['export_excel']                          = 'logistik/C_Logistik/export_tracking_driver';
+$route['det_driver_tracking/(:any)']            = 'logistik/C_Logistik/detail_tracking_driver/$1';
+$route['editdetaildriver']                      = 'logistik/C_Logistik/editdetaildriver';
+$route['hapus_detail_order']                    = 'logistik/C_Logistik/hapus_detail_order';
+$route['export_excel_lap_distribusi']           = 'logistik/C_Logistik/export_lap_distribusi/';
+$route['exportrekaplaporandriver']              = 'logistik/C_Logistik/export_rekap_laporan_driver/';
+$route['tmp_logistik_distribusi']               = 'logistik/C_Logistik/tmp_lap_distribusi/';
+$route['edit_laporan_tmp_dis']                  = 'logistik/C_Logistik/edit_laporan_tmp_dis/';
+$route['insert_laporan_tmp_dis']                = 'logistik/C_Logistik/insert_laporan_tmp_dis/';
 
-// PENYESUAIAN BARANG (Penyesuaian Persediaan)
-$route['persediaan/penyesuaian_barang']                            = 'keuangan/C_PenyesuaianBarang/index';
-$route['persediaan/penyesuaian_barang/get_data']                   = 'keuangan/C_PenyesuaianBarang/get_data';
-$route['persediaan/penyesuaian_barang/form']                       = 'keuangan/C_PenyesuaianBarang/form';
-$route['persediaan/penyesuaian_barang/form/(:num)']                = 'keuangan/C_PenyesuaianBarang/form/$1';
-$route['persediaan/penyesuaian_barang/save']                       = 'keuangan/C_PenyesuaianBarang/save';
-$route['persediaan/penyesuaian_barang/delete']                     = 'keuangan/C_PenyesuaianBarang/delete';
-$route['persediaan/penyesuaian_barang/unpost']                     = 'keuangan/C_PenyesuaianBarang/unpost';
-$route['persediaan/penyesuaian_barang/ref_no_ajax']                = 'keuangan/C_PenyesuaianBarang/ref_no_ajax';
-$route['persediaan/penyesuaian_barang/barang_lookup']              = 'keuangan/C_PenyesuaianBarang/barang_lookup';
-$route['persediaan/penyesuaian_barang/lot_lookup']                 = 'keuangan/C_PenyesuaianBarang/lot_lookup';
-$route['persediaan/penyesuaian_barang/accounts_lookup']            = 'keuangan/C_PenyesuaianBarang/accounts_lookup';
-$route['persediaan/penyesuaian_barang/gudang_lookup']              = 'keuangan/C_PenyesuaianBarang/gudang_lookup';
-$route['persediaan/penyesuaian_barang/detail_jurnal_ajax/(:num)']  = 'keuangan/C_PenyesuaianBarang/detail_jurnal_ajax/$1';
-$route['persediaan/penyesuaian_barang/print_receipt/(:num)']       = 'keuangan/C_PenyesuaianBarang/print_receipt/$1';
+// HRD 
+$route['hrd_lap_distribusi']                    = 'hrd/C_Hrd/lap_distribusi';
+$route['get_server_lap_dis']                    = 'hrd/C_Hrd/get_lap_distribusi';
+$route['add_lap_distribusi_hrd']                = 'hrd/C_Hrd/input_lap_distribusi';
+$route['edit_lap_distribusi_hrd/(:any)']        = 'hrd/C_Hrd/v_edit_lap_distribusi/$1';
+$route['edit_lap_distribusi_hrd']               = 'hrd/C_Hrd/edit_lap_distribusi';
+$route['hapus_lap_distribusi_hrd/(:any)']       = 'hrd/C_Hrd/v_hapus_lap_distribusi_hrd/$1';
+$route['hapus_lap_distribusi_hrd']              = 'hrd/C_Hrd/hapus_lap_distribusi_hrd';
+$route['hrd_lap_tamu']                          = 'hrd/C_Hrd/lap_tamu';
+$route['hrd_add_tamu']                          = 'hrd/C_Hrd/hrd_add_tamu';
+$route['tambah_lap_tamu']                       = 'hrd/C_Hrd/tambah_lap_tamu';
+$route['hapus_lap_tamu_hrd']                    = 'hrd/C_Hrd/hapus_lap_tamu_hrd';
+$route['edit_lap_tamu_hrd']                     = 'hrd/C_Hrd/edit_lap_tamu';
+$route['konfirm_buku_tamu']                     = 'hrd/C_Hrd/konfirm_buku_tamu';
+$route['hrd_lap_Karyawan_KM']                   = 'hrd/C_Hrd/lap_karykm';
+$route['edit_lap_Karyawan_KM']                  = 'hrd/C_Hrd/edit_lap_karykm';
+$route['tambah_lap_karykm']                     = 'hrd/C_Hrd/tambah_lap_karykm';
+$route['hapus_lap_karykm']                      = 'hrd/C_Hrd/hapus_lap_karykm';
+$route['hrd_lap_expedisi']                      = 'hrd/C_Hrd/lap_expedisi';
+$route['edit_lap_expedisi']                     = 'hrd/C_Hrd/edit_lap_expedisi';
+$route['tambah_lap_expedisi']                   = 'hrd/C_Hrd/tambah_lap_expedisi';
+$route['hapus_lap_expedisi']                    = 'hrd/C_Hrd/hapus_lap_expedisi';
+$route['hrd_lap_issue']                         = 'hrd/C_Hrd/lap_issue';
+$route['edit_lap_issue']                        = 'hrd/C_Hrd/edit_lap_issue';
+$route['update_status_issue/(:any)']            = 'hrd/C_Hrd/update_status_issue/$1';
+$route['tambah_lap_issue']                      = 'hrd/C_Hrd/tambah_lap_issue';
+$route['hapus_lap_issue']                       = 'hrd/C_Hrd/hapus_lap_issue';
+$route['search_lap_distribusi']                 = 'hrd/C_Hrd/search_lap_distribusi';
+$route['v_cari_lap_distribusi']                 = 'hrd/C_Hrd/v_cari_lap_distribusi';
+$route['hrd_data_truk']                         = 'hrd/C_Hrd/hrd_data_truk';
+$route['hrd_all_karyawan']                      = 'hrd/C_Hrd/hrd_all_karyawan';
+$route['updatekmsekarang']                      = 'hrd/C_Hrd/update_km_now_service_truk';
+$route['updatekmsebelum']                       = 'hrd/C_Hrd/update_km_past_service_truk';
+$route['edit_karyawan']                         = 'hrd/C_Hrd/edit_karyawan';
+$route['add_karyawan']                          = 'hrd/C_Hrd/add_karyawan';
+$route['export_laporan_issue']                  = 'hrd/C_Hrd/export_laporan_issue';
+$route['ex_lap_kar']                            = 'hrd/C_Hrd/export_laporan_karyawan';
+$route['export_hrd_lap_distribusi']             = 'hrd/C_Hrd/export_hrd_lap_distribusi';
 
-// KASIR - Transaksi Kas Harian
-$route['keuangan/kasir']                                = 'keuangan/C_Kasir/index';
-$route['keuangan/kasir/simpan_transaksi']               = 'keuangan/C_Kasir/simpan_transaksi';
-$route['keuangan/kasir/request_saldo']                  = 'keuangan/C_Kasir/request_saldo';
-$route['keuangan/kasir/hapus_transaksi']                = 'keuangan/C_Kasir/hapus_transaksi';
-$route['keuangan/kasir/get_transaksi']                  = 'keuangan/C_Kasir/get_transaksi';
-$route['keuangan/kasir/set_saldo']                      = 'keuangan/C_Kasir/set_saldo';
-$route['keuangan/kasir/get_saldo']                      = 'keuangan/C_Kasir/get_saldo';
-$route['keuangan/kasir/tambah_pilihan']                 = 'keuangan/C_Kasir/tambah_pilihan';
-$route['keuangan/kasir/hapus_pilihan']                  = 'keuangan/C_Kasir/hapus_pilihan';
-$route['keuangan/kasir/report_mutasi']                  = 'keuangan/C_Kasir/report_mutasi';
-$route['keuangan/kasir/print_mutasi']                   = 'keuangan/C_Kasir/print_mutasi';
-$route['keuangan/kasir/selesaikan_um']                  = 'keuangan/C_Kasir/selesaikan_um';
+$route['truncate_laporan_distribusi']           = 'hrd/C_Hrd/truncate_laporan_distribusi';
+$route['lap_tamu_serverside']                   = 'hrd/C_Hrd/lap_tamu_serverside';
+$route['get_tamu_by_id/(:any)']                 = 'hrd/C_Hrd/get_tamu_by_id/$1';
+$route['export_data_tamu_all']                  = 'hrd/C_Hrd/export_data_tamu_all';
+$route['truncate_all_data_tamu']                = 'hrd/C_Hrd/truncate_all_data_tamu';
+$route['lap_karykm_serverside']                 = 'hrd/C_Hrd/lap_karykm_serverside';
+$route['get_karykm_by_id/(:any)']               = 'hrd/C_Hrd/get_karykm_by_id/$1';
+$route['hapus_karykm']                          = 'hrd/C_Hrd/hapus_karykm';
+$route['lap_expedisi_serverside']               = 'hrd/C_Hrd/lap_expedisi_serverside';
+$route['get_expedisi_by_id/(:any)']             = 'hrd/C_Hrd/get_expedisi_by_id/$1';
+$route['export_file_laporan_expedisis']         = 'hrd/C_Hrd/export_data_hrd_lap_expedisi';
 
-$route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
-$route['keuangan/jurnal/pembelian']                 = 'keuangan/C_Keuangan/jurnal_pembelian';
-$route['keuangan/jurnal/penjualan']                 = 'keuangan/C_Keuangan/jurnal_penjualan';
-$route['keuangan/jurnal/pembayaran']                = 'keuangan/C_Keuangan/jurnal_pembayaran';
-$route['keuangan/jurnal/retur-penjualan']           = 'keuangan/C_Keuangan/jurnal_retur_penjualan';
-$route['keuangan/jurnal/retur-pembelian']           = 'keuangan/C_Keuangan/jurnal_retur_pembelian';
-$route['keuangan/jurnal/pelunasan-utang']           = 'keuangan/C_Keuangan/jurnal_pelunasan_utang';
-$route['keuangan/jurnal/retur-list']                = 'keuangan/C_Keuangan/jurnal_retur_list';
-$route['keuangan/jurnal/neraca']                    = 'keuangan/C_Keuangan/jurnal_neraca';
-$route['keuangan/jurnal/laba-rugi']                 = 'keuangan/C_Keuangan/jurnal_laba_rugi';
-$route['keuangan/jurnal/list']                      = 'keuangan/C_Keuangan/jurnal_list';
-$route['keuangan/jurnal/detail']                    = 'keuangan/C_Keuangan/jurnal_detail';
-$route['keuangan/jurnal/account-journal']           = 'keuangan/C_Keuangan/jurnal_account_journal';
-$route['keuangan/jurnal/purchase-list']             = 'keuangan/C_Keuangan/jurnal_purchase_list';
-$route['keuangan/jurnal/purchase-detail']           = 'keuangan/C_Keuangan/jurnal_purchase_detail';
-$route['keuangan/jurnal/sales-list']                = 'keuangan/C_Keuangan/jurnal_sales_list';
-$route['keuangan/jurnal/payment-list']              = 'keuangan/C_Keuangan/jurnal_payment_list';
-$route['keuangan/jurnal/purchase-return-list']      = 'keuangan/C_Keuangan/jurnal_purchase_return_list';
-$route['keuangan/jurnal/supplier-payment-list']     = 'keuangan/C_Keuangan/jurnal_supplier_payment_list';
-$route['keuangan/jurnal/general-detail']            = 'keuangan/C_Keuangan/jurnal_general_detail';
-$route['keuangan/jurnal/sales-detail']              = 'keuangan/C_Keuangan/jurnal_sales_detail';
-$route['keuangan/jurnal/store']                     = 'keuangan/C_Keuangan/jurnal_store';
-$route['keuangan/jurnal/update']                    = 'keuangan/C_Keuangan/jurnal_update';
-$route['keuangan/jurnal/deactivate']                = 'keuangan/C_Keuangan/jurnal_deactivate';
-$route['keuangan/jurnal/delete']                    = 'keuangan/C_Keuangan/jurnal_delete';
-$route['keuangan/jurnal/master/(:any)/list']        = 'keuangan/C_Keuangan/jurnal_master_list/$1';
-$route['keuangan/jurnal/master/(:any)/detail']      = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
-$route['keuangan/jurnal/master/(:any)/store']       = 'keuangan/C_Keuangan/jurnal_master_store/$1';
-$route['keuangan/jurnal/master/(:any)/update']      = 'keuangan/C_Keuangan/jurnal_master_update/$1';
-$route['keuangan/jurnal/master/(:any)/delete']      = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
-$route['keuangan/jurnal/period-store']              = 'keuangan/C_Keuangan/jurnal_period_store';
-$route['keuangan/jurnal/period-action']             = 'keuangan/C_Keuangan/jurnal_period_action';
-$route['accounting']                                = 'keuangan/C_Accounting/index';
-$route['accounting/manual-store']                   = 'keuangan/C_Accounting/manual_store';
-$route['accounting/manual-post']                    = 'keuangan/C_Accounting/manual_post';
-$route['accounting/reverse']                        = 'keuangan/C_Accounting/reverse';
-$route['accounting/journal-detail']                 = 'keuangan/C_Accounting/journal_detail';
-$route['accounting/journals']                       = 'keuangan/C_Accounting/journal_list';
-$route['accounting/exceptions']                     = 'keuangan/C_Accounting/exceptions';
-$route['accounting/exception-action']               = 'keuangan/C_Accounting/exception_action';
-$route['accounting/report']                         = 'keuangan/C_Accounting/report';
-$route['accounting/payment-store']                  = 'keuangan/C_Accounting/payment_store';
-$route['accounting/opening-balance-store']          = 'keuangan/C_Accounting/opening_balance_store';
-$route['accounting/opening-balance-migrate']        = 'keuangan/C_Accounting/opening_balance_migrate';
-$route['keuangan/accounting']                       = 'keuangan/C_Accounting/index';
-$route['keuangan/accounting/manual-store']          = 'keuangan/C_Accounting/manual_store';
-$route['keuangan/accounting/manual-post']           = 'keuangan/C_Accounting/manual_post';
-$route['keuangan/accounting/reverse']               = 'keuangan/C_Accounting/reverse';
-$route['keuangan/accounting/journal-detail']        = 'keuangan/C_Accounting/journal_detail';
-$route['keuangan/accounting/journals']              = 'keuangan/C_Accounting/journal_list';
-$route['keuangan/accounting/exceptions']            = 'keuangan/C_Accounting/exceptions';
-$route['keuangan/accounting/exception-action']      = 'keuangan/C_Accounting/exception_action';
-$route['keuangan/accounting/report']                = 'keuangan/C_Accounting/report';
-$route['keuangan/accounting/payment-store']         = 'keuangan/C_Accounting/payment_store';
-$route['keuangan/accounting/opening-balance-store'] = 'keuangan/C_Accounting/opening_balance_store';
-$route['keuangan/accounting/opening-balance-migrate'] = 'keuangan/C_Accounting/opening_balance_migrate';
-$route['accounting-test']                           = 'keuangan/C_Accounting/index';
-$route['accounting-test/manual-store']              = 'keuangan/C_Accounting/manual_store';
-$route['accounting-test/manual-post']               = 'keuangan/C_Accounting/manual_post';
-$route['accounting-test/auto-post']                 = 'keuangan/C_Accounting/auto_post';
-$route['accounting-test/reverse']                   = 'keuangan/C_Accounting/reverse';
-$route['accounting-test/journal-detail']            = 'keuangan/C_Accounting/journal_detail';
-$route['accounting-test/journals']                  = 'keuangan/C_Accounting/journal_list';
-$route['accounting-test/exceptions']                = 'keuangan/C_Accounting/exceptions';
-$route['accounting-test/report']                    = 'keuangan/C_Accounting/report';
-$route['keuangan/accounting-test']                  = 'keuangan/C_Accounting/index';
-$route['keuangan/accounting-test/manual-store']     = 'keuangan/C_Accounting/manual_store';
-$route['keuangan/accounting-test/manual-post']      = 'keuangan/C_Accounting/manual_post';
-$route['keuangan/accounting-test/auto-post']        = 'keuangan/C_Accounting/auto_post';
-$route['keuangan/accounting-test/reverse']          = 'keuangan/C_Accounting/reverse';
-$route['keuangan/accounting-test/journal-detail']   = 'keuangan/C_Accounting/journal_detail';
-$route['keuangan/accounting-test/journals']         = 'keuangan/C_Accounting/journal_list';
-$route['keuangan/accounting-test/exceptions']       = 'keuangan/C_Accounting/exceptions';
-$route['keuangan/accounting-test/report']           = 'keuangan/C_Accounting/report';
-$route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';
-$route['insertmodule']                              = 'keuangan/C_Keuangan/insertmodule';
-$route['insermodule_lot']                           = 'keuangan/C_Keuangan/insermodule_lot';
-$route['insertmodule_pnd']                          = 'keuangan/C_Keuangan/insertmodule_pnd';
-$route['csv_import']                                = 'keuangan/C_Keuangan/import';
-$route['csv_import_lot']                            = 'keuangan/C_Keuangan/csv_import_lot';
-$route['daily_stock_lot']                           = 'keuangan/C_Keuangan/daily_stock_lot';
-$route['csv_import_po_pnd']                         = 'keuangan/C_Keuangan/csv_import_po_pnd';
-$route['get_data_a/(:any)']                         = 'keuangan/C_Keuangan/get_stock_a/$1';
-$route['detail_lot/(:any)']                         = 'keuangan/C_Keuangan/detail_lot/$1';
-$route['gudang/(:any)']                             = 'keuangan/C_Keuangan/gudang/$1';
-$route['get_data_global']                           = 'keuangan/C_Keuangan/get_data_global';
-$route['list_stock_minimum/(:any)']                 = 'keuangan/C_Keuangan/list_stock_minimum/$1';
-$route['truncateitm/(:any)/(:any)']                 = 'keuangan/C_Keuangan/trsuncateitm/$1/$2';
-$route['deletedata/(:any)']                         = 'keuangan/C_Keuangan/deletedata/$1';
-$route['pagination']                                = 'keuangan/C_Coba1';
-$route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
+$route['hrd_lap_paket_pos']                     = 'hrd/C_Hrd/hrd_lap_penerimaan_pos';
+$route['lap_penerimaan_pos_serverside']         = 'hrd/C_Hrd/lap_penerimaan_pos_serverside';
+$route['tambah_penerimaan_paket']               = 'hrd/C_Hrd/tambah_penerimaan_paket';
+$route['konfirmasi_penerimaan_paket']           = 'hrd/C_Hrd/konfirmasi_penerimaan_paket';
+$route['get_paket_by_id/(:any)']                = 'hrd/C_Hrd/get_paket_by_id/$1';
+$route['edit_penerimaan_paket']                 = 'hrd/C_Hrd/edit_penerimaan_paket';
+$route['hapus_penerimaan_paket']                = 'hrd/C_Hrd/hapus_penerimaan_paket';
 
-// STOCK ONLINE GUDANG
-$route['stock']                                     = 'stock/C_Stock/index';
-$route['stock/detail']                              = 'stock/C_Stock/detail';
-$route['stock/detail/(:any)']                       = 'stock/C_Stock/detail/$1';
-$route['stock/summary']                             = 'stock/C_Stock/summary';
-$route['stock/gudangs']                             = 'stock/C_Stock/gudangs';
-$route['stock/available']                           = 'stock/C_Stock/available';
-$route['stock/items']                               = 'stock/C_Stock/items';
-$route['stock/batches']                             = 'stock/C_Stock/batches';
-$route['stock/ledger']                              = 'stock/C_Stock/ledger';
-$route['stock/reconciliation']                      = 'stock/C_Stock/reconciliation';
-$route['stock/sync']                                = 'stock/C_Stock/sync';
-$route['stock/buffer']                              = 'stock/C_Stock/buffer';
-$route['stock/buffer/summary']                      = 'stock/C_Stock/buffer_summary';
-$route['stock/buffer/items']                        = 'stock/C_Stock/buffer_items';
-$route['stock/buffer/export']                       = 'stock/C_Stock/buffer_export';
-$route['stock/buffer/update-minimum']               = 'stock/C_Stock/buffer_update_min';
+$route['hrd_truck_cek']                         = 'hrd/C_Hrd/hrd_truck_cek';
+$route['ajax_truck_checkup_list']               = 'hrd/C_Hrd/ajax_truck_checkup_list';
+$route['ajax_truck_checkup_detail/(:num)']      = 'hrd/C_Hrd/ajax_truck_checkup_detail/$1';
+$route['ajax_truck_checkup_save']               = 'hrd/C_Hrd/ajax_truck_checkup_save';
+$route['ajax_truck_master_checklist']           = 'hrd/C_Hrd/ajax_truck_master_checklist';
+$route['ajax_mekanik_kategori_list']            = 'hrd/C_Hrd/ajax_mekanik_kategori_list';
+$route['ajax_mekanik_kategori_save']            = 'hrd/C_Hrd/ajax_mekanik_kategori_save';
+$route['ajax_mekanik_kategori_delete']          = 'hrd/C_Hrd/ajax_mekanik_kategori_delete';
+$route['ajax_mekanik_kategori_detail_list']     = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_list';
+$route['ajax_mekanik_kategori_detail_save']     = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_save';
+$route['ajax_mekanik_kategori_detail_delete']   = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_delete';
 
+$route['hrd_chelklist_kendaraan']               = 'hrd/C_Hrd/checklist_kendaraan';
+$route['store_checklist_kendaraan']             = 'hrd/C_Hrd/store_checklist_kendaraan';
+$route['all_laporan_chelist_kendaraan']         = 'hrd/C_Hrd/all_laporan_chelist_kendaraan';
+$route['ajax_checklist_kendaraan']              = 'hrd/C_Hrd/ajax_checklist_kendaraan';
+$route['export_data_checklist_kendaraan']       = 'hrd/C_Hrd/export_laporan_checklist_kendaraan';
+$route['detail_checklist_kendaraan/(:any)']     = 'hrd/C_Hrd/detail_checklist/$1';
 
-// MASTER BARANG
-$route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
-$route['master_barang/list']                        = 'keuangan/C_Keuangan/master_barang_list';
-$route['master_barang/detail']                      = 'keuangan/C_Keuangan/master_barang_detail';
-$route['master_barang/store']                       = 'keuangan/C_Keuangan/master_barang_store';
-$route['master_barang/update']                      = 'keuangan/C_Keuangan/master_barang_update';
-$route['master_barang/delete']                      = 'keuangan/C_Keuangan/master_barang_delete';
-$route['purchase/listBarang']                       = 'keuangan/C_Keuangan/master_barang';
-$route['purchase/listBarang/list']                  = 'keuangan/C_Keuangan/master_barang_list';
-$route['purchase/listBarang/detail']                = 'keuangan/C_Keuangan/master_barang_detail';
-$route['purchase/listBarang/store']                 = 'keuangan/C_Keuangan/master_barang_store';
-$route['purchase/listBarang/update']                = 'keuangan/C_Keuangan/master_barang_update';
-$route['purchase/listBarang/delete']                = 'keuangan/C_Keuangan/master_barang_delete';
-$route['master_customer']                           = 'keuangan/C_Keuangan/master_customer';
-$route['master_customer/list']                      = 'keuangan/C_Keuangan/master_customer_list';
-$route['master_customer/detail']                    = 'keuangan/C_Keuangan/master_customer_detail';
-$route['master_customer/store']                     = 'keuangan/C_Keuangan/master_customer_store';
-$route['master_customer/update']                    = 'keuangan/C_Keuangan/master_customer_update';
-$route['master_customer/delete']                    = 'keuangan/C_Keuangan/master_customer_delete';
+//KPI
+$route['dashboardkpi']                          = 'kpi/C_Kpi';
+$route['dashboardkpiwhat']                      = 'kpi/C_Kpi/what';
+$route['add_kpi_baru']                          = 'kpi/C_Kpi/addkpi';
+$route['detail_kpi/(:any)/(:any)']              = 'kpi/C_Kpi/detail_kpi/$1/$2';
 
-// MASTER - USER MANAGEMENT
-$route['master/user-management']                    = 'master/C_Usermanagement';
-$route['master/user-management/list']               = 'master/C_Usermanagement/list';
-$route['master/user-management/detail/(:num)']      = 'master/C_Usermanagement/detail/$1';
-$route['master/user-management/save']               = 'master/C_Usermanagement/save';
-$route['master/user-management/update/(:num)']      = 'master/C_Usermanagement/update/$1';
-$route['master/user-management/delete/(:num)']      = 'master/C_Usermanagement/delete/$1';
-$route['master/user-management/reset-password/(:num)'] = 'master/C_Usermanagement/reset_password/$1';
-$route['master/user-management/toggle-status/(:num)'] = 'master/C_Usermanagement/toggle_status/$1';
-$route['master/user-management/options']            = 'master/C_Usermanagement/select_options';
-$route['master/user-facility']                      = 'master/C_Userfacility';
-$route['master/user-facility/users']                = 'master/C_Userfacility/users';
-$route['master/user-facility/matrix/(:num)']        = 'master/C_Userfacility/matrix/$1';
-$route['master/user-facility/update']               = 'master/C_Userfacility/update';
-$route['master/jobdesk']                            = 'master/C_Jobdesk';
-$route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
-$route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
-$route['master/jobdesk/save']                       = 'master/C_Jobdesk/save';
-$route['master/jobdesk/update/(:num)']              = 'master/C_Jobdesk/update/$1';
-$route['master/jobdesk/delete/(:num)']              = 'master/C_Jobdesk/delete/$1';
-$route['master/akses-level']                        = 'master/C_Akseslevel';
-$route['master/akses-level/list']                   = 'master/C_Akseslevel/list';
-$route['master/akses-level/detail/(:num)']          = 'master/C_Akseslevel/detail/$1';
-$route['master/akses-level/save']                   = 'master/C_Akseslevel/save';
-$route['master/akses-level/update/(:num)']          = 'master/C_Akseslevel/update/$1';
-$route['master/akses-level/delete/(:num)']          = 'master/C_Akseslevel/delete/$1';
-$route['master/akses-level/matrix/(:num)']          = 'master/C_Akseslevel/matrix/$1';
-$route['master/akses-level/update-permission']      = 'master/C_Akseslevel/update_permission';
-$route['master/menu']                               = 'master/C_Menu';
-$route['master/menu/list']                          = 'master/C_Menu/list';
-$route['master/menu/detail/(:num)']                 = 'master/C_Menu/detail/$1';
-$route['master/menu/save']                          = 'master/C_Menu/save';
-$route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
-$route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
-$route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
-
-// LOGISTIK ICS
-$route['ics']                                       = 'logistik/C_Ics';
-
-$route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
-$route['ics/save_mbarang']                          = 'logistik/C_Ics/add_master_barang';
-$route['ics/save_edit_mbarang']                     = 'logistik/C_Ics/edit_master_barang';
-$route['ics/get_detail_mbarang']                    = 'logistik/C_Ics/get_detail_mbarang';
-
-$route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_expdate';
-$route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
-$route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
-$route['ics/icsdo']                                 = 'logistik/C_Ics/ics_do';
-$route['ics/icsdo/dohistori']                       = 'logistik/C_Ics/history_ics_do';
-$route['ics/icspo']                                 = 'logistik/C_Ics/ics_po';
-$route['ics/data_lpb']                              = 'logistik/C_Ics/data_lpb';
-$route['ics/diffrent']                              = 'logistik/C_Ics/ics_diffrent';
-$route['ics/sv_opname']                             = 'logistik/C_Ics/save_opname_ics';
-$route['ics/get_detail_barang']                     = 'logistik/C_Ics/get_detail_barang';
-$route['ics/ics_stock_controller/(:any)']           = 'logistik/C_Ics/ics_stock_controller/$1';
-$route['ics/get_detail_by_exp_date']                = 'logistik/C_Ics/get_detail_by_exp_date';
-$route['ics/stock_by_kodebr/(:any)']                = 'logistik/C_Ics/stock_by_kodebr/$1';
-$route['ics/get_detail_by_exp']                     = 'logistik/C_Ics/get_detail_by_exp';
-$route['ics/by_allbarang_ics/(:any)']               = 'logistik/C_Ics/by_allbarang_ics/$1';
-$route['ics/detail_allbarang/(:any)']               = 'logistik/C_Ics/ics_detail_allbarang/$1';
-$route['ics/by_expdate_ics/(:any)']                 = 'logistik/C_Ics/by_expdate_ics/$1';
-$route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffrent';
-$route['ics/import_csv']                            = 'logistik/C_Ics/import_csv_po';
-$route['ics/sc_do_by_date_range']                   = 'logistik/C_Ics/sc_do_by_date_range';
-$route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator_operan';
-$route['ics/detail_barang/(:any)']                  = 'logistik/C_Ics/view_detail_master_barang/$1';
-
-$route['ics/gudang']                                = 'logistik/C_Ics/master_gudang';
-$route['ics/gudang_list']                           = 'logistik/C_Ics/gudang_list';
-$route['ics/gudang_save']                           = 'logistik/C_Ics/gudang_save';
-$route['ics/get_wilayah_by_gudang']                 = 'logistik/C_Ics/get_wilayah_by_gudang';
-$route['ics/update_gudang']                         = 'logistik/C_Ics/update_gudang';
-$route['ics/update_wilayah']                        = 'logistik/C_Ics/update_wilayah';
-$route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
-$route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
-$route['ics/sync_po_pre_do']                        = 'logistik/C_Ics/sync_po_pre_do';
-$route['save_qty_diterima']                         = 'logistik/C_Ics/save_qty_diterima';
-$route['get_barang_by_po']                          = 'logistik/C_ics/get_barang_by_po';
-$route['po_selesai']                                = 'logistik/C_Ics/po_selesai';
-$route['riwayat_barang_masuk']                      = 'logistik/C_Ics/riwayat_barang_masuk';
-$route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
-$route['ics/detail_po']                             = 'logistik/C_Ics/detail_po';
-$route['ics/ajax_get_detail_po_rows']               = 'logistik/C_Ics/ajax_get_detail_po_rows';
-$route['ics/detail_record_lpb']                     = 'logistik/C_Ics/detail_record_lpb';
-$route['ics/lpb_manual']                            = 'logistik/C_Ics/lpb_manual';
-$route['ics/lpb_manual/store']                      = 'logistik/C_Ics/ajax_lpb_manual_store';
-$route['ics/lpb_manual/barang']                     = 'logistik/C_Ics/ajax_lpb_manual_barang';
-$route['ics/lpb_report']                            = 'logistik/C_Ics/lpb_report';
-$route['ics/lpb_report/json']                       = 'logistik/C_Ics/ajax_lpb_report_data';
-$route['ics/lpb_report/export_excel']               = 'logistik/C_Ics/export_lpb_report_excel';
-// Import Excel Purchasing ke LPB
-$route['ics/import_lpb']                            = 'logistik/C_ImportLpb/index';
-$route['ics/import_lpb/upload']                     = 'logistik/C_ImportLpb/upload';
-$route['ics/import_lpb/process']                    = 'logistik/C_ImportLpb/process';
-$route['ics/import_lpb/download_template']          = 'logistik/C_ImportLpb/download_template';
-// Summary Hutang Purchasing (Per Faktur)
-$route['ics/summary_hutang']                        = 'logistik/C_Ics/summary_hutang';
-$route['ics/summary_hutang/json']                   = 'logistik/C_Ics/ajax_summary_hutang_data';
-$route['ics/lpb_manual_log']                        = 'logistik/C_Ics/lpb_manual_log';
-$route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
-$route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';
-$route['ics/ajax_get_purchasing_po_detail']         = 'logistik/C_Ics/ajax_get_purchasing_po_detail';
-$route['ics/ajax_get_pre_po_adjustment']            = 'logistik/C_Ics/ajax_get_pre_po_adjustment';
-$route['ics/ajax_submit_adjustment']                = 'logistik/C_Ics/ajax_submit_adjustment';
-$route['ics/ajax_update_lpb_detail_price']          = 'logistik/C_Ics/ajax_update_lpb_detail_price';
-$route['ics/ajax_accept_lpb_detail_price']          = 'logistik/C_Ics/ajax_accept_lpb_detail_price';
-$route['ics/ajax_bulk_accept_lpb_detail_price']     = 'logistik/C_Ics/ajax_bulk_accept_lpb_detail_price';
-$route['ics/ajax_history_adjustment']               = 'logistik/C_Ics/ajax_history_adjustment';
-$route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_history_invoice';
-$route['ics/ajax_history_diskon']                   = 'logistik/C_Ics/ajax_history_diskon';
-$route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
-$route['ics/ajax_split_lpb_multiple_invoice']       = 'logistik/C_Ics/ajax_split_lpb_multiple_invoice';
-$route['ics/ajax_split_lpb_detail']                 = 'logistik/C_Ics/ajax_split_lpb_detail';
-$route['ics/ajax_update_faktur_pajak']              = 'logistik/C_Ics/ajax_update_faktur_pajak';
-$route['ics/ajax_update_lpb_type']                  = 'logistik/C_Ics/ajax_update_lpb_type';
-$route['ics/ajax_unpost_lpb']                       = 'logistik/C_Ics/ajax_unpost_lpb';
-$route['ics/ajax_post_lpb']                         = 'logistik/C_Ics/ajax_post_lpb';
-$route['ics/ajax_update_lpb_identity']              = 'logistik/C_Ics/ajax_update_lpb_identity';
-$route['ics/ajax_update_lpb_sj']                    = 'logistik/C_Ics/ajax_update_lpb_sj';
-$route['ics/ajax_update_lpb_detail_receipt']        = 'logistik/C_Ics/ajax_update_lpb_detail_receipt';
-$route['ics/ajax_generate_lpb_number']              = 'logistik/C_Ics/ajax_generate_lpb_number';
-$route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
-$route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';
-$route['ics/ajax_save_tmp_po_received']             = 'logistik/C_Ics/ajax_save_tmp_po_received';
-$route['ics/ajax_delete_tmp_po_received_row']       = 'logistik/C_Ics/ajax_delete_tmp_po_received_row';
-$route['ics/ajax_finalize_tmp_po_received']         = 'logistik/C_Ics/ajax_finalize_tmp_po_received';
-$route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
-$route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
-$route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
-$route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
-$route['ics/ajax_barang_pergudang']                 = 'logistik/C_Ics/ajax_barang_pergudang';
-$route['ics/api/stock_per_gudang']                  = 'logistik/C_Ics/api_stock_per_gudang';
-
-
-$route['api/v1/stock/(:any)']                       = 'logistik/C_Ics/api_stock/$1';
-
-$route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
-$route['ics/retur/pembelian']                       = 'logistik/C_Ics/retur_pembelian';
-$route['ics/retur/faktur_select2']                  = 'logistik/C_Ics/ajax_retur_faktur_select2';
-$route['ics/retur/barang_select2']                  = 'logistik/C_Ics/ajax_retur_barang_select2';
-$route['ics/retur/lot_select2']                     = 'logistik/C_Ics/ajax_retur_lot_select2';
-$route['ics/retur/exp_select2']                     = 'logistik/C_Ics/ajax_retur_exp_select2';
-$route['ics/retur/add_detail']                      = 'logistik/C_Ics/ajax_retur_add_detail';
-$route['ics/retur/list_detail']                     = 'logistik/C_Ics/ajax_retur_list_detail';
-$route['ics/retur/delete_detail']                   = 'logistik/C_Ics/ajax_retur_delete_detail';
-$route['ics/retur/rekam_penjualan']                 = 'logistik/C_Ics/ajax_retur_rekam_penjualan';
-$route['ics/retur/rekam_pembelian']                 = 'logistik/C_Ics/ajax_retur_rekam_pembelian';
-$route['ics/retur/detail_retur']                    = 'logistik/C_Ics/detail_retur';
-$route['ics/retur/detail_retur/(:any)']             = 'logistik/C_Ics/detail_retur/$1';
-$route['ics/retur/pembelian/faktur_select2']        = 'logistik/C_Ics/ajax_retur_pembelian_faktur_select2';
-$route['ics/retur/pembelian/barang_select2']        = 'logistik/C_Ics/ajax_retur_pembelian_barang_select2';
-$route['ics/retur/pembelian/exp_select2']           = 'logistik/C_Ics/ajax_retur_pembelian_exp_select2';
-$route['ics/retur/pembelian/add_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_add_detail';
-$route['ics/retur/pembelian/list_detail']           = 'logistik/C_Ics/ajax_retur_pembelian_list_detail';
-$route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur_pembelian_delete_detail';
-$route['ics/retur/pembelian/lpb_select2']           = 'logistik/C_Ics/ajax_retur_pembelian_lpb_select2';
-$route['ics/retur/pembelian/lpb_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_lpb_detail';
-$route['ics/retur/pembelian/create_draft']          = 'logistik/C_Ics/ajax_retur_pembelian_create_draft';
-$route['ics/retur/pembelian/submit']                = 'logistik/C_Ics/ajax_retur_pembelian_submit';
-$route['ics/retur/pembelian/verify_purchasing']     = 'logistik/C_Ics/ajax_retur_pembelian_verify_purchasing';
-$route['ics/retur/pembelian/verify_accounting']     = 'logistik/C_Ics/ajax_retur_pembelian_verify_accounting';
-$route['ics/retur/pembelian/post']                  = 'logistik/C_Ics/ajax_retur_pembelian_post';
-$route['ics/retur/pembelian/void']                  = 'logistik/C_Ics/ajax_retur_pembelian_void';
-$route['ics/retur/pembelian/monitoring']                          = 'logistik/C_Ics/retur_pembelian_monitoring';
-$route['ics/retur/pembelian/monitoring/detail/(:num)']           = 'logistik/C_Ics/ajax_retur_pembelian_monitoring_detail/$1';
-$route['ics/retur/pembelian/monitoring/update_status']           = 'logistik/C_Ics/ajax_retur_pembelian_update_persiapan';
-$route['ics/retur/pembelian/monitoring/toggle_item']             = 'logistik/C_Ics/ajax_retur_pembelian_toggle_item_persiapan';
-$route['ics/retur/pembelian/adjustment']            = 'logistik/C_Ics/retur_pembelian_adjustment';
-$route['ics/retur/pembelian/adjustment/lpb_select2'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_select2';
-$route['ics/retur/pembelian/adjustment/lpb_detail'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_detail';
-$route['ics/retur/pembelian/adjustment/post']       = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_post';
-$route['ics/lpb_revision']                          = 'logistik/C_Ics/lpb_revision';
-$route['ics/lpb_revision/create']                   = 'logistik/C_Ics/ajax_lpb_revision_create';
-$route['ics/lpb_revision/detail']                   = 'logistik/C_Ics/ajax_lpb_revision_detail';
-$route['ics/lpb_revision/unpost_faktur']            = 'logistik/C_Ics/ajax_lpb_revision_unpost_faktur';
-$route['ics/lpb_revision/unpost_lpb']               = 'logistik/C_Ics/ajax_lpb_revision_unpost_lpb';
-$route['ics/lpb_revision/finish']                   = 'logistik/C_Ics/ajax_lpb_revision_finish';
-
-// MUTASI BARANG GUDANG
-$route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
-$route['ics/mutasi_barang/input']                   = 'logistik/C_Ics/input_mutasi_barang';
-$route['ics/mutasi_barang/list_barang']             = 'logistik/C_Ics/list_barang_mutasi';
-
-$route['ics/ajax_barang_select2']                   = 'logistik/C_Ics/ajax_barang_select2';
-$route['ics/ajax_expired_by_barang']                = 'logistik/C_Ics/ajax_expired_by_barang';
-
-$route['ics/ajax_barang_by_gudang']                 = 'logistik/C_Ics/ajax_barang_by_gudang';
-$route['ics/ajax_exp_by_gudang_barang']             = 'logistik/C_Ics/ajax_exp_by_gudang_barang';
-$route['ics/ajax_get_qty_gudang']                   = 'logistik/C_Ics/ajax_get_qty_gudang';
-$route['ics/ajax_list_barang_mutasi_gudang']        = 'logistik/C_Ics/ajax_list_barang_mutasi_gudang';
-$route['ics/ajax_lot_tmp_mutasi']                   = 'logistik/C_Ics/ajax_lot_tmp_mutasi';
-$route['ics/ajax_mutasi_lot_select2']               = 'logistik/C_Ics/ajax_mutasi_lot_select2';
-$route['ics/ajax_mutasi_exp_select2']               = 'logistik/C_Ics/ajax_mutasi_exp_select2';
-$route['ics/ajax_mutasi_lot_qty']                   = 'logistik/C_Ics/ajax_mutasi_lot_qty';
-$route['ics/ajax_add_tmp_mutasi']                   = 'logistik/C_Ics/ajax_add_tmp_mutasi';
-$route['ics/ajax_list_tmp_mutasi']                  = 'logistik/C_Ics/ajax_list_tmp_mutasi';
-$route['ics/ajax_update_tmp_mutasi']                = 'logistik/C_Ics/ajax_update_tmp_mutasi';
-$route['ics/ajax_update_tmp_mutasi_field']          = 'logistik/C_Ics/ajax_update_tmp_mutasi_field';
-$route['ics/ajax_delete_tmp_mutasi']                = 'logistik/C_Ics/ajax_delete_tmp_mutasi';
-$route['ics/ajax_rekam_mutasi']                     = 'logistik/C_Ics/ajax_rekam_mutasi';
-
-$route['ics/ajax_detail_mutasi']                    = 'logistik/C_Ics/ajax_detail_mutasi';
-$route['ics/ajax_rollback_mutasi']                  = 'logistik/C_Ics/ajax_rollback_mutasi';
-$route['ics/ajax_delete_mutasi']                    = 'logistik/C_Ics/ajax_delete_mutasi';
-$route['ics/ajax_unpost_mutasi']                    = 'logistik/C_Ics/ajax_unpost_mutasi';
-$route['ics/ajax_filter_mutasi']                    = 'logistik/C_Ics/ajax_filter_mutasi';
-
-
-$route['logistik/stock']                            = 'logistik/C_Ics/saldo_stock';
-$route['logistik/lpb']                              = 'logistik/C_Ics/create_lpb';
-
-// LOGISTIK - DISTRIBUSI
-$route['logistik/distibusi']                        = 'logistik/C_Distribusi';
-$route['logistik/distibusi/get_ploting_rute']       = 'logistik/C_Distribusi/get_ploting_rute';
-$route['logistik/distibusi/driver_rute_matrix']     = 'logistik/C_Distribusi/driver_rute_matrix';
-$route['logistik/distibusi/driver_ready']           = 'logistik/C_Distribusi/driver_ready';
-$route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/list_faktur_status';
-$route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
-$route['logistik/distibusi/list_total_kirim_do']    = 'logistik/C_Distribusi/list_total_kirim_do';
-$route['logistik/distibusi/ajax_total_kirim_do']    = 'logistik/C_Distribusi/ajax_total_kirim_do';
-$route['logistik/distibusi/export_total_kirim_do']    = 'logistik/C_Distribusi/export_total_kirim_do';
-$route['logistik/distibusi/driver_productif']       = 'logistik/C_Distribusi/driver_productif';
-$route['logistik/distibusi/ajax_driver_productif']  = 'logistik/C_Distribusi/ajax_driver_productif';
-$route['logistik/distibusi/export_driver_productif']  = 'logistik/C_Distribusi/export_driver_productif';
-$route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
-$route['logistik/distibusi/ajax_detail_tonase_by_rute'] = 'logistik/C_Distribusi/ajax_detail_tonase_by_rute';
-$route['logistik/distibusi/ajax_dashboard_distribusi'] = 'logistik/C_Distribusi/ajax_dashboard_distribusi';
-
-$route['distibusi/detail_rute/(:any)']              = 'logistik/C_Distribusi/detail_rute/$1';
-$route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/detail_tonase_by_rute/$1';
-
-
-// LOGISTIK & OPNAME
-$route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
-$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
-$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
-$route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
-$route['stockopname']                               = 'logistik/C_Logistik/stockopname';
-$route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
-$route['detailbarang/(:any)']                       = 'logistik/C_Logistik/detailbarang/$1';
-$route['forminput/(:any)/(:any)']                   = 'logistik/C_Logistik/forminput/$1/$2';
-$route['insertopname']                              = 'logistik/C_Logistik/insertopname';
-$route['stkopname_tracking']                        = 'logistik/C_Logistik/stkopname_tracking';
-$route['admstocktracking']                          = 'logistik/C_Logistik/admstocktracking';
-$route['searchbarang']                              = 'logistik/C_Logistik/searchbarang';
-$route['search_get_exp_date']                       = 'logistik/C_Logistik/search_get_exp_date';
-$route['save_opname']                               = 'logistik/C_Logistik/save_opname';
-$route['save_edit_opname']                          = 'logistik/C_Logistik/save_edit_opname';
-$route['request_opname']                            = 'logistik/C_Logistik/request_opname';
-$route['cek_req_user_opname/(:any)/(:any)']         = 'logistik/C_Logistik/cek_req_user_opname/$1/$2';
-$route['req_opname_acc/(:any)']                     = 'logistik/C_Logistik/req_opname_acc/$1';
-$route['trackingtim/(:any)']                        = 'logistik/C_Logistik/admtrackingtim/$1';
-$route['compare_opname']                            = 'logistik/C_Logistik/compare_opname';
-$route['compare_wilayah/(:any)']                    = 'logistik/C_Logistik/compare_wilayah/$1';
-$route['opname_datapending']                        = 'logistik/C_Logistik/opname_datapending';
-$route['request_opname_admin']                      = 'logistik/C_Logistik/request_opname_admin';
-$route['detailtrack/(:any)/(:any)']                 = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
-$route['export_compare_allbarang']                  = 'logistik/C_Logistik/export_compare_allbarang';
-$route['usropname_input']                           = 'logistik/C_Logistik/usropname_input';
-$route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
-$route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
-
-//LOGISTIK - DO
-$route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
-$route['pre_do/insert_csv']                         = 'logistik/C_Logistik/insert_csv';
-$route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
-$route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
-$route['logistik/so_siap_loading']                  = 'logistik/C_Logistik/so_siap_loading';
-$route['logistik/so_siap_loading/tambah']           = 'logistik/C_Logistik/tambah_so_siap_loading';
-$route['logistik/so_siap_loading/tambah/(:any)']    = 'logistik/C_Logistik/simpan_tambah_so_siap_loading/$1';
-$route['logistik/so_siap_loading/verifikasi/(:any)'] = 'logistik/C_Logistik/verifikasi_barang_so_siap_loading/$1';
-$route['logistik/so_siap_loading/verifikasi/(:any)/simpan'] = 'logistik/C_Logistik/simpan_verifikasi_barang_so_siap_loading/$1';
-$route['logistik/so_siap_loading/update_urutan']     = 'logistik/C_Logistik/update_urutan_so_siap_loading';
-$route['logistik/so_siap_loading/siap_faktur']      = 'logistik/C_Logistik/siap_faktur_so_siap_loading';
-$route['logistik/so_siap_loading/kembalikan/(:any)'] = 'logistik/C_Logistik/kembalikan_so_siap_loading/$1';
-$route['create_do']                                 = 'logistik/C_Logistik/create_do';
-$route['view_faktur_not_list']                      = 'logistik/C_Logistik/view_faktur_not_list';
-$route['ajax_view_faktur_not_list']                 = 'logistik/C_Logistik/ajax_view_faktur_not_list';
-$route['ajax_update_kd_barang_not_list']            = 'logistik/C_Logistik/ajax_update_kd_barang_not_list';
-$route['faktur_on_site']                            = 'logistik/C_Logistik/faktur_on_site';
-$route['edited_rute_do']                            = 'logistik/C_Logistik/edited_rute_do';
-$route['insert_tmp']                                = 'logistik/C_Logistik/insert_tmp';
-$route['insert_tmp/(:any)/(:any)']                  = 'logistik/C_Logistik/insert_tmp/$1/$2';
-$route['revert_do']                                 = 'logistik/C_Logistik/revert_do';
-$route['revert_do/(:any)/(:any)']                   = 'logistik/C_Logistik/revert_do/$1/$2';
-$route['cancel_fk/(:any)/(:any)']                   = 'logistik/C_Logistik/cancel_fk/$1/$2';
-$route['detail_fk']                                 = 'logistik/C_Logistik/detail_fk';
-$route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detail_fk/$1';
-$route['insertfromdraft']                           = 'logistik/C_Logistik/insertfromdraft';
-$route['insertfromdraft_batch']                     = 'logistik/C_Logistik/insertfromdraft_batch';
-$route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
-$route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
-$route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
-
-$route['faktur_bintang']                            = 'logistik/C_Logistik/faktur_bintang';
-$route['get_fktur_bintang']                         = 'logistik/C_Logistik/get_fktur_bintang';
-$route['get_customer_bintang']                      = 'logistik/C_Logistik/get_customer_bintang';
-$route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
-
-$route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
-$route['do/confirm_sales']              = 'logistik/C_Logistik/confirm_sales';
-$route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
-
-// LOGISTIK - Checker
-$route['checker']                                   = 'logistik/C_Checker/index';
-$route['checker/so_loading']                        = 'logistik/C_Checker/so_loading';
-$route['checker/so_loading/detail/(:any)']          = 'logistik/C_Checker/so_loading_detail/$1';
-$route['checker/toggle_so_item_loaded']             = 'logistik/C_Checker/toggle_so_item_loaded';
-$route['checker/selesai_loading_rute']              = 'logistik/C_Checker/selesai_loading_rute';
-$route['checker/dashboard']                         = 'logistik/C_Checker/dashboard';
-$route['checker/arsip']                             = 'logistik/C_Checker/arsip';
-// Bongkaran
-$route['checker/store']                             = 'logistik/C_Checker/store';
-$route['checker/start']                             = 'logistik/C_Checker/start';
-$route['checker/update_progres']                    = 'logistik/C_Checker/update_progres';
-$route['checker/done']                              = 'logistik/C_Checker/done';
-$route['checker/pause']                             = 'logistik/C_Checker/pause';
-$route['checker/resume']                            = 'logistik/C_Checker/resume';
-$route['checker/update_status_bongkaran']           = 'logistik/C_Checker/update_status_bongkaran';
-$route['checker/archive_all_today']                 = 'logistik/C_Checker/archive_all_today';
-$route['checker/ganti_checker']                     = 'logistik/C_Checker/ganti_checker';
-// KK
-$route['checker/store_kk']                          = 'logistik/C_Checker/store_kk';
-$route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';
-$route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
-$route['checker/siap_loading_kk']                   = 'logistik/C_Checker/siap_loading_kk';
-$route['checker/update_kk']                         = 'logistik/C_Checker/update_kk';
-$route['checker/start_kk']                          = 'logistik/C_Checker/start_kk';
-$route['checker/update_progres_kk']                 = 'logistik/C_Checker/update_progres_kk';
-$route['checker/done_kk']                           = 'logistik/C_Checker/done_kk';
-$route['checker/pause_kk']                          = 'logistik/C_Checker/pause_kk';
-$route['checker/resume_kk']                         = 'logistik/C_Checker/resume_kk';
-$route['checker/ganti_checker_kk']                  = 'logistik/C_Checker/ganti_checker_kk';
-$route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
-// LK
-$route['checker/store_lk']                          = 'logistik/C_Checker/store_lk';
-$route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
-$route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
-$route['checker/siap_loading_lk']                   = 'logistik/C_Checker/siap_loading_lk';
-$route['checker/update_lk']                         = 'logistik/C_Checker/update_lk';
-$route['checker/start_lk']                          = 'logistik/C_Checker/start_lk';
-$route['checker/update_progres_lk']                 = 'logistik/C_Checker/update_progres_lk';
-$route['checker/done_lk']                           = 'logistik/C_Checker/done_lk';
-$route['checker/pause_lk']                          = 'logistik/C_Checker/pause_lk';
-$route['checker/resume_lk']                         = 'logistik/C_Checker/resume_lk';
-$route['checker/ganti_checker_lk']                  = 'logistik/C_Checker/ganti_checker_lk';
-$route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
-// Siapkan Barang KK
-$route['checker/start_siapkan_kk']                  = 'logistik/C_Checker/start_siapkan_kk';
-$route['checker/update_progres_siapkan_kk']         = 'logistik/C_Checker/update_progres_siapkan_kk';
-$route['checker/done_siapkan_kk']                   = 'logistik/C_Checker/done_siapkan_kk';
-$route['checker/pause_siapkan_kk']                  = 'logistik/C_Checker/pause_siapkan_kk';
-$route['checker/resume_siapkan_kk']                 = 'logistik/C_Checker/resume_siapkan_kk';
-// Siapkan Barang LK
-$route['checker/start_siapkan_lk']                  = 'logistik/C_Checker/start_siapkan_lk';
-$route['checker/update_progres_siapkan_lk']         = 'logistik/C_Checker/update_progres_siapkan_lk';
-$route['checker/done_siapkan_lk']                   = 'logistik/C_Checker/done_siapkan_lk';
-$route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_siapkan_lk';
-$route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
-// Notifikasi
-$route['checker/push_notif']                        = 'logistik/C_Checker/push_notif';
-$route['checker/get_notif']                         = 'logistik/C_Checker/get_notif';
-$route['checker/read_notif']                        = 'logistik/C_Checker/read_notif';
-
-//LOGISTIK - DO (FAKTUR PENDING)
-$route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
-$route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/create_pending_do/$1';
-
-// $route['list_faktur/(:any)/(:any)']              = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
-
-$route['list_faktur/(:any)']                        = 'logistik/C_Logistik/list_faktur_sortby_rute/$1';
-$route['acc_check/(:any)/(:any)/(:any)']            = 'logistik/C_Logistik/acc_check/$1/$2/$3';
-$route['rekam_order_check']                         = 'logistik/C_Logistik/rekam_order_check';
-$route['do/update_urutan_faktur']                   = 'logistik/C_Logistik/update_urutan_faktur_do';
-$route['do/repost_status']                          = 'logistik/C_Logistik/repost_status';
-$route['do/delete_ics_do']                          = 'logistik/C_Logistik/delete_ics_do';
-$route['print_do/(:any)']                           = 'logistik/C_Logistik/print_do/$1';
-$route['print_regis/(:any)']                        = 'logistik/C_Logistik/print_regis/$1';
-$route['print_checker/(:any)']                      = 'logistik/C_Logistik/print_checker/$1';
-$route['pnd_br_detpo/(:any)/(:any)/(:any)']         = 'logistik/C_Logistik/pnd_br_detpo/$1/$2/$3';
-$route['get_barang']                                = 'logistik/C_Logistik/get_barang';
-$route['get_barang_pending_detail']                 = 'logistik/C_Logistik/get_barang_pending_detail';
-$route['update_barang_pending']                     = 'logistik/C_Logistik/update_barang_pending';
-$route['update_barang']                             = 'logistik/C_Logistik/update_barang';
-$route['rekam_do']                                  = 'logistik/C_Logistik/rekam_do';
-$route['truncatelog/(:any)/(:any)']                 = 'logistik/C_Logistik/truncatelog/$1/$2';
-$route['get_tmp_do']                                = 'logistik/C_Logistik/get_tmp_do';
-$route['get_tmpdonorut']                            = 'logistik/C_Logistik/get_tmpdonorut';
-$route['update_norut']                              = 'logistik/C_Logistik/update_norut';
-$route['save_do']                                   = 'logistik/C_Logistik/save_do';
-$route['custupdate']                                = 'logistik/C_Logistik/custupdate';
-
-// ---- Sales Order ----
-$route['sales_order']                               = 'sales/C_SalesOrder/index';
-$route['sales_order/create']                        = 'sales/C_SalesOrder/create';
-$route['sales_order/store']                         = 'sales/C_SalesOrder/store';
-$route['sales_order/detail/(:any)']                 = 'sales/C_SalesOrder/detail/$1';
-$route['sales_order/edit/(:any)']                   = 'sales/C_SalesOrder/edit/$1';
-$route['sales_order/update/(:any)']                 = 'sales/C_SalesOrder/update/$1';
-$route['sales_order/cancel/(:any)']                 = 'sales/C_SalesOrder/cancel/$1';
-$route['sales_order/rekam/(:any)']                  = 'sales/C_SalesOrder/rekam/$1';
-$route['sales_order/approval']                      = 'sales/C_SalesOrder/approval';
-$route['sales_order/approve']                       = 'sales/C_SalesOrder/approve';
-$route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
-$route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
-$route['sales_order/refresh_plafon_customers']      = 'sales/C_SalesOrder/refresh_plafon_customers';
-$route['sales_order/ajax_customer_piutang']          = 'sales/C_SalesOrder/ajax_customer_piutang';
-$route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
-$route['sales_order/activity_log_so/(:any)']        = 'sales/C_SalesOrder/activity_log_so/$1';  // tambahan
-$route['sales_order/form_faktur/(:any)']            = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';       // faktur dibuat dari Admin SC
-$route['sales_order/simpan_faktur/(:any)']          = 'sales/C_SalesOrder/simpan_faktur/$1';     // tambahan
-$route['sales_order/detail_faktur/(:any)']          = 'sales/C_SalesOrder/detail_faktur/$1';     // tambahan
-$route['sales_order/admin_sc']                      = 'sales/C_SalesOrder/admin_sc';
-$route['sales_order/admin_sc/faktur']               = 'sales/C_SalesOrder/admin_sc_faktur';
-$route['sales_order/admin_sc/faktur/print_rute']    = 'sales/C_SalesOrder/admin_sc_print_faktur_rute';
-$route['sales_order/admin_sc/pilih_barang/(:any)']  = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';
-$route['sales_order/admin_sc/form_faktur/(:any)']   = 'sales/C_SalesOrder/admin_sc_form_faktur/$1';
-$route['sales_order/admin_sc/update_harga_faktur/(:any)'] = 'sales/C_SalesOrder/admin_sc_update_harga_faktur/$1';
-$route['admin_sc']                                  = 'sales/C_SalesOrder/admin_sc';
-$route['sales_order/faktur_rute']                   = 'sales/C_SalesOrder/faktur_rute';
-$route['sales_order/so_rute']                       = 'sales/C_SalesOrder/so_rute';
-$route['sales_order/bulk_update_so_rute']           = 'sales/C_SalesOrder/bulk_update_so_rute';
-$route['sales_order/reset_so_rute']                 = 'sales/C_SalesOrder/reset_so_rute';
-$route['sales_order/confirm_so_rute_loading']       = 'sales/C_SalesOrder/confirm_so_rute_loading';
-$route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
-$route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
-$route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
-$route['sales_order/confirm_rute_loading']          = 'sales/C_SalesOrder/confirm_rute_loading';
-$route['sales_order/admin_sc/repost_faktur_item']   = 'sales/C_SalesOrder/repost_faktur_item';
-$route['sales_order/admin_sc/get_faktur_detail_json'] = 'sales/C_SalesOrder/get_faktur_detail_json';
-$route['sales_order/admin_sc/get_faktur_detail_info_json'] = 'sales/C_SalesOrder/get_faktur_detail_info_json';
-$route['pecah_faktur']                              = 'sales/C_SalesOrder/pecah_faktur';
-$route['sales_order/pecah_faktur']                  = 'sales/C_SalesOrder/pecah_faktur';
-$route['pecah_faktur_kios/(:any)']                  = 'sales/C_SalesOrder/pecah_faktur_kios/$1';
-$route['sales_order/pecah_faktur_kios/(:any)']      = 'sales/C_SalesOrder/pecah_faktur_kios/$1';
-$route['sales_order/auto_split_kios/(:any)']        = 'sales/C_SalesOrder/auto_split_kios/$1';
-$route['sales_order/split_faktur/(:any)']           = 'sales/C_SalesOrder/split_faktur/$1';
-$route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpan_split_faktur/$1';
-$route['sales_order/split_faktur_batch']            = 'sales/C_SalesOrder/split_faktur_batch';
-$route['sales_order/simpan_split_faktur_batch']     = 'sales/C_SalesOrder/simpan_split_faktur_batch';
-$route['sales_order/detail_faktur_pecah/(:any)']     = 'sales/C_SalesOrder/detail_faktur_pecah/$1';
-$route['sales_order/customer_acak']                  = 'sales/C_SalesOrder/customer_acak';
-$route['sales_order/sync_customer_acak']             = 'sales/C_SalesOrder/sync_customer_acak';
-$route['sales_order/simpan_customer_acak']           = 'sales/C_SalesOrder/simpan_customer_acak';
-$route['sales_order/update_customer_acak']           = 'sales/C_SalesOrder/update_customer_acak';
-$route['sales_order/hapus_customer_acak/(:any)']      = 'sales/C_SalesOrder/hapus_customer_acak/$1';
-$route['sales_order/get_next_kode_acak']             = 'sales/C_SalesOrder/get_next_kode_acak';
-$route['sales_order/ajax_search_kios']               = 'sales/C_SalesOrder/ajax_search_kios';
-$route['sales_order/export_faktur_pecah']              = 'sales/C_SalesOrder/export_faktur_pecah';
-$route['pecah_faktur/export']                         = 'sales/C_SalesOrder/export_faktur_pecah';
-$route['sales_order/export_faktur_z_selesai']         = 'sales/C_SalesOrder/export_faktur_z_selesai';
-$route['pecah_faktur/export_selesai']                 = 'sales/C_SalesOrder/export_faktur_z_selesai';
-$route['sales_order/reset_pecah_faktur_induk/(:any)'] = 'sales/C_SalesOrder/reset_pecah_faktur_induk/$1';
-$route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
-$route['sales_order/admin_sc/get_faktur_activity_log_json'] = 'sales/C_SalesOrder/get_faktur_activity_log_json';
-$route['sales_order/admin_sc/activity_log'] = 'sales/C_SalesOrder/admin_sc_activity_log';
-
-// ---- Sales Order Loby (Direct Cash Sales) ----
-$route['sales_order_loby']                                  = 'sales/C_SalesOrderLoby/index';
-$route['sales_order_loby/create']                           = 'sales/C_SalesOrderLoby/create';
-$route['sales_order_loby/store']                            = 'sales/C_SalesOrderLoby/store';
-$route['sales_order_loby/detail/(:any)']                    = 'sales/C_SalesOrderLoby/detail/$1';
-$route['sales_order_loby/edit/(:any)']                      = 'sales/C_SalesOrderLoby/edit/$1';
-$route['sales_order_loby/update/(:any)']                    = 'sales/C_SalesOrderLoby/update/$1';
-$route['sales_order_loby/cancel/(:any)']                    = 'sales/C_SalesOrderLoby/cancel/$1';
-$route['sales_order_loby/delete/(:any)']                    = 'sales/C_SalesOrderLoby/delete/$1';
-$route['sales_order_loby/unpost']                           = 'sales/C_SalesOrderLoby/unpost';
-$route['sales_order_loby/unpost/(:any)']                    = 'sales/C_SalesOrderLoby/unpost/$1';
-$route['sales_order_loby/form_faktur/(:any)']               = 'sales/C_SalesOrderLoby/form_faktur/$1';
-$route['sales_order_loby/simpan_faktur/(:any)']             = 'sales/C_SalesOrderLoby/simpan_faktur/$1';
-$route['sales_order_loby/detail_faktur/(:any)']             = 'sales/C_SalesOrderLoby/detail_faktur/$1';
-$route['sales_order_loby/print_faktur/(:any)']              = 'sales/C_SalesOrderLoby/print_faktur/$1';
-$route['sales_order_loby/detail_jurnal_ajax/(:any)']        = 'sales/C_SalesOrderLoby/detail_jurnal_ajax/$1';
-$route['sales_order_loby/get_stock']                        = 'sales/C_SalesOrderLoby/get_stock';
-$route['sales_order_loby/get_barang']                       = 'sales/C_SalesOrderLoby/get_barang';
-
-
-
-// ---- Retur Penjualan (SPR) ----
-$route['retur_penjualan']                                    = 'sales/C_ReturPenjualan/index';
-$route['retur_penjualan/create']                             = 'sales/C_ReturPenjualan/create';
-$route['retur_penjualan/store']                              = 'sales/C_ReturPenjualan/store';
-$route['retur_penjualan/edit/(:any)']                        = 'sales/C_ReturPenjualan/edit/$1';
-$route['retur_penjualan/update/(:any)']                      = 'sales/C_ReturPenjualan/update/$1';
-$route['retur_penjualan/delete/(:any)']                      = 'sales/C_ReturPenjualan/delete/$1';
-$route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPenjualan/detail/$1';
-$route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
-$route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
-$route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPenjualan/ajax_search_barang';
-$route['retur_penjualan/ajax/search_customer']               = 'sales/C_ReturPenjualan/ajax_search_customer';
-// Manager SC (Mng SC)
-$route['retur_penjualan/mngsc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/mngsc_verifikasi/$1';
-$route['retur_penjualan/mngsc/simpan/(:any)']              = 'sales/C_ReturPenjualan/mngsc_simpan/$1';
-// Kadep UB (Jagung)
-$route['retur_penjualan/kadepub/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/kadepub_verifikasi/$1';
-$route['retur_penjualan/kadepub/simpan/(:any)']              = 'sales/C_ReturPenjualan/kadepub_simpan/$1';
-// Admin Retur (Adm Retur)
-$route['retur_penjualan/admretur/cek/(:any)']                = 'sales/C_ReturPenjualan/admretur_cek/$1';
-$route['retur_penjualan/admretur/simpan/(:any)']             = 'sales/C_ReturPenjualan/admretur_simpan/$1';
-// Kadep SC
-$route['retur_penjualan/kadep_sc/approve/(:any)']            = 'sales/C_ReturPenjualan/kadep_sc_approve/$1';
-$route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPenjualan/kadep_sc_simpan/$1';
-// Logistik
-$route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPenjualan/logistik_proses/$1';
-$route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
-$route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
-
-// ---- ADMLPB2 — Buat Retur dari SPR disetujui Kadep ----
-$route['retur_penjualan/admlpb2']                            = 'sales/C_ReturPenjualan/admlpb2_index';
-$route['retur_penjualan/retur/buat/(:any)']                  = 'sales/C_ReturPenjualan/retur_buat/$1';
-$route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';
-$route['retur_penjualan/retur/edit/(:any)']                  = 'sales/C_ReturPenjualan/retur_edit/$1';
-$route['retur_penjualan/retur/update/(:any)']                = 'sales/C_ReturPenjualan/retur_update/$1';
-$route['retur_penjualan/retur/submit/(:any)']                = 'sales/C_ReturPenjualan/retur_submit/$1';
-
-// ---- Retur Penjualan ----
-$route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
-$route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
-$route['retur_penjualan/retur/approve/(:any)']               = 'sales/C_ReturPenjualan/retur_approve/$1';
-$route['retur_penjualan/retur/approve_simpan/(:any)']        = 'sales/C_ReturPenjualan/retur_approve_simpan/$1';
-$route['retur_penjualan/retur/print/(:any)']                 = 'sales/C_ReturPenjualan/retur_print/$1';
-$route['retur_penjualan/retur/history']                       = 'sales/C_ReturPenjualan/retur_history';
-// Admin Stock
-$route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
-$route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';
-// Collection
-$route['retur_penjualan/retur/collection/(:any)']            = 'sales/C_ReturPenjualan/retur_collection/$1';
-$route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_collection_simpan/$1';
-// Kasir
-$route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPenjualan/retur_kasir/$1';
-$route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
-$route['retur_penjualan/activity_log']                       = 'sales/C_ReturPenjualan/activity_log';
-$route['retur_penjualan/get_pending_notifications']          = 'sales/C_ReturPenjualan/get_pending_notifications';
-
-// COBA API
-$route['getdata_kiupo']                             = 'api/C_Api';
-$route['sync_pre_po_erp']                          = 'api/C_Api/sync_pre_po_erp';
-
-//SCHEDULE DIREKTUR
-$route['schedule_direktur']                         = 'schedule/C_Schedule';
-$route['act_schedule/(:any)']                       = 'schedule/C_Schedule/act_schedule/$1';
-
-// DEVELOPMENT 
-$route['development']                               = 'schedule/C_Development/dashboard_do';
-
-// EXTRAVAGANZA - UNDIAN
-$route['extravaganza']                              = 'extravaganza/C_Extravaganza';
-$route['extravaganza_undian']                       = 'extravaganza/C_Extravaganza/undian';
-$route['extravaganza_savewin']                      = 'extravaganza/C_Extravaganza/save_win';
-
-// EXTRAVAGANZA - REGISTRASI
-$route['extravaganza_registrasi']                   = 'extravaganza/C_Extravaganza/registrasi_tamu';
-
-// USER REPORT
-$route['user_report']                               = 'karyawan_report/C_Report';
-
-// PRICELIST - ONLINE & INTEGRATED MODULE
-$route['pricelist_online']                          = 'keuangan/C_Keuangan/pricelist_online';
-$route['pricelist']                                 = 'C_Pricelist/index';
-$route['pricelist/data']                            = 'C_Pricelist/ajax_data';
-$route['pricelist/update_margin']                   = 'C_Pricelist/update_margin';
-$route['pricelist/recalculate']                     = 'C_Pricelist/recalculate_all';
-$route['pricelist/history']                         = 'C_Pricelist/history';
-
-// SALES TONASE KUBIKASI
-$route['sales_report']                              = 'sales/C_Sales/dashboard_sales';
-
-// EXPORT
-$route['export-stock']                              = 'logistik/C_ExportStock/export';
-
-// SALES KIU KATALOG
-$route['kiu_katalog']                               = 'sales/C_ExportStock/export';
+//UserAccount
+$route['userAdmin']                             = 'user/Admin';
+$route['addUser']                               = 'user/Admin/addUser';
 
 //IndeksNilaiKepuasanPelanggan
-$route['kepuasan_pelanggan']                        = 'pelanggan/C_Pelanggan';
-$route['nilai_ipkp/(:any)']                         = 'pelanggan/C_Pelanggan/input_nilai/$1';
-$route['ratingreview']                              = 'pelanggan/C_Pelanggan/rating_review';
+$route['kepuasan_pelanggan']                    = 'pelanggan/C_Pelanggan';
+$route['nilai_ipkp/(:any)']                     = 'pelanggan/C_Pelanggan/input_nilai/$1';
+$route['ratingreview']                          = 'pelanggan/C_Pelanggan/rating_review';
 
-// LPB
-$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
-$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
-
-//LOGISTIK - Checker
-$route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';
-$route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
-$route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
-$route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
-$route['checker/pause']                             = 'logistik/C_Checker/pause';
-$route['checker/resume']                            = 'logistik/C_Checker/resume';
-$route['checker/pause_kk']                          = 'logistik/C_Checker/pause_kk';
-$route['checker/resume_kk']                         = 'logistik/C_Checker/resume_kk';
-$route['checker/pause_lk']                          = 'logistik/C_Checker/pause_lk';
-$route['checker/resume_lk']                         = 'logistik/C_Checker/resume_lk';
-$route['checker/start_siapkan_kk']                  = 'logistik/C_Checker/start_siapkan_kk';
-$route['checker/update_progres_siapkan_kk']         = 'logistik/C_Checker/update_progres_siapkan_kk';
-$route['checker/done_siapkan_kk']                   = 'logistik/C_Checker/done_siapkan_kk';
-$route['checker/pause_siapkan_kk']                  = 'logistik/C_Checker/pause_siapkan_kk';
-$route['checker/resume_siapkan_kk']                 = 'logistik/C_Checker/resume_siapkan_kk';
-$route['checker/start_siapkan_lk']                  = 'logistik/C_Checker/start_siapkan_lk';
-$route['checker/update_progres_siapkan_lk']         = 'logistik/C_Checker/update_progres_siapkan_lk';
-$route['checker/done_siapkan_lk']                   = 'logistik/C_Checker/done_siapkan_lk';
-$route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_siapkan_lk';
-$route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
-$route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
-$route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
-
-// BUKU BESAR & JURNAL UMUM
-$route['buku_besar/jurnal_umum']                    = 'keuangan/C_BukuBesar/jurnal_umum';
-$route['buku_besar/jurnal_umum_list']               = 'keuangan/C_BukuBesar/jurnal_umum_list';
-$route['buku_besar/jurnal_umum_store']              = 'keuangan/C_BukuBesar/jurnal_umum_store';
-$route['buku_besar/jurnal_umum_delete']             = 'keuangan/C_BukuBesar/jurnal_umum_delete';
-$route['buku_besar/jurnal_umum_detail']             = 'keuangan/C_BukuBesar/jurnal_umum_detail';
-$route['buku_besar/jurnal_umum_next_ref']           = 'keuangan/C_BukuBesar/get_next_ref';
-// APPROVAL EDIT HARGA SALES ORDER
-$route['sales_order/admin_sc/minta_approval_harga/(:num)']  = 'sales/C_SalesOrder/admin_sc_minta_approval_harga/$1';
-$route['sales_order/admin_sc/get_approval_status/(:num)']    = 'sales/C_SalesOrder/admin_sc_get_approval_status/$1';
-$route['sales_order/admin_sc/approve_harga']                 = 'sales/C_SalesOrder/admin_sc_approve_harga';
-$route['sales_order/admin_sc/reject_harga']                  = 'sales/C_SalesOrder/admin_sc_reject_harga';
-$route['sales_order/admin_sc/get_pending_approvals']         = 'sales/C_SalesOrder/admin_sc_get_pending_approvals';
-
-// Pembatalan Sisa Barang (Partial)
-$route['sales_order/get_partial_items/(:any)']             = 'sales/C_SalesOrder/get_partial_items/$1';
-$route['sales_order/request_cancel_partial']               = 'sales/C_SalesOrder/request_cancel_partial';
-$route['sales_order/admin_sc_get_pending_cancel_requests'] = 'sales/C_SalesOrder/admin_sc_get_pending_cancel_requests';
-$route['sales_order/admin_sc_approve_cancel_partial']      = 'sales/C_SalesOrder/admin_sc_approve_cancel_partial';
-$route['sales_order/admin_sc_reject_cancel_partial']       = 'sales/C_SalesOrder/admin_sc_reject_cancel_partial';
-
-// dashboard_penilaian
-$route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
-
-// Mobile ERP modern UI
-$route['mobile-erp']                                = 'hrd/C_Hrd/mobile_erp_dashboard';
-$route['mobile-erp/list']                           = 'hrd/C_Hrd/mobile_erp_list';
-$route['mobile-erp/detail/(:num)']                  = 'hrd/C_Hrd/mobile_erp_detail/$1';
-$route['mobile-erp/profile']                        = 'hrd/C_Hrd/mobile_erp_profile';
-
-// Penilaian Lingkungan Kantor
-$route['penilaian_lingkungan']                     = 'hrd/C_Hrd/penilaian_lingkungan';
-$route['hrd/penilaian_lingkungan/admin']           = 'hrd/C_Hrd/penilaian_lingkungan_admin';
-$route['hrd/penilaian_lingkungan/monitoring']      = 'hrd/C_Hrd/penilaian_lingkungan_monitoring';
-$route['hrd/penilaian_lingkungan/submit']          = 'hrd/C_Hrd/submit_environment_issue';
-$route['hrd/penilaian_lingkungan/list']            = 'hrd/C_Hrd/get_environment_issue_list';
-$route['hrd/penilaian_lingkungan/detail/(:num)']   = 'hrd/C_Hrd/get_environment_issue_detail/$1';
-$route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environment_issue';
-$route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
-$route['hrd/penilaian_lingkungan/breakdown']       = 'hrd/C_Hrd/get_environment_issue_breakdown';
-$route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
-$route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
-$route['hrd/penilaian_lingkungan/locations/delete'] = 'hrd/C_Hrd/delete_hrd_location';
-$route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
-$route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
-$route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
-
-// Faktur Penjualan (Telah dialihkan ke Modul Transaksi)
-$route['faktur_penjualan']                         = 'admin/C_Transaksi/index';
-$route['faktur_penjualan/activity_log']            = 'admin/C_Transaksi/index';
-$route['faktur_penjualan/edit_qty/(:any)']         = 'admin/C_Transaksi/index';
-$route['faktur_penjualan/update_qty/(:any)']       = 'admin/C_Transaksi/index';
-
-// =========================================================================
-// MODUL PAKET BUNDLING (PURCHASING & LOGISTIK)
-// =========================================================================
-
-// Purchasing - Request Paket Bundling
-$route['purchasing/bundling/request']                       = 'purchasing/C_BundlingRequest/index';
-$route['purchasing/bundling/request/create']                = 'purchasing/C_BundlingRequest/create';
-$route['purchasing/bundling/request/save']                  = 'purchasing/C_BundlingRequest/save';
-$route['purchasing/bundling/request/detail/(:num)']         = 'purchasing/C_BundlingRequest/detail/$1';
-$route['purchasing/bundling/request/cancel/(:num)']         = 'purchasing/C_BundlingRequest/cancel/$1';
-$route['purchasing/bundling/request/delete/(:num)']         = 'purchasing/C_BundlingRequest/delete/$1';
-$route['purchasing/bundling/request/update_packaging_cost'] = 'purchasing/C_BundlingRequest/update_packaging_cost';
-
-// Purchasing - Master Formula Paket Bundling
-$route['purchasing/bundling/formula']               = 'purchasing/C_BundlingRequest/formula';
-$route['purchasing/bundling/formula/save']          = 'purchasing/C_BundlingRequest/formula_save';
-$route['purchasing/bundling/formula/detail_ajax']   = 'purchasing/C_BundlingRequest/ajax_get_formula_detail';
-$route['purchasing/bundling/ajax_search_barang']    = 'purchasing/C_BundlingRequest/ajax_search_barang';
-
-// Logistik - Monitoring, Mutasi Bahan & Realisasi Pembuatan (Assembly)
-$route['logistik/bundling']                         = 'logistik/C_BundlingLogistik/index';
-$route['logistik/bundling/detail/(:num)']           = 'logistik/C_BundlingLogistik/detail/$1';
-$route['logistik/bundling/mutasi_bahan/(:num)']     = 'logistik/C_BundlingLogistik/mutasi_bahan/$1';
-$route['logistik/bundling/execute_mutasi']          = 'logistik/C_BundlingLogistik/execute_mutasi';
-$route['logistik/bundling/assembly/(:num)']         = 'logistik/C_BundlingLogistik/form_assembly/$1';
-$route['logistik/bundling/save_assembly']           = 'logistik/C_BundlingLogistik/save_assembly';
-
-// Logistik - Riwayat & Bukti Transaksi
-$route['logistik/bundling/history']                 = 'logistik/C_BundlingLogistik/history';
-$route['logistik/bundling/assembly_detail/(:num)']  = 'logistik/C_BundlingLogistik/detail_assembly/$1';
-
-
-// =========================================================================
-// MODUL BARANG KONSINYASI (PURCHASING) — Penyelesaian Tagihan (Settlement)
-// =========================================================================
-$route['purchasing/konsinyasi']                              = 'purchasing/C_Konsinyasi/index';
-$route['purchasing/konsinyasi/ajax_detail']                  = 'purchasing/C_Konsinyasi/ajax_detail';
-$route['purchasing/konsinyasi/ajax_post_settlement']         = 'purchasing/C_Konsinyasi/ajax_post_settlement';
-$route['purchasing/konsinyasi/ajax_sync']                    = 'purchasing/C_Konsinyasi/ajax_sync';
-$route['purchasing/konsinyasi/ajax_view_journal']            = 'purchasing/C_Konsinyasi/ajax_view_journal';
-$route['purchasing/konsinyasi/(:any)']                       = 'purchasing/C_Konsinyasi/$1';
-
-// Backward-compat: URL lama tetap berfungsi
-$route['purchasing/konsinyasi_settlement']                   = 'purchasing/C_Konsinyasi/index';
-$route['purchasing/konsinyasi_settlement/detail']            = 'purchasing/C_Konsinyasi/ajax_detail';
-$route['purchasing/konsinyasi_settlement/post']              = 'purchasing/C_Konsinyasi/ajax_post_settlement';
-$route['purchasing/konsinyasi_settlement/sync']              = 'purchasing/C_Konsinyasi/ajax_sync';
-$route['purchasing/konsinyasi_settlement/journal']           = 'purchasing/C_Konsinyasi/ajax_view_journal';
-
-
+//RequestDesign
+$route['requestdesign']                         = 'requestdesign/C_requestdesign';
+$route['addinventaris']                         = 'inventaris/C_Inventaris/addinventaris';
+$route['editinventaris']                        = 'inventaris/C_Inventaris/editinventaris';
+$route['hapusinventaris1']                      = 'inventaris/C_Inventaris/hapusinventaris';
+$route['changeowner']                           = 'inventaris/C_Inventaris/changeowner';
+$route['selectowner']                           = 'inventaris/C_Inventaris/selectowner';

@@ -38,39 +38,78 @@
             </div>
             <div class="card-body">
               <table id="tb_lap_distribusi" class="table table-bordered table-striped">
+                <colgroup>
+                  <col style="display:none">
+                  <col>
+                  <col>
+                  <col>
+                  <col>
+                  <col style="width:10%">
+                  <col>
+                </colgroup>
+
                 <thead>
                   <tr>
-                    <th hidden>id</th>
+                    <th hidden>ID</th>
                     <th>Tanggal</th>
                     <th>Des Issue</th>
                     <th>Lokasi</th>
                     <th>Penemu Issue</th>
-                    <th>#</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">#</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   <?php foreach ($laporan as $l) : ?>
-
                     <tr>
-                      <th hidden><?= $l->id ?></th>
-                      <th><?= $l->tanggal ?></th>
-                      <th><?= $l->issue ?></th>
-                      <th><?= $l->lokasi ?></th>
-                      <th><?= $l->nama ?></th>
-                      <th>
-                        <div class="row">
-                          <a href="#" class="btn btn-warning btn-sm " data-toggle="modal" data-target="#editissue<?= $l->id ?>">
-                            <i class="fa fa-solid fa-pencil-alt"></i>
-                          </a>
-                          <a href="#" class="btn btn-danger btn-sm " data-toggle="modal" data-target="#hapuslapissue<?= $l->id ?>">
-                            <i class="fa fa-solid fa-trash-alt"></i>
-                          </a>
-                        </div>
-                      </th>
+                      <td hidden><?= $l->id ?></td>
+                      <td><?= $l->tanggal ?></td>
+                      <td><?= $l->issue ?></td>
+                      <td><?= $l->lokasi ?></td>
+                      <td><?= $l->nama ?></td>
+
+                      <!-- STATUS -->
+                      <td class="text-center" style="width:10%">
+                        <?php if ($l->status == '1') : ?>
+                          <span class="badge badge-warning px-3 py-1">On Progress</span>
+                        <?php else : ?>
+                          <span class="badge badge-success px-3 py-1">Done</span>
+                        <?php endif; ?>
+                      </td>
+
+                      <!-- ACTION -->
+                      <?php if ($l->status == '1') : ?>
+                        <td class="text-center">
+                          <div class="row">
+                            <div class="col-4">
+                              <a href="#" class="btn btn-warning btn-sm btn-block " data-toggle="modal" data-target="#editissue<?= $l->id ?>">
+                                <i class="fa fa-solid fa-pencil-alt"></i>
+                              </a>
+                            </div>
+                            <div class="col-4">
+                              <a href="#" class="btn btn-danger btn-sm btn-block " data-toggle="modal" data-target="#hapuslapissue<?= $l->id ?>">
+                                <i class="fa fa-solid fa-trash-alt"></i>
+                              </a>
+                            </div>
+                            <div class="col-4">
+                              <a href="<?= base_url('update_status_issue/' . $l->id) ?>" class="btn btn-success btn-sm btn-block">
+                                <i class="fa fa-check"></i>
+                              </a>
+                            </div>
+                          </div>
+                        </td>
+                      <?php else : ?>
+                        <td class="text-center"><a href="#" class="btn btn-primary btn-sm btn-block">
+                            <i class="fa fa-check"></i>
+                          </a></td>
+                      <?php endif; ?>
+
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
               </table>
+
             </div>
           </div>
         </div>

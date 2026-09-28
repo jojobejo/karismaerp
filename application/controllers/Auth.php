@@ -8,139 +8,56 @@ class Auth extends CI_Controller
         parent::__construct();
         $this->load->model('M_Auth');
     }
-
     function index()
     {
         $this->load->view("partial/login/header");
         $this->load->view("content/login/body");
         $this->load->view("partial/login/footer");
     }
-
     function process()
     {
-        $username = trim((string) $this->input->post('user_isi'));
-        $password = (string) $this->input->post('pass_isi');
-        $auth_candidates = method_exists($this->M_Auth, 'get_auth_candidates')
-            ? $this->M_Auth->get_auth_candidates($username)
-            : array_filter([$this->M_Auth->get_auth_user($username)]);
-        $key = null;
+        $username = $this->input->post('user_isi');
+        $password = $this->input->post('pass_isi');
 
-        if (empty($auth_candidates)) {
-            $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Username tidak ditemukan');
+        $check_username = $this->M_Auth->cek_username($username)->num_rows();
+        if ($check_username > 0) {
+
+            $check_password = $this->M_Auth->cek_password($username);
+
+            foreach ($check_password as $key) {
+                if ($key->username == $username && password_verify($password, $key->password)) {
+                    $data_session = array(
+                        'id'          => $key->id,
+                        'username'    => $key->username,
+                        'kduser'      => $key->kode_user,
+                        'subdepartemen' => $key->sub_departemen,
+                        'nama_user'   => $key->nama_user,
+                        'akses_lv'    => $key->akses_lv,
+                        'departemen'  => $key->departemen,
+                        'status'      => "is_login"
+                    );
+
+                    if ($key->departemen == 'KEUANGAN') {
+                        $this->session->set_userdata($data_session);
+                        redirect('hrd_lap_paket_pos');
+                    } elseif ($key->departemen == 'MIA') {
+                        $this->session->set_userdata($data_session);
+                        redirect('hrd_lap_paket_pos');
+                    } elseif ($key->departemen == 'HRD & GA') {
+                        $this->session->set_userdata($data_session);
+                        redirect('hrd_lap_paket_pos');
+                    } else {
+                        $this->session->set_userdata($data_session);
+                        redirect('dashboard');
+                    }
+                } else {
+                    $this->session->set_flashdata("gagal", "username / password salah!!!");
+                    redirect('Auth');
+                }
+            }
+        } else {
             $this->session->set_flashdata("gagal", "username salah");
             redirect('Auth');
-            return;
-        }
-
-        foreach ($auth_candidates as $candidate) {
-            if ($this->M_Auth->verify_password($password, $candidate->password ?? '')) {
-                $key = $candidate;
-                break;
-            }
-        }
-
-        if (!$key) {
-            $this->M_Auth->log_login($auth_candidates[0], 'failed', 'Password salah');
-            $this->session->set_flashdata("gagal", "username / password salah!!!");
-            redirect('Auth');
-            return;
-        }
-
-        if (isset($key->status) && (int)$key->status !== 1) {
-            $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
-            $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
-            redirect('Auth');
-            return;
-        }
-
-        $auth_source = $key->auth_source ?? 'tb_karyawan';
-        $akses_lv = (int)($key->akses_lv ?? $key->level ?? 0);
-        $jobdesk_hrd = strtolower(trim((string)($key->jobdesk_hrd ?? '')));
-        $jobdesk = strtoupper(trim((string)($key->jobdesk ?? $key->jabatan ?? '')));
-        $username_login = strtolower(trim((string)($key->username ?? '')));
-        $is_admin_dashboard = ($username_login === 'admin' || ($akses_lv === 1 && $jobdesk === 'ADMIN'));
-        $nama = $key->nm_karyawan ?? $key->nama_lngkp ?? $key->nama_user ?? $key->username;
-        $departemen = $key->departemen ?? $key->departement ?? null;
-
-        $data_session = array(
-            'id'            => $key->id,
-            'id_karyawan'   => $auth_source === 'tb_karyawan' ? $key->id : null,
-            'auth_source'   => $auth_source,
-            'nik'           => $key->nik ?? null,
-            'username'      => $key->username,
-            'departemen'    => $departemen,
-            'lv'            => $akses_lv,
-            'akses_lv'      => $akses_lv,
-            'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
-            'jobdesk'       => $jobdesk,
-            'jobdesk_hrd'   => $jobdesk_hrd,
-            'jobdesk_id'    => $key->jobdesk_id ?? null,
-            'nama'          => $nama,
-            'nama_user'     => $nama,
-            'tim'           => $key->tim ?? null,
-            'wilayah'       => $key->wilayah ?? null,
-            'is_admin_dashboard' => $is_admin_dashboard,
-            'logged_in'     => true
-        );
-
-        $this->session->set_userdata($data_session);
-        if ($this->M_Auth->password_should_be_hashed($key->password ?? '')) {
-            $this->M_Auth->update_password_hash($key->id, $auth_source, $password);
-        }
-        $this->M_Auth->update_last_login($key->id, $auth_source);
-        $this->M_Auth->log_login($key, 'success', 'Login berhasil');
-
-        // Redirect based on jobdesk
-        if ($jobdesk_hrd === 'direksi_readonly') {
-            redirect('dashboard_penilaian');
-        } else if ($jobdesk == 'LOGISTIK') {
-            redirect('logistik');
-        } else if ($jobdesk == 'ADMINICS') {
-            redirect('ics/ics_diffrent');
-        } else if ($jobdesk == 'ADMINKEU') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'KIUKEU') {
-            redirect('keuangan/pembayaran');
-        } else if ($jobdesk == 'ADMINPURCHASING') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'DIREKTUR') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'ADMINGA') {
-            redirect('schedule_direktur');
-        } else if ($jobdesk == 'ADMINKEUTC') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'STOCKOPNAME') {
-            redirect('stockopname');
-        } else if ($jobdesk == 'ADMIN') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'SALESONLINE') {
-            redirect('stock');
-        } else if ($jobdesk == 'SALESCOUNTER') {
-            redirect('sales_report');
-        } else if ($jobdesk == 'SALES') {
-            redirect('kiu_katalog');
-        } else if ($jobdesk == 'DISTRIBUSI') {
-            redirect('logistik/distibusi');
-        } else if ($jobdesk == 'ADMINLOGLPB') {
-            redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMLOG') {
-            redirect('checker');
-        } else if ($jobdesk == 'CHECKER') {
-            redirect('checker');
-        } else if ($jobdesk == 'MANAGERWH') {
-            redirect('checker');
-        } else if ($jobdesk == 'SALESCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard');
-        } else if ($jobdesk == 'MANAGERCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'ADMINSC') {
-            redirect('sales_order/admin_sc');
-        } else if ($jobdesk == 'SC') {
-            redirect('sales_order');
-        } else {
-            redirect('dashboard');
         }
     }
 

@@ -1,7 +1,7 @@
 <script>
     $(function() {
         var table1;
-        
+
         table1 = $('#tb_lap_distribusia').DataTable({
             "responsive": true,
             "lengthChange": false,

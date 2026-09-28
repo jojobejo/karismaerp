@@ -1,4 +1,17 @@
+<style>
+    .badge-kondisi input {
+        display: none
+    }
+
+    .badge-kondisi label {
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 20px;
+    }
+</style>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
+
     <div class="wrapper">
 
         <!-- Preloader -->
@@ -8,8 +21,8 @@
 
         <?php $this->load->view('partial/main/navbar') ?>
         <?php $this->load->view('partial/main/sidebar') ?>
-        <?php $this->load->view('content/kpi/modaldashboardkpi') ?>
 
+        <?php $this->load->view('content/hrd/modal_paket_pos') ?>
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
@@ -25,38 +38,28 @@
             <!-- /.content-header -->
             <section class="content">
                 <div class="container-fluid">
+                    <a href="<?= base_url('hrd_chelklist_kendaraan') ?>" class="btn btn-md btn-primary mb-3"><i class="fa fa-caret-square-left"></i> FORM INPUT</a>
+                    <a href="<?= base_url('export_data_checklist_kendaraan') ?>" class="btn btn-md btn-success mb-3 ml-3"><i class="fa fa-file"></i> Export Data Laporan</a>
                     <div class="card">
                         <div class="card-header">
-                            <h3 class="card-title">List KPI</h3>
+                            <h3 class="card-title">LAPORAN CHECKLIST KENDARAAN</h3>
                         </div>
-                        <div class="ml-2">
-                            <button type="button" class="btn btn-primary m-2 ml-3" data-toggle="modal" data-target="#addkpi">
-                                <i class="fas fa-pen"></i>
-                                Buat KPI baru
-                            </button>
-                        </div>
+
                         <div class="card-body">
-                            <table id="tb_lap_distribusi" class="table table-bordered table-striped">
-                                <thead>
+                            <table id="checklist_kendaraan" class="table table-bordered table-hover">
+                                <thead class="thead-dark">
                                     <tr>
-                                        <th>Bulan KPI</th>
-                                        <th>Nilai Total KPI</th>
-                                        <th>Status Nilai KPI</th>
-                                        <th>#</th>
+                                        <th>No</th>
+                                        <th>Tanggal</th>
+                                        <th>Driver</th>
+                                        <th>No Polisi</th>
+                                        <th>No Lambung</th>
+                                        <th>Kilometer</th>
+                                        <th>Inputer</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <?php foreach ($allkpi as $a) :
-
-                                    ?>
-                                        <tr>
-                                            <td><?= format_bulan($a->tgl_pembuatan) ?></td>
-                                            <td><?= $d->nama_driver ?></td>
-                                            <td></td>
-                                            <td><a class="btn btn-primary btn-sm" href="<?= base_url('detail_kpi/') . $a->kd_user . '/' . $a->bln_pembuatan ?>"><i class="fas fa-eye"></i></a></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -79,3 +82,21 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $(function() {
+            $('#checklist_kendaraan').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "<?= base_url('ajax_checklist_kendaraan') ?>",
+                    type: "POST"
+                },
+                order: [],
+                columnDefs: [{
+                    targets: [0, 7],
+                    orderable: false
+                }]
+            });
+        });
+    </script>
