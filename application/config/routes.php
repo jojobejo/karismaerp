@@ -165,6 +165,8 @@ $route['get_karykm_by_id/(:any)']               = 'hrd/C_Hrd/get_karykm_by_id/$1
 $route['hapus_karykm']                          = 'hrd/C_Hrd/hapus_karykm';
 $route['lap_expedisi_serverside']               = 'hrd/C_Hrd/lap_expedisi_serverside';
 $route['get_expedisi_by_id/(:any)']             = 'hrd/C_Hrd/get_expedisi_by_id/$1';
+$route['riwayat_penerimaan_expedisi/(:num)']    = 'hrd/C_Hrd/riwayat_penerimaan_expedisi/$1';
+$route['konfirmasi_penerimaan_expedisi']        = 'hrd/C_Hrd/konfirmasi_penerimaan_expedisi';
 $route['export_file_laporan_expedisis']         = 'hrd/C_Hrd/export_data_hrd_lap_expedisi';
 
 $route['hrd_lap_paket_pos']                     = 'hrd/C_Hrd/hrd_lap_penerimaan_pos';

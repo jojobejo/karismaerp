@@ -71,8 +71,25 @@
                 </div>
                 <div class="form-group">
                     <div class="row">
+                        <label class="col-sm-3 control-label text-right" for="penerima_berkas_id">Penerima Berkas<span class="required">*</span></label>
+                        <div class="col-sm-8">
+                            <select class="form-control" id="penerima_berkas_id" name="penerima_berkas_id" required>
+                                <option value="">Pilih petugas Logistik</option>
+                                <?php foreach ($penerima_berkas as $penerima) : ?>
+                                    <option value="<?= (int) $penerima->id ?>"><?= html_escape($penerima->nama_user) ?> (<?= html_escape($penerima->username) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="row">
                         <label class="col-sm-3 control-label text-right" for="id_bar">Inputer<span class="required">*</span></label>
-                        <div class="col-sm-8"><input class="form-control" type="text" id="inputer" name="inputer" value="" required /></div>
+                        <div class="col-sm-8">
+                            <input type="hidden" id="inputer_default" value="<?= html_escape($this->session->userdata('nama_user')) ?>" />
+                            <input class="form-control" type="text" id="inputer" name="inputer" value="<?= html_escape($this->session->userdata('nama_user')) ?>" maxlength="255" required />
+                            <small class="form-text text-muted">Nilai awal mengikuti pengguna login dan dapat diganti sesuai petugas Security Pos yang melakukan input.</small>
+                        </div>
                     </div>
                 </div>
             </div>

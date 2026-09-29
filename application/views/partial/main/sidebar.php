@@ -106,7 +106,7 @@
               <a href="<?php echo base_url('hrd_lap_expedisi') ?>" class="nav-link">
                 <i class="nav-icon fa fa-truck-loading"></i>
                 <p>
-                  Laporan Expedisi
+                  Konfirmasi Berkas Expedisi
                 </p>
               </a>
             </li>

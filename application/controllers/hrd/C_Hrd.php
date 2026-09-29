@@ -495,6 +495,9 @@ class C_Hrd extends CI_Controller
     {
         $data['page_title'] = 'KARISMA';
         $data['laporan']    = $this->M_Hrd->get_all_laporan_expedisi()->result();
+        $data['penerima_berkas'] = $this->M_Hrd->get_penerima_berkas_logistik();
+        $data['is_hrd4'] = $this->session->userdata('username') === 'HRD4';
+        $data['is_logistik'] = $this->session->userdata('departemen') === 'LOGISTIK';
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/lapexpedisibody.php', $data);
@@ -521,9 +524,14 @@ class C_Hrd extends CI_Controller
             $row[] = $l->namabarang;
             $row[] = $l->jumlahbarang;
             $row[] = $l->keterangan;
+            $row[] = $l->nama_penerima ?: '-';
+            $row[] = $l->nm_inputer ?: '-';
+            $row[] = $l->status_berkas === 'SUDAH_DITERIMA'
+                ? '<span class="badge badge-success">Sudah Diterima</span>'
+                : '<span class="badge badge-warning">Belum Diterima</span>';
+            $row[] = $l->diterima_pada ? date('d-m-Y H:i', strtotime($l->diterima_pada)) : '-';
 
-            // tombol hanya non LOGISTIK
-            if ($this->session->userdata('departemen') != 'LOGISTIK') {
+            if ($this->session->userdata('username') === 'HRD4') {
                 $row[] = '
                 <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
                     <i class="fa fa-pencil-alt"></i>
@@ -532,6 +540,14 @@ class C_Hrd extends CI_Controller
                     <i class="fa fa-trash-alt"></i>
                 </button>
             ';
+            } elseif ($this->session->userdata('departemen') === 'LOGISTIK') {
+                $aksi = '<button class="btn btn-info btn-sm btn-riwayat" data-id="' . $l->id . '"><i class="fa fa-history"></i> Riwayat</button>';
+                if ($l->status_berkas === 'BELUM_DITERIMA') {
+                    $aksi .= ' <button class="btn btn-success btn-sm btn-terima" data-id="' . $l->id . '"><i class="fa fa-check"></i> Konfirmasi</button>';
+                }
+                $row[] = $aksi;
+            } else {
+                $row[] = '<button class="btn btn-info btn-sm btn-riwayat" data-id="' . $l->id . '"><i class="fa fa-history"></i> Riwayat</button>';
             }
 
             $data[] = $row;
@@ -547,9 +563,36 @@ class C_Hrd extends CI_Controller
 
     public function get_expedisi_by_id($id)
     {
-        echo json_encode(
-            $this->db->get_where('tb_expedisi', ['id' => $id])->row()
+        echo json_encode($this->M_Hrd->get_expedisi_by_id($id));
+    }
+
+    public function riwayat_penerimaan_expedisi($id)
+    {
+        echo json_encode([
+            'status' => true,
+            'data' => $this->M_Hrd->get_riwayat_penerimaan_expedisi($id),
+        ]);
+    }
+
+    public function konfirmasi_penerimaan_expedisi()
+    {
+        if ($this->session->userdata('departemen') !== 'LOGISTIK') {
+            show_error('Akses konfirmasi hanya untuk petugas Logistik.', 403);
+            return;
+        }
+
+        $expedisiId = (int) $this->input->post('id');
+        $catatan = trim($this->input->post('catatan_penerimaan', true));
+        $berhasil = $this->M_Hrd->konfirmasi_penerimaan_expedisi(
+            $expedisiId,
+            (int) $this->session->userdata('id'),
+            $catatan
         );
+
+        echo json_encode([
+            'status' => $berhasil,
+            'message' => $berhasil ? 'Penerimaan berkas berhasil dikonfirmasi.' : 'Data tidak dapat dikonfirmasi. Pastikan berkas masih menunggu dan ditujukan kepada Anda.',
+        ]);
     }
 
 
@@ -564,6 +607,10 @@ class C_Hrd extends CI_Controller
     // FUNGSI CRUD
     public function tambah_lap_expedisi()
     {
+        if ($this->session->userdata('username') !== 'HRD4') {
+            show_error('Input laporan expedisi hanya untuk HRD4.', 403);
+            return;
+        }
         $tanggal = $this->input->post('tanggal');
         $jammasuk = $this->input->post('jammasuk');
         $jamkeluar = $this->input->post('jamkeluar');
@@ -574,6 +621,19 @@ class C_Hrd extends CI_Controller
         $namabarang = $this->input->post('namabarang');
         $jumlahbarang = $this->input->post('jumlahbarang');
         $keterangan = $this->input->post('keterangan');
+        $inputer = trim($this->input->post('inputer', true));
+        $penerimaBerkasId = (int) $this->input->post('penerima_berkas_id');
+
+        $penerima = $this->db->get_where('tb_user', [
+            'id' => $penerimaBerkasId,
+            'departemen' => 'LOGISTIK',
+        ])->row();
+
+        if (!$penerima || $inputer === '') {
+            $this->session->set_flashdata('gagal', 'Penerima berkas Logistik wajib dipilih.');
+            redirect('hrd_lap_expedisi');
+            return;
+        }
 
 
         $data = array(
@@ -587,7 +647,9 @@ class C_Hrd extends CI_Controller
             'namabarang' => $namabarang,
             'jumlahbarang' => $jumlahbarang,
             'keterangan' => $keterangan,
-
+            'penerima_berkas_id' => $penerimaBerkasId,
+            'nm_inputer' => $inputer,
+            'status_berkas' => 'BELUM_DITERIMA',
         );
         $this->M_Hrd->addlapexpedisi($data);
         redirect('hrd_lap_expedisi');
@@ -595,7 +657,26 @@ class C_Hrd extends CI_Controller
 
     public function edit_lap_expedisi()
     {
+        if ($this->session->userdata('username') !== 'HRD4') {
+            show_error('Perubahan laporan expedisi hanya untuk HRD4.', 403);
+            return;
+        }
         $id = $this->input->post('id');
+        $penerimaBerkasId = (int) $this->input->post('penerima_berkas_id');
+        $inputer = trim($this->input->post('inputer', true));
+        $laporan = $this->M_Hrd->get_expedisi_by_id($id);
+        $penerima = $this->db->get_where('tb_user', [
+            'id' => $penerimaBerkasId,
+            'departemen' => 'LOGISTIK',
+        ])->row();
+
+        if (!$laporan || !$penerima || $inputer === '' || ($laporan->status_berkas === 'SUDAH_DITERIMA' && (int) $laporan->penerima_berkas_id !== $penerimaBerkasId)) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Inputer wajib diisi, penerima harus petugas Logistik, dan penerima tidak dapat diubah setelah berkas diterima.',
+            ]);
+            return;
+        }
 
         $data = [
             'tanggal' => $this->input->post('tanggal'),
@@ -608,6 +689,8 @@ class C_Hrd extends CI_Controller
             'namabarang' => $this->input->post('namabarang'),
             'jumlahbarang' => $this->input->post('jumlahbarang'),
             'keterangan' => $this->input->post('keterangan'),
+            'penerima_berkas_id' => $penerimaBerkasId,
+            'nm_inputer' => $inputer,
         ];
 
         $this->M_Hrd->editlapexpedisi($id, $data);
@@ -620,6 +703,10 @@ class C_Hrd extends CI_Controller
 
     public function hapus_lap_expedisi()
     {
+        if ($this->session->userdata('username') !== 'HRD4') {
+            show_error('Hapus laporan expedisi hanya untuk HRD4.', 403);
+            return;
+        }
         $id = $this->input->post('id');
         $this->db->delete('tb_expedisi', ['id' => $id]);
         echo json_encode(['status' => true]);

@@ -73,6 +73,22 @@
                   <input type="text" name="keterangan" id="edit_keterangan" class="form-control" required>
                 </div>
               </div>
+
+              <div class="row mt-2">
+                <div class="col-md-6">
+                  <label>Penerima Berkas</label>
+                  <select name="penerima_berkas_id" id="edit_penerima_berkas_id" class="form-control" required>
+                    <option value="">Pilih petugas Logistik</option>
+                    <?php foreach ($penerima_berkas as $penerima) : ?>
+                      <option value="<?= (int) $penerima->id ?>"><?= html_escape($penerima->nama_user) ?> (<?= html_escape($penerima->username) ?>)</option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label>Inputer</label>
+                  <input type="text" name="inputer" id="edit_inputer" class="form-control" maxlength="255" required>
+                </div>
+              </div>
             </div>
 
             <div class="modal-footer">
@@ -100,6 +116,41 @@
       </div>
     </div>
 
+    <div class="modal fade" id="modalKonfirmasiPenerimaan">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Konfirmasi Penerimaan Berkas</h4>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+          <form id="formKonfirmasiPenerimaan">
+            <div class="modal-body">
+              <input type="hidden" name="id" id="terima_id">
+              <p>Pastikan berkas fisik telah diterima sebelum melakukan konfirmasi.</p>
+              <label>Catatan Penerimaan</label>
+              <textarea class="form-control" name="catatan_penerimaan" maxlength="500" placeholder="Opsional"></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-success">Konfirmasi Diterima</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalRiwayatPenerimaan">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Riwayat Penerimaan Berkas</h4>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+          <div class="modal-body" id="isiRiwayatPenerimaan"></div>
+        </div>
+      </div>
+    </div>
+
 
 
     <!-- Content Wrapper. Contains page content -->
@@ -118,10 +169,9 @@
         <div class="container-fluid">
           <div class="card">
             <div class="card-header">
-              <h3 class="card-title">LAPORAN EXPEDISI</h3>
+              <h3 class="card-title"><?= $is_logistik ? 'KONFIRMASI PENERIMAAN BERKAS EXPEDISI' : 'LAPORAN EXPEDISI' ?></h3>
             </div>
-            <?php if ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'LOGISTIK') : ?>
-            <?php elseif ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
+            <?php if ($is_hrd4) : ?>
               <div class="row">
                 <div class="col-auto">
                   <button type="button" class="btn btn-primary m-2 ml-3" data-toggle="modal" data-target="#addexpedisi">
@@ -152,9 +202,11 @@
                     <th>Nama Barang</th>
                     <th>Jumlah Barang</th>
                     <th>Keterangan</th>
-                    <?php if ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
-                      <th>#</th>
-                    <?php endif; ?>
+                    <th>Penerima Berkas</th>
+                    <th>Inputer</th>
+                    <th>Status Berkas</th>
+                    <th>Diterima Pada</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
