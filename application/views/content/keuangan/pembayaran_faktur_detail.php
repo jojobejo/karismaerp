@@ -292,6 +292,9 @@
         <li id="menu-print-pembayaran">
             <i class="fas fa-print text-info mr-2"></i>Print Bukti Pembayaran
         </li>
+        <li id="menu-print-konsinyasi" style="display:none;">
+            <i class="fas fa-file-invoice text-success mr-2"></i>Print Faktur Konsinyasi (Supplier)
+        </li>
         <li style="border-top: 1px solid #e2e8f0; margin: 4px 0; padding: 0;"></li>
         <li id="menu-unpost-pembayaran" class="text-danger">
             <i class="fas fa-undo-alt text-danger mr-2"></i><span id="label-menu-unpost">Unpost Pembayaran</span>
@@ -593,6 +596,14 @@ $(function () {
                 .attr('title', 'Pembayaran harus di-unpost menjadi draft terlebih dahulu sebelum dapat dihapus');
         }
 
+        let rowNoFaktur = (($(this).data('no-faktur') || activeFakturNo || '') + '').toUpperCase();
+        let isKonsinyasi = (rowNoFaktur.indexOf('TINV') !== -1 || rowNoFaktur.indexOf('T') === 0);
+        if (isKonsinyasi) {
+            $('#menu-print-konsinyasi').show();
+        } else {
+            $('#menu-print-konsinyasi').hide();
+        }
+
         let posX = e.pageX;
         let posY = e.pageY;
 
@@ -621,6 +632,14 @@ $(function () {
         $('#context-menu-pembayaran').hide();
         if (!contextMenuPaymentId) return;
         let printUrl = '<?= base_url("keuangan/pembayaran/print_bukti/") ?>' + contextMenuPaymentId;
+        window.open(printUrl, '_blank');
+    });
+
+    // Klik "Print Faktur Konsinyasi" pada context menu
+    $('#menu-print-konsinyasi').on('click', function() {
+        $('#context-menu-pembayaran').hide();
+        if (!contextMenuPaymentId) return;
+        let printUrl = '<?= base_url("keuangan/pembayaran/print_faktur_konsinyasi/") ?>' + contextMenuPaymentId;
         window.open(printUrl, '_blank');
     });
 

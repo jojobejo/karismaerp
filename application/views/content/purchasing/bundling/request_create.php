@@ -557,11 +557,7 @@ function renderRequestItemRow(rIndex, kd, nama, sat, isInbox, qtyInbox, isiInbox
                             <div class="input-group-append"><span class="input-group-text px-1 small row-satuan-label">${sat}</span></div>
                         </div>
                     </div>
-                    <div class="text-center mt-1">
-                        <span class="badge badge-warning text-dark px-2 py-1 row-inbox-summary" style="font-size: 0.78rem;">
-                            <i class="fas fa-box mr-1"></i> ${qtyInbox} Box @ ${isiInbox} ${sat} = <strong>${qtyTotal} ${sat}</strong>
-                        </span>
-                    </div>
+
                 </div>
 
                 <!-- Wrapper jika reguler -->
@@ -630,9 +626,7 @@ function recalculateTotals() {
             qtyPerPaket = qBox * iBox;
             $(this).find('.row-qty-total').val(qtyPerPaket);
             $(this).find('.row-qty-regular').val(qtyPerPaket);
-            $(this).find('.row-inbox-summary').html(
-                `<i class="fas fa-box mr-1"></i> ${qBox} Box @ ${iBox} ${sat} = <strong>${qtyPerPaket.toLocaleString('id-ID')} ${sat}</strong>`
-            );
+
 
             let totalPcs = qtyRequest * qtyPerPaket;
             let totalBox = qtyRequest * qBox;

@@ -216,6 +216,38 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
+     * Memeriksa apakah gudang merupakan gudang konsinyasi.
+     * Kriteria: ID gudang 13 atau nama gudang mengandung 'konsi' atau tipe 'KONSINYASI'.
+     *
+     * @param int|string|null $gudang_id
+     * @return bool
+     */
+    public function is_gudang_konsinyasi($gudang_id)
+    {
+        if (empty($gudang_id)) {
+            return false;
+        }
+
+        if ((int)$gudang_id === 13) {
+            return true;
+        }
+
+        $row = $this->db->select('id_gudang, nama_gudang, tipe')
+            ->where('id_gudang', (int)$gudang_id)
+            ->get('tb_gudang')
+            ->row_array();
+
+        if (!$row) {
+            return false;
+        }
+
+        $nama = strtolower((string)($row['nama_gudang'] ?? ''));
+        $tipe = strtoupper((string)($row['tipe'] ?? ''));
+
+        return (strpos($nama, 'konsi') !== false || $tipe === 'KONSINYASI');
+    }
+
+    /**
      * Generate No. Faktur — format: [prefix urutan user]INVDDMMYYXXXX
      * Faktur sekarang hidup di tbso_faktur_penjualan.
      */
@@ -1805,54 +1837,65 @@ class M_SalesOrder extends CI_Model
         }
 
         // ── Perhitungan Jurnal & Simpan ke Database ────────────────
-        $total_nilai_pesanan = 0;
-        foreach ($faktur_items as $item) {
-            $total_nilai_pesanan += (float)($item['subtotal_after_disc'] ?? 0);
-        }
-        $tax_rate = (float)($faktur_items[0]['pajak'] ?? 0);
-        $div_factor = 1 + ($tax_rate / 100);
-        
-        $jurnal_piutang = round($total_nilai_pesanan);
-        $jurnal_penjualan = round($jurnal_piutang / $div_factor);
-        $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
+        $is_konsinyasi = $this->is_gudang_konsinyasi($gudang_id) || (strtoupper(substr($no_faktur, 0, 1)) === 'T');
+        $journal = null;
 
-        $fj = [
-            'id_faktur'      => $id_faktur,
-            'no_faktur'      => $no_faktur,
-            'piutang_dagang' => $jurnal_piutang,
-            'penjualan'      => $jurnal_penjualan,
-            'ppn_keluar'     => $jurnal_ppn_keluar,
-            'created_at'     => date('Y-m-d H:i:s')
-        ];
-        if ($this->db->table_exists('tbso_faktur_jurnal')) {
-            $this->db->insert('tbso_faktur_jurnal', $fj);
-        }
+        if (!$is_konsinyasi) {
+            $total_nilai_pesanan = 0;
+            foreach ($faktur_items as $item) {
+                $total_nilai_pesanan += (float)($item['subtotal_after_disc'] ?? 0);
+            }
+            $tax_rate = (float)($faktur_items[0]['pajak'] ?? 0);
+            $div_factor = 1 + ($tax_rate / 100);
+            
+            $jurnal_piutang = round($total_nilai_pesanan);
+            $jurnal_penjualan = round($jurnal_piutang / $div_factor);
+            $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
 
-        if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
-            $this->load->library('Accounting_source_service');
-            $journal = $this->accounting_source_service->post_sales_invoice(
-                $no_faktur,
-                '',
-                (int)($faktur_header['created_by_id'] ?? 0) ?: null,
-                true
-            );
+            $fj = [
+                'id_faktur'      => $id_faktur,
+                'no_faktur'      => $no_faktur,
+                'piutang_dagang' => $jurnal_piutang,
+                'penjualan'      => $jurnal_penjualan,
+                'ppn_keluar'     => $jurnal_ppn_keluar,
+                'created_at'     => date('Y-m-d H:i:s')
+            ];
+            if ($this->db->table_exists('tbso_faktur_jurnal')) {
+                $this->db->insert('tbso_faktur_jurnal', $fj);
+            }
 
-            if (empty($journal['success'])) {
+            if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                $this->load->library('Accounting_source_service');
+                $journal = $this->accounting_source_service->post_sales_invoice(
+                    $no_faktur,
+                    '',
+                    (int)($faktur_header['created_by_id'] ?? 0) ?: null,
+                    true
+                );
+
+                if (empty($journal['success'])) {
+                    $this->db->trans_rollback();
+                    return [
+                        'errors' => [
+                            'Faktur batal disimpan karena jurnal otomatis gagal: '
+                            . ($journal['message'] ?? 'Posting jurnal gagal.')
+                        ],
+                    ];
+                }
+            } else {
                 $this->db->trans_rollback();
                 return [
                     'errors' => [
-                        'Faktur batal disimpan karena jurnal otomatis gagal: '
-                        . ($journal['message'] ?? 'Posting jurnal gagal.')
+                        'Faktur batal disimpan karena schema jurnal accounting belum tersedia.'
                     ],
                 ];
             }
         } else {
-            $this->db->trans_rollback();
-            return [
-                'errors' => [
-                    'Faktur batal disimpan karena schema jurnal accounting belum tersedia.'
-                ],
-            ];
+            // Faktur barang dari gudang konsinyasi: tidak terjurnal saat faktur diterbitkan
+            if (file_exists(APPPATH . 'models/M_Konsinyasi.php') || $this->load->is_loaded('M_Konsinyasi')) {
+                $this->load->model('M_Konsinyasi');
+                $this->M_Konsinyasi->sync_pending_consignment_sales();
+            }
         }
 
         // ── Cek apakah semua outstanding = 0 → Completed ────────────
@@ -2413,41 +2456,44 @@ class M_SalesOrder extends CI_Model
             }
             $div_factor = 1 + ($tax_rate / 100);
 
-            $jurnal_piutang = round($total_nilai_pesanan);
-            $jurnal_penjualan = round($jurnal_piutang / $div_factor);
-            $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
+            $is_konsinyasi = $this->is_gudang_konsinyasi($faktur['gudang_id'] ?? null) || (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+            if (!$is_konsinyasi) {
+                $jurnal_piutang = round($total_nilai_pesanan);
+                $jurnal_penjualan = round($jurnal_piutang / $div_factor);
+                $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
 
-            $fj = [
-                'id_faktur'      => $id_faktur,
-                'no_faktur'      => $faktur['no_faktur'],
-                'piutang_dagang' => $jurnal_piutang,
-                'penjualan'      => $jurnal_penjualan,
-                'ppn_keluar'     => $jurnal_ppn_keluar,
-                'created_at'     => date('Y-m-d H:i:s')
-            ];
-            if ($this->db->table_exists('tbso_faktur_jurnal')) {
-                $this->db->insert('tbso_faktur_jurnal', $fj);
-            }
+                $fj = [
+                    'id_faktur'      => $id_faktur,
+                    'no_faktur'      => $faktur['no_faktur'],
+                    'piutang_dagang' => $jurnal_piutang,
+                    'penjualan'      => $jurnal_penjualan,
+                    'ppn_keluar'     => $jurnal_ppn_keluar,
+                    'created_at'     => date('Y-m-d H:i:s')
+                ];
+                if ($this->db->table_exists('tbso_faktur_jurnal')) {
+                    $this->db->insert('tbso_faktur_jurnal', $fj);
+                }
 
-            if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
-                $this->load->library('Accounting_source_service');
-                $current_user_id = (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0);
-                
-                $journal = $this->accounting_source_service->post_sales_invoice(
-                    $faktur['no_faktur'],
-                    '',
-                    $current_user_id ?: null,
-                    true
-                );
+                if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                    $this->load->library('Accounting_source_service');
+                    $current_user_id = (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0);
+                    
+                    $journal = $this->accounting_source_service->post_sales_invoice(
+                        $faktur['no_faktur'],
+                        '',
+                        $current_user_id ?: null,
+                        true
+                    );
 
-                if (empty($journal['success'])) {
-                    $this->db->trans_rollback();
-                    return [
-                        'errors' => [
-                            'Repost gagal karena posting jurnal baru tidak berhasil: '
-                            . ($journal['message'] ?? 'Posting jurnal gagal.')
-                        ],
-                    ];
+                    if (empty($journal['success'])) {
+                        $this->db->trans_rollback();
+                        return [
+                            'errors' => [
+                                'Repost gagal karena posting jurnal baru tidak berhasil: '
+                                . ($journal['message'] ?? 'Posting jurnal gagal.')
+                            ],
+                        ];
+                    }
                 }
             }
         }

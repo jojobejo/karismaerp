@@ -11,9 +11,9 @@
             <div class="row mb-3 align-items-center">
                 <div class="col-sm-6">
                     <h1 class="m-0 font-weight-bold" style="color: #0f172a; font-size: 1.5rem;">
-                        <i class="fas fa-handshake text-primary mr-2"></i> Penyelesaian Barang Konsinyasi
+                        <i class="fas fa-boxes text-primary mr-2"></i> Tracking &amp; Penyelesaian Barang Konsinyasi
                     </h1>
-                    <p class="text-muted mb-0 small">Pengelolaan penyelesaian tagihan konsinyasi: pengakuan hutang dan HPP atas barang titipan supplier yang telah laku/dibayar pelanggan (Penerimaan fisik barang melalui PO &amp; LPB di Logistik)</p>
+                    <p class="text-muted mb-0 small">Monitoring perpindahan barang konsinyasi: barang di gudang, di kios, dan barang laku yang dibeli kios</p>
                 </div>
                 <div class="col-sm-6 text-right">
                     <button type="button" class="btn btn-primary shadow-sm font-weight-bold" id="btnSyncKonsinyasi">
@@ -27,33 +27,50 @@
     <section class="content">
         <div class="container-fluid">
 
-            <!-- Summary Cards -->
+            <!-- 3 Summary Cards Tracking Posisi Barang Konsinyasi -->
             <div class="row mb-3">
-                <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #f59e0b !important;">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #2563eb !important;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">Terjual (Menunggu Tagihan)</span>
-                                    <h3 class="mb-0 font-weight-bold text-warning mt-1"><?= number_format($stats['pending_qty'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
-                                    <small class="text-muted"><?= $stats['pending_count'] ?> item transaksi SO/Faktur</small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">1. Barang di Gudang</span>
+                                    <h3 class="mb-0 font-weight-bold text-primary mt-1"><?= number_format($tracking_summary['total_di_gudang'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
+                                    <small class="text-muted"><?= $tracking_summary['item_di_gudang'] ?> jenis barang fisik (belum dikirim ke kios)</small>
                                 </div>
-                                <div class="p-3 bg-warning-light rounded-circle text-warning" style="background: #fef3c7;">
-                                    <i class="fas fa-clock fa-2x"></i>
+                                <div class="p-3 rounded-circle text-primary" style="background: #dbeafe;">
+                                    <i class="fas fa-warehouse fa-2x"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #f59e0b !important;">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted font-weight-bold small text-uppercase">2. Barang di Kios</span>
+                                    <h3 class="mb-0 font-weight-bold text-warning mt-1"><?= number_format($tracking_summary['total_di_kios'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
+                                    <small class="text-muted"><?= $tracking_summary['total_kios_count'] ?> kios pemegang titipan (belum laku/dibeli)</small>
+                                </div>
+                                <div class="p-3 rounded-circle text-warning" style="background: #fef3c7;">
+                                    <i class="fas fa-store fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
                     <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #10b981 !important;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">Selesai Difakturkan (Billed)</span>
-                                    <h3 class="mb-0 font-weight-bold text-success mt-1"><?= number_format($stats['billed_qty'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
-                                    <small class="text-muted">Total Hutang: <strong>Rp <?= number_format($stats['billed_hutang'], 2) ?></strong></small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">3. Barang Laku (Siap Ditagih)</span>
+                                    <h3 class="mb-0 font-weight-bold text-success mt-1"><?= number_format($tracking_summary['total_laku'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
+                                    <small class="text-muted"><?= $tracking_summary['item_laku'] ?> jenis barang laku (belum diinput tagihan supplier)</small>
                                 </div>
                                 <div class="p-3 rounded-circle text-success" style="background: #d1fae5;">
                                     <i class="fas fa-check-circle fa-2x"></i>
@@ -62,58 +79,36 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="col-md-12 col-lg-4">
-                    <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #3b82f6 !important;">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">Alur Penerimaan Fisik</span>
-                                    <h5 class="mb-0 font-weight-bold text-primary mt-1">PO &amp; LPB Konsinyasi</h5>
-                                    <small class="text-muted">Masuk melalui Logistik (Data LPB: ics/data_lpb)</small>
-                                </div>
-                                <div class="p-3 rounded-circle text-primary" style="background: #dbeafe;">
-                                    <i class="fas fa-dolly-flatbed fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- ========================================================================= -->
-            <!-- DAFTAR PENYELESAIAN TAGIHAN BARANG KONSINYASI (SETTLEMENT) -->
+            <!-- NAVIGASI TAB UTAMA: TRACKING POSISI BARANG vs PENYELESAIAN SETTLEMENT -->
             <!-- ========================================================================= -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px;">
                 <div class="card-body p-0">
-                    <!-- Tab header -->
-                    <div class="d-flex border-bottom" style="border-radius: 12px 12px 0 0; overflow: hidden;">
-                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=PENDING&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
-                           class="px-4 py-3 font-weight-bold text-decoration-none d-flex align-items-center gap-2
-                           <?= ($filters['status'] === 'PENDING') ? 'text-warning border-bottom border-warning' : 'text-muted' ?>"
-                           style="border-bottom: <?= ($filters['status'] === 'PENDING') ? '3px solid #f59e0b' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'PENDING') ? '#fffbeb' : 'white' ?>; margin-bottom: -1px;">
-                            <i class="fas fa-clock mr-2"></i> Menunggu Input Tagihan
-                            <span class="badge badge-warning text-dark ml-2"><?= $stats['pending_count'] ?></span>
-                        </a>
-                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=BILLED&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
+                    <div class="d-flex border-bottom" style="border-radius: 12px 12px 0 0; overflow: hidden; background: #fff;">
+                        <a href="<?= site_url('purchasing/konsinyasi?tab=tracking') ?>&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
                            class="px-4 py-3 font-weight-bold text-decoration-none d-flex align-items-center
-                           <?= ($filters['status'] === 'BILLED') ? 'text-success' : 'text-muted' ?>"
-                           style="border-bottom: <?= ($filters['status'] === 'BILLED') ? '3px solid #10b981' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'BILLED') ? '#f0fdf4' : 'white' ?>; margin-bottom: -1px;">
-                            <i class="fas fa-history mr-2"></i> Riwayat Sudah Ditagih
-                            <span class="badge badge-success ml-2"><?= $stats['billed_count'] ?></span>
+                           <?= ($filters['tab'] === 'tracking') ? 'text-primary' : 'text-muted' ?>"
+                           style="border-bottom: <?= ($filters['tab'] === 'tracking') ? '3px solid #2563eb' : '3px solid transparent' ?>; background: <?= ($filters['tab'] === 'tracking') ? '#eff6ff' : 'white' ?>; margin-bottom: -1px; font-size: 1rem;">
+                            <i class="fas fa-boxes mr-2"></i> Tracking Posisi Barang (Gudang vs Kios vs Laku)
+                            <span class="badge badge-primary ml-2"><?= count($tracking_barang) ?> Barang</span>
                         </a>
-                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=SEMUA&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
+                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=<?= urlencode($filters['status']) ?>&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
                            class="px-4 py-3 font-weight-bold text-decoration-none d-flex align-items-center
-                           <?= ($filters['status'] === 'SEMUA') ? 'text-primary' : 'text-muted' ?>"
-                           style="border-bottom: <?= ($filters['status'] === 'SEMUA') ? '3px solid #3b82f6' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'SEMUA') ? '#eff6ff' : 'white' ?>; margin-bottom: -1px;">
-                            <i class="fas fa-list mr-2"></i> Semua
+                           <?= ($filters['tab'] === 'penyelesaian') ? 'text-warning' : 'text-muted' ?>"
+                           style="border-bottom: <?= ($filters['tab'] === 'penyelesaian') ? '3px solid #f59e0b' : '3px solid transparent' ?>; background: <?= ($filters['tab'] === 'penyelesaian') ? '#fffbeb' : 'white' ?>; margin-bottom: -1px; font-size: 1rem;">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i> Penyelesaian &amp; Tagihan Supplier (Barang Laku)
+                            <span class="badge badge-warning text-dark ml-2"><?= $stats['pending_count'] ?> Laku Siap Ditagih</span>
                         </a>
                     </div>
 
-                    <!-- Filter dalam tab -->
+                    <!-- Filter Bar -->
                     <form method="get" action="<?= site_url('purchasing/konsinyasi') ?>" class="row align-items-end p-3">
-                        <input type="hidden" name="tab" value="penyelesaian">
-                        <input type="hidden" name="status" value="<?= htmlspecialchars($filters['status']) ?>">
+                        <input type="hidden" name="tab" value="<?= htmlspecialchars($filters['tab']) ?>">
+                        <?php if ($filters['tab'] === 'penyelesaian'): ?>
+                            <input type="hidden" name="status" value="<?= htmlspecialchars($filters['status']) ?>">
+                        <?php endif; ?>
                         <div class="col-md-4">
                             <label class="small font-weight-bold text-muted mb-1">Supplier Konsinyasi</label>
                             <select name="kd_suplier" class="form-control form-control-sm font-weight-bold" onchange="this.form.submit()">
@@ -126,9 +121,9 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="small font-weight-bold text-muted mb-1">Pencarian Barang / Customer / SO / Invoice Supplier</label>
+                            <label class="small font-weight-bold text-muted mb-1">Pencarian Barang / Customer / SO / Invoice</label>
                             <div class="input-group input-group-sm">
-                                <input type="text" name="search" class="form-control" placeholder="Cari nama barang, customer, no SO, no invoice supplier..." value="<?= htmlspecialchars($filters['search']) ?>">
+                                <input type="text" name="search" class="form-control" placeholder="Cari nama barang, customer, nomor faktur..." value="<?= htmlspecialchars($filters['search']) ?>">
                                 <div class="input-group-append">
                                     <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
                                 </div>
@@ -136,7 +131,7 @@
                         </div>
                         <div class="col-md-2 text-right pt-2">
                             <?php if (!empty($filters['search']) || $filters['kd_suplier'] !== 'SEMUA'): ?>
-                                <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=<?= $filters['status'] ?>" class="btn btn-sm btn-outline-danger btn-block">
+                                <a href="<?= site_url('purchasing/konsinyasi?tab=' . $filters['tab']) ?>" class="btn btn-sm btn-outline-danger btn-block">
                                     <i class="fas fa-times-circle mr-1"></i> Reset
                                 </a>
                             <?php endif; ?>
@@ -145,18 +140,143 @@
                 </div>
             </div>
 
-
-            <!-- Tabel Data Settlement Konsinyasi -->
+            <?php if ($filters['tab'] === 'tracking'): ?>
+            <!-- ========================================================================= -->
+            <!-- TABEL INVENTARIS TRACKING POSISI BARANG KONSINYASI -->
+            <!-- ========================================================================= -->
             <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                 <div class="card-header bg-white py-3 border-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-dark">
+                            <i class="fas fa-boxes text-primary mr-1"></i> Rekap Posisi Stok Barang Konsinyasi (Gudang Kita, Kios &amp; Laku)
+                        </h6>
+                        <span class="badge badge-light border text-muted px-2 py-1">
+                            Total: <?= count($tracking_barang) ?> Jenis Barang
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
+                            <thead style="background: #f1f5f9; color: #334155;">
+                                <tr>
+                                    <th class="py-3 px-3" style="width: 50px;">No</th>
+                                    <th class="py-3" style="width: 140px;">Kode Barang</th>
+                                    <th class="py-3">Nama Barang</th>
+                                    <th class="py-3">Supplier Konsinyasi</th>
+                                    <th class="py-3 text-right" style="background: #eff6ff; color: #1e40af;">
+                                        <i class="fas fa-warehouse mr-1"></i> Barang di Gudang
+                                    </th>
+                                    <th class="py-3 text-right" style="background: #fffbeb; color: #b45309;">
+                                        <i class="fas fa-store mr-1"></i> Di Kios
+                                    </th>
+                                    <th class="py-3 text-right" style="background: #f0fdf4; color: #15803d;">
+                                        <i class="fas fa-shopping-bag mr-1"></i> Barang Laku (Siap Ditagih)
+                                    </th>
+                                    <th class="py-3 text-right" style="background: #f8fafc; font-weight: bold;">
+                                        Total Konsinyasi Aktif
+                                    </th>
+                                    <th class="py-3 text-center" style="width: 140px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($tracking_barang)): ?>
+                                    <tr>
+                                        <td colspan="9" class="text-center py-5 text-muted">
+                                            <i class="fas fa-box-open fa-3x mb-3 text-black-50 d-block"></i>
+                                            Tidak ada data barang konsinyasi yang ditemukan pada filter ini.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php $no = 1; foreach ($tracking_barang as $tb): ?>
+                                        <tr>
+                                            <td class="px-3 text-muted font-weight-bold text-center"><?= $no++ ?></td>
+                                            <td class="font-weight-bold text-primary"><?= htmlspecialchars($tb['kode_barang']) ?></td>
+                                            <td>
+                                                <strong class="text-dark"><?= htmlspecialchars($tb['nama_barang']) ?></strong>
+                                                <br><small class="text-muted">Satuan: <strong><?= htmlspecialchars($tb['satuan'] ?: 'PCS') ?></strong></small>
+                                            </td>
+                                            <td>
+                                                <strong class="text-dark"><?= htmlspecialchars($tb['nama_suplier']) ?></strong>
+                                                <?php if (!empty($tb['kd_suplier'])): ?>
+                                                    <br><small class="text-muted">Kode: <?= htmlspecialchars($tb['kd_suplier']) ?></small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-right" style="background: #f8faff;">
+                                                <span class="badge badge-primary px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
+                                                    <?= number_format($tb['stok_gudang'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-right" style="background: #fffdf5;">
+                                                <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
+                                                    <?= number_format($tb['stok_kios'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                                </span>
+                                                <?php if ((float)$tb['stok_kios'] > 0): ?>
+                                                    <br><small class="text-warning font-weight-bold"><i class="fas fa-store mr-1"></i><?= (int)$tb['jml_kios'] ?> Kios Titipan</small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-right" style="background: #f6fef9;">
+                                                <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
+                                                    <?= number_format($tb['stok_laku'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-dark" style="background: #f8fafc; font-size: 0.95rem;">
+                                                <?= number_format($tb['total_stok'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold shadow-xs btnTrackingKios" 
+                                                        onclick="openModalTrackingKios('<?= htmlspecialchars($tb['kode_barang']) ?>', '<?= htmlspecialchars(addslashes($tb['nama_barang'])) ?>')"
+                                                        title="Lihat rincian posisi barang ini di tiap kios">
+                                                    <i class="fas fa-store mr-1"></i> Rincian Kios
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php else: ?>
+
+            <!-- ========================================================================= -->
+            <!-- TABEL PENYELESAIAN TAGIHAN KONSINYASI (BARANG LAKU) -->
+            <!-- ========================================================================= -->
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; overflow: hidden;">
+                <!-- Sub-tab filter status settlement -->
+                <div class="d-flex border-bottom bg-white" style="border-radius: 12px 12px 0 0;">
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=LAKU&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                       class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
+                       <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? 'text-warning border-bottom border-warning' : 'text-muted' ?>"
+                       style="border-bottom: <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? '3px solid #f59e0b' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? '#fffbeb' : 'white' ?>; margin-bottom: -1px;">
+                        <i class="fas fa-shopping-bag mr-2"></i> Menunggu Tagihan Supplier (Barang Laku)
+                        <span class="badge badge-warning text-dark ml-2"><?= $stats['pending_count'] ?></span>
+                    </a>
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=BILLED&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                       class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
+                       <?= ($filters['status'] === 'BILLED') ? 'text-success' : 'text-muted' ?>"
+                       style="border-bottom: <?= ($filters['status'] === 'BILLED') ? '3px solid #10b981' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'BILLED') ? '#f0fdf4' : 'white' ?>; margin-bottom: -1px;">
+                        <i class="fas fa-check-circle mr-2"></i> Riwayat Sudah Ditagih
+                        <span class="badge badge-success ml-2"><?= $stats['billed_count'] ?></span>
+                    </a>
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=SEMUA&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                       class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
+                       <?= ($filters['status'] === 'SEMUA') ? 'text-primary' : 'text-muted' ?>"
+                       style="border-bottom: <?= ($filters['status'] === 'SEMUA') ? '3px solid #3b82f6' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'SEMUA') ? '#eff6ff' : 'white' ?>; margin-bottom: -1px;">
+                        <i class="fas fa-list mr-2"></i> Semua
+                    </a>
+                </div>
+
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-dark">
                             <?php if ($filters['status'] === 'BILLED'): ?>
-                                <i class="fas fa-history text-success mr-1"></i> Riwayat Barang Konsinyasi Sudah Ditagih
-                            <?php elseif ($filters['status'] === 'PENDING'): ?>
-                                <i class="fas fa-clock text-warning mr-1"></i> Barang Konsinyasi Menunggu Input Tagihan Supplier
+                                <i class="fas fa-history text-success mr-1"></i> Riwayat Barang Konsinyasi Sudah Ditagih Supplier
+                            <?php elseif ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING'): ?>
+                                <i class="fas fa-shopping-bag text-warning mr-1"></i> Barang Konsinyasi Laku (Menunggu Input Tagihan Supplier)
                             <?php else: ?>
-                                <i class="fas fa-list text-muted mr-1"></i> Semua Daftar Barang Konsinyasi
+                                <i class="fas fa-list text-muted mr-1"></i> Semua Daftar Transaksi Barang Konsinyasi Laku
                             <?php endif; ?>
                         </h6>
                         <span class="badge badge-light border text-muted px-2 py-1">
@@ -170,23 +290,23 @@
                             <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
                                     <th class="py-3 px-3">No. Settlement</th>
-                                    <th class="py-3">Tgl Terjual</th>
+                                    <th class="py-3">Tgl Penjualan/Laku</th>
                                     <th class="py-3">Supplier Konsinyasi</th>
-                                    <th class="py-3">Penjualan ke Customer</th>
-                                    <th class="py-3">Barang & Batch/Lot</th>
-                                    <th class="py-3 text-right">Qty Terjual</th>
-                                    <th class="py-3 text-right">Harga Jual</th>
+                                    <th class="py-3">Lokasi Kios / Pembeli</th>
+                                    <th class="py-3">Barang &amp; Batch/Lot</th>
+                                    <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku (Dibeli Kios)</th>
+                                    <th class="py-3 text-right">Harga Jual Kios</th>
                                     <th class="py-3 text-center">Status</th>
                                     <th class="py-3">Tagihan Beli Supplier</th>
-                                    <th class="py-3 text-center" style="width: 140px;">Aksi</th>
+                                    <th class="py-3 text-center" style="width: 170px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($settlements)): ?>
                                     <tr>
                                         <td colspan="10" class="text-center py-5 text-muted">
-                                            <i class="fas fa-clipboard-check fa-3x mb-3 text-black-50 d-block"></i>
-                                            Tidak ada data barang konsinyasi yang ditemukan pada filter ini.
+                                            <i class="fas fa-shopping-bag fa-3x mb-3 text-black-50 d-block"></i>
+                                            Tidak ada data barang konsinyasi laku pada filter ini.
                                         </td>
                                     </tr>
                                 <?php else: ?>
@@ -212,27 +332,27 @@
                                                 <br><small class="text-muted">Kode: <?= htmlspecialchars($s['kd_suplier']) ?></small>
                                             </td>
                                             <td>
-                                                <span class="font-weight-bold text-dark"><?= htmlspecialchars($s['customer_name']) ?></span>
-                                                <br><small class="text-muted">SO: <?= htmlspecialchars($s['no_so']) ?><?= !empty($s['no_faktur']) ? ' | Inv: ' . htmlspecialchars($s['no_faktur']) : '' ?></small>
+                                                <span class="font-weight-bold text-dark"><i class="fas fa-store text-warning mr-1"></i><?= htmlspecialchars($s['customer_name']) ?></span>
+                                                <br><small class="text-muted">SO: <?= htmlspecialchars($s['no_so']) ?><?= !empty($s['no_faktur']) ? ' | Faktur: <strong class="text-primary">' . htmlspecialchars($s['no_faktur']) . '</strong>' : '' ?></small>
                                             </td>
                                             <td>
                                                 <strong class="text-dark"><?= htmlspecialchars($s['nama_barang']) ?></strong>
                                                 <br><small class="text-muted">Lot: <?= htmlspecialchars($s['no_lot'] ?: '-') ?> | ED: <?= !empty($s['expired_date']) ? date('d/m/Y', strtotime($s['expired_date'])) : '-' ?></small>
                                             </td>
-                                            <td class="text-right font-weight-bold">
+                                            <td class="text-right font-weight-bold text-success" style="background: #fdfefe; font-size: 0.95rem;">
                                                 <?= number_format($s['qty_net'], 2) ?> <?= htmlspecialchars($s['satuan']) ?>
                                             </td>
                                             <td class="text-right text-muted">
                                                 Rp <?= number_format($s['hrg_jual'], 2) ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($s['status'] === 'PENDING'): ?>
+                                                <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
                                                     <span class="badge badge-warning text-dark px-2 py-1 shadow-xs">
-                                                        <i class="fas fa-clock mr-1"></i> Menunggu Invoice
+                                                        <i class="fas fa-shopping-bag mr-1"></i> Barang Laku
                                                     </span>
                                                 <?php elseif ($s['status'] === 'BILLED'): ?>
                                                     <span class="badge badge-success px-2 py-1 shadow-xs">
-                                                        <i class="fas fa-check-circle mr-1"></i> Terjurnal (Billed)
+                                                        <i class="fas fa-check-double mr-1"></i> Sudah Ditagih
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">
@@ -258,21 +378,29 @@
                                                         <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
-                                                    <span class="text-muted small font-italic">Belum diinput</span>
+                                                    <span class="text-muted small font-italic">Menunggu nota/faktur dari supplier</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($s['status'] === 'PENDING'): ?>
-                                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm btnProcessSettlement" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>)">
-                                                        <i class="fas fa-file-invoice-dollar mr-1"></i> Input Tagihan
-                                                    </button>
+                                                <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="<?= site_url('purchasing/konsinyasi/print_faktur/' . (int) $s['id_settlement']) ?>" target="_blank" class="btn btn-outline-primary font-weight-bold shadow-xs" title="Cetak Faktur Realisasi Penjualan Konsinyasi untuk Dilaporkan ke Supplier">
+                                                            <i class="fas fa-print mr-1"></i> Faktur
+                                                        </a>
+                                                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>)" title="Input Tagihan/Faktur Pembelian dari Supplier">
+                                                            <i class="fas fa-file-invoice-dollar mr-1"></i> Tagihan
+                                                        </button>
+                                                    </div>
                                                 <?php else: ?>
                                                     <div class="btn-group btn-group-sm">
+                                                        <a href="<?= site_url('purchasing/konsinyasi/print_faktur/' . (int) $s['id_settlement']) ?>" target="_blank" class="btn btn-outline-secondary font-weight-bold shadow-xs" title="Cetak Faktur Realisasi Penjualan Konsinyasi untuk Supplier">
+                                                            <i class="fas fa-print"></i>
+                                                        </a>
                                                         <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat Detail Settlement">
-                                                            <i class="fas fa-eye mr-1"></i> Detail
+                                                            <i class="fas fa-eye"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-outline-info font-weight-bold" onclick="openModalViewJournal(<?= (int) $s['id_settlement'] ?>)" title="Lihat Jurnal Pembelian (Atau Klik Kanan baris)">
-                                                            <i class="fas fa-book"></i> Jurnal
+                                                            <i class="fas fa-book"></i>
                                                         </button>
                                                     </div>
                                                 <?php endif; ?>
@@ -285,6 +413,7 @@
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Hint Klik Kanan untuk pengguna -->
             <div class="text-muted small text-right mt-1 mb-3">
@@ -295,7 +424,32 @@
     </section>
 </div>
 
-<!-- Modal Form Penyelesaian Konsinyasi (Input Invoice Supplier) -->
+<!-- Modal Rincian Kios Pemegang Barang Konsinyasi -->
+<div class="modal fade" id="modalTrackingKios" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
+            <div class="modal-header border-0 bg-primary text-white" style="border-radius: 14px 14px 0 0;">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-store mr-2"></i> Rincian Titipan di Kios — <span id="modalKiosNamaBarang">-</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4" id="modalTrackingKiosBody">
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="text-muted mt-2">Memuat daftar kios pemegang barang...</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Form Penyelesaian Konsinyasi (Input Tagihan & Pembelian Kios) -->
 <div class="modal fade" id="modalSettlement" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
@@ -310,7 +464,7 @@
             <form id="formSettlement">
                 <input type="hidden" name="id_settlement" id="set_id_settlement">
                 <div class="modal-body p-4">
-                    <!-- Ringkasan Info Penjualan -->
+                    <!-- Ringkasan Info Penjualan / Pengiriman ke Kios -->
                     <div class="p-3 mb-3 bg-light rounded border">
                         <div class="row small mb-1">
                             <div class="col-4 text-muted">Barang:</div>
@@ -321,13 +475,30 @@
                             <div class="col-8 font-weight-bold text-dark" id="txt_nama_suplier">-</div>
                         </div>
                         <div class="row small mb-1">
-                            <div class="col-4 text-muted">Qty Terjual:</div>
-                            <div class="col-8 font-weight-bold text-primary" id="txt_qty_terjual">-</div>
+                            <div class="col-4 text-muted">Barang Laku:</div>
+                            <div class="col-8 font-weight-bold text-success" id="txt_qty_terjual">-</div>
                         </div>
                         <div class="row small">
-                            <div class="col-4 text-muted">Customer:</div>
+                            <div class="col-4 text-muted">Lokasi Kios:</div>
                             <div class="col-8 text-dark" id="txt_customer_name">-</div>
                         </div>
+                    </div>
+
+                    <!-- Input Qty Laku (Dibeli Kios) -->
+                    <div class="form-group mb-3 p-3 rounded" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between mb-1">
+                            <span><i class="fas fa-shopping-bag text-success mr-1"></i> Qty Laku yang Ditagihkan <span class="badge badge-secondary ml-1" style="font-size:0.75rem;"><i class="fas fa-lock mr-1"></i>Terkunci</span></span>
+                            <span class="badge badge-success font-weight-bold" id="badge_sisa_titipan_kios">Barang Laku: 0</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" step="any" min="0.001" name="qty_laku" id="input_qty_laku" class="form-control font-weight-bold text-right text-success" placeholder="0" readonly style="background-color: #f1f5f9; cursor: not-allowed;" required>
+                            <div class="input-group-append">
+                                <span class="input-group-text font-weight-bold span_satuan_kios" style="background-color: #e2e8f0;">pcs</span>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-1 font-italic" id="helper_qty_laku">
+                            <i class="fas fa-info-circle mr-1 text-success"></i> *Qty ini terkunci otomatis sesuai jumlah barang konsinyasi yang telah dibeli oleh kios.
+                        </small>
                     </div>
 
                     <!-- Input Invoice Resmi Supplier -->
@@ -549,7 +720,20 @@ window.calculateSettlementLive = function() {
     var ppnPersen = (tipe === 'NON_PPN') ? 0 : 11;
     $('#ppn_persen').val(ppnPersen);
 
+    // Qty laku yang dibeli kios
+    var activeQty = parseFloat($('#input_qty_laku').val());
+    if (isNaN(activeQty) || activeQty <= 0) {
+        activeQty = currentQtyNet;
+    }
+    if (activeQty > currentQtyNet) {
+        activeQty = currentQtyNet;
+        $('#input_qty_laku').val(currentQtyNet);
+    }
+
     var satuanText = currentSatuan ? ' / ' + currentSatuan : '';
+
+    // Info helper qty laku terkunci
+    $('#helper_qty_laku').html('<span class="text-success font-weight-bold"><i class="fas fa-lock mr-1 text-muted"></i>Qty terkunci: <strong>' + activeQty.toFixed(2) + ' ' + currentSatuan + '</strong> (sesuai jumlah yang telah dibeli kios).</span>');
 
     if (tipe === 'NON_PPN') {
         $('#label_hrg_satuan').text('Harga Satuan Non-PPN (Rp) *');
@@ -580,13 +764,13 @@ window.calculateSettlementLive = function() {
         var divider = 1 + (ppnPersen / 100);
         hrgSatuanDpp = (ppnPersen > 0) ? (hrg / divider) : hrg;
 
-        totalTagihan = currentQtyNet * hrgSatuanInc;
+        totalTagihan = activeQty * hrgSatuanInc;
         subtotalDpp = (ppnPersen > 0) ? (totalTagihan / divider) : totalTagihan;
         nilaiPpn = totalTagihan - subtotalDpp;
     } else if (tipe === 'NON_PPN') {
         hrgSatuanDpp = hrg;
         hrgSatuanInc = hrg;
-        subtotalDpp = currentQtyNet * hrg;
+        subtotalDpp = activeQty * hrg;
         nilaiPpn = 0;
         totalTagihan = subtotalDpp;
     } else {
@@ -594,7 +778,7 @@ window.calculateSettlementLive = function() {
         hrgSatuanDpp = hrg;
         hrgSatuanInc = hrg * (1 + (ppnPersen / 100));
 
-        subtotalDpp = currentQtyNet * hrgSatuanDpp;
+        subtotalDpp = activeQty * hrgSatuanDpp;
         nilaiPpn = (subtotalDpp * ppnPersen) / 100;
         totalTagihan = subtotalDpp + nilaiPpn;
     }
@@ -609,8 +793,8 @@ window.calculateSettlementLive = function() {
 // Global function untuk tombol "Input Tagihan"
 window.openModalInputTagihan = function(id) {
     var $btn = $('#btn-settle-' + id);
-    var oldHtml = $btn.html();
-    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...');
+    var oldHtml = $btn.length ? $btn.html() : '';
+    if ($btn.length) $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...');
 
     $.ajax({
         url: '<?= site_url("purchasing/konsinyasi/ajax_detail") ?>',
@@ -618,7 +802,7 @@ window.openModalInputTagihan = function(id) {
         data: { id_settlement: id },
         dataType: 'json',
         success: function(res) {
-            $btn.prop('disabled', false).html(oldHtml);
+            if ($btn.length) $btn.prop('disabled', false).html(oldHtml);
             if (res && res.status && res.data) {
                 var d = res.data;
                 $('#set_id_settlement').val(d.id_settlement);
@@ -629,6 +813,12 @@ window.openModalInputTagihan = function(id) {
 
                 currentQtyNet = parseFloat(d.qty_net) || 0;
                 currentSatuan = d.satuan || '';
+
+                $('#input_qty_laku').val(currentQtyNet.toFixed(2));
+                $('#input_qty_laku').attr('max', currentQtyNet);
+                $('.span_satuan_kios').text(currentSatuan || 'pcs');
+                $('#badge_sisa_titipan_kios').text('Barang Laku: ' + currentQtyNet.toFixed(2) + ' ' + currentSatuan);
+
                 $('#hrg_satuan_input').val('');
                 $('#no_invoice_supplier').val('');
 
@@ -651,7 +841,7 @@ window.openModalInputTagihan = function(id) {
             }
         },
         error: function(xhr, status, error) {
-            $btn.prop('disabled', false).html(oldHtml);
+            if ($btn.length) $btn.prop('disabled', false).html(oldHtml);
             var errMsg = 'Terjadi kesalahan sistem saat mengambil data tagihan (' + status + ').';
             if (xhr.status === 401) {
                 errMsg = 'Sesi login telah berakhir. Silakan login kembali.';
@@ -661,6 +851,83 @@ window.openModalInputTagihan = function(id) {
             } else {
                 alert(errMsg);
             }
+        }
+    });
+};
+
+// Global function untuk tombol "Rincian Kios" pada tab Tracking Posisi Barang
+window.openModalTrackingKios = function(kdBarang, namaBarang) {
+    $('#modalKiosNamaBarang').text(namaBarang || kdBarang);
+    $('#modalTrackingKiosBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="text-muted mt-2">Memuat daftar kios pemegang barang...</p></div>');
+    showModalSafe('modalTrackingKios');
+
+    $.ajax({
+        url: '<?= site_url("purchasing/konsinyasi/ajax_tracking_kios") ?>',
+        type: 'GET',
+        data: { kd_barang: kdBarang },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.status && res.data) {
+                var list = res.data;
+                if (list.length === 0) {
+                    $('#modalTrackingKiosBody').html('<div class="alert alert-info py-4 text-center"><i class="fas fa-info-circle fa-2x mb-2 d-block"></i>Belum ada pengiriman barang konsinyasi ini ke kios (belum ada Faktur T).</div>');
+                    return;
+                }
+
+                var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+                var html = '<div class="table-responsive">';
+                html += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size:0.88rem;">';
+                html += '<thead style="background:#0f172a; color:#fff;"><tr>';
+                html += '<th>Lokasi Kios</th>';
+                html += '<th>No. Faktur T</th>';
+                html += '<th>Tgl Kirim</th>';
+                html += '<th>Lot / ED</th>';
+                html += '<th class="text-right">Qty di Kios</th>';
+                html += '<th class="text-center">Status</th>';
+                html += '<th class="text-center" style="width:120px;">Aksi</th>';
+                html += '</tr></thead><tbody>';
+
+                $.each(list, function(i, r) {
+                    var isDiKios = (r.status === 'DI_KIOS' || r.status === 'PENDING');
+                    var isLaku = (r.status === 'LAKU');
+                    var isBilled = (r.status === 'BILLED');
+
+                    var badge = '';
+                    var btnAksi = '';
+
+                    if (isDiKios) {
+                        badge = '<span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-store mr-1"></i>Ada di Kios</span>';
+                        btnAksi = '<span class="text-muted small font-italic">Menunggu Kios</span>';
+                    } else if (isLaku) {
+                        badge = '<span class="badge badge-info text-white font-weight-bold px-2 py-1"><i class="fas fa-shopping-bag mr-1"></i>Laku (Siap Ditagih)</span>';
+                        btnAksi = '<button type="button" class="btn btn-sm btn-primary font-weight-bold shadow-xs" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalInputTagihan(' + r.id_settlement + '); }, 300);"><i class="fas fa-file-invoice-dollar mr-1"></i>Input Tagihan</button>';
+                    } else {
+                        badge = '<span class="badge badge-success font-weight-bold px-2 py-1"><i class="fas fa-check-double mr-1"></i>Sudah Ditagih Supplier</span>';
+                        btnAksi = '<button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalDetailSettlement(' + r.id_settlement + '); }, 300);"><i class="fas fa-eye mr-1"></i>Detail</button>';
+                    }
+
+                    var tglKirim = r.tanggal_settlement ? new Date(r.tanggal_settlement).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
+                    var ed = r.expired_date ? new Date(r.expired_date).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
+
+                    html += '<tr>';
+                    html += '<td><strong class="text-dark"><i class="fas fa-store text-warning mr-1"></i>' + (r.customer_name || '-') + '</strong><br><small class="text-muted">SO: ' + (r.no_so || '-') + '</small></td>';
+                    html += '<td><strong class="text-primary">' + (r.no_faktur || '-') + '</strong></td>';
+                    html += '<td>' + tglKirim + '</td>';
+                    html += '<td><small>' + (r.no_lot || '-') + '<br>ED: ' + ed + '</small></td>';
+                    html += '<td class="text-right font-weight-bold ' + (isDiKios ? 'text-warning' : (isLaku ? 'text-info' : 'text-success')) + '" style="font-size:0.95rem;">' + parseFloat(r.qty_net || 0).toFixed(2) + ' ' + (r.satuan || '') + '</td>';
+                    html += '<td class="text-center">' + badge + '</td>';
+                    html += '<td class="text-center">' + btnAksi + '</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table></div>';
+                $('#modalTrackingKiosBody').html(html);
+            } else {
+                $('#modalTrackingKiosBody').html('<div class="alert alert-danger">Gagal memuat rincian kios.</div>');
+            }
+        },
+        error: function(xhr, status) {
+            $('#modalTrackingKiosBody').html('<div class="alert alert-danger">Terjadi kesalahan koneksi (' + status + ').</div>');
         }
     });
 };
@@ -986,7 +1253,7 @@ $(document).ready(function() {
             }
             $('.ctx-item-input').hide();
         } else {
-            $('#ctxMenuStatus').removeClass('badge-success').addClass('badge-warning').text('PENDING');
+            $('#ctxMenuStatus').removeClass('badge-success').addClass('badge-warning').text('LAKU');
             if (hasJournal == '1') {
                 $('.ctx-item-journal').show().html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal Pembelian');
             } else {
@@ -1039,7 +1306,7 @@ $(document).ready(function() {
     $(document).on('change', 'input[name="tipe_pajak"]', function() {
         window.calculateSettlementLive();
     });
-    $(document).on('input change', '#hrg_satuan_input', function() {
+    $(document).on('input change', '#hrg_satuan_input, #input_qty_laku', function() {
         window.calculateSettlementLive();
     });
 

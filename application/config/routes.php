@@ -206,6 +206,10 @@ $route['keuangan/pembayaran/ajax_post_pembayaran']   = 'keuangan/C_pembayaran/aj
 $route['keuangan/pembayaran/ajax_delete_pembayaran'] = 'keuangan/C_pembayaran/ajax_delete_pembayaran';
 $route['keuangan/pembayaran/print_bukti/(:any)']     = 'keuangan/C_pembayaran/print_bukti/$1';
 $route['keuangan/pembayaran/print_bukti']            = 'keuangan/C_pembayaran/print_bukti';
+$route['keuangan/pembayaran/print_faktur_konsinyasi/(:num)'] = 'keuangan/C_pembayaran/print_faktur_konsinyasi/$1';
+$route['purchasing/konsinyasi/print_faktur/(:num)']  = 'purchasing/C_Konsinyasi/print_faktur/$1';
+$route['purchasing/konsinyasi']                      = 'purchasing/C_Konsinyasi/index';
+$route['purchasing/konsinyasi/(:any)']               = 'purchasing/C_Konsinyasi/$1';
 $route['laporan']                                   = 'keuangan/C_Laporan/index';
 $route['laporan/keuangan']                          = 'keuangan/C_Laporan/keuangan';
 $route['laporan/keuangan/jurnal-transaksi']         = 'keuangan/C_Laporan/jurnal_transaksi_report';
@@ -1115,6 +1119,7 @@ $route['purchasing/bundling/formula']               = 'purchasing/C_BundlingRequ
 $route['purchasing/bundling/formula/save']          = 'purchasing/C_BundlingRequest/formula_save';
 $route['purchasing/bundling/formula/detail_ajax']   = 'purchasing/C_BundlingRequest/ajax_get_formula_detail';
 $route['purchasing/bundling/ajax_search_barang']    = 'purchasing/C_BundlingRequest/ajax_search_barang';
+$route['purchasing/bundling/ajax_item_hpp']          = 'purchasing/C_BundlingRequest/ajax_item_hpp';
 
 // Logistik - Monitoring, Mutasi Bahan & Realisasi Pembuatan (Assembly)
 $route['logistik/bundling']                         = 'logistik/C_BundlingLogistik/index';

@@ -325,13 +325,34 @@ class M_Bundling extends CI_Model
         if (!empty($row['rincian_biaya_kemasan'])) {
             $decoded = json_decode($row['rincian_biaya_kemasan'], true);
             if (is_array($decoded) && !empty($decoded)) {
+                $isInbox = !empty($row['is_innerbox']);
+                $jmlInbox = (float)($row['jumlah_innerbox'] ?? 1);
+                if ($jmlInbox <= 0) $jmlInbox = 1;
+
                 foreach ($decoded as $it) {
                     $nama = trim($it['nama'] ?? '');
                     $nominal = (float)str_replace(',', '', $it['nominal'] ?? 0);
+                    $qty = isset($it['qty']) ? (float)str_replace(',', '', $it['qty']) : 1.0;
+                    $satuan = !empty($it['satuan']) ? trim($it['satuan']) : 'pcs';
+                    $qtyVal = ($qty > 0) ? $qty : 1.0;
+
+                    if (isset($it['sub_per_paket'])) {
+                        $subPerPaket = (float)$it['sub_per_paket'];
+                        $subPerInbox = isset($it['sub_per_inbox']) ? (float)$it['sub_per_inbox'] : (($isInbox && $jmlInbox > 0) ? ($subPerPaket / $jmlInbox) : $subPerPaket);
+                    } else {
+                        // Data lama: nominal merupakan total biaya per paket (Master Box)
+                        $subPerPaket = $nominal;
+                        $subPerInbox = ($isInbox && $jmlInbox > 0) ? ($nominal / $jmlInbox) : $nominal;
+                    }
+
                     if ($nama !== '' || $nominal > 0) {
                         $items[] = [
-                            'nama'    => $nama !== '' ? $nama : 'Biaya Kemasan / Printilan',
-                            'nominal' => $nominal
+                            'nama'          => $nama !== '' ? $nama : 'Biaya Kemasan / Printilan',
+                            'qty'           => $qtyVal,
+                            'satuan'        => $satuan,
+                            'nominal'       => $nominal,
+                            'sub_per_inbox' => $subPerInbox,
+                            'sub_per_paket' => $subPerPaket
                         ];
                     }
                 }
@@ -644,7 +665,7 @@ class M_Bundling extends CI_Model
             $header['kemasan_items'] = $this->parse_packaging_items($header);
             $totalBiayaKemasanPerPaket = 0.0;
             foreach ($header['kemasan_items'] as $kItem) {
-                $totalBiayaKemasanPerPaket += (float)($kItem['nominal'] ?? 0);
+                $totalBiayaKemasanPerPaket += (float)($kItem['sub_per_paket'] ?? $kItem['nominal'] ?? 0);
             }
             $totalBiayaKemasanKeseluruhan = $totalBiayaKemasanPerPaket * $qtyReq;
 
@@ -796,10 +817,11 @@ class M_Bundling extends CI_Model
 
             $totalKebutuhan = $qtyRequest * $qtyPerPaket; // Kalkulasi otomatis total fisik
 
-            // Hitung HPP dan estimasi modal menggunakan metode LIFO (Last In First Out)
+            // Hitung HPP dan estimasi modal: dukung input manual atau otomatis LIFO (Last In First Out)
+            $hppInput = isset($d['hpp_satuan']) && (float)$d['hpp_satuan'] > 0 ? (float)$d['hpp_satuan'] : 0.0;
             $lifo = $this->calculate_item_lifo_cost($kdBrg, $totalKebutuhan, $idGudangAsal, $d['nama_barang_komponen'] ?? '');
-            $hppSatuan = $lifo['hpp_satuan'];
-            $modalTotalBarang = $lifo['total_modal'];
+            $hppSatuan = ($hppInput > 0) ? $hppInput : $lifo['hpp_satuan'];
+            $modalTotalBarang = ($hppInput > 0) ? ($totalKebutuhan * $hppInput) : $lifo['total_modal'];
             $subtotalHpp = ($qtyRequest > 0) ? ($modalTotalBarang / $qtyRequest) : ($qtyPerPaket * $hppSatuan);
 
             $totalEstHppPaket += $subtotalHpp;
@@ -866,7 +888,8 @@ class M_Bundling extends CI_Model
 
         $qtyReq = (float)$req['qty_request'];
         $isInnerbox = !empty($req['is_innerbox']) ? 1 : 0;
-        $jmlInnerbox = (float)($req['jumlah_innerbox'] ?? 0);
+        $jmlInnerbox = (float)($req['jumlah_innerbox'] ?? 1);
+        if ($jmlInnerbox <= 0) $jmlInnerbox = 1;
 
         // Proses rincian item biaya kemasan dinamis
         $rawKemasan = $data['kemasan_items'] ?? $data['items'] ?? $data['rincian_biaya_kemasan'] ?? [];
@@ -882,11 +905,30 @@ class M_Bundling extends CI_Model
             foreach ($rawKemasan as $k) {
                 $nm = trim($k['nama'] ?? '');
                 $nom = (float)str_replace(',', '', $k['nominal'] ?? 0);
+                $qty = isset($k['qty']) ? (float)str_replace(',', '', $k['qty']) : 1.0;
+                $sat = !empty($k['satuan']) ? trim($k['satuan']) : 'pcs';
+                $qtyVal = ($qty > 0) ? $qty : 1.0;
+
                 if ($nm !== '' || $nom > 0) {
                     if ($nm === '') $nm = 'Biaya Kemasan';
-                    $validKemasan[] = ['nama' => $nm, 'nominal' => $nom];
-                    $totalBiayaKemasanPerPaket += $nom;
-                    $summaryKemasan[] = $nm . ' (Rp ' . number_format($nom, 0, ',', '.') . ')';
+
+                    $subPerInbox = $qtyVal * $nom;
+                    if ($isInnerbox && $jmlInnerbox > 0) {
+                        $subPerPaket = $subPerInbox * $jmlInnerbox;
+                    } else {
+                        $subPerPaket = $subPerInbox;
+                    }
+
+                    $validKemasan[] = [
+                        'nama'          => $nm,
+                        'qty'           => $qtyVal,
+                        'satuan'        => $sat,
+                        'nominal'       => $nom,
+                        'sub_per_inbox' => $subPerInbox,
+                        'sub_per_paket' => $subPerPaket
+                    ];
+                    $totalBiayaKemasanPerPaket += $subPerPaket;
+                    $summaryKemasan[] = $nm . ' ' . $qtyVal . ' ' . $sat . ' (Rp ' . number_format($nom, 0, ',', '.') . ')';
                 }
             }
         }

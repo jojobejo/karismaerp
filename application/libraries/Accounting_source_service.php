@@ -23,6 +23,22 @@ class Accounting_source_service
             return $this->fail('Nomor faktur kosong.', ['SOURCE_ID_REQUIRED']);
         }
 
+        // Faktur barang konsinyasi (kode berawalan 'T') tidak dijurnal saat penerbitan faktur
+        if (strtoupper(substr($noFaktur, 0, 1)) === 'T') {
+            return [
+                'success' => true,
+                'message' => 'Faktur konsinyasi tidak dijurnal otomatis saat penerbitan faktur.',
+                'data' => [
+                    'sales_invoice' => null,
+                    'goods_issue' => null,
+                    'source_id' => $noFaktur,
+                    'is_consignment' => true,
+                    'posted' => false
+                ],
+                'errors' => []
+            ];
+        }
+
         $header = $this->CI->db
             ->where('no_faktur', $noFaktur)
             ->get('tbso_faktur_penjualan')
@@ -34,6 +50,33 @@ class Accounting_source_service
                 'source_id' => $noFaktur,
                 'source_no' => $noFaktur,
             ], 'Faktur final tidak ditemukan atau sudah dibatalkan.', ['SOURCE_NOT_POSTABLE']);
+        }
+
+        // Cek jika gudang pada header faktur adalah gudang konsinyasi
+        $isKonsinyasi = false;
+        if (!empty($header->gudang_id)) {
+            if ((int)$header->gudang_id === 13) {
+                $isKonsinyasi = true;
+            } else {
+                $gdgRow = $this->CI->db->select('nama_gudang, tipe')->where('id_gudang', (int)$header->gudang_id)->get('tb_gudang')->row();
+                if ($gdgRow && (strpos(strtolower((string)$gdgRow->nama_gudang), 'konsi') !== false || strtoupper((string)$gdgRow->tipe) === 'KONSINYASI')) {
+                    $isKonsinyasi = true;
+                }
+            }
+        }
+        if ($isKonsinyasi) {
+            return [
+                'success' => true,
+                'message' => 'Faktur konsinyasi tidak dijurnal otomatis saat penerbitan faktur.',
+                'data' => [
+                    'sales_invoice' => null,
+                    'goods_issue' => null,
+                    'source_id' => $noFaktur,
+                    'is_consignment' => true,
+                    'posted' => false
+                ],
+                'errors' => []
+            ];
         }
 
         $items = $this->CI->db->query(

@@ -1135,10 +1135,17 @@ class M_Keuangan extends CI_Model
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
-        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id', 'left');
+        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id OR f.no_faktur = j.source_no', 'left');
         $this->db->where('j.source_module', 'SALES');
+        $this->db->group_start();
         $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
+        $this->db->or_where('j.source_type', 'FAKTUR_PENJUALAN_KONSINYASI');
+        $this->db->group_end();
+        $this->db->group_start();
         $this->db->where('j.posting_event', 'SALES_INVOICE');
+        $this->db->or_where('j.posting_event IS NULL');
+        $this->db->or_where('j.posting_event', '');
+        $this->db->group_end();
         if ($search !== '') {
             $this->db->group_start();
             $this->db->like('j.source_no', $search);

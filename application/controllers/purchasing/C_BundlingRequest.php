@@ -120,7 +120,8 @@ class C_BundlingRequest extends CI_Controller
                                 'is_innerbox'          => $isInnerbox,
                                 'qty_innerbox'         => $qtyInnerbox,
                                 'isi_per_innerbox'     => $isiPerInnerbox,
-                                'satuan_innerbox'      => $isInnerbox ? $satuanInnerbox : null
+                                'satuan_innerbox'      => $isInnerbox ? $satuanInnerbox : null,
+                                'hpp_satuan'           => isset($item['hpp_satuan']) ? (float)str_replace(',', '', $item['hpp_satuan']) : null
                             ];
                         }
                     }
@@ -394,6 +395,16 @@ class C_BundlingRequest extends CI_Controller
             return;
         }
 
+        // Lengkapi info HPP LIFO untuk setiap komponen formula
+        if (!empty($formula['details'])) {
+            foreach ($formula['details'] as $idx => $d) {
+                $qtyKomp = (float)($d['qty_komponen'] ?? 1);
+                $lifo = $this->M_Bundling->calculate_item_lifo_cost($d['kode_barang_komponen'], $qtyKomp, 2, $d['nama_barang_komponen'] ?? '');
+                $formula['details'][$idx]['hpp_satuan'] = (float)$lifo['hpp_satuan'];
+                $formula['details'][$idx]['subtotal_hpp'] = $qtyKomp * (float)$lifo['hpp_satuan'];
+            }
+        }
+
         $this->output->set_content_type('application/json')
             ->set_output(json_encode(['status' => true, 'data' => $formula]));
     }
@@ -452,6 +463,33 @@ class C_BundlingRequest extends CI_Controller
             $items = array_merge($items, $fallbackItems);
         }
 
+        // Sertakan HPP satuan estimasi LIFO untuk setiap barang
+        foreach ($items as &$it) {
+            $lifo = $this->M_Bundling->calculate_item_lifo_cost($it['kode_barang'], 1, 2, $it['nama_barang']);
+            $it['hpp_satuan'] = (float)$lifo['hpp_satuan'];
+        }
+        unset($it);
+
         $this->output->set_content_type('application/json')->set_output(json_encode($items));
+    }
+
+    /**
+     * AJAX untuk mengambil HPP satuan dan modal item secara real-time
+     */
+    public function ajax_item_hpp()
+    {
+        $kd = trim($this->input->get('kode_barang') ?: '');
+        $qty = (float)($this->input->get('qty') ?: 1);
+        $nama = trim($this->input->get('nama_barang') ?: '');
+        $gudangId = (int)($this->input->get('id_gudang_asal') ?: 2);
+
+        $lifo = $this->M_Bundling->calculate_item_lifo_cost($kd, $qty, $gudangId, $nama);
+        $this->output->set_content_type('application/json')->set_output(json_encode([
+            'status'      => true,
+            'kode_barang' => $kd,
+            'hpp_satuan'  => (float)$lifo['hpp_satuan'],
+            'total_modal' => (float)$lifo['total_modal'],
+            'breakdown'   => $lifo['breakdown'] ?? []
+        ]));
     }
 }

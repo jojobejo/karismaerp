@@ -266,6 +266,56 @@ class C_pembayaran extends CI_Controller
 
         $data['akun_harta'] = $this->M_pembayaran->get_harta_accounts();
 
+        // ── Data Barang Konsinyasi untuk Input Qty Pelunasan ────────
+        $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+        if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
+            if ((int)$faktur['gudang_id'] === 13) {
+                $is_konsinyasi = true;
+            } else {
+                $gdg = $this->db->select('nama_gudang, tipe')->where('id_gudang', (int)$faktur['gudang_id'])->get('tb_gudang')->row();
+                if ($gdg && (stripos($gdg->nama_gudang, 'konsi') !== false || strtoupper((string)$gdg->tipe) === 'KONSINYASI')) {
+                    $is_konsinyasi = true;
+                }
+            }
+        }
+        $data['is_konsinyasi'] = $is_konsinyasi;
+        $data['konsinyasi_items'] = [];
+        $data['first_item'] = null;
+
+        if ($is_konsinyasi) {
+            $k_items = $this->db->select('d.*, b.satuan AS b_satuan')
+                ->from('tbso_faktur_detail d')
+                ->join('tbpo_barang b', 'b.kode_barang = d.kd_barang', 'left')
+                ->where('d.id_faktur', (int)$faktur['id_faktur'])
+                ->get()
+                ->result_array();
+
+            foreach ($k_items as &$it) {
+                $settlements = $this->db->where('id_faktur', (int)$faktur['id_faktur'])
+                    ->where('kd_barang', $it['kd_barang'])
+                    ->get('tb_konsinyasi_settlement')
+                    ->result_array();
+                
+                $qty_di_kios = 0;
+                $qty_laku = 0;
+                if (!empty($settlements)) {
+                    foreach ($settlements as $st) {
+                        if (in_array($st['status'], ['DI_KIOS', 'PENDING'], true)) {
+                            $qty_di_kios += (float)$st['qty_net'];
+                        } elseif (in_array($st['status'], ['LAKU', 'BILLED'], true)) {
+                            $qty_laku += (float)$st['qty_net'];
+                        }
+                    }
+                } else {
+                    $qty_di_kios = (float)$it['qty'];
+                }
+                $it['qty_di_kios'] = $qty_di_kios;
+                $it['qty_laku'] = $qty_laku;
+            }
+            $data['konsinyasi_items'] = $k_items;
+            $data['first_item'] = !empty($k_items) ? $k_items[0] : null;
+        }
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -355,12 +405,33 @@ class C_pembayaran extends CI_Controller
             ?: $this->session->userdata('username')
             ?: 'system';
 
+        $qty_konsinyasi = (float)$this->input->post('qty_konsinyasi', true);
+
+        // Validasi khusus faktur konsinyasi: Qty yang dibeli harus valid
+        $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+        if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
+            if ((int)$faktur['gudang_id'] === 13) {
+                $is_konsinyasi = true;
+            } else {
+                $gdg = $this->db->select('nama_gudang, tipe')->where('id_gudang', (int)$faktur['gudang_id'])->get('tb_gudang')->row();
+                if ($gdg && (stripos($gdg->nama_gudang, 'konsi') !== false || strtoupper((string)$gdg->tipe) === 'KONSINYASI')) {
+                    $is_konsinyasi = true;
+                }
+            }
+        }
+
+        if ($is_konsinyasi && $qty_konsinyasi <= 0 && $this->input->post('qty_konsinyasi') !== null) {
+            $this->session->set_flashdata('error', 'Untuk faktur konsinyasi, Qty barang yang dibeli kios harus lebih dari 0.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+        }
+
         $data = [
             'id_faktur'           => $faktur['id_faktur'],
             'no_faktur'           => $faktur['no_faktur'],
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
+            'qty_konsinyasi'      => ($is_konsinyasi && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
             'no_bg'               => $no_bg !== '' ? $no_bg : null,
             'nama_bank'           => $nama_bank !== '' ? $nama_bank : null,
@@ -762,6 +833,54 @@ class C_pembayaran extends CI_Controller
         $data['page_title'] = 'BUKTI PEMBAYARAN FAKTUR - ' . ($payment['no_faktur'] ?? '');
 
         $this->load->view('content/keuangan/pembayaran_bukti_print.php', $data);
+    }
+
+    /**
+     * Cetak Faktur Realisasi Penjualan Konsinyasi untuk dilaporkan ke Supplier
+     */
+    public function print_faktur_konsinyasi($id_pembayaran = null)
+    {
+        $id_pembayaran = (int)$id_pembayaran;
+        $payment = $this->db->get_where('tbkeu_pembayaran_faktur', ['id_pembayaran' => $id_pembayaran])->row_array();
+        if (!$payment) {
+            show_404();
+            return;
+        }
+
+        // Cari settlement terkait faktur ini
+        $this->load->model('M_Konsinyasi');
+        $settlement = $this->db
+            ->where('id_faktur', (int)$payment['id_faktur'])
+            ->where('status', 'BILLED')
+            ->order_by('id_settlement', 'DESC')
+            ->get('tb_konsinyasi_settlement')
+            ->row_array();
+
+        if (!$settlement) {
+            $settlement = $this->db
+                ->where('id_faktur', (int)$payment['id_faktur'])
+                ->order_by('id_settlement', 'DESC')
+                ->get('tb_konsinyasi_settlement')
+                ->row_array();
+        }
+
+        if (!$settlement) {
+            $this->session->set_flashdata('error', 'Data penyelesaian konsinyasi tidak ditemukan.');
+            redirect('keuangan/pembayaran');
+            return;
+        }
+
+        $fakturDetail = $this->db
+            ->where('id_faktur', (int) $settlement['id_faktur'])
+            ->where('kd_barang', $settlement['kd_barang'])
+            ->get('tbso_faktur_detail')
+            ->row_array();
+
+        $data['page_title']    = 'Faktur Realisasi Penjualan Konsinyasi - ' . ($settlement['no_settlement'] ?? '');
+        $data['settlement']    = $settlement;
+        $data['faktur_detail'] = $fakturDetail;
+
+        $this->load->view('content/purchasing/konsinyasi/faktur_konsinyasi_print.php', $data);
     }
 
     /**

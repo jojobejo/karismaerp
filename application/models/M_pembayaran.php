@@ -557,6 +557,7 @@ class M_pembayaran extends CI_Model
 
         if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
             $this->load->model('M_Journal');
+            $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $data);
             $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
         }
 
@@ -586,6 +587,7 @@ class M_pembayaran extends CI_Model
             $payment = $this->get_payment($id_pembayaran);
             if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
                 $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
         }
@@ -697,6 +699,7 @@ class M_pembayaran extends CI_Model
             $payment = $this->get_payment($id_pembayaran);
             if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
                 $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
         }
@@ -881,6 +884,7 @@ class M_pembayaran extends CI_Model
                 ]);
             } else {
                 $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
         }
@@ -1044,6 +1048,7 @@ class M_pembayaran extends CI_Model
                 $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal_detail');
                 $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal');
             }
+            $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $data);
             $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
         }
 

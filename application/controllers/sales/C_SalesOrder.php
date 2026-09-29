@@ -1879,13 +1879,15 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
         $data['so']                = $so;
         $is_faktur_z               = !empty($so['is_faktur_z']);
+        $is_konsinyasi             = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
         $data['is_faktur_z']       = $is_faktur_z;
+        $data['is_konsinyasi']     = $is_konsinyasi;
         $data['details']           = array_map(function($item) use ($tax_rate) {
             $item['pajak'] = $tax_rate;
             // Faktur Z Induk nominal aslinya tetap utuh (potongan 20% baru diterapkan saat dipecah menjadi Faktur H)
             return $item;
         }, array_values($items_outstanding));
-        $faktur_prefix             = $is_faktur_z ? 'Z' : $this->_getFakturUserPrefix();
+        $faktur_prefix             = $is_konsinyasi ? 'T' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix());
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
@@ -1987,7 +1989,8 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $faktur_prefix = !empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix();
+        $is_konsinyasi = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
+        $faktur_prefix = $is_konsinyasi ? 'T' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix());
         $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
         $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
         $no_faktur = $posted_no_faktur;
@@ -2087,6 +2090,8 @@ class C_SalesOrder extends CI_Controller
             $journal_message = '';
             if (is_array($result) && !empty($result['journal']['sales_invoice']['nomor_jurnal'])) {
                 $journal_message = ' Jurnal <b>' . htmlspecialchars($result['journal']['sales_invoice']['nomor_jurnal']) . '</b> otomatis dibuat.';
+            } elseif ($is_konsinyasi) {
+                $journal_message = ' <span class="badge badge-warning text-dark">Faktur Konsinyasi (Kode Awalan T &bull; Tidak Terjurnal)</span>';
             }
 
             if (($so_fresh['status'] ?? '') === 'completed') {

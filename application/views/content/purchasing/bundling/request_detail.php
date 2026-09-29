@@ -132,6 +132,12 @@
 
                 $totalHpp1Paket = (float)($request['estimasi_hpp_per_paket'] ?? ($estHppBahan + $totalKemasanPerPaket));
                 $totalModalRequest = (float)($request['estimasi_total_modal'] ?? ($totalHpp1Paket * $qtyReq));
+
+                $isInbox = !empty($request['is_innerbox']);
+                $jmlInbox = (float)($request['jumlah_innerbox'] ?? 1);
+                if ($jmlInbox <= 0) $jmlInbox = 1;
+                $hppPerInnerbox = ($isInbox && $jmlInbox > 0) ? ($totalHpp1Paket / $jmlInbox) : $totalHpp1Paket;
+                $kemasanPerInnerbox = ($isInbox && $jmlInbox > 0) ? ($totalKemasanPerPaket / $jmlInbox) : $totalKemasanPerPaket;
             ?>
             <div class="row mb-4">
                 <!-- 1. HPP Bahan Baku LIFO -->
@@ -172,7 +178,13 @@
                                 Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?>
                                 <small class="text-muted font-weight-normal" style="font-size: 0.8rem;">/ <?= htmlspecialchars($request['satuan']) ?></small>
                             </h4>
-                            <small class="text-muted d-block mt-1"><?= count($kemasanItems) ?> jenis kemasan / printilan</small>
+                            <?php if ($isInbox && $jmlInbox > 1): ?>
+                                <small class="text-muted d-block mt-1">
+                                    Setara <strong style="color: #6d28d9;">Rp <?= number_format($kemasanPerInnerbox, 2, ',', '.') ?></strong> / <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
+                                </small>
+                            <?php else: ?>
+                                <small class="text-muted d-block mt-1"><?= count($kemasanItems) ?> jenis kemasan / printilan</small>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -197,7 +209,16 @@
                                     Rp <?= number_format($totalHpp1Paket, 2, ',', '.') ?>
                                     <small class="text-muted font-weight-normal" style="font-size: 0.8rem;">/ <?= htmlspecialchars($request['satuan']) ?></small>
                                 </h4>
-                                <small class="text-muted d-block mt-1">HPP Bahan Baku + Biaya Kemasan Lengkap</small>
+                                <?php if ($isInbox && $jmlInbox > 1): ?>
+                                    <div class="mt-1">
+                                        <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 0.82rem;">
+                                            Rp <?= number_format($hppPerInnerbox, 2, ',', '.') ?> / <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
+                                        </span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">HPP per 1 Kardus Kecil (Bahan + Printilan)</small>
+                                <?php else: ?>
+                                    <small class="text-muted d-block mt-1">HPP Bahan Baku + Biaya Kemasan Lengkap</small>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -239,9 +260,11 @@
                             <thead class="bg-light text-muted small text-uppercase">
                                 <tr>
                                     <th style="width: 5%;">No</th>
-                                    <th style="width: 45%;">Nama Kemasan / Printilan</th>
-                                    <th style="width: 25%;" class="text-right">Biaya per 1 Paket</th>
-                                    <th style="width: 25%;" class="text-right">Total Kebutuhan (<?= number_format($qtyReq, 0, ',', '.') ?> Paket)</th>
+                                    <th style="width: 35%;">Nama Kemasan / Printilan</th>
+                                    <th style="width: 15%; text-align: center;">Qty per Kemasan</th>
+                                    <th style="width: 15%;" class="text-right">Biaya per Unit</th>
+                                    <th style="width: 15%;" class="text-right">Subtotal per Paket</th>
+                                    <th style="width: 15%;" class="text-right">Total Kebutuhan (<?= number_format($qtyReq, 0, ',', '.') ?> <?= htmlspecialchars($request['satuan']) ?>)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,7 +276,10 @@
                                         $namaItem = trim($kItem['nama'] ?? '');
                                         if ($namaItem === '' && $nomItem <= 0) continue;
                                         $hasValidItem = true;
-                                        $totItem = $nomItem * $qtyReq;
+                                        $qtyItem = isset($kItem['qty']) && (float)$kItem['qty'] > 0 ? (float)$kItem['qty'] : 1;
+                                        $satItem = !empty($kItem['satuan']) ? $kItem['satuan'] : 'pcs';
+                                        $subPaket = isset($kItem['sub_per_paket']) ? (float)$kItem['sub_per_paket'] : ($nomItem * ($isInbox && $jmlInbox > 0 ? $jmlInbox : 1));
+                                        $totItem = $subPaket * $qtyReq;
                                 ?>
                                     <tr>
                                         <td class="text-center font-weight-bold text-muted"><?= $noK++ ?></td>
@@ -261,10 +287,16 @@
                                             <i class="fas fa-box text-secondary mr-2"></i>
                                             <span class="font-weight-bold text-dark"><?= htmlspecialchars($namaItem ?: 'Biaya Kemasan') ?></span>
                                         </td>
+                                        <td class="text-center font-weight-bold text-primary">
+                                            <?= number_format($qtyItem, 0) ?> <?= htmlspecialchars($satItem) ?>
+                                        </td>
                                         <td class="text-right font-weight-bold text-dark">
                                             Rp <?= number_format($nomItem, 2, ',', '.') ?>
                                         </td>
                                         <td class="text-right font-weight-bold" style="color: #6d28d9;">
+                                            Rp <?= number_format($subPaket, 2, ',', '.') ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold text-primary">
                                             Rp <?= number_format($totItem, 2, ',', '.') ?>
                                         </td>
                                     </tr>
@@ -272,7 +304,7 @@
 
                                 <?php if (!$hasValidItem): ?>
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">
+                                        <td colspan="6" class="text-center text-muted py-4">
                                             <i class="fas fa-box-open fa-2x mb-2 text-secondary d-block"></i>
                                             Belum ada rincian biaya kemasan & printilan untuk request ini.<br>
                                             <button type="button" class="btn btn-sm btn-primary mt-2 font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost">
@@ -284,9 +316,9 @@
                             </tbody>
                             <tfoot class="bg-light font-weight-bold">
                                 <tr>
-                                    <td colspan="2" class="text-right text-uppercase small text-muted">Total Kemasan & Printilan:</td>
+                                    <td colspan="4" class="text-right text-uppercase small text-muted">Total Kemasan & Printilan:</td>
                                     <td class="text-right font-weight-bold" style="color: #6d28d9; font-size: 1rem;">
-                                        Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?> <small class="text-muted font-weight-normal">/ paket</small>
+                                        Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?> <small class="text-muted font-weight-normal">/ <?= htmlspecialchars($request['satuan']) ?></small>
                                     </td>
                                     <td class="text-right font-weight-bold text-primary" style="font-size: 1rem;">
                                         Rp <?= number_format($totalKemasanKeseluruhan, 2, ',', '.') ?>
@@ -320,10 +352,15 @@
                         <!-- 3 Kotak Alur Fisik -->
                         <div class="row align-items-stretch">
                             <div class="col-md-4 mb-2 mb-md-0">
-                                <div class="p-3 bg-white rounded shadow-sm h-100 border">
-                                    <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold mb-2">
-                                        <i class="fas fa-box-open mr-1"></i> Kardus Kecil (1 Innerbox)
-                                    </span>
+                                <div class="p-3 bg-white rounded shadow-sm h-100 border position-relative">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold">
+                                            <i class="fas fa-box-open mr-1"></i> Kardus Kecil (1 Innerbox)
+                                        </span>
+                                        <button type="button" class="btn btn-xs btn-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost" title="Tambah Kardus / Stiker / Printilan">
+                                            <i class="fas fa-plus mr-1"></i> Tambah
+                                        </button>
+                                    </div>
                                     <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
                                         Isi Campuran dalam 1 Kardus Kecil:
                                     </div>
@@ -334,7 +371,26 @@
                                                 <span class="text-primary"><?= number_format($itemInbox['isi_per_innerbox'], 0) ?> <?= htmlspecialchars($itemInbox['satuan']) ?></span>
                                             </li>
                                         <?php endforeach; ?>
+                                        <?php foreach ($kemasanItems as $kItem): 
+                                            $nomItem = (float)($kItem['nominal'] ?? 0);
+                                            $namaItem = trim($kItem['nama'] ?? '');
+                                            if ($namaItem === '' && $nomItem <= 0) continue;
+                                            $qtyItem = isset($kItem['qty']) && (float)$kItem['qty'] > 0 ? (float)$kItem['qty'] : 1;
+                                            $satItem = !empty($kItem['satuan']) ? $kItem['satuan'] : 'pcs';
+                                        ?>
+                                            <li class="mb-1 text-dark">
+                                                <?= htmlspecialchars($namaItem) ?> <?= number_format($qtyItem, 0) ?> <?= htmlspecialchars($satItem) ?>
+                                                <?php if ($nomItem > 0): ?>
+                                                    <small class="text-muted ml-1">(Rp <?= number_format($nomItem, 0, ',', '.') ?>)</small>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
                                     </ul>
+                                    <div class="mt-3 pt-2 border-top">
+                                        <button type="button" class="btn btn-xs btn-block btn-outline-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost">
+                                            <i class="fas fa-plus-circle mr-1"></i> Tambah Kardus / Stiker / Printilan
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -356,6 +412,15 @@
                                                 $compSum = [];
                                                 foreach ($stock_status as $it) {
                                                     $compSum[] = number_format($it['qty_per_paket'], 0) . ' ' . $it['satuan'] . ' ' . $it['nama_barang'];
+                                                }
+                                                foreach ($kemasanItems as $kIt) {
+                                                    $nomIt = (float)($kIt['nominal'] ?? 0);
+                                                    $nmIt = trim($kIt['nama'] ?? '');
+                                                    if ($nmIt === '' && $nomIt <= 0) continue;
+                                                    $qIt = isset($kIt['qty']) && (float)$kIt['qty'] > 0 ? (float)$kIt['qty'] : 1;
+                                                    $satIt = !empty($kIt['satuan']) ? $kIt['satuan'] : 'pcs';
+                                                    $totBoxK = $qIt * (float)$request['jumlah_innerbox'];
+                                                    $compSum[] = number_format($totBoxK, 0) . ' ' . $satIt . ' ' . $nmIt;
                                                 }
                                                 echo htmlspecialchars(implode(', ', $compSum));
                                             ?>
@@ -776,9 +841,11 @@
                         <table class="table table-bordered table-sm mb-0" id="tblModalKemasan">
                             <thead class="bg-light text-muted small text-uppercase">
                                 <tr>
-                                    <th style="width: 55%;">Nama Biaya Kemasan / Printilan</th>
-                                    <th style="width: 35%;" class="text-right">Biaya per 1 Paket (Rp)</th>
-                                    <th style="width: 10%; text-align: center;">Aksi</th>
+                                    <th style="width: 45%;">Nama Kemasan / Printilan</th>
+                                    <th style="width: 15%; text-align: center;">Qty</th>
+                                    <th style="width: 15%; text-align: center;">Satuan</th>
+                                    <th style="width: 20%;" class="text-right">Biaya per Unit (Rp)</th>
+                                    <th style="width: 5%; text-align: center;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="kemasanRowsContainer">
@@ -789,7 +856,7 @@
 
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold shadow-sm" id="btnAddKemasanRow">
-                            <i class="fas fa-plus-circle mr-1"></i> Tambah Biaya / Printilan
+                            <i class="fas fa-plus-circle mr-1"></i> Tambah Baris Printilan
                         </button>
                         <span class="small text-muted">
                             <i class="fas fa-calculator mr-1"></i> Otomatis menghitung Total HPP per Paket
@@ -798,19 +865,36 @@
 
                     <!-- Live Preview Kalkulasi Modal -->
                     <div class="card bg-light border p-3 mt-3 mb-0" style="border-radius: 8px;">
+                        <?php if (!empty($request['is_innerbox']) && (float)$request['jumlah_innerbox'] > 1): ?>
+                            <div class="d-flex justify-content-between mb-1 small">
+                                <span class="text-muted">Biaya Kemasan per 1 Kardus Kecil (Innerbox):</span>
+                                <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan_inbox">Rp 0,00</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1 small">
+                                <span class="text-muted">Biaya Kemasan per 1 Master Box (<?= (int)$request['jumlah_innerbox'] ?> Innerbox):</span>
+                                <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan">Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?></strong>
+                            </div>
+                        <?php else: ?>
+                            <div class="d-flex justify-content-between mb-1 small">
+                                <span class="text-muted">Total Kemasan & Printilan per 1 Paket:</span>
+                                <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan">Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?></strong>
+                            </div>
+                        <?php endif; ?>
                         <div class="d-flex justify-content-between mb-1 small">
-                            <span class="text-muted">HPP Bahan Baku Komponen (LIFO):</span>
+                            <span class="text-muted">HPP Bahan Baku (LIFO):</span>
                             <strong class="text-dark">Rp <?= number_format($estHppBahan, 2, ',', '.') ?></strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1 small">
-                            <span class="text-muted">Total Kemasan & Printilan per 1 Paket:</span>
-                            <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan">Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?></strong>
                         </div>
                         <hr class="my-1">
                         <div class="d-flex justify-content-between font-weight-bold">
-                            <span class="text-success">Estimasi Total Modal / HPP per 1 Paket:</span>
+                            <span class="text-success">Estimasi Total Modal / HPP per 1 Paket (Master Box):</span>
                             <span class="text-success font-weight-bold" id="lbl_preview_total_hpp" style="font-size: 1.1rem;">Rp <?= number_format($totalHpp1Paket, 2, ',', '.') ?></span>
                         </div>
+                        <?php if (!empty($request['is_innerbox']) && (float)$request['jumlah_innerbox'] > 1): ?>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>Setara HPP per 1 Kardus Kecil (Innerbox):</span>
+                                <strong class="text-success" id="lbl_preview_hpp_inbox">Rp <?= number_format($hppPerInnerbox, 2, ',', '.') ?></strong>
+                            </div>
+                        <?php endif; ?>
                         <div class="d-flex justify-content-between small text-muted mt-1">
                             <span>Total Modal Seluruh Request (<?= number_format($qtyReq, 0) ?> Paket):</span>
                             <strong class="text-primary" id="lbl_preview_total_modal">Rp <?= number_format($totalModalRequest, 2, ',', '.') ?></strong>
@@ -833,15 +917,20 @@
 $(document).ready(function() {
     const qtyPaket = <?= (float)$qtyReq ?>;
     const hppBahanBaku = <?= (float)$estHppBahan ?>;
-    const initialKemasanItems = <?= json_encode(!empty($kemasanItems) ? $kemasanItems : [['nama' => '', 'nominal' => 0]]) ?>;
+    const isInnerbox = <?= !empty($request['is_innerbox']) ? 'true' : 'false' ?>;
+    const jmlInnerbox = <?= (float)($request['jumlah_innerbox'] ?? 1) ?>;
+    const initialKemasanItems = <?= json_encode(!empty($kemasanItems) ? $kemasanItems : [['nama' => '', 'nominal' => 0, 'qty' => 1, 'satuan' => 'pcs']]) ?>;
 
     function formatRupiah(number) {
         return 'Rp ' + Number(number || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function createKemasanRowHtml(index, nama, nominal) {
+    function createKemasanRowHtml(index, nama, nominal, qty, satuan) {
         nama = nama || '';
         nominal = (nominal !== undefined && nominal !== null && nominal !== '') ? nominal : 0;
+        qty = (qty !== undefined && qty !== null && qty !== '' && parseFloat(qty) > 0) ? parseFloat(qty) : 1;
+        satuan = satuan || 'pcs';
+
         return `
             <tr class="kemasan-row" data-index="${index}">
                 <td>
@@ -849,10 +938,16 @@ $(document).ready(function() {
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-box text-secondary"></i></span>
                         </div>
-                        <input type="text" name="kemasan_items[${index}][nama]" class="form-control inp-nama-kemasan font-weight-bold" placeholder="Contoh: Kardus Innerbox / Stiker Hologram / Outer Box" value="${escapeHtml(nama)}">
+                        <input type="text" name="kemasan_items[${index}][nama]" class="form-control inp-nama-kemasan font-weight-bold" placeholder="Contoh: kardus / stiker hologram" value="${escapeHtml(nama)}">
                     </div>
                 </td>
-                <td>
+                <td style="width: 15%;">
+                    <input type="number" step="any" min="0.001" name="kemasan_items[${index}][qty]" class="form-control form-control-sm text-center font-weight-bold inp-qty-kemasan" placeholder="1" value="${qty}">
+                </td>
+                <td style="width: 15%;">
+                    <input type="text" name="kemasan_items[${index}][satuan]" class="form-control form-control-sm text-center font-weight-bold inp-sat-kemasan" placeholder="pcs" value="${escapeHtml(satuan)}">
+                </td>
+                <td style="width: 20%;">
                     <div class="input-group input-group-sm">
                         <div class="input-group-prepend">
                             <span class="input-group-text font-weight-bold">Rp</span>
@@ -860,7 +955,7 @@ $(document).ready(function() {
                         <input type="number" step="any" min="0" name="kemasan_items[${index}][nominal]" class="form-control text-right font-weight-bold text-dark inp-nominal-kemasan" placeholder="0" value="${nominal}">
                     </div>
                 </td>
-                <td class="text-center align-middle">
+                <td class="text-center align-middle" style="width: 5%;">
                     <button type="button" class="btn btn-xs btn-outline-danger btn-del-kemasan-row" title="Hapus baris ini">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -885,9 +980,9 @@ $(document).ready(function() {
         $container.empty();
         rowIndex = 0;
 
-        let itemsToRender = Array.isArray(initialKemasanItems) && initialKemasanItems.length > 0 ? initialKemasanItems : [{nama: '', nominal: 0}];
+        let itemsToRender = Array.isArray(initialKemasanItems) && initialKemasanItems.length > 0 ? initialKemasanItems : [{nama: '', nominal: 0, qty: 1, satuan: 'pcs'}];
         itemsToRender.forEach(function(item) {
-            $container.append(createKemasanRowHtml(rowIndex, item.nama, item.nominal));
+            $container.append(createKemasanRowHtml(rowIndex, item.nama, item.nominal, item.qty, item.satuan));
             rowIndex++;
         });
 
@@ -895,15 +990,26 @@ $(document).ready(function() {
     }
 
     function hitungLiveKemasan() {
-        let totalKemasanPaket = 0;
+        let totalKemasanPerInnerbox = 0;
         $('#kemasanRowsContainer .kemasan-row').each(function() {
+            const qty = parseFloat($(this).find('.inp-qty-kemasan').val()) || 1;
             const nom = parseFloat($(this).find('.inp-nominal-kemasan').val()) || 0;
-            totalKemasanPaket += nom;
+            totalKemasanPerInnerbox += (qty * nom);
         });
+
+        let totalKemasanPaket = totalKemasanPerInnerbox;
+        if (isInnerbox && jmlInnerbox > 0) {
+            totalKemasanPaket = totalKemasanPerInnerbox * jmlInnerbox;
+        }
 
         const totalHppPaket = hppBahanBaku + totalKemasanPaket;
         const grandTotalModal = totalHppPaket * qtyPaket;
 
+        if (isInnerbox && jmlInnerbox > 1) {
+            const hppPerInbox = totalHppPaket / jmlInnerbox;
+            $('#lbl_preview_kemasan_inbox').text(formatRupiah(totalKemasanPerInnerbox));
+            $('#lbl_preview_hpp_inbox').text(formatRupiah(hppPerInbox));
+        }
         $('#lbl_preview_kemasan').text(formatRupiah(totalKemasanPaket));
         $('#lbl_preview_total_hpp').text(formatRupiah(totalHppPaket));
         $('#lbl_preview_total_modal').text(formatRupiah(grandTotalModal));
@@ -912,7 +1018,7 @@ $(document).ready(function() {
     // Tambah Baris Baru
     $('#btnAddKemasanRow').on('click', function() {
         const $container = $('#kemasanRowsContainer');
-        const newRowHtml = createKemasanRowHtml(rowIndex, '', 0);
+        const newRowHtml = createKemasanRowHtml(rowIndex, '', 0, 1, 'pcs');
         $container.append(newRowHtml);
         rowIndex++;
         $container.find('tr:last .inp-nama-kemasan').focus();
@@ -929,13 +1035,15 @@ $(document).ready(function() {
         } else {
             // Sisakan 1 kolom inputan saja dengan mengosongkan isinya
             $row.find('.inp-nama-kemasan').val('');
+            $row.find('.inp-qty-kemasan').val(1);
+            $row.find('.inp-sat-kemasan').val('pcs');
             $row.find('.inp-nominal-kemasan').val(0);
         }
         hitungLiveKemasan();
     });
 
-    // Input nominal atau nama memicu hitung ulang live
-    $(document).on('input change', '.inp-nominal-kemasan', hitungLiveKemasan);
+    // Input nominal atau qty memicu hitung ulang live
+    $(document).on('input change', '.inp-nominal-kemasan, .inp-qty-kemasan', hitungLiveKemasan);
 
     // Initial render
     renderInitialRows();

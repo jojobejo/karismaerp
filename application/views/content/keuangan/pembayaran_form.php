@@ -397,6 +397,29 @@ $default_metode = '';
                                         <input type="date" name="tanggal_pembayaran" class="form-control" required
                                                value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_pembayaran']) : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d'))) ?>">
                                     </div>
+                                    <?php if (!empty($is_konsinyasi) && !empty($first_item)): ?>
+                                        <?php
+                                        $k_hrg_satuan = (float)($first_item['hrg_satuan'] ?? 0);
+                                        $k_qty_kios = (float)($first_item['qty_di_kios'] ?? 0);
+                                        $k_satuan = htmlspecialchars($first_item['satuan'] ?? 'pcs');
+                                        ?>
+                                        <div class="form-group">
+                                            <label>Qty yang Dibeli Kios <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" step="any" min="0.001" max="<?= $k_qty_kios ?>" 
+                                                       id="qty_konsinyasi" name="qty_konsinyasi" 
+                                                       class="form-control font-weight-bold" 
+                                                       placeholder="0" required>
+                                                <div class="input-group-append">
+                                                    <span class="input-group-text"><?= $k_satuan ?></span>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                Maksimal <?= number_format($k_qty_kios, 0, ',', '.') ?> <?= $k_satuan ?> di kios (&times; Rp <?= number_format($k_hrg_satuan, 0, ',', '.') ?>)
+                                            </small>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <div class="form-group">
                                         <label>Jumlah Pembayaran <span class="text-danger">*</span></label>
                                         <?php
@@ -419,6 +442,9 @@ $default_metode = '';
                                             $sisa_non_bg = max(0, (float)$faktur['sisa_tagihan'] - $bg_pending_total);
                                             $raw_bayar = ($sisa_non_bg > 0) ? $sisa_non_bg : (float)$faktur['sisa_tagihan'];
                                         }
+                                        if (!empty($is_konsinyasi)) {
+                                            $raw_bayar = 0;
+                                        }
                                         $display_bayar = number_format($raw_bayar, 0, ',', '.');
                                         ?>
                                         <input type="text" name="jumlah_pembayaran" id="jumlah_pembayaran" class="form-control input-currency" required
@@ -426,7 +452,7 @@ $default_metode = '';
                                         <small class="text-muted">
                                             Maksimal Rp <?= number_format($max_bayar, 0, ',', '.') ?>
                                             <?php if (!$is_bg_cair_mode && !empty($faktur['total_bg_pending'])): ?>
-                                                <span class="text-warning ml-1">(Terdapat BG belum cair: Rp <?= number_format((float)$faktur['total_bg_pending'], 0, ',', '.') ?>)</span>
+                                                 <span class="text-warning ml-1">(Terdapat BG belum cair: Rp <?= number_format((float)$faktur['total_bg_pending'], 0, ',', '.') ?>)</span>
                                             <?php endif; ?>
                                         </small>
                                     </div>
@@ -780,9 +806,74 @@ document.addEventListener('DOMContentLoaded', function() {
         checkBg.addEventListener('change', handleMetodeChange);
     }
 
+    // ── Logika Sinkronisasi Qty Konsinyasi <-> Jumlah Pembayaran ──
+    <?php if (!empty($is_konsinyasi) && !empty($first_item)): ?>
+    var hrgSatuanKonsinyasi = <?= (float)($first_item['hrg_satuan'] ?? 0) ?>;
+    var sisaQtyKonsinyasi = <?= (float)($first_item['qty_di_kios'] ?? 0) ?>;
+    var qtyInput = document.getElementById('qty_konsinyasi');
+    var btnBeliSemua = document.getElementById('btnBeliSemuaKonsinyasi');
+
+    if (qtyInput) {
+        qtyInput.addEventListener('input', function() {
+            var q = parseFloat(this.value) || 0;
+            if (q > sisaQtyKonsinyasi) {
+                this.value = sisaQtyKonsinyasi;
+                q = sisaQtyKonsinyasi;
+            }
+            if (q < 0) {
+                this.value = 0;
+                q = 0;
+            }
+            var calculatedBayar = Math.round(q * hrgSatuanKonsinyasi);
+            if (jumlahInput) {
+                jumlahInput.value = formatRupiahInput(calculatedBayar);
+                hitungJurnal();
+            }
+        });
+
+        if (btnBeliSemua) {
+            btnBeliSemua.addEventListener('click', function() {
+                qtyInput.value = sisaQtyKonsinyasi;
+                qtyInput.dispatchEvent(new Event('input'));
+            });
+        }
+
+        if (jumlahInput) {
+            jumlahInput.addEventListener('input', function() {
+                var bayar = parseRupiahNumber(this.value);
+                if (hrgSatuanKonsinyasi > 0) {
+                    var calculatedQty = Math.round((bayar / hrgSatuanKonsinyasi) * 1000) / 1000;
+                    if (calculatedQty > sisaQtyKonsinyasi) {
+                        calculatedQty = sisaQtyKonsinyasi;
+                    }
+                    qtyInput.value = calculatedQty > 0 ? calculatedQty : '';
+                }
+            });
+        }
+    }
+    <?php endif; ?>
+
     var form = document.getElementById('formPembayaran');
     if (form) {
         form.addEventListener('submit', function(e) {
+            <?php if (!empty($is_konsinyasi)): ?>
+            if (qtyInput) {
+                var qVal = parseFloat(qtyInput.value) || 0;
+                if (qVal <= 0) {
+                    e.preventDefault();
+                    alert('❌ Qty barang konsinyasi yang dibeli oleh kios harus diisi (lebih dari 0)!');
+                    qtyInput.focus();
+                    return false;
+                }
+                if (qVal > sisaQtyKonsinyasi + 0.001) {
+                    e.preventDefault();
+                    alert('❌ Qty yang dibeli (' + qVal + ') melebihi sisa barang yang berada di kios (' + sisaQtyKonsinyasi + ')!');
+                    qtyInput.focus();
+                    return false;
+                }
+            }
+            <?php endif; ?>
+
             var bayar = parseRupiahNumber(jumlahInput ? jumlahInput.value : 0);
             var diskon = diskonInput ? parseRupiahNumber(diskonInput.value) : 0;
             var total = bayar + diskon;

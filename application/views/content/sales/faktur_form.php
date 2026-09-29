@@ -84,6 +84,9 @@ $faktur_back_url = $is_admin_sc_context
                     <?php if (!empty($so['is_faktur_z'])): ?>
                         (Faktur Z)
                     <?php endif; ?>
+                    <?php if (!empty($is_konsinyasi)): ?>
+                        <span class="badge badge-warning text-dark ml-1"><i class="fas fa-boxes mr-1"></i>Gudang Konsinyasi</span>
+                    <?php endif; ?>
                 </strong>.
                 Rute / Regional: <strong><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></strong>
             </div>
@@ -106,7 +109,12 @@ $faktur_back_url = $is_admin_sc_context
                                            value="<?= htmlspecialchars($no_faktur) ?>" readonly>
                                     <?php if (!empty($so['is_faktur_z'])): ?>
                                         <small class="text-info">
-                                            <i class="fas fa-check-circle mr-1"></i>Mode Faktur Z dari Sales Order.
+                                             <i class="fas fa-check-circle mr-1"></i>Mode Faktur Z dari Sales Order.
+                                        </small>
+                                    <?php endif; ?>
+                                    <?php if (!empty($is_konsinyasi)): ?>
+                                        <small class="text-warning font-weight-bold d-block mt-1">
+                                            <i class="fas fa-info-circle mr-1"></i>Faktur Barang Konsinyasi (Kode Awalan <b>T</b> &bull; Tidak Terjurnal Otomatis).
                                         </small>
                                     <?php endif; ?>
                                 </div>

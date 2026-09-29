@@ -32,7 +32,7 @@ class C_Konsinyasi extends CI_Controller
     }
 
     /**
-     * Halaman Utama Modul Barang Konsinyasi (Penerimaan & Penyelesaian)
+     * Halaman Utama Modul Barang Konsinyasi (Penerimaan, Tracking Lokasi & Penyelesaian)
      */
     public function index()
     {
@@ -40,18 +40,21 @@ class C_Konsinyasi extends CI_Controller
         $this->M_Konsinyasi->sync_pending_consignment_sales();
 
         $filters = [
-            'status'     => $this->input->get('status') ?: 'PENDING',
+            'status'     => $this->input->get('status') ?: 'LAKU',
             'kd_suplier' => $this->input->get('kd_suplier') ?: 'SEMUA',
             'date_from'  => $this->input->get('date_from') ?: '',
             'date_to'    => $this->input->get('date_to') ?: '',
-            'search'     => $this->input->get('search') ?: ''
+            'search'     => $this->input->get('search') ?: '',
+            'tab'        => $this->input->get('tab') ?: 'tracking'
         ];
 
-        $data['page_title']  = 'Penyelesaian Barang Konsinyasi - Purchasing';
-        $data['filters']     = $filters;
-        $data['stats']       = $this->M_Konsinyasi->get_summary_stats();
-        $data['suppliers']   = $this->M_Konsinyasi->get_suppliers_list();
-        $data['settlements'] = $this->M_Konsinyasi->get_settlement_list($filters);
+        $data['page_title']       = 'Tracking & Penyelesaian Barang Konsinyasi - Purchasing';
+        $data['filters']          = $filters;
+        $data['stats']            = $this->M_Konsinyasi->get_summary_stats();
+        $data['tracking_summary'] = $this->M_Konsinyasi->get_tracking_summary();
+        $data['tracking_barang']  = $this->M_Konsinyasi->get_tracking_barang_list($filters);
+        $data['suppliers']        = $this->M_Konsinyasi->get_suppliers_list();
+        $data['settlements']      = $this->M_Konsinyasi->get_settlement_list($filters);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/purchasing/konsinyasi/settlement_list.php', $data);
@@ -85,6 +88,7 @@ class C_Konsinyasi extends CI_Controller
     {
         $idSettlement = (int) $this->input->post('id_settlement');
         $payload = [
+            'qty_laku'             => (float) $this->input->post('qty_laku'),
             'tipe_pajak'           => trim((string) $this->input->post('tipe_pajak', TRUE)),
             'hrg_satuan_input'     => (float) $this->input->post('hrg_satuan_input'),
             'hrg_beli_satuan'      => (float) $this->input->post('hrg_satuan_input'),
@@ -102,6 +106,29 @@ class C_Konsinyasi extends CI_Controller
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode($result));
+    }
+
+    /**
+     * AJAX: Ambil detail kios pemegang barang konsinyasi tertentu
+     */
+    public function ajax_tracking_kios()
+    {
+        $kdBarang = trim((string) $this->input->get('kd_barang'));
+        if (empty($kdBarang)) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['status' => false, 'message' => 'Kode barang tidak valid.']));
+            return;
+        }
+
+        $list = $this->M_Konsinyasi->get_tracking_kios_by_barang($kdBarang);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status' => true,
+                'data'   => $list
+            ]));
     }
 
     /**
@@ -185,6 +212,34 @@ class C_Konsinyasi extends CI_Controller
                 'header'     => $jurnal,
                 'details'    => $details
             ]));
+    }
+
+    /**
+     * Cetak Faktur Laporan Realisasi Penjualan Konsinyasi untuk dilaporkan ke Supplier
+     */
+    public function print_faktur($idSettlement)
+    {
+        $idSettlement = (int) $idSettlement;
+        $settlement = $this->M_Konsinyasi->get_settlement_by_id($idSettlement);
+        if (!$settlement) {
+            show_404();
+            return;
+        }
+
+        $fakturDetail = null;
+        if (!empty($settlement['id_faktur'])) {
+            $fakturDetail = $this->db
+                ->where('id_faktur', (int) $settlement['id_faktur'])
+                ->where('kd_barang', $settlement['kd_barang'])
+                ->get('tbso_faktur_detail')
+                ->row_array();
+        }
+
+        $data['page_title']    = 'Faktur Realisasi Penjualan Konsinyasi - ' . ($settlement['no_settlement'] ?? '');
+        $data['settlement']    = $settlement;
+        $data['faktur_detail'] = $fakturDetail;
+
+        $this->load->view('content/purchasing/konsinyasi/faktur_konsinyasi_print.php', $data);
     }
 }
 

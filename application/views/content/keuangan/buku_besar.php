@@ -793,10 +793,10 @@ $(document).ready(function() {
         let ref  = m.no_referensi || '';
 
         // --- PENJUALAN (Faktur) ---
-        if (mod === 'SALES' && type === 'FAKTUR_PENJUALAN') {
-            // source_id is the faktur no (e.g. DINV2507260001)
+        if (mod === 'SALES' && (type === 'FAKTUR_PENJUALAN' || type === 'FAKTUR_PENJUALAN_KONSINYASI')) {
+            // source_no / source_id is the faktur no (e.g. DINV2507260001 / TINV2609260001)
             // Open faktur detail
-            return base + 'sales_order/detail_faktur/' + encodeURIComponent(sid || ref);
+            return base + 'sales_order/detail_faktur/' + encodeURIComponent(sno || sid || ref);
         }
         // --- PEMBAYARAN PIUTANG ---
         if (mod === 'KEUANGAN' && (type === 'PEMBAYARAN_FAKTUR' || type === 'PEMBAYARAN')) {
