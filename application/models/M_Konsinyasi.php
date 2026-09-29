@@ -34,6 +34,7 @@ class M_Konsinyasi extends CI_Model
                   `id_so` int(11) DEFAULT NULL,
                   `no_so` varchar(50) DEFAULT NULL,
                   `id_faktur` int(11) DEFAULT NULL,
+                  `id_pembayaran` int(11) DEFAULT NULL,
                   `no_faktur` varchar(50) DEFAULT NULL,
                   `customer_name` varchar(150) DEFAULT NULL,
                   `id_lpb_asal` int(11) DEFAULT NULL,
@@ -70,6 +71,15 @@ class M_Konsinyasi extends CI_Model
                   KEY `idx_faktur` (`no_faktur`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+        } else {
+            // Pastikan enum kolom status sudah mendukung DI_KIOS dan LAKU jika tabel sudah ada sebelumnya
+            $col = $this->db->query("SHOW COLUMNS FROM tb_konsinyasi_settlement LIKE 'status'")->row_array();
+            if ($col && strpos((string)$col['Type'], 'DI_KIOS') === false) {
+                $this->db->query("ALTER TABLE tb_konsinyasi_settlement MODIFY COLUMN status ENUM('DI_KIOS','PENDING','LAKU','BILLED','CANCELLED') NOT NULL DEFAULT 'DI_KIOS'");
+            }
+            if (!$this->db->field_exists('id_pembayaran', 'tb_konsinyasi_settlement')) {
+                $this->db->query("ALTER TABLE tb_konsinyasi_settlement ADD COLUMN id_pembayaran INT(11) NULL DEFAULT NULL AFTER id_faktur, ADD INDEX idx_pembayaran (id_pembayaran)");
+            }
         }
 
         if (!$this->db->table_exists('tb_konsinyasi_masuk')) {

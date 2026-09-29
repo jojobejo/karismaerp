@@ -32,6 +32,12 @@ class M_pembayaran extends CI_Model
                     'default'    => 0,
                     'after'      => 'jumlah_pembayaran',
                 ],
+                'qty_konsinyasi' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '15,3',
+                    'null'       => true,
+                    'after'      => 'jumlah_diskon',
+                ],
                 'tanggal_bg_cair' => [
                     'type'  => 'DATE',
                     'null'  => true,
@@ -315,7 +321,9 @@ class M_pembayaran extends CI_Model
         $this->db->select("
             f.id_faktur,
             f.no_faktur,
+            f.id_so,
             f.no_so,
+            f.gudang_id,
             f.kd_customer,
             COALESCE(NULLIF(f.customer_name, ''), c.nama_customer, '-') AS nama_customer,
             c.nama_kios,

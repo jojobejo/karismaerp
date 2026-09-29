@@ -491,7 +491,7 @@ class M_Journal extends CI_Model
         }
 
         // Sinkronisasi posisi stok konsinyasi: memindahkan stok di kios (PENDING) ke barang laku (BILLED)
-        $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input);
+        $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran);
 
         return $id_jurnal_sj;
     }
@@ -499,7 +499,7 @@ class M_Journal extends CI_Model
     /**
      * Sinkronisasi data konsinyasi (tb_konsinyasi_settlement) saat kios melakukan pembayaran
      */
-    private function _sync_settlement_on_payment($id_faktur, $faktur, $firstItem, $total_nominal, $userId, $qty_konsinyasi_input = null)
+    private function _sync_settlement_on_payment($id_faktur, $faktur, $firstItem, $total_nominal, $userId, $qty_konsinyasi_input = null, $id_pembayaran = null)
     {
         if (!$this->db->table_exists('tb_konsinyasi_settlement')) {
             return;
@@ -544,13 +544,35 @@ class M_Journal extends CI_Model
             ?: $this->session->userdata('username')
             ?: 'Keuangan';
 
+        // Hitung urutan pembayaran ke berapa untuk faktur konsinyasi ini
+        $paymentIndex = 1;
+        if (!empty($id_pembayaran)) {
+            $allPayments = $this->db
+                ->select('id_pembayaran')
+                ->where('id_faktur', (int)$id_faktur)
+                ->where('status !=', 'CANCELLED')
+                ->order_by('id_pembayaran', 'ASC')
+                ->get('tbkeu_pembayaran_faktur')
+                ->result_array();
+
+            foreach ($allPayments as $idx => $p) {
+                if ((int)$p['id_pembayaran'] === (int)$id_pembayaran) {
+                    $paymentIndex = $idx + 1;
+                    break;
+                }
+            }
+        }
+        $noFakturKonsinyasi = $faktur['no_faktur'] . '-' . $paymentIndex;
+
         if ($qty_dibeli >= $qty_net_existing) {
             // Lunas seluruhnya oleh kios: ubah status menjadi LAKU (Barang laku dibeli kios, siap diinput tagihan supplier)
             $this->db->where('id_settlement', $settlement['id_settlement'])->update('tb_konsinyasi_settlement', [
-                'status'     => 'LAKU',
-                'settled_at' => date('Y-m-d H:i:s'),
-                'settled_by' => $userName,
-                'catatan'    => 'Barang laku dibeli kios via pelunasan faktur ' . $faktur['no_faktur'] . ' di Keuangan (Menunggu tagihan supplier)'
+                'no_faktur'     => $noFakturKonsinyasi,
+                'id_pembayaran' => !empty($id_pembayaran) ? (int)$id_pembayaran : null,
+                'status'        => 'LAKU',
+                'settled_at'    => date('Y-m-d H:i:s'),
+                'settled_by'    => $userName,
+                'catatan'       => 'Barang laku dibeli kios via pelunasan faktur ' . $noFakturKonsinyasi . ' di Keuangan (Menunggu tagihan supplier)'
             ]);
         } else {
             // Lunas sebagian (misal 50 pcs dari 120 pcs)
@@ -560,6 +582,8 @@ class M_Journal extends CI_Model
             $sisa_data = $settlement;
             unset($sisa_data['id_settlement']);
             $sisa_data['no_settlement']  = 'KONS-SET-' . date('ymd') . '-' . sprintf('%04d', rand(100, 9999));
+            $sisa_data['no_faktur']      = $faktur['no_faktur'];
+            $sisa_data['id_pembayaran']  = null;
             $sisa_data['qty_terjual']    = $qty_sisa;
             $sisa_data['qty_net']        = $qty_sisa;
             $sisa_data['subtotal_jual']  = round($qty_sisa * $hrg_jual, 2);
@@ -570,13 +594,15 @@ class M_Journal extends CI_Model
 
             // 2. Baris settlement ini diupdate dengan qty yang dibeli kios & status menjadi LAKU (Menunggu tagihan supplier)
             $this->db->where('id_settlement', $settlement['id_settlement'])->update('tb_konsinyasi_settlement', [
+                'no_faktur'     => $noFakturKonsinyasi,
+                'id_pembayaran' => !empty($id_pembayaran) ? (int)$id_pembayaran : null,
                 'qty_terjual'   => $qty_dibeli,
                 'qty_net'       => $qty_dibeli,
                 'subtotal_jual' => round($qty_dibeli * $hrg_jual, 2),
                 'status'        => 'LAKU',
                 'settled_at'    => date('Y-m-d H:i:s'),
                 'settled_by'    => $userName,
-                'catatan'       => 'Barang laku dibeli kios ' . $qty_dibeli . ' ' . $settlement['satuan'] . ' via pelunasan faktur ' . $faktur['no_faktur'] . ' di Keuangan (Menunggu tagihan supplier)'
+                'catatan'       => 'Barang laku dibeli kios ' . $qty_dibeli . ' ' . $settlement['satuan'] . ' via pelunasan faktur ' . $noFakturKonsinyasi . ' di Keuangan (Menunggu tagihan supplier)'
             ]);
         }
     }

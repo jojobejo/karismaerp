@@ -295,9 +295,10 @@
                 <p>Telp: (031) 8988888 | Email: purchasing@kiu.co.id</p>
             </div>
             <div class="doc-title-box">
-                <div class="doc-title">Laporan Realisasi Penjualan Konsinyasi</div>
+                <div class="doc-title">Faktur Realisasi Penjualan Konsinyasi</div>
                 <div class="doc-subtitle">Bukti Barang Konsinyasi Laku Terjual (Dasar Faktur Pembelian)</div>
-                <div class="doc-no">No: <?= htmlspecialchars($settlement['no_settlement'] ?? '-') ?></div>
+                <div class="doc-no">No. Faktur: <span style="color: #0284c7;"><?= htmlspecialchars($no_faktur_konsinyasi ?? $settlement['no_faktur_konsinyasi'] ?? $settlement['no_faktur']) ?></span></div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Ref. Settlement: <?= htmlspecialchars($settlement['no_settlement'] ?? '-') ?></div>
             </div>
         </div>
 
@@ -347,9 +348,19 @@
                         <td class="val"><?= htmlspecialchars($settlement['customer_name'] ?? '-') ?></td>
                     </tr>
                     <tr>
-                        <td class="label">No. Faktur Titipan</td>
+                        <td class="label">No. Faktur Konsinyasi</td>
                         <td class="sep">:</td>
-                        <td class="val" style="color: #0284c7;"><?= htmlspecialchars($settlement['no_faktur'] ?? '-') ?></td>
+                        <td class="val" style="color: #0284c7; font-size: 12.5px;">
+                            <strong><?= htmlspecialchars($no_faktur_konsinyasi ?? $settlement['no_faktur_konsinyasi'] ?? $settlement['no_faktur']) ?></strong>
+                            <?php if (!empty($settlement['payment_ke'])): ?>
+                                <span style="background: #e0f2fe; color: #0369a1; padding: 1.5px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-left: 4px;">Pembayaran Ke-<?= (int)$settlement['payment_ke'] ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">No. Faktur Induk Titipan</td>
+                        <td class="sep">:</td>
+                        <td class="val"><?= htmlspecialchars($settlement['no_faktur_asli'] ?? $payment['no_faktur'] ?? '-') ?></td>
                     </tr>
                     <tr>
                         <td class="label">No. Sales Order</td>

@@ -401,7 +401,10 @@ $default_metode = '';
                                         <?php
                                         $k_hrg_satuan = (float)($first_item['hrg_satuan'] ?? 0);
                                         $k_qty_kios = (float)($first_item['qty_di_kios'] ?? 0);
-                                        $k_satuan = htmlspecialchars($first_item['satuan'] ?? 'pcs');
+                                        if ($k_qty_kios <= 0 && !empty($first_item['qty'])) {
+                                            $k_qty_kios = (float)$first_item['qty'];
+                                        }
+                                        $k_satuan = htmlspecialchars(!empty($first_item['satuan']) ? $first_item['satuan'] : (!empty($first_item['b_satuan']) ? $first_item['b_satuan'] : 'PCS'));
                                         ?>
                                         <div class="form-group">
                                             <label>Qty yang Dibeli Kios <span class="text-danger">*</span></label>
@@ -809,14 +812,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Logika Sinkronisasi Qty Konsinyasi <-> Jumlah Pembayaran ──
     <?php if (!empty($is_konsinyasi) && !empty($first_item)): ?>
     var hrgSatuanKonsinyasi = <?= (float)($first_item['hrg_satuan'] ?? 0) ?>;
-    var sisaQtyKonsinyasi = <?= (float)($first_item['qty_di_kios'] ?? 0) ?>;
+    var sisaQtyKonsinyasi = <?= (float)($k_qty_kios ?? ($first_item['qty_di_kios'] ?? 0)) ?>;
     var qtyInput = document.getElementById('qty_konsinyasi');
     var btnBeliSemua = document.getElementById('btnBeliSemuaKonsinyasi');
 
     if (qtyInput) {
         qtyInput.addEventListener('input', function() {
             var q = parseFloat(this.value) || 0;
-            if (q > sisaQtyKonsinyasi) {
+            if (sisaQtyKonsinyasi > 0 && q > sisaQtyKonsinyasi) {
                 this.value = sisaQtyKonsinyasi;
                 q = sisaQtyKonsinyasi;
             }
