@@ -235,9 +235,27 @@ class C_Konsinyasi extends CI_Controller
                 ->row_array();
         }
 
-        $data['page_title']    = 'Faktur Realisasi Penjualan Konsinyasi - ' . ($settlement['no_settlement'] ?? '');
-        $data['settlement']    = $settlement;
-        $data['faktur_detail'] = $fakturDetail;
+        $fakturKonsinyasi = null;
+        if (!empty($settlement['id_pembayaran'])) {
+            $fakturKonsinyasi = $this->M_Konsinyasi->get_faktur_konsinyasi_by_payment($settlement['id_pembayaran']);
+        }
+        if (!$fakturKonsinyasi && !empty($settlement['id_settlement'])) {
+            $fakturKonsinyasi = $this->db->get_where('tb_konsinyasi_faktur', ['id_settlement' => (int) $settlement['id_settlement']])->row_array();
+        }
+        if (!$fakturKonsinyasi && !empty($settlement['no_faktur'])) {
+            $fakturKonsinyasi = $this->M_Konsinyasi->get_faktur_konsinyasi_by_no($settlement['no_faktur']);
+        }
+
+        $noFakturKonsinyasi = !empty($fakturKonsinyasi['no_faktur_konsinyasi'])
+            ? $fakturKonsinyasi['no_faktur_konsinyasi']
+            : ($settlement['no_faktur'] ?? $settlement['no_settlement']);
+
+        $settlement['no_faktur_konsinyasi'] = $noFakturKonsinyasi;
+        $data['page_title']           = 'Faktur Realisasi Penjualan Konsinyasi - ' . $noFakturKonsinyasi;
+        $data['no_faktur_konsinyasi'] = $noFakturKonsinyasi;
+        $data['faktur_konsinyasi']    = $fakturKonsinyasi;
+        $data['settlement']           = $settlement;
+        $data['faktur_detail']        = $fakturDetail;
 
         $this->load->view('content/purchasing/konsinyasi/faktur_konsinyasi_print.php', $data);
     }

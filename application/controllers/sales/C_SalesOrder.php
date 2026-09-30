@@ -2197,6 +2197,14 @@ class C_SalesOrder extends CI_Controller
         $data['parent_faktur'] = $parent_faktur;
         $data['has_remaining_split_qty'] = $has_remaining_split_qty;
 
+        if ($this->input->get('print') == '1') {
+            $this->load->model('M_pembayaran');
+            $grandTotal = (float)($faktur['total_tagihan'] ?? ($faktur['total_setelah_pajak'] ?? 0));
+            $data['terbilang'] = $this->M_pembayaran->terbilang($grandTotal);
+            $this->load->view('content/sales/faktur_print_zahir.php', $data);
+            return;
+        }
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_detail.php', $data);
         $this->load->view('partial/main/footer.php');

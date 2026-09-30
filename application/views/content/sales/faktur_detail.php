@@ -259,9 +259,9 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                    class="btn btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> <?= $back_label ?>
                 </a>
-                <button class="btn btn-info btn-sm" onclick="window.print()">
+                <a href="<?= base_url('sales_order/detail_faktur/' . $faktur['id_faktur'] . '?print=1') ?>" target="_blank" class="btn btn-info btn-sm">
                     <i class="fas fa-print"></i> Cetak Faktur
-                </button>
+                </a>
             </div>
 
             <?php if (!empty($faktur['is_split_parent'])): ?>

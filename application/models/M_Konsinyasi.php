@@ -124,6 +124,50 @@ class M_Konsinyasi extends CI_Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
         }
+
+        if (!$this->db->table_exists('tb_konsinyasi_faktur')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_konsinyasi_faktur` (
+                  `id_faktur_konsinyasi` int(11) NOT NULL AUTO_INCREMENT,
+                  `no_faktur_konsinyasi` varchar(50) NOT NULL,
+                  `id_faktur_induk` int(11) NOT NULL,
+                  `no_faktur_induk` varchar(50) NOT NULL,
+                  `id_pembayaran` int(11) NOT NULL,
+                  `id_settlement` int(11) DEFAULT NULL,
+                  `id_so` int(11) DEFAULT NULL,
+                  `no_so` varchar(50) DEFAULT NULL,
+                  `termin_ke` int(11) NOT NULL DEFAULT 1,
+                  `tanggal_faktur` date NOT NULL,
+                  `kd_customer` varchar(50) DEFAULT NULL,
+                  `nama_customer` varchar(150) DEFAULT NULL,
+                  `kd_suplier` varchar(50) DEFAULT NULL,
+                  `nama_suplier` varchar(150) DEFAULT NULL,
+                  `gudang_id` int(11) DEFAULT 13,
+                  `kd_barang` varchar(50) NOT NULL,
+                  `nama_barang` varchar(200) NOT NULL,
+                  `no_lot` varchar(100) DEFAULT NULL,
+                  `expired_date` date DEFAULT NULL,
+                  `qty` decimal(15,3) NOT NULL DEFAULT 0.000,
+                  `satuan` varchar(30) DEFAULT 'PCS',
+                  `hrg_satuan` decimal(15,2) NOT NULL DEFAULT 0.00,
+                  `subtotal` decimal(15,2) NOT NULL DEFAULT 0.00,
+                  `jumlah_bayar` decimal(15,2) NOT NULL DEFAULT 0.00,
+                  `metode_pembayaran` varchar(50) DEFAULT NULL,
+                  `status` enum('LAKU','BILLED','CANCELLED') NOT NULL DEFAULT 'LAKU',
+                  `created_by` varchar(100) DEFAULT NULL,
+                  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_faktur_konsinyasi`),
+                  UNIQUE KEY `idx_no_faktur_konsinyasi` (`no_faktur_konsinyasi`),
+                  KEY `idx_faktur_induk` (`id_faktur_induk`),
+                  KEY `idx_pembayaran` (`id_pembayaran`),
+                  KEY `idx_settlement` (`id_settlement`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+
+        if ($this->db->table_exists('tbkeu_pembayaran_faktur') && !$this->db->field_exists('no_faktur_konsinyasi', 'tbkeu_pembayaran_faktur')) {
+            $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur ADD COLUMN no_faktur_konsinyasi VARCHAR(50) NULL DEFAULT NULL AFTER no_faktur, ADD INDEX idx_no_faktur_konsinyasi (no_faktur_konsinyasi)");
+        }
     }
 
     /**
@@ -192,7 +236,8 @@ class M_Konsinyasi extends CI_Model
             UPDATE tb_konsinyasi_settlement s
             JOIN tbso_faktur_penjualan fp ON fp.id_so = s.id_so
             SET s.no_faktur = fp.no_faktur, s.id_faktur = fp.id_faktur
-            WHERE (s.no_faktur IS NULL OR s.no_faktur = '') OR (s.id_faktur IS NULL OR s.id_faktur = 0)
+            WHERE ((s.no_faktur IS NULL OR s.no_faktur = '') AND (s.no_faktur NOT LIKE '%-%'))
+               OR (s.id_faktur IS NULL OR s.id_faktur = 0)
         ");
 
         // Ambil penjualan dari Sales Order yang menggunakan gudang konsinyasi
@@ -816,6 +861,177 @@ class M_Konsinyasi extends CI_Model
             ->order_by('nama_suplier', 'ASC')
             ->get('tb_konsinyasi_settlement')
             ->result_array();
+    }
+
+    /**
+     * Menerbitkan entitas faktur konsinyasi baru saat pelunasan kios
+     * Sesuai termin dan kuantitas barang yang dibeli kios.
+     * TIDAK disimpan di tbso_faktur_penjualan (disimpan mandiri di tb_konsinyasi_faktur)
+     */
+    public function terbitkan_faktur_konsinyasi($id_faktur, $id_pembayaran, array $extra = [])
+    {
+        $this->ensure_schema();
+
+        $id_pembayaran = (int) $id_pembayaran;
+        $id_faktur = (int) $id_faktur;
+
+        $pembayaran = $this->db->get_where('tbkeu_pembayaran_faktur', ['id_pembayaran' => $id_pembayaran])->row_array();
+        if (!$pembayaran) {
+            return null;
+        }
+
+        // Ambil data faktur induk
+        $fakturInduk = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        if (!$fakturInduk) {
+            return null;
+        }
+
+        $customer = $this->db->get_where('tb_customer', ['kd_customer' => $fakturInduk['kd_customer']])->row_array();
+        $namaCustomer = $customer['nama_customer'] ?? $fakturInduk['nama_customer'] ?? $fakturInduk['kd_customer'];
+
+        // Hitung termin ke berapa untuk pembayaran konsinyasi ini
+        $allPayments = $this->db
+            ->select('id_pembayaran')
+            ->where('id_faktur', $id_faktur)
+            ->where('status !=', 'CANCELLED')
+            ->order_by('id_pembayaran', 'ASC')
+            ->get('tbkeu_pembayaran_faktur')
+            ->result_array();
+
+        $terminKe = 1;
+        foreach ($allPayments as $idx => $p) {
+            if ((int) $p['id_pembayaran'] === $id_pembayaran) {
+                $terminKe = $idx + 1;
+                break;
+            }
+        }
+
+        $noFakturKonsinyasi = $fakturInduk['no_faktur'] . '-' . $terminKe;
+
+        // Update nomor faktur konsinyasi di tabel pembayaran
+        $this->db->where('id_pembayaran', $id_pembayaran)->update('tbkeu_pembayaran_faktur', [
+            'no_faktur_konsinyasi' => $noFakturKonsinyasi
+        ]);
+
+        // Cari settlement terkait (berdasarkan id_pembayaran atau settlement aktif)
+        $settlement = null;
+        if (!empty($extra['id_settlement'])) {
+            $settlement = $this->db->get_where('tb_konsinyasi_settlement', ['id_settlement' => (int) $extra['id_settlement']])->row_array();
+        }
+        if (!$settlement) {
+            $settlement = $this->db->get_where('tb_konsinyasi_settlement', ['id_pembayaran' => $id_pembayaran])->row_array();
+        }
+        if (!$settlement) {
+            $settlement = $this->db
+                ->where('id_faktur', $id_faktur)
+                ->where_in('status', ['LAKU', 'BILLED', 'DI_KIOS', 'PENDING'])
+                ->order_by('id_settlement', 'DESC')
+                ->get('tb_konsinyasi_settlement')
+                ->row_array();
+        }
+
+        $fakturDetail = $this->db->get_where('tbso_faktur_detail', ['id_faktur' => $id_faktur])->row_array();
+
+        $kdBarang   = $settlement['kd_barang'] ?? $fakturDetail['kd_barang'] ?? 'KONS';
+        $namaBarang = $settlement['nama_barang'] ?? $fakturDetail['nama_barang'] ?? 'Barang Konsinyasi';
+        $satuan     = $settlement['satuan'] ?? $fakturDetail['satuan'] ?? 'PCS';
+        $hrgSatuan  = (float) ($settlement['hrg_jual'] ?? $fakturDetail['hrg_satuan'] ?? 0);
+        $qty        = (float) (!empty($pembayaran['qty_konsinyasi']) && (float)$pembayaran['qty_konsinyasi'] > 0
+                        ? $pembayaran['qty_konsinyasi']
+                        : ($settlement['qty_net'] ?? 0));
+
+        if ($qty <= 0 && $hrgSatuan > 0) {
+            $qty = round((float) $pembayaran['jumlah_pembayaran'] / $hrgSatuan, 3);
+        }
+        $subtotal = round($qty * $hrgSatuan, 2);
+        if ($subtotal <= 0) {
+            $subtotal = (float) $pembayaran['jumlah_pembayaran'];
+        }
+
+        $kdSuplier   = $settlement['kd_suplier'] ?? null;
+        $namaSuplier = $settlement['nama_suplier'] ?? 'Supplier Konsinyasi';
+        $noLot       = $settlement['no_lot'] ?? ($fakturDetail['no_lot'] ?? null);
+        $expDate     = $settlement['expired_date'] ?? null;
+        $idSettlement = !empty($settlement['id_settlement']) ? (int) $settlement['id_settlement'] : null;
+
+        $existing = $this->db->get_where('tb_konsinyasi_faktur', ['no_faktur_konsinyasi' => $noFakturKonsinyasi])->row_array();
+        $payloadFaktur = [
+            'no_faktur_konsinyasi' => $noFakturKonsinyasi,
+            'id_faktur_induk'      => $id_faktur,
+            'no_faktur_induk'      => $fakturInduk['no_faktur'],
+            'id_pembayaran'        => $id_pembayaran,
+            'id_settlement'        => $idSettlement,
+            'id_so'                => !empty($fakturInduk['id_so']) ? (int) $fakturInduk['id_so'] : null,
+            'no_so'                => $fakturInduk['no_so'],
+            'termin_ke'            => $terminKe,
+            'tanggal_faktur'       => $pembayaran['tanggal_pembayaran'],
+            'kd_customer'          => $fakturInduk['kd_customer'],
+            'nama_customer'        => $namaCustomer,
+            'kd_suplier'           => $kdSuplier,
+            'nama_suplier'         => $namaSuplier,
+            'gudang_id'            => (int) ($fakturInduk['gudang_id'] ?: 13),
+            'kd_barang'            => $kdBarang,
+            'nama_barang'          => $namaBarang,
+            'no_lot'               => $noLot,
+            'expired_date'         => $expDate,
+            'qty'                  => $qty,
+            'satuan'               => $satuan,
+            'hrg_satuan'           => $hrgSatuan,
+            'subtotal'             => $subtotal,
+            'jumlah_bayar'         => (float) $pembayaran['jumlah_pembayaran'],
+            'metode_pembayaran'    => $pembayaran['metode_pembayaran'],
+            'status'               => ($settlement['status'] ?? 'LAKU') === 'BILLED' ? 'BILLED' : 'LAKU',
+            'created_by'           => $pembayaran['create_by'] ?? 'system',
+            'created_at'           => $pembayaran['create_at'] ?? date('Y-m-d H:i:s')
+        ];
+
+        if ($existing) {
+            $this->db->where('id_faktur_konsinyasi', $existing['id_faktur_konsinyasi'])->update('tb_konsinyasi_faktur', $payloadFaktur);
+            $idFakturKonsinyasi = $existing['id_faktur_konsinyasi'];
+        } else {
+            $this->db->insert('tb_konsinyasi_faktur', $payloadFaktur);
+            $idFakturKonsinyasi = $this->db->insert_id();
+        }
+
+        // Update juga settlement agar no_faktur dan id_pembayaran sinkron
+        if ($idSettlement) {
+            $this->db->where('id_settlement', $idSettlement)->update('tb_konsinyasi_settlement', [
+                'no_faktur'     => $noFakturKonsinyasi,
+                'id_pembayaran' => $id_pembayaran
+            ]);
+        }
+
+        $payloadFaktur['id_faktur_konsinyasi'] = $idFakturKonsinyasi;
+        return $payloadFaktur;
+    }
+
+    /**
+     * Mengambil entitas faktur konsinyasi berdasarkan id_pembayaran
+     */
+    public function get_faktur_konsinyasi_by_payment($id_pembayaran)
+    {
+        $this->ensure_schema();
+        $row = $this->db->get_where('tb_konsinyasi_faktur', ['id_pembayaran' => (int) $id_pembayaran])->row_array();
+        if ($row) {
+            return $row;
+        }
+
+        // Jika belum ada di tabel tapi ada pembayaran, otomatis terbitkan
+        $pembayaran = $this->db->get_where('tbkeu_pembayaran_faktur', ['id_pembayaran' => (int) $id_pembayaran])->row_array();
+        if ($pembayaran) {
+            return $this->terbitkan_faktur_konsinyasi($pembayaran['id_faktur'], $id_pembayaran);
+        }
+
+        return null;
+    }
+
+    /**
+     * Mengambil entitas faktur konsinyasi berdasarkan nomor faktur konsinyasi
+     */
+    public function get_faktur_konsinyasi_by_no($noFakturKonsinyasi)
+    {
+        $this->ensure_schema();
+        return $this->db->get_where('tb_konsinyasi_faktur', ['no_faktur_konsinyasi' => trim((string)$noFakturKonsinyasi)])->row_array();
     }
 }
 

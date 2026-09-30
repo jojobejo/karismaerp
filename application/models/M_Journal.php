@@ -605,6 +605,14 @@ class M_Journal extends CI_Model
                 'catatan'       => 'Barang laku dibeli kios ' . $qty_dibeli . ' ' . $settlement['satuan'] . ' via pelunasan faktur ' . $noFakturKonsinyasi . ' di Keuangan (Menunggu tagihan supplier)'
             ]);
         }
+
+        // Terbitkan entitas faktur konsinyasi baru secara mandiri ke tb_konsinyasi_faktur
+        if (!empty($id_pembayaran)) {
+            $this->load->model('M_Konsinyasi');
+            $this->M_Konsinyasi->terbitkan_faktur_konsinyasi($id_faktur, $id_pembayaran, [
+                'id_settlement' => (int) $settlement['id_settlement']
+            ]);
+        }
     }
 
     public function accounting_journal_schema_ready()

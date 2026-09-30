@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($page_title ?? 'Faktur') ?></title>
+    <title><?= htmlspecialchars($page_title ?? ('Faktur - ' . ($faktur['no_faktur'] ?? ''))) ?></title>
     <style>
         * {
             box-sizing: border-box;
@@ -347,8 +347,8 @@
             <i class="fas fa-file-invoice"></i> Format Cetak Faktur Standar Zahir
         </div>
         <div style="display: flex; gap: 8px;">
-            <a href="javascript:window.history.back()" class="btn-action btn-back">
-                &larr; Kembali
+            <a href="<?= base_url('sales_order/detail_faktur/' . $faktur['id_faktur']) ?>" class="btn-action btn-back">
+                &larr; Kembali ke Detail
             </a>
             <button onclick="window.print()" class="btn-action btn-print">
                 &#128424; Cetak Dokumen
@@ -357,60 +357,32 @@
     </div>
 
     <?php
-    // Persiapan variabel data faktur
-    $noFakturCetak = $no_faktur_konsinyasi
-        ?? $faktur_konsinyasi['no_faktur_konsinyasi']
-        ?? $settlement['no_faktur_konsinyasi']
-        ?? $settlement['no_faktur']
-        ?? '-';
-
-    $noSOCetak = !empty($faktur_konsinyasi['no_so']) 
-        ? $faktur_konsinyasi['no_so'] 
-        : (!empty($so['no_so']) ? $so['no_so'] : (!empty($settlement['no_so']) ? $settlement['no_so'] : ''));
-
-    $namaCustomer = $faktur_konsinyasi['nama_customer']
-        ?? $customer['nama_kios']
-        ?? $customer['nama_customer']
-        ?? $settlement['customer_name']
-        ?? 'Pelanggan';
-
-    $alamatCustomer = $customer['alamat_kios']
-        ?? $customer['alamat']
-        ?? 'Jawa Timur, Indonesia';
-    if (!empty($customer['regional'])) {
-        $alamatCustomer .= ' (' . $customer['regional'] . ')';
+    $noFakturCetak = $faktur['no_faktur'] ?? '-';
+    $noSOCetak     = $so['no_so'] ?? ($faktur['no_so'] ?? '-');
+    $namaCustomer  = $faktur['customer_name'] ?? ($so['customer_name'] ?? 'Pelanggan New');
+    $alamatCustomer= $faktur['alamat_kios'] ?? ($faktur['alamat'] ?? ($so['alamat_kios'] ?? ($so['alamat'] ?? 'Jawa Timur, Indonesia')));
+    if (!empty($faktur['regional'])) {
+        $alamatCustomer .= ' (' . $faktur['regional'] . ')';
     }
 
-    $tglFaktur = !empty($faktur_konsinyasi['tanggal_faktur'])
-        ? $faktur_konsinyasi['tanggal_faktur']
-        : (!empty($payment['tanggal_pembayaran']) ? $payment['tanggal_pembayaran'] : ($settlement['tanggal_settlement'] ?? date('Y-m-d')));
-    
+    $tglFaktur = !empty($faktur['tanggal_faktur']) ? $faktur['tanggal_faktur'] : date('Y-m-d');
     $tglFormatted = date('l, F d, Y', strtotime($tglFaktur));
 
-    $keteranganFaktur = !empty($payment['keterangan'])
-        ? $payment['keterangan']
-        : ('Penjualan, ' . $namaCustomer . (!empty($faktur_konsinyasi['termin_ke']) ? ' (Termin ' . $faktur_konsinyasi['termin_ke'] . ')' : ''));
+    $keteranganFaktur = !empty($faktur['keterangan']) 
+        ? $faktur['keterangan'] 
+        : ('Penjualan, ' . $namaCustomer);
 
-    $termBayar = !empty($payment['cara_pembayaran'])
-        ? ucfirst(strtolower($payment['cara_pembayaran']))
-        : (!empty($payment['metode_pembayaran']) ? $payment['metode_pembayaran'] : 'Cash/Tunai');
+    $termBayar = !empty($faktur['cara_pembayaran']) 
+        ? ucfirst(strtolower($faktur['cara_pembayaran'])) 
+        : (!empty($so['cara_pembayaran']) ? ucfirst(strtolower($so['cara_pembayaran'])) : 'Cash/Tunai');
 
-    $salesman = !empty($customer['nama_sales'])
-        ? $customer['nama_sales']
-        : (!empty($so['salesman']) ? $so['salesman'] : (!empty($payment['create_by']) ? $payment['create_by'] : 'Admin'));
+    $salesman = !empty($so['salesman']) 
+        ? $so['salesman'] 
+        : (!empty($faktur['create_by']) ? $faktur['create_by'] : (!empty($so['create_by']) ? $so['create_by'] : 'Eko'));
 
-    $kdBarang = $faktur_konsinyasi['kd_barang'] ?? $settlement['kd_barang'] ?? ($faktur_detail['kd_barang'] ?? 'PRD-001');
-    $namaBarang = $faktur_konsinyasi['nama_barang'] ?? $settlement['nama_barang'] ?? ($faktur_detail['nama_barang'] ?? 'Barang Konsinyasi');
-    $satuan = $faktur_konsinyasi['satuan'] ?? $settlement['satuan'] ?? ($faktur_detail['satuan'] ?? 'Pcs');
-
-    $qty = (float)($faktur_konsinyasi['qty'] ?? (!empty($payment['qty_konsinyasi']) ? $payment['qty_konsinyasi'] : ($settlement['qty_net'] ?? 1)));
-    $hrgSatuan = (float)($faktur_konsinyasi['hrg_satuan'] ?? $settlement['hrg_jual'] ?? ($faktur_detail['hrg_satuan'] ?? 0));
-    $disc = 0.00;
-    $subTotal = (float)($faktur_konsinyasi['subtotal'] ?? ($qty * $hrgSatuan));
-    $pajak = 0.00;
-    $discFinal = 0.00;
-    $grandTotal = $subTotal - $discFinal + $pajak;
-
+    $discFinal  = (float)($faktur['diskon_nominal'] ?? 0);
+    $pajak      = (float)($faktur['ppn_nominal'] ?? 0);
+    $grandTotal = (float)($faktur['total_tagihan'] ?? ($faktur['total_setelah_pajak'] ?? 0));
     $terbilangTeks = !empty($terbilang) ? $terbilang : 'Nol Rupiah';
     ?>
 
@@ -499,20 +471,37 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Baris Item Realisasi Konsinyasi -->
-                        <tr class="bg-soft">
-                            <td class="text-left">
-                                <div class="col-item-name">
-                                    <span class="item-code"><?= htmlspecialchars($kdBarang) ?></span>
-                                    <span class="item-name"><?= htmlspecialchars($namaBarang) ?></span>
-                                </div>
-                            </td>
-                            <td class="text-center"><?= number_format($qty, 0, ',', '.') ?></td>
-                            <td class="text-center"><?= htmlspecialchars($satuan) ?></td>
-                            <td class="text-right"><?= number_format($hrgSatuan, 2, '.', ',') ?></td>
-                            <td class="text-right"><?= number_format($disc, 2, '.', ',') ?></td>
-                            <td class="text-right"><?= number_format($subTotal, 2, '.', ',') ?></td>
-                        </tr>
+                        <?php if (empty($details)): ?>
+                            <tr class="bg-soft">
+                                <td colspan="6" class="text-center" style="padding: 18px 0; color: #64748b;">
+                                    Tidak ada item barang dalam faktur ini.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php $rowIdx = 0; foreach ($details as $d): ?>
+                                <?php 
+                                $isSoftBg = ($rowIdx % 2 === 0); 
+                                $rowIdx++;
+                                $itemQty = (float)($d['qty'] ?? 1);
+                                $itemHrg = (float)($d['hrg_satuan'] ?? 0);
+                                $itemDisc = (float)($d['disc1'] ?? 0);
+                                $itemSubtotal = (float)($d['subtotal_after_disc'] ?? ($d['subtotal'] ?? ($itemQty * $itemHrg)));
+                                ?>
+                                <tr class="<?= $isSoftBg ? 'bg-soft' : 'bg-white' ?>">
+                                    <td class="text-left">
+                                        <div class="col-item-name">
+                                            <span class="item-code"><?= htmlspecialchars($d['kd_barang'] ?? '') ?></span>
+                                            <span class="item-name"><?= htmlspecialchars($d['nama_barang'] ?? '') ?></span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center"><?= number_format($itemQty, 0, ',', '.') ?></td>
+                                    <td class="text-center"><?= htmlspecialchars($d['satuan'] ?? 'Pcs') ?></td>
+                                    <td class="text-right"><?= number_format($itemHrg, 2, '.', ',') ?></td>
+                                    <td class="text-right"><?= number_format($itemDisc, 2, '.', ',') ?></td>
+                                    <td class="text-right"><?= number_format($itemSubtotal, 2, '.', ',') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

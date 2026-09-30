@@ -435,9 +435,20 @@ class C_pembayaran extends CI_Controller
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
+        $no_faktur_konsinyasi = null;
+        if ($is_konsinyasi) {
+            $countExisting = $this->db
+                ->where('id_faktur', (int)$faktur['id_faktur'])
+                ->where('status !=', 'CANCELLED')
+                ->count_all_results('tbkeu_pembayaran_faktur');
+            $terminKe = $countExisting + 1;
+            $no_faktur_konsinyasi = $faktur['no_faktur'] . '-' . $terminKe;
+        }
+
         $data = [
             'id_faktur'           => $faktur['id_faktur'],
             'no_faktur'           => $faktur['no_faktur'],
+            'no_faktur_konsinyasi'=> $no_faktur_konsinyasi,
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
@@ -857,6 +868,11 @@ class C_pembayaran extends CI_Controller
             return;
         }
 
+        $this->load->model('M_Konsinyasi');
+
+        // Ambil entitas faktur konsinyasi resmi dari tb_konsinyasi_faktur
+        $fakturKonsinyasi = $this->M_Konsinyasi->get_faktur_konsinyasi_by_payment($id_pembayaran);
+
         // Cari nomor urutan pembayaran ke berapa untuk faktur ini
         $allPayments = $this->db
             ->select('id_pembayaran')
@@ -873,21 +889,23 @@ class C_pembayaran extends CI_Controller
                 break;
             }
         }
-        $noFakturKonsinyasi = $payment['no_faktur'] . '-' . $paymentIndex;
+
+        $noFakturKonsinyasi = !empty($fakturKonsinyasi['no_faktur_konsinyasi'])
+            ? $fakturKonsinyasi['no_faktur_konsinyasi']
+            : (!empty($payment['no_faktur_konsinyasi']) ? $payment['no_faktur_konsinyasi'] : ($payment['no_faktur'] . '-' . $paymentIndex));
 
         // Cari settlement terkait faktur ini:
-        // 1. Berdasarkan id_pembayaran spesifik jika ada
-        $this->load->model('M_Konsinyasi');
         $settlement = null;
-        if ($this->db->field_exists('id_pembayaran', 'tb_konsinyasi_settlement')) {
+        if (!empty($fakturKonsinyasi['id_settlement'])) {
+            $settlement = $this->db->get_where('tb_konsinyasi_settlement', ['id_settlement' => (int)$fakturKonsinyasi['id_settlement']])->row_array();
+        }
+        if (!$settlement && $this->db->field_exists('id_pembayaran', 'tb_konsinyasi_settlement')) {
             $settlement = $this->db
                 ->where('id_pembayaran', $id_pembayaran)
                 ->order_by('id_settlement', 'DESC')
                 ->get('tb_konsinyasi_settlement')
                 ->row_array();
         }
-
-        // 2. Berdasarkan status LAKU atau BILLED untuk faktur ini
         if (!$settlement) {
             $settlement = $this->db
                 ->where('id_faktur', (int)$payment['id_faktur'])
@@ -896,8 +914,6 @@ class C_pembayaran extends CI_Controller
                 ->get('tb_konsinyasi_settlement')
                 ->row_array();
         }
-
-        // 3. Fallback jika masih belum ada
         if (!$settlement) {
             $settlement = $this->db
                 ->where('id_faktur', (int)$payment['id_faktur'])
@@ -913,13 +929,15 @@ class C_pembayaran extends CI_Controller
         }
 
         // Pastikan kuantitas laku yang dicetak sesuai kuantitas yang dibayar pada pembayaran ini
-        if (!empty($payment['qty_konsinyasi']) && (float)$payment['qty_konsinyasi'] > 0) {
-            $settlement['qty_terjual']   = (float)$payment['qty_konsinyasi'];
-            $settlement['qty_net']       = (float)$payment['qty_konsinyasi'];
-            $settlement['subtotal_jual'] = round((float)$settlement['qty_net'] * (float)$settlement['hrg_jual'], 2);
-        }
+        $qtyCetak = !empty($fakturKonsinyasi['qty']) && (float)$fakturKonsinyasi['qty'] > 0
+            ? (float)$fakturKonsinyasi['qty']
+            : ((!empty($payment['qty_konsinyasi']) && (float)$payment['qty_konsinyasi'] > 0) ? (float)$payment['qty_konsinyasi'] : (float)$settlement['qty_net']);
 
-        // Sematkan nomor faktur konsinyasi ber-suffix nomor urut pembayaran
+        $settlement['qty_terjual']   = $qtyCetak;
+        $settlement['qty_net']       = $qtyCetak;
+        $settlement['subtotal_jual'] = round((float)$settlement['qty_net'] * (float)$settlement['hrg_jual'], 2);
+
+        // Sematkan nomor faktur konsinyasi resmi
         $settlement['no_faktur_asli']       = $payment['no_faktur'];
         $settlement['no_faktur_konsinyasi'] = $noFakturKonsinyasi;
         $settlement['payment_ke']           = $paymentIndex;
@@ -931,11 +949,33 @@ class C_pembayaran extends CI_Controller
             ->get('tbso_faktur_detail')
             ->row_array();
 
+        $fakturInduk = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => (int) $payment['id_faktur']])->row_array();
+        $customer = null;
+        if ($fakturInduk && !empty($fakturInduk['kd_customer'])) {
+            $customer = $this->db->get_where('tb_customer', ['kd_customer' => $fakturInduk['kd_customer']])->row_array();
+        }
+
+        $so = null;
+        if (!empty($settlement['id_so'])) {
+            $so = $this->db->get_where('tbso_sales_order', ['id_so' => (int) $settlement['id_so']])->row_array();
+        } elseif ($fakturInduk && !empty($fakturInduk['id_so'])) {
+            $so = $this->db->get_where('tbso_sales_order', ['id_so' => (int) $fakturInduk['id_so']])->row_array();
+        }
+
+        $totalJual = (float) ($fakturKonsinyasi['subtotal'] ?? $settlement['subtotal_jual'] ?? 0);
+        $terbilang = $this->M_pembayaran->terbilang($totalJual);
+
         $data['page_title']           = 'Faktur Realisasi Penjualan Konsinyasi - ' . $noFakturKonsinyasi;
         $data['no_faktur_konsinyasi'] = $noFakturKonsinyasi;
+        $data['faktur_konsinyasi']    = $fakturKonsinyasi;
         $data['payment']              = $payment;
         $data['settlement']           = $settlement;
         $data['faktur_detail']        = $fakturDetail;
+        $data['faktur_induk']         = $fakturInduk;
+        $data['customer']             = $customer;
+        $data['so']                   = $so;
+        $data['terbilang']            = $terbilang;
+        $data['total_jual']           = $totalJual;
 
         $this->load->view('content/purchasing/konsinyasi/faktur_konsinyasi_print.php', $data);
     }
