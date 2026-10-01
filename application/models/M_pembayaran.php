@@ -821,6 +821,33 @@ class M_pembayaran extends CI_Model
                 }
             }
         }
+        // 4. Reversal Konsinyasi Settlement (Kembalikan LAKU menjadi DI_KIOS)
+        if ($this->db->table_exists('tb_konsinyasi_settlement')) {
+            $linkedSettlements = $this->db->get_where('tb_konsinyasi_settlement', ['id_pembayaran' => $id_pembayaran])->result_array();
+            foreach ($linkedSettlements as $st) {
+                if ($st['status'] === 'LAKU' || $st['status'] === 'BILLED') {
+                    // Coba kembalikan no_faktur ke nomor asli tanpa suffix -X
+                    $origNoFaktur = $st['no_faktur'];
+                    if (preg_match('/^(.*?)-\d+$/', (string)$st['no_faktur'], $matches)) {
+                        $origNoFaktur = $matches[1];
+                    }
+                    
+                    $this->db->where('id_settlement', $st['id_settlement'])->update('tb_konsinyasi_settlement', [
+                        'status' => 'DI_KIOS',
+                        'id_pembayaran' => null,
+                        'no_faktur' => $origNoFaktur,
+                        'catatan' => 'Pembayaran dibatalkan/di-unpost, barang kembali berstatus titipan di kios.'
+                    ]);
+                }
+            }
+        }
+
+        // Juga batalkan (CANCELLED) faktur konsinyasi yang terbentuk dari pembayaran ini
+        if ($this->db->table_exists('tb_konsinyasi_faktur')) {
+            $this->db->where('id_pembayaran', $id_pembayaran)->update('tb_konsinyasi_faktur', [
+                'status' => 'CANCELLED'
+            ]);
+        }
 
         $this->db->trans_complete();
 

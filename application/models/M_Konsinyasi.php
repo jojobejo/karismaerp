@@ -240,7 +240,14 @@ class M_Konsinyasi extends CI_Model
                OR (s.id_faktur IS NULL OR s.id_faktur = 0)
         ");
 
-        // Ambil penjualan dari Sales Order yang menggunakan gudang konsinyasi
+        // Hapus data konsinyasi_settlement yang berasal dari SO tapi belum ada faktur (karena rule baru: baru masuk kios ketika sudah jadi faktur)
+        $this->db->query("
+            DELETE s FROM tb_konsinyasi_settlement s
+            WHERE s.id_so IS NOT NULL 
+              AND (s.id_faktur IS NULL OR s.id_faktur = 0)
+              AND s.status = 'DI_KIOS'
+        ");
+
         $this->db->select("
             so.id_so,
             so.no_so,
@@ -261,7 +268,8 @@ class M_Konsinyasi extends CI_Model
         ");
         $this->db->from('tbso_sales_order so');
         $this->db->join('tbso_sales_order_detail sod', 'sod.id_so = so.id_so', 'inner');
-        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_so = so.id_so', 'left');
+        // Ubah join ke inner agar HANYA SO yang sudah terbit faktur yang masuk ke konsinyasi
+        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_so = so.id_so', 'inner');
         $this->db->where_in('so.gudang_id', $warehouseIds);
         $this->db->where_not_in('so.status', ['draft', 'cancelled']);
         $this->db->where('sod.qty >', 0);
