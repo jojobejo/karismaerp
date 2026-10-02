@@ -15,6 +15,15 @@ class C_Checker extends CI_Controller
         return in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK]);
     }
 
+    private function canOperateSoLoading()
+    {
+        return in_array($this->role(), [
+            self::ROLE_CHECKER,
+            self::ROLE_MANAGERCK,
+            self::ROLE_ADMLOG,
+        ], true);
+    }
+
     private function isMCK()
     {
         return $this->role() === self::ROLE_MANAGERCK;
@@ -125,6 +134,7 @@ class C_Checker extends CI_Controller
         $data['row']        = $row;
         $data['type']       = 'lk';
         $data['role']       = $this->role();
+        $data['so_loading_items'] = $this->get_so_loading_items_by_route($row['keterangan']);
     
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/detail.php', $data);
@@ -142,10 +152,44 @@ class C_Checker extends CI_Controller
         $data['row']        = $row;
         $data['type']       = 'kk';
         $data['role']       = $this->role();
+        $data['so_loading_items'] = $this->get_so_loading_items_by_route($row['keterangan']);
     
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/detail.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    private function get_so_loading_items_by_route($kd_rute)
+    {
+        return $this->db->query("
+            SELECT
+                sod.id,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.customer_name,
+                c.nama_kios,
+                sod.kd_barang,
+                sod.nama_barang,
+                sod.no_lot,
+                sod.expired_date,
+                COALESCE(sod.qty_siap_faktur, sod.qty) AS qty_siap,
+                sod.satuan,
+                COALESCE(sod.checker_loaded, 0) AS checker_loaded
+            FROM tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              AND so.status IN ('siap_faktur', 'partial', 'completed')
+              AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+              AND DATE(so.tanggal_transaksi) = (
+                  SELECT MAX(DATE(so2.tanggal_transaksi))
+                  FROM tbso_sales_order so2
+                  LEFT JOIN tb_customer c2 ON c2.kd_customer = so2.kd_customer
+                  WHERE COALESCE(NULLIF(so2.kd_rute, ''), c2.kd_rute, 'TANPA_RUTE') = ?
+                    AND so2.status IN ('siap_faktur', 'partial', 'completed')
+              )
+            ORDER BY so.tanggal_transaksi DESC, so.no_so ASC, sod.id ASC
+        ", [$kd_rute, $kd_rute])->result_array();
     }
 
     // ================================================================
@@ -1026,7 +1070,7 @@ class C_Checker extends CI_Controller
         $this->load->model('M_Logistik');
         
         // Tampilkan rute jika:
-        // 1. SO belum masuk DO (tidak ada di tb_detail_do via faktur)
+        // 1. Item belum masuk DO; pemeriksaan dilakukan per detail barang
         // 2. Masih ada item yang belum diverifikasi checker (checker_loaded = 0/NULL/2)
         // 3. Status SO siap_faktur, partial, ATAU completed
         //    - completed bisa terjadi saat Admin SC sudah memfakturkan seluruh item
@@ -1042,22 +1086,27 @@ class C_Checker extends CI_Controller
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
             WHERE so.status IN ('siap_faktur', 'partial', 'completed')
-            AND NOT EXISTS (
-                SELECT 1
-                FROM tbso_faktur_penjualan fp
-                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
-                WHERE fp.id_so = so.id_so
-            )
             AND EXISTS (
                 SELECT 1
                 FROM tbso_sales_order_detail sod
                 WHERE sod.id_so = so.id_so
                     AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
                     AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM tbso_faktur_detail fd
+                        JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+                        WHERE fd.id_so_detail = sod.id
+                    )
             )
             GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE'), DATE(so.tanggal_transaksi)
             ORDER BY DATE(so.tanggal_transaksi) ASC, kd_rute ASC
         ")->result_array();
+
+        foreach ($routes as &$route) {
+            $route['activity'] = $this->M_Checker->get_route_loading_activity($route['kd_rute']);
+        }
+        unset($route);
 
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
         $data['routes'] = $routes;
@@ -1073,6 +1122,8 @@ class C_Checker extends CI_Controller
         if (!$this->canView()) { show_error('Akses ditolak', 403); }
         $this->load->model('M_Logistik');
         $kd_rute = rawurldecode($kd_rute);
+        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        $show_history = $activity && ($activity['status'] ?? '') === 'DONE';
 
         // Tampilkan item yang belum masuk DO dan masih perlu diverifikasi checker
         // Status SO: siap_faktur, partial, ATAU completed
@@ -1085,6 +1136,12 @@ class C_Checker extends CI_Controller
             $date_filter = "AND DATE(so.tanggal_transaksi) = ?";
             $params[] = $tgl_transaksi;
         }
+        $do_filter = $show_history ? '' : "AND NOT EXISTS (
+            SELECT 1
+            FROM tbso_faktur_detail fd
+            JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+            WHERE fd.id_so_detail = sod.id
+        )";
 
         $items = $this->db->query("
             SELECT 
@@ -1107,12 +1164,7 @@ class C_Checker extends CI_Controller
               AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
               $date_filter
               AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
-              AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
-              AND NOT EXISTS (
-                  SELECT 1 FROM tb_detail_do dd
-                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
-                  WHERE fp.id_so = so.id_so
-              )
+              $do_filter
             ORDER BY so.no_so ASC, sod.id ASC
         ", $params)->result_array();
 
@@ -1120,10 +1172,104 @@ class C_Checker extends CI_Controller
         $data['kd_rute'] = $kd_rute;
         $data['items'] = $items;
         $data['role'] = $this->role();
+        $data['activity'] = $activity;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/so_loading_detail.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function start_so_loading_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        if ($kd_rute === '') {
+            echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid.']);
+            exit;
+        }
+
+        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        if (!$activity) {
+            echo json_encode(['status' => false, 'message' => 'Aktivitas Loading LK/KK untuk rute ini tidak ditemukan.']);
+            exit;
+        }
+        if ($activity['status'] === 'PROSES_LOADING' && !empty($activity['waktu_mulai'])) {
+            echo json_encode(['status' => true, 'message' => 'Loading sudah dimulai sebelumnya.']);
+            exit;
+        }
+
+        $nik = (string)$this->session->userdata('nik');
+        $nama = (string)($this->nama() ?: $this->session->userdata('username'));
+        $ok = $this->M_Checker->start_route_loading($kd_rute, $nik, $nama);
+
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok ? 'Loading rute ' . $kd_rute . ' dimulai.' : 'Gagal memulai loading.'
+        ]);
+        exit;
+    }
+
+    public function pause_so_loading_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        $action = strtolower(trim((string)$this->input->post('action', true)));
+        if ($kd_rute === '' || !in_array($action, ['pause', 'resume'], true)) {
+            echo json_encode(['status' => false, 'message' => 'Data pause tidak valid.']);
+            exit;
+        }
+
+        $ok = $this->M_Checker->set_route_loading_pause($kd_rute, $action === 'pause');
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok
+                ? ($action === 'pause' ? 'Loading berhasil di-pause.' : 'Loading berhasil dilanjutkan.')
+                : 'Gagal mengubah status pause loading.'
+        ]);
+        exit;
+    }
+
+    public function prepare_so_loading_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        $action = strtolower(trim((string)$this->input->post('action', true)));
+        if ($kd_rute === '' || !in_array($action, ['start', 'finish'], true)) {
+            echo json_encode(['status' => false, 'message' => 'Data penyiapan barang tidak valid.']);
+            exit;
+        }
+
+        $ok = $this->M_Checker->set_route_loading_preparation($kd_rute, $action === 'start');
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok
+                ? ($action === 'start'
+                    ? 'Penyiapan barang dimulai.'
+                    : 'Penyiapan barang selesai. Proses loading dapat dilanjutkan.')
+                : 'Gagal mengubah proses penyiapan barang.'
+        ]);
+        exit;
     }
 
     public function toggle_so_item_loaded()
@@ -1133,6 +1279,10 @@ class C_Checker extends CI_Controller
 
         if ($this->input->method() !== 'post') {
             echo json_encode(['status' => false, 'message' => 'Method tidak valid']);
+            exit;
+        }
+        if (!$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
             exit;
         }
 
@@ -1151,20 +1301,35 @@ class C_Checker extends CI_Controller
             exit;
         }
 
-        $this->db->where('id', $id_detail);
-        $this->db->update('tbso_sales_order_detail', ['checker_loaded' => $loaded]);
-
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $detail['id_so']])->row_array();
         $c = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
         $kd_rute = trim((string)(($so['kd_rute'] ?? '') ?: ($c['kd_rute'] ?? '')));
 
+        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        if (!$activity || $activity['status'] !== 'PROSES_LOADING' || empty($activity['waktu_mulai'])) {
+            echo json_encode(['status' => false, 'message' => 'Klik Start Loading terlebih dahulu.']);
+            exit;
+        }
+        if (!empty($activity['is_paused'])) {
+            echo json_encode(['status' => false, 'message' => 'Loading sedang di-pause. Klik Lanjutkan terlebih dahulu.']);
+            exit;
+        }
+
+        $this->db->where('id', $id_detail);
+        $this->db->update('tbso_sales_order_detail', ['checker_loaded' => $loaded]);
+
         $this->load->model('M_Logistik');
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
+        $progress = $this->M_Checker->update_route_loading_progress(
+            $kd_rute,
+            $so['tanggal_transaksi'] ?? null
+        );
         $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
 
         echo json_encode([
             'status' => true,
             'message' => 'Status muat berhasil diperbarui',
+            'progress' => $progress,
             'created_do' => $created_do ? $created_do['kd_do'] : null
         ]);
         exit;
@@ -1185,6 +1350,20 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid']);
             exit;
         }
+        if (!$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        if (!$activity || $activity['status'] !== 'PROSES_LOADING' || empty($activity['waktu_mulai'])) {
+            echo json_encode(['status' => false, 'message' => 'Loading belum dimulai. Klik Start terlebih dahulu.']);
+            exit;
+        }
+        if (!empty($activity['is_paused'])) {
+            echo json_encode(['status' => false, 'message' => 'Loading sedang di-pause. Klik Lanjutkan terlebih dahulu.']);
+            exit;
+        }
 
         $tgl_transaksi = $this->input->post('date', true);
         $date_filter = "";
@@ -1200,14 +1379,15 @@ class C_Checker extends CI_Controller
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('siap_faktur', 'partial')
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             $date_filter
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
-                SELECT 1 FROM tbso_faktur_penjualan fp
-                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
-                WHERE fp.id_so = so.id_so
+                SELECT 1
+                FROM tbso_faktur_detail fd
+                JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+                WHERE fd.id_so_detail = sod.id
             )
             AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0)
         ", $params)->row_array();
@@ -1226,14 +1406,15 @@ class C_Checker extends CI_Controller
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('siap_faktur', 'partial')
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             $date_filter
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
-                SELECT 1 FROM tbso_faktur_penjualan fp
-                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
-                WHERE fp.id_so = so.id_so
+                SELECT 1
+                FROM tbso_faktur_detail fd
+                JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+                WHERE fd.id_so_detail = sod.id
             )
             AND sod.checker_loaded = 2
         ", $params)->row_array();
@@ -1242,6 +1423,10 @@ class C_Checker extends CI_Controller
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
 
         if ((int)$ada_ditolak['total'] > 0) {
+            if (!$this->M_Checker->finish_route_loading($kd_rute)) {
+                echo json_encode(['status' => false, 'message' => 'Gagal mencatat waktu selesai loading.']);
+                exit;
+            }
             // Ada item X — tandai selesai tapi jangan buat DO
             // Kembalikan response sukses dengan pesan instruksi untuk Admin SC
             echo json_encode([
@@ -1255,6 +1440,11 @@ class C_Checker extends CI_Controller
 
         // Semua item dimuat (checker_loaded = 1) — coba buat DO
         $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
+
+        if (!$this->M_Checker->finish_route_loading($kd_rute)) {
+            echo json_encode(['status' => false, 'message' => 'Gagal mencatat waktu selesai loading.']);
+            exit;
+        }
 
         echo json_encode([
             'status'      => true,

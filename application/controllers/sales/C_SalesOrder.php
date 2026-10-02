@@ -4446,6 +4446,17 @@ class C_SalesOrder extends CI_Controller
             echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid.']);
             exit;
         }
+        $rute_loading = $this->M_Logistik->get_rute_do($kd_rute);
+        if (
+            !$rute_loading
+            || !in_array(strtoupper((string)($rute_loading->jenis_rute ?? '')), ['LK', 'KK'], true)
+        ) {
+            echo json_encode([
+                'msg'     => 'error',
+                'message' => 'Rute belum terdaftar sebagai rute LK atau KK.'
+            ]);
+            exit;
+        }
 
         $filter = [];
         if ($this->_isRestrictedSalesUser()) {
@@ -4517,9 +4528,24 @@ class C_SalesOrder extends CI_Controller
             'confirm_at' => date('Y-m-d H:i:s'),
         ]);
 
+        // Catat rute ke aktivitas Checker sesuai jenis rute LK atau KK.
+        $checker_synced = $this->M_Checker->sync_route_activity(
+            $kd_rute,
+            'siap_loading',
+            $confirm_by
+        );
+        if (!$checker_synced) {
+            echo json_encode([
+                'msg'     => 'error',
+                'message' => 'Status SO sudah diperbarui, tetapi rute gagal dicatat ke halaman Checker.'
+            ]);
+            exit;
+        }
+
         echo json_encode([
             'msg'     => 'success',
-            'message' => $updated . ' SO rute ' . $kd_rute . ' berubah menjadi Verifikasi.'
+            'message' => $updated . ' SO rute ' . $kd_rute
+                . ' berubah menjadi Verifikasi dan masuk ke Loading Checker.'
         ]);
         exit;
     }

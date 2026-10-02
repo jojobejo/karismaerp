@@ -13,7 +13,7 @@ class M_Konsinyasi extends CI_Model
 {
     public function __construct()
     {
-        parent::__construct();
+        parent::__construct(); 
         $this->ensure_schema();
     }
 

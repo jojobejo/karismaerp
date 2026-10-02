@@ -46,6 +46,17 @@
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
+<?php
+$loading_completed = !empty($activity) && ($activity['status'] ?? '') === 'DONE';
+$loading_started = !empty($activity)
+    && in_array(($activity['status'] ?? ''), ['PROSES_LOADING', 'PENYIAPAN_BARANG'], true)
+    && !empty($activity['waktu_mulai']);
+$is_preparing_goods = $loading_started && ($activity['status'] ?? '') === 'PENYIAPAN_BARANG';
+$is_loading_paused = $loading_started && !$is_preparing_goods && !empty($activity['is_paused']);
+$has_loading_permission = in_array($role, ['CHECKER', 'MANAGERCK', 'ADMLOG'], true);
+$can_operate_loading = $loading_started && !$is_preparing_goods && !$is_loading_paused && $has_loading_permission;
+$preparation_completed = !empty($activity['waktu_selesai_siapkan']);
+?>
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
         <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo" height="150" width="300">
@@ -89,6 +100,55 @@
                         </h3>
                     </div>
                     <div class="card-body">
+                        <?php if ($loading_completed): ?>
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Loading telah selesai
+                                <?php if (!empty($activity['waktu_selesai'])): ?>
+                                    pada <b><?= date('d/m/Y H:i:s', strtotime($activity['waktu_selesai'])) ?></b>.
+                                <?php endif; ?>
+                                Daftar di bawah merupakan hasil loading barang.
+                            </div>
+                        <?php elseif (!$loading_started): ?>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                Loading belum dimulai. Kembali ke daftar rute lalu klik <b>Start</b>.
+                            </div>
+                        <?php else: ?>
+                            <div class="alert <?= ($is_loading_paused || $is_preparing_goods) ? 'alert-warning' : 'alert-info' ?> py-2 d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas <?= $is_preparing_goods ? 'fa-boxes' : ($is_loading_paused ? 'fa-pause-circle' : 'fa-clock') ?> mr-1"></i>
+                                    Loading dimulai pada <b><?= date('d/m/Y H:i:s', strtotime($activity['waktu_mulai'])) ?></b>.
+                                    <?php if ($is_preparing_goods): ?>
+                                        <b class="ml-2">Sedang menyiapkan barang.</b>
+                                    <?php elseif ($is_loading_paused): ?>
+                                        <b class="ml-2">Durasi sedang berhenti.</b>
+                                    <?php endif; ?>
+                                </span>
+                                <?php if ($has_loading_permission): ?>
+                                    <div class="d-flex align-items-center">
+                                        <?php if (!$is_preparing_goods): ?>
+                                            <button type="button"
+                                                    id="btn-toggle-pause"
+                                                    class="btn btn-sm <?= $is_loading_paused ? 'btn-success' : 'btn-warning' ?>"
+                                                    data-action="<?= $is_loading_paused ? 'resume' : 'pause' ?>">
+                                                <i class="fas <?= $is_loading_paused ? 'fa-play' : 'fa-pause' ?> mr-1"></i>
+                                                <?= $is_loading_paused ? 'Lanjutkan' : 'Pause' ?>
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if (!$is_loading_paused && (!$preparation_completed || $is_preparing_goods)): ?>
+                                            <button type="button"
+                                                    id="btn-toggle-prepare"
+                                                    class="btn btn-sm ml-3 <?= $is_preparing_goods ? 'btn-success' : 'btn-secondary' ?>"
+                                                    data-action="<?= $is_preparing_goods ? 'finish' : 'start' ?>">
+                                                <i class="fas <?= $is_preparing_goods ? 'fa-check' : 'fa-boxes' ?> mr-1"></i>
+                                                <?= $is_preparing_goods ? 'Selesai Siapkan' : 'Siapkan Barang' ?>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                         <?php if (empty($items)): ?>
                             <div class="text-center py-5 text-muted">
                                 <i class="fas fa-check-double fa-3x mb-3 text-success"></i>
@@ -165,6 +225,7 @@
                                                     ?>
                                                     <button type="button"
                                                             class="btn btn-sm btn-load-yes <?= $status_muat === 1 ? 'btn-success' : 'btn-outline-success' ?>"
+                                                            <?= !$can_operate_loading ? 'disabled' : '' ?>
                                                             data-id="<?= $item['id'] ?>"
                                                             data-action="1"
                                                             title="Dimuat">
@@ -172,6 +233,7 @@
                                                     </button>
                                                     <button type="button"
                                                             class="btn btn-sm btn-load-no <?= $status_muat === 2 ? 'btn-danger' : 'btn-outline-danger' ?>"
+                                                            <?= !$can_operate_loading ? 'disabled' : '' ?>
                                                             data-id="<?= $item['id'] ?>"
                                                             data-action="2"
                                                             title="Tidak Dimuat">
@@ -211,6 +273,7 @@
 $(document).ready(function() {
     var totalItems = <?= count($items) ?>;
     var kdRute = '<?= addslashes($kd_rute) ?>';
+    var canOperateLoading = <?= $can_operate_loading ? 'true' : 'false' ?>;
 
     function countDone() {
         var done = 0;
@@ -227,7 +290,7 @@ $(document).ready(function() {
     function updateProgress() {
         var done = countDone();
         $('#count-done').text(done);
-        if (done >= totalItems && totalItems > 0) {
+        if (canOperateLoading && done >= totalItems && totalItems > 0) {
             $('#btn-selesai-loading').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
         } else {
             $('#btn-selesai-loading').prop('disabled', true);
@@ -236,6 +299,62 @@ $(document).ready(function() {
 
     // Init progress on load
     updateProgress();
+
+    $('#btn-toggle-pause').on('click', function() {
+        var button = $(this);
+        var action = button.data('action');
+        var label = action === 'pause' ? 'pause' : 'melanjutkan';
+        if (!confirm('Yakin ingin ' + label + ' loading rute ' + kdRute + '?')) return;
+
+        button.prop('disabled', true);
+        $.ajax({
+            url: '<?= base_url("checker/so_loading/pause") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { kd_rute: kdRute, action: action },
+            success: function(response) {
+                if (response.status) {
+                    window.location.reload();
+                    return;
+                }
+                alert(response.message || 'Gagal mengubah status pause.');
+                button.prop('disabled', false);
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi saat mengubah status pause.');
+                button.prop('disabled', false);
+            }
+        });
+    });
+
+    $('#btn-toggle-prepare').on('click', function() {
+        var button = $(this);
+        var action = button.data('action');
+        var question = action === 'start'
+            ? 'Mulai menyiapkan barang? Aksi Muat/Tidak Muat akan dikunci sementara.'
+            : 'Tandai penyiapan barang selesai dan lanjutkan proses loading?';
+        if (!confirm(question)) return;
+
+        button.prop('disabled', true);
+        $.ajax({
+            url: '<?= base_url("checker/so_loading/prepare") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { kd_rute: kdRute, action: action },
+            success: function(response) {
+                if (response.status) {
+                    window.location.reload();
+                    return;
+                }
+                alert(response.message || 'Gagal mengubah proses penyiapan barang.');
+                button.prop('disabled', false);
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi saat mengubah proses penyiapan barang.');
+                button.prop('disabled', false);
+            }
+        });
+    });
 
     // Tombol ✅ / ❌ per baris
     $(document).on('click', '.btn-load-yes, .btn-load-no', function() {

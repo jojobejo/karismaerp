@@ -833,6 +833,64 @@ if (!empty($row['waktu_mulai'])) {
 
                     </div><!-- /detail-main -->
 
+                    <?php if (!empty($so_loading_items)): ?>
+                    <div class="sc" style="margin-top:14px;">
+                        <div class="sc-head blue">
+                            <i class="fas fa-boxes"></i> Daftar Barang Loading SO
+                            <span class="badge badge-light ml-auto"><?= count($so_loading_items) ?> item</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="thead-light text-center">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Tanggal SO</th>
+                                        <th>No SO</th>
+                                        <th>Customer/Kios</th>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Barang</th>
+                                        <th>No Lot</th>
+                                        <th>Expired</th>
+                                        <th class="text-right">Qty Siap</th>
+                                        <th>Hasil Checker</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($so_loading_items as $index => $item):
+                                        $loaded_status = (int)($item['checker_loaded'] ?? 0);
+                                    ?>
+                                    <tr>
+                                        <td class="text-center"><?= $index + 1 ?></td>
+                                        <td class="text-center"><?= !empty($item['tanggal_transaksi']) ? date('d/m/Y', strtotime($item['tanggal_transaksi'])) : '-' ?></td>
+                                        <td><?= htmlspecialchars($item['no_so']) ?></td>
+                                        <td>
+                                            <?= htmlspecialchars($item['customer_name']) ?>
+                                            <?php if (!empty($item['nama_kios'])): ?>
+                                                <br><small class="text-muted"><?= htmlspecialchars($item['nama_kios']) ?></small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= htmlspecialchars($item['kd_barang']) ?></td>
+                                        <td><?= htmlspecialchars($item['nama_barang']) ?></td>
+                                        <td class="text-center"><?= htmlspecialchars($item['no_lot'] ?: '-') ?></td>
+                                        <td class="text-center"><?= !empty($item['expired_date']) && $item['expired_date'] !== '0000-00-00' ? date('d/m/Y', strtotime($item['expired_date'])) : '-' ?></td>
+                                        <td class="text-right"><?= number_format((float)$item['qty_siap'], 2, ',', '.') ?> <?= htmlspecialchars($item['satuan']) ?></td>
+                                        <td class="text-center">
+                                            <?php if ($loaded_status === 1): ?>
+                                                <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Dimuat</span>
+                                            <?php elseif ($loaded_status === 2): ?>
+                                                <span class="badge badge-danger"><i class="fas fa-times mr-1"></i>Tidak Dimuat</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-secondary">Belum Diproses</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                 </div><!-- /detail-wrap -->
             </section>
         </div>

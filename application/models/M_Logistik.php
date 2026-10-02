@@ -1942,9 +1942,15 @@ class M_Logistik extends CI_Model
         $this->db->where('id_so', $id_so);
         $this->db->where('status', 'sedang_verifikasi');
         $this->db->update('tbso_sales_order', [
-            'status'    => $target_status,
-            'update_by' => $update_by,
-            'update_at' => date('Y-m-d H:i:s'),
+            // Plan lama tidak boleh digunakan kembali saat Sales memuat ulang SO.
+            'status'                    => $target_status,
+            'loading_tgl_pengiriman'    => null,
+            'loading_jenis_pengiriman'  => 'expedisi_kantor',
+            'loading_driver'            => null,
+            'loading_nolambung'         => null,
+            'loading_urutan'            => 0,
+            'update_by'                 => $update_by,
+            'update_at'                 => date('Y-m-d H:i:s'),
         ]);
 
         $this->db->trans_complete();

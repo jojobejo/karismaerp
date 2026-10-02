@@ -365,6 +365,177 @@ class M_Checker extends CI_Model
 
         return null;
     }
+
+    public function get_route_loading_activity($rute)
+    {
+        $type = $this->detect_loading_type_by_rute($rute);
+        if (!$type) {
+            return null;
+        }
+
+        $table = $type === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        $row = $this->db
+            ->where('keterangan', strtoupper(trim((string)$rute)))
+            ->where('is_archived', 0)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get($table)
+            ->row_array();
+
+        if ($row) {
+            $row['loading_type'] = $type;
+        }
+        return $row ?: null;
+    }
+
+    public function start_route_loading($rute, $nik, $nama)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity) {
+            return false;
+        }
+
+        if ($activity['status'] === 'DONE') {
+            return false;
+        }
+
+        $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        $data = [
+            'status'      => 'PROSES_LOADING',
+            'nik_checker' => $nik,
+            'nm_checker'  => $nama,
+            'progres'     => 0,
+            'is_paused'   => 0,
+            'paused_at'   => null,
+        ];
+        if (empty($activity['waktu_mulai'])) {
+            $data['waktu_mulai'] = date('Y-m-d H:i:s');
+        }
+
+        return $this->db->where('id', $activity['id'])->update($table, $data);
+    }
+
+    public function update_route_loading_progress($rute, $tgl_transaksi = null)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity || $activity['status'] !== 'PROSES_LOADING') {
+            return false;
+        }
+
+        $params = [$rute];
+        $date_filter = '';
+        if (!empty($tgl_transaksi)) {
+            $date_filter = 'AND DATE(so.tanggal_transaksi) = ?';
+            $params[] = $tgl_transaksi;
+        }
+
+        $summary = $this->db->query("
+            SELECT
+                COUNT(*) AS total_item,
+                SUM(CASE WHEN sod.checker_loaded IN (1, 2) THEN 1 ELSE 0 END) AS item_diproses
+            FROM tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+              AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              {$date_filter}
+              AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM tbso_faktur_detail fd
+                  JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+                  WHERE fd.id_so_detail = sod.id
+              )
+        ", $params)->row_array();
+
+        $total = (int)($summary['total_item'] ?? 0);
+        $done = (int)($summary['item_diproses'] ?? 0);
+        $progress = $total > 0 ? min(99, (int)floor(($done / $total) * 100)) : 0;
+        $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+
+        return $this->db->where('id', $activity['id'])->update($table, ['progres' => $progress])
+            ? $progress
+            : false;
+    }
+
+    public function finish_route_loading($rute)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity || $activity['status'] !== 'PROSES_LOADING' || empty($activity['waktu_mulai'])) {
+            return false;
+        }
+
+        $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        return $this->db->where('id', $activity['id'])->update($table, [
+            'status'        => 'DONE',
+            'progres'       => 100,
+            'waktu_selesai' => date('Y-m-d H:i:s'),
+            'is_paused'     => 0,
+            'paused_at'     => null,
+        ]);
+    }
+
+    public function set_route_loading_pause($rute, $pause)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity || $activity['status'] !== 'PROSES_LOADING') {
+            return false;
+        }
+
+        if ($pause) {
+            if (!empty($activity['is_paused'])) {
+                return true;
+            }
+            return $activity['loading_type'] === 'kk'
+                ? $this->pause_kk($activity['id'])
+                : $this->pause_lk($activity['id']);
+        }
+
+        if (empty($activity['is_paused'])) {
+            return true;
+        }
+        return $activity['loading_type'] === 'kk'
+            ? $this->resume_kk($activity['id'])
+            : $this->resume_lk($activity['id']);
+    }
+
+    public function set_route_loading_preparation($rute, $start)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity) {
+            return false;
+        }
+
+        $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        if ($start) {
+            if (
+                $activity['status'] !== 'PROSES_LOADING'
+                || !empty($activity['is_paused'])
+                || !empty($activity['waktu_selesai_siapkan'])
+            ) {
+                return false;
+            }
+            return $this->db->where('id', $activity['id'])->update($table, [
+                'status'                 => 'PENYIAPAN_BARANG',
+                'progres_siapkan'        => 0,
+                'waktu_mulai_siapkan'    => date('Y-m-d H:i:s'),
+                'waktu_selesai_siapkan'  => null,
+                'is_paused_siapkan'      => 0,
+                'paused_at_siapkan'      => null,
+            ]);
+        }
+
+        if ($activity['status'] !== 'PENYIAPAN_BARANG') {
+            return false;
+        }
+        return $this->db->where('id', $activity['id'])->update($table, [
+            'status'                  => 'PROSES_LOADING',
+            'progres_siapkan'         => 100,
+            'waktu_selesai_siapkan'   => date('Y-m-d H:i:s'),
+            'is_paused_siapkan'       => 0,
+            'paused_at_siapkan'       => null,
+        ]);
+    }
     public function start_lk($id, $nik, $nama, $pintu = null)
     {
         $data = [

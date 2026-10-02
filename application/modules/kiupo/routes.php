@@ -588,6 +588,9 @@ $route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_
 $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
+$route['checker/so_loading/start']                  = 'logistik/C_Checker/start_so_loading_rute';
+$route['checker/so_loading/pause']                  = 'logistik/C_Checker/pause_so_loading_rute';
+$route['checker/so_loading/prepare']                = 'logistik/C_Checker/prepare_so_loading_rute';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

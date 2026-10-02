@@ -3814,7 +3814,26 @@ class M_SalesOrder extends CI_Model
 
         $has_faktur = (int)($jumlah_faktur['total'] ?? 0) > 0;
 
-        // Jika ada faktur yang sudah masuk DO, tidak bisa dikembalikan
+        // Hitung sisa barang yang belum terfaktur. Faktur dari pengiriman sebelumnya
+        // tidak boleh menghalangi pengembalian sisa barang pada SO partial.
+        $progress = $this->db->query("
+            SELECT COALESCE(SUM(
+                GREATEST(
+                    COALESCE(qty_siap_faktur, qty) - COALESCE(qty_faktur, 0),
+                    0
+                )
+            ), 0) AS total_outstanding,
+            COALESCE(SUM(COALESCE(qty_faktur, 0)), 0) AS total_qty_faktur
+            FROM tbso_sales_order_detail
+            WHERE id_so = ?
+        ", [$id_so])->row_array();
+
+        $has_outstanding = (float)($progress['total_outstanding'] ?? 0) > 0.001;
+        $has_progress    = $has_faktur || (float)($progress['total_qty_faktur'] ?? 0) > 0.001;
+
+        // DO hanya memblokir jika seluruh barang SO sudah terfaktur. Jika masih ada
+        // outstanding, yang dikembalikan ke Sales hanya sisa tersebut; histori faktur
+        // dan DO untuk barang yang telah dikirim tetap dipertahankan.
         $in_do = $this->db->query("
             SELECT COUNT(*) AS total
             FROM tbso_faktur_penjualan fp
@@ -3822,7 +3841,7 @@ class M_SalesOrder extends CI_Model
             WHERE fp.id_so = ?
         ", [$id_so])->row_array();
 
-        if ((int)($in_do['total'] ?? 0) > 0) {
+        if ((int)($in_do['total'] ?? 0) > 0 && !$has_outstanding) {
             return ['errors' => ['SO tidak dapat dikembalikan karena fakturnya sudah masuk Delivery Order.']];
         }
 
@@ -3908,18 +3927,23 @@ class M_SalesOrder extends CI_Model
             }
         }
 
-        // SO yang dikembalikan dari Admin SC harus masuk antrian Sales sebagai partial,
-        // agar tidak lagi diperlakukan sebagai SO siap faktur penuh.
-        $new_status = 'partial';
+        // SO tanpa faktur/progres kembali menjadi open. Status partial hanya dipakai
+        // jika sudah ada faktur aktif atau kuantitas yang pernah terfaktur.
+        $new_status = $has_progress ? 'partial' : 'open';
 
         $this->db->trans_start();
 
         // Update status SO
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', [
-            'status'    => $new_status,
-            'update_by' => $update_by,
-            'update_at' => date('Y-m-d H:i:s'),
+            'status'                    => $new_status,
+            'loading_tgl_pengiriman'    => null,
+            'loading_jenis_pengiriman'  => 'expedisi_kantor',
+            'loading_driver'            => null,
+            'loading_nolambung'         => null,
+            'loading_urutan'            => 0,
+            'update_by'                 => $update_by,
+            'update_at'                 => date('Y-m-d H:i:s'),
         ]);
 
         // Reset checker_loaded ke 0 HANYA untuk item yang belum terfakturkan

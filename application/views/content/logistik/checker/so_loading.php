@@ -100,8 +100,16 @@
                             </div>
                         <?php else: ?>
                             <div class="route-grid">
-                                <?php foreach ($routes as $route): ?>
-                                    <a href="<?= base_url('checker/so_loading/detail/' . rawurlencode($route['kd_rute']) . '?date=' . $route['tgl_transaksi']) ?>" class="route-card">
+                                <?php foreach ($routes as $route):
+                                    $activity = $route['activity'] ?? null;
+                                    $is_started = $activity
+                                        && in_array(($activity['status'] ?? ''), ['PROSES_LOADING', 'PENYIAPAN_BARANG'], true)
+                                        && !empty($activity['waktu_mulai']);
+                                    $is_loading_done = $activity && ($activity['status'] ?? '') === 'DONE';
+                                    $detail_url = base_url('checker/so_loading/detail/' . rawurlencode($route['kd_rute']) . '?date=' . $route['tgl_transaksi']);
+                                    $can_start = in_array($role, ['CHECKER', 'MANAGERCK', 'ADMLOG'], true);
+                                ?>
+                                    <div class="route-card">
                                         <div class="route-code"><?= htmlspecialchars($route['kd_rute']) ?></div>
                                         <div class="route-name" title="<?= htmlspecialchars($route['nama_rute']) ?>">
                                             <?= htmlspecialchars($route['nama_rute']) ?>
@@ -110,11 +118,26 @@
                                             <span class="route-badge">
                                                 <i class="fas fa-file-invoice mr-1"></i><?= (int)$route['total_so'] ?> SO
                                             </span>
-                                            <span class="text-info font-weight-bold" style="font-size: 13px;">
-                                                Mulai Loading <i class="fas fa-chevron-right ml-1"></i>
-                                            </span>
+                                            <?php if ($is_loading_done): ?>
+                                                <a href="<?= $detail_url ?>" class="badge badge-warning px-3 py-2" title="Lihat detail loading; menunggu proses faktur Admin SC.">
+                                                    <i class="fas fa-file-invoice-dollar mr-1"></i>Proses Faktur
+                                                </a>
+                                            <?php elseif ($is_started): ?>
+                                                <a href="<?= $detail_url ?>" class="btn btn-info btn-sm">
+                                                    <i class="fas fa-play-circle mr-1"></i>Lanjut Loading
+                                                </a>
+                                            <?php elseif ($can_start): ?>
+                                                <button type="button"
+                                                        class="btn btn-success btn-sm btn-start-route"
+                                                        data-rute="<?= htmlspecialchars($route['kd_rute'], ENT_QUOTES, 'UTF-8') ?>"
+                                                        data-url="<?= htmlspecialchars($detail_url, ENT_QUOTES, 'UTF-8') ?>">
+                                                    <i class="fas fa-play mr-1"></i>Start
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="badge badge-secondary">Menunggu Checker Start</span>
+                                            <?php endif; ?>
                                         </div>
-                                    </a>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
@@ -130,3 +153,32 @@
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
+<script>
+$(document).on('click', '.btn-start-route', function() {
+    var button = $(this);
+    var route = button.data('rute');
+    var detailUrl = button.data('url');
+
+    if (!confirm('Mulai loading rute ' + route + '? Waktu mulai akan dicatat.')) return;
+
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Memulai...');
+    $.ajax({
+        url: '<?= base_url("checker/so_loading/start") ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: { kd_rute: route },
+        success: function(response) {
+            if (response.status) {
+                window.location.href = detailUrl;
+                return;
+            }
+            alert(response.message || 'Gagal memulai loading.');
+            button.prop('disabled', false).html('<i class="fas fa-play mr-1"></i>Start');
+        },
+        error: function() {
+            alert('Terjadi kesalahan koneksi saat memulai loading.');
+            button.prop('disabled', false).html('<i class="fas fa-play mr-1"></i>Start');
+        }
+    });
+});
+</script>
