@@ -41,6 +41,7 @@ class C_Checker extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_Checker');
+        $this->load->model('M_DeliveryTrip');
         $this->load->library('session');
         $this->load->helper('url');
         date_default_timezone_set('Asia/Jakarta');
@@ -1111,6 +1112,16 @@ class C_Checker extends CI_Controller
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
         $data['routes'] = $routes;
         $data['role'] = $this->role();
+        $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+            ->order_by('id_trip', 'DESC')->get('tb_delivery_trip')->result_array();
+        $data['active_trips'] = [];
+        foreach ($trip_rows as $trip_row) {
+            $summary = $this->M_DeliveryTrip->capacity_summary($trip_row['id_trip']);
+            if ($summary) {
+                $summary['has_do'] = $this->db->where('id_trip', $trip_row['id_trip'])->count_all_results('tb_do') > 0;
+                $data['active_trips'][] = $summary;
+            }
+        }
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/so_loading.php', $data);
@@ -1173,6 +1184,12 @@ class C_Checker extends CI_Controller
         $data['items'] = $items;
         $data['role'] = $this->role();
         $data['activity'] = $activity;
+        $id_trip = (int)($activity['id_trip'] ?? 0);
+        if (!$id_trip) {
+            $active_trip = $this->M_DeliveryTrip->get_active_by_route($kd_rute);
+            $id_trip = (int)($active_trip['id_trip'] ?? 0);
+        }
+        $data['trip'] = $id_trip ? $this->M_DeliveryTrip->capacity_summary($id_trip) : null;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/so_loading_detail.php', $data);
@@ -1208,6 +1225,11 @@ class C_Checker extends CI_Controller
         $nik = (string)$this->session->userdata('nik');
         $nama = (string)($this->nama() ?: $this->session->userdata('username'));
         $ok = $this->M_Checker->start_route_loading($kd_rute, $nik, $nama);
+        if ($ok && !empty($activity['id_trip'])) {
+            $trip = $this->M_DeliveryTrip->get((int)$activity['id_trip']);
+            $next_status = $trip && $trip['status'] === 'PROSES_TAMBAHAN' ? 'PROSES_TAMBAHAN' : 'PROSES_LOADING';
+            $this->M_DeliveryTrip->set_status((int)$activity['id_trip'], $next_status);
+        }
 
         echo json_encode([
             'status'  => (bool)$ok,
@@ -1318,19 +1340,17 @@ class C_Checker extends CI_Controller
         $this->db->where('id', $id_detail);
         $this->db->update('tbso_sales_order_detail', ['checker_loaded' => $loaded]);
 
-        $this->load->model('M_Logistik');
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
         $progress = $this->M_Checker->update_route_loading_progress(
             $kd_rute,
             $so['tanggal_transaksi'] ?? null
         );
-        $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
 
         echo json_encode([
             'status' => true,
             'message' => 'Status muat berhasil diperbarui',
             'progress' => $progress,
-            'created_do' => $created_do ? $created_do['kd_do'] : null
+            'created_do' => null
         ]);
         exit;
     }
@@ -1439,7 +1459,8 @@ class C_Checker extends CI_Controller
         }
 
         // Semua item dimuat (checker_loaded = 1) — coba buat DO
-        $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
+        $id_trip = (int)($activity['id_trip'] ?? 0);
+        $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username, false, $id_trip ?: null);
 
         if (!$this->M_Checker->finish_route_loading($kd_rute)) {
             echo json_encode(['status' => false, 'message' => 'Gagal mencatat waktu selesai loading.']);
@@ -1450,8 +1471,55 @@ class C_Checker extends CI_Controller
             'status'      => true,
             'created_do'  => $created_do ? $created_do['kd_do'] : null,
             'ada_ditolak' => false,
-            'message'     => $created_do ? 'DO berhasil dibuat.' : 'Loading selesai. Menunggu faktur Admin SC sebelum DO dapat dibuat.'
+            'message'     => $created_do
+                ? (!empty($created_do['merged'])
+                    ? 'Muatan tambahan berhasil digabung ke DO ' . $created_do['kd_do'] . '.'
+                    : 'DO berhasil dibuat.')
+                : 'Loading selesai. Menunggu faktur Admin SC sebelum DO dapat dibuat.'
         ]);
+        exit;
+    }
+
+    public function open_additional_load()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']); exit;
+        }
+        $id_trip = (int)$this->input->post('id_trip');
+        $trip = $this->M_DeliveryTrip->capacity_summary($id_trip);
+        if (!$trip) {
+            echo json_encode(['status' => false, 'message' => 'Trip tidak ditemukan.']); exit;
+        }
+        if ($this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
+            echo json_encode(['status' => false, 'message' => 'Tambahan muatan hanya dapat dibuka setelah DO awal terbentuk.']); exit;
+        }
+        if ($trip['remaining_tonase'] <= 0 || $trip['remaining_kubikasi'] <= 0) {
+            echo json_encode(['status' => false, 'message' => 'Kapasitas trip sudah penuh.']); exit;
+        }
+        $by = $this->session->userdata('username') ?: $this->nama() ?: 'system';
+        $ok = $this->M_DeliveryTrip->open_additional($id_trip, $by);
+        echo json_encode(['status' => (bool)$ok, 'message' => $ok
+            ? 'Permintaan tambahan muatan dibuka. Sales dapat menambahkan SO pada rute ini.'
+            : 'Gagal membuka tambahan muatan.']);
+        exit;
+    }
+
+    public function close_delivery_trip()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']); exit;
+        }
+        $id_trip = (int)$this->input->post('id_trip');
+        if ($this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
+            echo json_encode(['status' => false, 'message' => 'Trip belum memiliki DO dan belum dapat ditutup sebagai keberangkatan.']); exit;
+        }
+        $by = $this->session->userdata('username') ?: $this->nama() ?: 'system';
+        $ok = $this->M_DeliveryTrip->close($id_trip, $by);
+        echo json_encode(['status' => (bool)$ok, 'message' => $ok ? 'Trip ditutup dan tidak menerima muatan tambahan.' : 'Gagal menutup trip.']);
         exit;
     }
 }

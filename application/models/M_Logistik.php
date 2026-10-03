@@ -742,7 +742,7 @@ class M_Logistik extends CI_Model
      * Buat DO berstatus On Delivery langsung dari faktur confirmed pada satu rute.
      * Faktur yang sudah masuk detail/tmp DO tidak ikut diproses lagi.
      */
-    public function create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by)
+    public function create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by, $id_trip = null)
     {
         $this->_ensureSoLoadingPlanColumns();
         $plan = $this->get_so_siap_loading_plan_by_rute($kd_rute);
@@ -774,6 +774,7 @@ class M_Logistik extends CI_Model
                 ON mb.kode_barang COLLATE utf8mb4_general_ci = fd.kd_barang
             WHERE f.status = 'confirmed'
             AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
+            AND (? IS NULL OR f.id_trip = ?)
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur
@@ -785,7 +786,7 @@ class M_Logistik extends CI_Model
                 AND t.kd_customer = f.kd_customer
             )
             ORDER BY COALESCE(NULLIF(so.loading_urutan, 0), 999999) ASC, f.tanggal_faktur ASC, f.no_faktur ASC, fd.id ASC
-        ", [$kd_rute])->result();
+        ", [$kd_rute, $id_trip, $id_trip])->result();
 
         if (empty($rows)) return false;
 
@@ -793,18 +794,38 @@ class M_Logistik extends CI_Model
         $now = date('Y-m-d H:i:s');
         $today = date('Y-m-d');
         $today_view = date('d/m/Y');
-        $kd_do = $this->generate_kd_do();
+        $this->db->trans_begin();
+
+        // Selama DO trip masih On Delivery, muatan tambahan digabung ke DO awal.
+        $existing_do = null;
+        if ($id_trip && $this->db->field_exists('id_trip', 'tb_do')) {
+            $existing_do = $this->db->query("
+                SELECT kd_do
+                FROM tb_do
+                WHERE id_trip = ? AND status IN (5, 6)
+                ORDER BY id ASC
+                LIMIT 1
+                FOR UPDATE
+            ", [(int)$id_trip])->row_array();
+        }
+        $reuse_existing_do = !empty($existing_do['kd_do']);
+        $kd_do = $reuse_existing_do ? $existing_do['kd_do'] : $this->generate_kd_do();
 
         $detail_rows = [];
         $faktur_ids = [];
         $faktur_numbers = [];
         $faktur_order = [];
+        $faktur_order_base = 0;
+        if ($reuse_existing_do) {
+            $order_row = $this->db->select_max('norut', 'max_norut')->where('kd_do', $kd_do)->get('tb_detail_do')->row_array();
+            $faktur_order_base = (int)($order_row['max_norut'] ?? 0);
+        }
 
         foreach ($rows as $row) {
             $faktur_ids[(int)$row->id_faktur] = (int)$row->id_faktur;
             $faktur_numbers[$row->no_faktur] = $row->no_faktur;
             if (!isset($faktur_order[$row->no_faktur])) {
-                $faktur_order[$row->no_faktur] = count($faktur_order) + 1;
+                $faktur_order[$row->no_faktur] = $faktur_order_base + count($faktur_order) + 1;
             }
 
             $detail_rows[] = [
@@ -831,9 +852,7 @@ class M_Logistik extends CI_Model
             ];
         }
 
-        $this->db->trans_begin();
-
-        $this->db->insert('tb_do', [
+        $do_header = [
             'kd_do'                => $kd_do,
             'nolambung'            => $plan ? (string)$plan->loading_nolambung : '',
             'regional'             => $kd_rute,
@@ -841,7 +860,15 @@ class M_Logistik extends CI_Model
             'tgl_pengiriman'       => ($plan && !empty($plan->loading_tgl_pengiriman)) ? $plan->loading_tgl_pengiriman : $today,
             'tgl_create'           => $now,
             'status'               => 5,
-        ]);
+        ];
+        if ($this->db->field_exists('id_trip', 'tb_do') && $id_trip) {
+            $do_header['id_trip'] = (int)$id_trip;
+            $previous_do = $this->db->where('id_trip', (int)$id_trip)->count_all_results('tb_do');
+            $do_header['is_additional_do'] = $previous_do > 0 ? 1 : 0;
+        }
+        if (!$reuse_existing_do) {
+            $this->db->insert('tb_do', $do_header);
+        }
 
         $this->db->insert('tb_log_confirm_sales', [
             'kd_do'      => $kd_do,
@@ -863,6 +890,11 @@ class M_Logistik extends CI_Model
             ]);
         }
 
+        if ($this->db->trans_status() && $reuse_existing_do) {
+            // Detail tambahan sudah tergabung sehingga DO kembali siap dikirim.
+            $this->db->where('kd_do', $kd_do)->update('tb_do', ['status' => 5]);
+        }
+
         if (!$this->db->trans_status()) {
             $this->db->trans_rollback();
             return false;
@@ -874,6 +906,7 @@ class M_Logistik extends CI_Model
             'kd_do'        => $kd_do,
             'total_faktur' => count($faktur_numbers),
             'total_detail' => count($detail_rows),
+            'merged'       => $reuse_existing_do,
         ];
     }
 
@@ -1538,6 +1571,26 @@ class M_Logistik extends CI_Model
             return null;
         }
 
+        // Muatan tambahan selalu mewarisi plan dari SO awal pada trip yang sama.
+        $trip_plan = $this->db->query("
+            SELECT
+                awal.loading_tgl_pengiriman,
+                awal.loading_jenis_pengiriman,
+                awal.loading_driver,
+                awal.loading_nolambung
+            FROM tbso_sales_order tambahan
+            JOIN tbso_sales_order awal
+                ON awal.id_trip = tambahan.id_trip
+                AND awal.is_additional_load = 0
+            WHERE tambahan.status = 'sedang_verifikasi'
+              AND tambahan.is_additional_load = 1
+              AND tambahan.kd_rute = ?
+              AND awal.loading_tgl_pengiriman IS NOT NULL
+            ORDER BY awal.id_so ASC
+            LIMIT 1
+        ", [$kd_rute])->row();
+        if ($trip_plan) return $trip_plan;
+
         // Hanya ambil plan dari SO yang BELUM masuk DO.
         // SO yang sudah jadi DO (fakturnya ada di tb_detail_do) tidak boleh dijadikan
         // referensi plan, supaya SO baru dengan rute yang sama tidak mewarisi
@@ -1568,6 +1621,13 @@ class M_Logistik extends CI_Model
         ", [$kd_rute])->row();
     }
 
+    public function is_additional_loading_route($kd_rute)
+    {
+        return $this->db->where('kd_rute', trim((string)$kd_rute))
+            ->where('status', 'sedang_verifikasi')->where('is_additional_load', 1)
+            ->count_all_results('tbso_sales_order') > 0;
+    }
+
     public function save_so_siap_loading_plan_by_rute($kd_rute, array $plan)
     {
         $this->_ensureSoLoadingPlanColumns();
@@ -1586,7 +1646,20 @@ class M_Logistik extends CI_Model
 
         $this->db->where('status', 'sedang_verifikasi');
         $this->db->where("COALESCE(NULLIF(kd_rute, ''), (SELECT c.kd_rute FROM tb_customer c WHERE c.kd_customer = tbso_sales_order.kd_customer LIMIT 1), 'TANPA_RUTE') = " . $this->db->escape($kd_rute), null, false);
-        return $this->db->update('tbso_sales_order', $data);
+        $updated = $this->db->update('tbso_sales_order', $data);
+        if ($updated && $this->db->table_exists('tb_delivery_trip')) {
+            $trip = $this->db->where('kd_rute', strtoupper($kd_rute))
+                ->where_in('status', ['DRAFT','VERIFIKASI','SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+                ->order_by('id_trip', 'DESC')->limit(1)->get('tb_delivery_trip')->row_array();
+            if ($trip) {
+                $this->db->where('id_trip', $trip['id_trip'])->update('tb_delivery_trip', [
+                    'tgl_pengiriman' => $plan['tgl_pengiriman'] ?: $trip['tgl_pengiriman'],
+                    'driver' => $plan['driver'] ?: null,
+                    'nolambung' => $plan['nolambung'] ?: null,
+                ]);
+            }
+        }
+        return $updated;
     }
 
     public function update_urutan_so_siap_loading($kd_rute, array $urutan_so)
@@ -8871,7 +8944,7 @@ FROM (
         return (int)($row['total'] ?? 0) > 0;
     }
 
-    public function check_and_auto_create_do($kd_rute, $create_by, $bypass_checks = false)
+    public function check_and_auto_create_do($kd_rute, $create_by, $bypass_checks = false, $id_trip = null)
     {
         $kd_rute = trim((string)$kd_rute);
         if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
@@ -8895,16 +8968,25 @@ FROM (
             }
         }
 
+        if (!$id_trip && $this->db->table_exists('tb_delivery_trip')) {
+            $trip = $this->db->where('kd_rute', $kd_rute)
+                ->where_in('status', ['SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+                ->order_by('id_trip', 'DESC')->limit(1)->get('tb_delivery_trip')->row_array();
+            $id_trip = $trip['id_trip'] ?? null;
+        }
         $note = 'DO otomatis dibuat setelah seluruh SO rute ' . $kd_rute . ' selesai difakturkan dan termuat semua.';
-        $created = $this->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by);
+        $created = $this->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by, $id_trip);
         if (!$created) {
             return false;
         }
 
+        $log_description = !empty($created['merged'])
+            ? 'TAMBAHAN MUATAN RUTE ' . $kd_rute . ' digabung ke DO ' . $created['kd_do'] . ' oleh ' . $create_by
+            : 'AUTO DO RUTE ' . $kd_rute . ' dari faktur Admin SC & Checker oleh ' . $create_by;
         $this->insertlog_do([
             'kd_do'      => $created['kd_do'],
             'tgl_input'  => date('d/m/Y'),
-            'keterangan' => 'AUTO DO RUTE ' . $kd_rute . ' dari faktur Admin SC & Checker oleh ' . $create_by,
+            'keterangan' => $log_description,
             'inputer'    => $create_by,
         ]);
 

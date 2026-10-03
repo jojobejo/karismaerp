@@ -84,6 +84,7 @@
                                             <option value="3">Proses DO</option>
                                             <option value="4">Is Loading</option>
                                             <option value="5">On Delivery</option>
+                                            <option value="6">Menunggu Tambahan Muatan</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2 col-sm-6 mb-2">
@@ -156,6 +157,10 @@
                                                 $datasts    = '<span class="badge badge-dark">On Delivery</span>';
                                                 $statusCode = '5';
                                                 $confirmCode = '';
+                                            } elseif ($status == '6') {
+                                                $datasts    = '<span class="badge badge-warning">Menunggu Tambahan Muatan</span>';
+                                                $statusCode = '6';
+                                                $confirmCode = '';
                                             }
                                         ?>
                                             <tr
@@ -208,6 +213,12 @@
                                                                 </a>
                                                             </div>
                                                         </div>
+                                                    </td>
+                                                <?php elseif ($i->status == '6') : ?>
+                                                    <td>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
                                                     </td>
                                                 <?php endif; ?>
                                             </tr>

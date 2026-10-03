@@ -239,6 +239,7 @@
     $sisa_kub = max(0, $batas_kub - $total_kubikasi);
 
     $loading_plan = $loading_plan ?? null;
+    $is_additional_loading = !empty($is_additional_loading);
     $tgl_pengiriman = '';
     if (!empty($loading_plan->loading_tgl_pengiriman) && $loading_plan->loading_tgl_pengiriman !== '0000-00-00') {
         $tgl_pengiriman_ts = strtotime($loading_plan->loading_tgl_pengiriman);
@@ -485,6 +486,12 @@
                                             </h3>
                                         </div>
                                         <div class="card-body py-2">
+                                            <?php if ($is_additional_loading): ?>
+                                                <div class="alert alert-info py-2 mb-2">
+                                                    <i class="fas fa-link mr-1"></i>
+                                                    Muatan tambahan menggunakan plan pengiriman trip awal. Tanggal, driver, dan kendaraan tidak perlu diatur ulang.
+                                                </div>
+                                            <?php endif; ?>
                                             <form id="formLoadingPlan"
                                                   method="post"
                                                   action="<?= base_url('logistik/so_siap_loading/siap_faktur') ?>">
@@ -493,7 +500,7 @@
                                                     <div class="col-md-3">
                                                         <div class="form-group">
                                                             <label for="tgl_isi">Tanggal Pengiriman</label>
-                                                            <input type="date" class="form-control form-control-sm" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <input type="date" class="form-control form-control-sm" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>" <?= $is_additional_loading ? 'readonly' : '' ?>>
                                                         </div>
                                                     </div>
                                                     <div class="col-md-3">
@@ -501,11 +508,11 @@
                                                             <label>Jenis Pengiriman</label>
                                                             <div class="d-flex flex-wrap">
                                                                 <div class="custom-control custom-radio mr-3">
-                                                                    <input class="custom-control-input" type="radio" id="jenis_kantor" name="jenis_pengiriman" value="expedisi_kantor" <?= !$is_luar ? 'checked' : '' ?>>
+                                                                    <input class="custom-control-input" type="radio" id="jenis_kantor" name="jenis_pengiriman" value="expedisi_kantor" <?= !$is_luar ? 'checked' : '' ?> <?= $is_additional_loading ? 'disabled' : '' ?>>
                                                                     <label for="jenis_kantor" class="custom-control-label">Ekspedisi Kantor</label>
                                                                 </div>
                                                                 <div class="custom-control custom-radio">
-                                                                    <input class="custom-control-input" type="radio" id="jenis_luar" name="jenis_pengiriman" value="expedisi_luar" <?= $is_luar ? 'checked' : '' ?>>
+                                                                    <input class="custom-control-input" type="radio" id="jenis_luar" name="jenis_pengiriman" value="expedisi_luar" <?= $is_luar ? 'checked' : '' ?> <?= $is_additional_loading ? 'disabled' : '' ?>>
                                                                     <label for="jenis_luar" class="custom-control-label">Ekspedisi Luar</label>
                                                                 </div>
                                                             </div>
@@ -514,7 +521,7 @@
                                                     <div class="col-md-3" id="select_driver_wrapper">
                                                         <div class="form-group">
                                                             <label for="driver_isi">Driver</label>
-                                                            <select class="form-control form-control-sm" name="driver_isi" id="driver_isi">
+                                                            <select class="form-control form-control-sm" name="driver_isi" id="driver_isi" <?= $is_additional_loading ? 'disabled' : '' ?>>
                                                                 <option value="">Pilih Driver</option>
                                                                 <?php foreach (($driver ?? []) as $drv) : ?>
                                                                     <option value="<?= htmlspecialchars($drv->kd_driver, ENT_QUOTES, 'UTF-8') ?>" <?= $selected_driver === (string)$drv->kd_driver ? 'selected' : '' ?>>
@@ -527,13 +534,13 @@
                                                     <div class="col-md-3 d-none" id="input_driver_luar_wrapper">
                                                         <div class="form-group">
                                                             <label for="driver_luar_isi">Driver Luar</label>
-                                                            <input type="text" class="form-control form-control-sm" name="driver_luar_isi" id="driver_luar_isi" value="<?= $is_luar ? htmlspecialchars($selected_driver, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="Nama driver">
+                                                            <input type="text" class="form-control form-control-sm" name="driver_luar_isi" id="driver_luar_isi" value="<?= $is_luar ? htmlspecialchars($selected_driver, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="Nama driver" <?= $is_additional_loading ? 'readonly' : '' ?>>
                                                         </div>
                                                     </div>
                                                     <div class="col-md-3" id="select_truck_wrapper">
                                                         <div class="form-group">
                                                             <label for="truck_isi">Kendaraan</label>
-                                                            <select class="form-control form-control-sm" name="truck_isi" id="truck_isi">
+                                                            <select class="form-control form-control-sm" name="truck_isi" id="truck_isi" <?= $is_additional_loading ? 'disabled' : '' ?>>
                                                                 <option value="">Pilih Kendaraan</option>
                                                                 <?php foreach (($truck ?? []) as $trk) : ?>
                                                                     <option value="<?= htmlspecialchars($trk->id, ENT_QUOTES, 'UTF-8') ?>" <?= $selected_truck === (string)$trk->id ? 'selected' : '' ?>>
@@ -546,7 +553,7 @@
                                                     <div class="col-md-3 d-none" id="input_truck_luar_wrapper">
                                                         <div class="form-group">
                                                             <label for="truck_luar_isi">Kendaraan Luar</label>
-                                                            <input type="text" class="form-control form-control-sm" name="truck_luar_isi" id="truck_luar_isi" value="<?= $is_luar ? htmlspecialchars($selected_truck, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="No. plat / kendaraan">
+                                                            <input type="text" class="form-control form-control-sm" name="truck_luar_isi" id="truck_luar_isi" value="<?= $is_luar ? htmlspecialchars($selected_truck, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="No. plat / kendaraan" <?= $is_additional_loading ? 'readonly' : '' ?>>
                                                         </div>
                                                     </div>
                                                 </div>

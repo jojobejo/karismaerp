@@ -184,7 +184,9 @@ class M_Checker extends CI_Model
 
     public function get_list_kk()
     {
-        return $this->db->where('is_archived', 0)->order_by('id', 'ASC')->get('tb_loading_kk')->result_array();
+        return $this->db->select('l.*, t.status AS trip_status')
+            ->from('tb_loading_kk l')->join('tb_delivery_trip t', 't.id_trip = l.id_trip', 'left')
+            ->where('l.is_archived', 0)->order_by('l.id', 'ASC')->get()->result_array();
     }
 
     public function get_arsip_kk()
@@ -249,7 +251,9 @@ class M_Checker extends CI_Model
     // ================================================================
     public function get_list_lk()
     {
-        return $this->db->where('is_archived', 0)->order_by('id', 'ASC')->get('tb_loading_lk')->result_array();
+        return $this->db->select('l.*, t.status AS trip_status')
+            ->from('tb_loading_lk l')->join('tb_delivery_trip t', 't.id_trip = l.id_trip', 'left')
+            ->where('l.is_archived', 0)->order_by('l.id', 'ASC')->get()->result_array();
     }
 
     public function get_arsip_lk()
@@ -298,54 +302,61 @@ class M_Checker extends CI_Model
     public function sync_route_activity($rute, $event, $by = null)
     {
         $rute = trim((string)$rute);
-        if ($rute === '' || strtoupper($rute) === 'TANPA_RUTE') {
-            return false;
-        }
+        if ($rute === '' || strtoupper($rute) === 'TANPA_RUTE') return false;
 
         $type = $this->detect_loading_type_by_rute($rute);
-        if (!$type) {
-            return false;
-        }
+        if (!$type) return false;
 
         $table = $type === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
-        $row = $this->db
-            ->where('keterangan', $rute)
-            ->where('is_archived', 0)
-            ->order_by('id', 'DESC')
-            ->limit(1)
-            ->get($table)
-            ->row_array();
+        $trip = null;
+        if ($this->db->table_exists('tb_delivery_trip')) {
+            $trip = $this->db->where('kd_rute', strtoupper($rute))
+                ->where_in('status', ['DRAFT','VERIFIKASI','SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+                ->order_by('id_trip', 'DESC')->limit(1)->get('tb_delivery_trip')->row_array();
+        }
+
+        $this->db->where('is_archived', 0);
+        if ($trip && $this->db->field_exists('id_trip', $table)) {
+            // Satu trip selalu memakai satu baris Activity Warehouse yang sama.
+            $this->db->where('id_trip', (int)$trip['id_trip'])->order_by('id', 'ASC');
+        } else {
+            $this->db->where('keterangan', $rute)->order_by('id', 'DESC');
+        }
+        $row = $this->db->limit(1)->get($table)->row_array();
 
         if (!$row) {
-            $kode = $type === 'kk' ? $this->generate_kode_kk() : $this->generate_kode_lk();
-            $this->db->insert($table, [
-                'kode'       => $kode,
-                'tgl'        => date('Y-m-d'),
-                'keterangan' => $rute,
-                'status'     => 'MENUNGGU',
+            $insert = [
+                'kode' => $type === 'kk' ? $this->generate_kode_kk() : $this->generate_kode_lk(),
+                'tgl' => date('Y-m-d'), 'keterangan' => $rute, 'status' => 'MENUNGGU',
                 'created_by' => $by ?: 'system',
-            ]);
-            $id = $this->db->insert_id();
-            $row = $this->db->where('id', $id)->get($table)->row_array();
+            ];
+            if ($trip && $this->db->field_exists('id_trip', $table)) $insert['id_trip'] = (int)$trip['id_trip'];
+            $this->db->insert($table, $insert);
+            $row = $this->db->where('id', $this->db->insert_id())->get($table)->row_array();
         }
 
         $now = date('Y-m-d H:i:s');
         $data = [];
         if ($event === 'siap_loading') {
-            if (!in_array($row['status'] ?? '', ['CETAK_DO','DO_SELESAI','PENYIAPAN_BARANG','BARANG_SIAP','PROSES_LOADING','DONE'], true)) {
-                $data['status'] = 'SIAP_LOADING';
-            }
+            if (!in_array($row['status'] ?? '', ['CETAK_DO','DO_SELESAI','PENYIAPAN_BARANG','BARANG_SIAP','PROSES_LOADING'], true)) $data['status'] = 'SIAP_LOADING';
             $data['waktu_siap_loading'] = !empty($row['waktu_siap_loading']) ? $row['waktu_siap_loading'] : $now;
+            if (($row['status'] ?? '') === 'DONE' && $trip && in_array($trip['status'], ['MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'], true)) {
+                // Mulai siklus tambahan pada baris yang sama, tanpa menduplikasi rute.
+                $data['waktu_mulai'] = null;
+                $data['waktu_selesai'] = null;
+                $data['progres'] = 0;
+                $data['is_paused'] = 0;
+                $data['paused_at'] = null;
+                $data['total_pause_secs'] = 0;
+            }
         } elseif ($event === 'cetak_do') {
             $data['status'] = 'CETAK_DO';
-            if (empty($row['waktu_siap_loading'])) {
-                $data['waktu_siap_loading'] = $now;
-            }
+            if (empty($row['waktu_siap_loading'])) $data['waktu_siap_loading'] = $now;
             $data['waktu_cetak_do'] = !empty($row['waktu_cetak_do']) ? $row['waktu_cetak_do'] : $now;
         } else {
             return false;
         }
-
+        if ($trip && $this->db->field_exists('id_trip', $table)) $data['id_trip'] = (int)$trip['id_trip'];
         return $this->db->where('id', $row['id'])->update($table, $data);
     }
 

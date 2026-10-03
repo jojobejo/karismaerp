@@ -86,6 +86,33 @@
 
         <section class="content">
             <div class="container-fluid">
+                <?php if (!empty($active_trips)): ?>
+                <div class="card card-outline card-warning">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-truck mr-1"></i>Trip Pengiriman Aktif</h3></div>
+                    <div class="card-body p-2">
+                        <div class="row">
+                        <?php foreach ($active_trips as $trip): ?>
+                            <div class="col-md-6 col-lg-4 mb-2">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="d-flex justify-content-between"><b><?= htmlspecialchars($trip['kode_trip']) ?></b><span class="badge badge-warning"><?= htmlspecialchars($trip['status']) ?></span></div>
+                                    <small>Rute <?= htmlspecialchars($trip['kd_rute']) ?> · <?= date('d/m/Y', strtotime($trip['tgl_pengiriman'])) ?></small>
+                                    <div class="mt-2">Sisa <b><?= number_format($trip['remaining_tonase'], 3, ',', '.') ?> ton</b> / <b><?= number_format($trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                                    <?php if ($trip['status'] === 'MENUNGGU_TAMBAHAN'): ?><small class="text-warning">Menunggu SO tambahan dari Sales</small><?php endif; ?>
+                                    <?php if (!empty($trip['has_do']) && in_array($role, ['CHECKER','MANAGERCK','ADMLOG'], true)): ?>
+                                    <div class="mt-2 text-right">
+                                        <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN'): ?>
+                                        <button class="btn btn-warning btn-xs btn-trip-action" data-action="open" data-trip="<?= (int)$trip['id_trip'] ?>">Buka Tambahan</button>
+                                        <?php endif; ?>
+                                        <button class="btn btn-danger btn-xs btn-trip-action" data-action="close" data-trip="<?= (int)$trip['id_trip'] ?>">Tutup Trip</button>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <div class="card card-outline card-info">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -154,6 +181,22 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 <script>
+$(document).on('click', '.btn-trip-action', function() {
+    var button = $(this), action = button.data('action');
+    var question = action === 'open' ? 'Buka permintaan tambahan muatan untuk trip ini?' : 'Tutup trip ini dan tandai siap berangkat?';
+    if (!confirm(question)) return;
+    button.prop('disabled', true);
+    $.ajax({
+        url: action === 'open' ? '<?= base_url("checker/so_loading/open_additional") ?>' : '<?= base_url("checker/so_loading/close_trip") ?>',
+        type: 'POST', dataType: 'json', data: {id_trip: button.data('trip')},
+        success: function(response) {
+            alert(response.message || 'Selesai.');
+            if (response.status) location.reload(); else button.prop('disabled', false);
+        },
+        error: function() { alert('Terjadi kesalahan koneksi.'); button.prop('disabled', false); }
+    });
+});
+
 $(document).on('click', '.btn-start-route', function() {
     var button = $(this);
     var route = button.data('rute');

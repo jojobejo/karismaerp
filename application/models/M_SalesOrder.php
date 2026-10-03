@@ -1747,6 +1747,14 @@ class M_SalesOrder extends CI_Model
         $this->db->insert('tbso_faktur_penjualan', $fh);
         $id_faktur = $this->db->insert_id();
 
+        // Faktur mengikuti trip SO agar DO tambahan tetap berada pada kendaraan yang sama.
+        if ($this->db->field_exists('id_trip', 'tbso_faktur_penjualan') && !empty($so['id_trip'])) {
+            $this->db->where('id_faktur', $id_faktur)->update('tbso_faktur_penjualan', [
+                'id_trip' => (int)$so['id_trip'],
+                'is_additional_load' => !empty($so['is_additional_load']) ? 1 : 0,
+            ]);
+        }
+
         // ── Insert detail faktur + update stok ─────────────────────
         foreach ($faktur_items as $item) {
             $qty_item = (float)$item['qty'];

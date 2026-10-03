@@ -4316,6 +4316,9 @@ class C_SalesOrder extends CI_Controller
         $data['total_qty_order']       = round($total_qty_order, 2);
         $data['total_qty_faktur']      = round($total_qty_faktur, 2);
         $data['total_qty_outstanding'] = round($total_qty_outstanding, 2);
+        $this->load->model('M_DeliveryTrip');
+        $active_trip = $selected_rute !== '' ? $this->M_DeliveryTrip->get_active_by_route($selected_rute) : null;
+        $data['active_trip'] = $active_trip ? $this->M_DeliveryTrip->capacity_summary($active_trip['id_trip']) : null;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_rute.php', $data);
@@ -4495,12 +4498,44 @@ class C_SalesOrder extends CI_Controller
         }
 
         $confirm_by = $this->_getUsername();
+        $this->load->model('M_DeliveryTrip');
+        $existing_trip = $this->M_DeliveryTrip->get_active_by_route($kd_rute);
+        $trip = $existing_trip ?: $this->M_DeliveryTrip->get_or_create(
+            $kd_rute,
+            date('Y-m-d'),
+            $confirm_by
+        );
+        if (!$trip) {
+            echo json_encode(['msg' => 'error', 'message' => 'Gagal membuat Trip Pengiriman untuk rute ini.']);
+            exit;
+        }
+        $is_additional = in_array($trip['status'], ['MENUNGGU_TAMBAHAN', 'PROSES_TAMBAHAN'], true);
+        $trip_has_do = $this->db->where('id_trip', $trip['id_trip'])->count_all_results('tb_do') > 0;
+        if ($existing_trip && $trip_has_do && !$is_additional) {
+            echo json_encode([
+                'msg' => 'error',
+                'message' => 'Trip rute ini sudah memiliki DO. Checker atau Admin Logistik harus membuka Tambahan Muatan terlebih dahulu.'
+            ]);
+            exit;
+        }
+        if ($is_additional) {
+            $current_capacity = $this->M_DeliveryTrip->capacity_summary($trip['id_trip']);
+            if (
+                !$current_capacity
+                || ($current_capacity['loaded_tonase'] + $current_capacity['reserved_tonase'] + $total_tonase_loading) > (float)$current_capacity['kapasitas_tonase'] + 0.000001
+                || ($current_capacity['loaded_kubikasi'] + $current_capacity['reserved_kubikasi'] + $total_kubikasi_loading) > (float)$current_capacity['kapasitas_kubikasi'] + 0.000001
+            ) {
+                echo json_encode(['msg' => 'error', 'message' => 'SO tambahan melebihi sisa kapasitas Trip Pengiriman.']);
+                exit;
+            }
+        }
         $updated = 0;
         foreach ($sales_orders as $so) {
             if (!in_array(($so['status'] ?? ''), ['open', 'partial'], true)) {
                 continue;
             }
 
+            $this->M_DeliveryTrip->attach_so($trip['id_trip'], $so['id_so'], $is_additional);
             if ($this->M_SalesOrder->update_status($so['id_so'], 'sedang_verifikasi', $confirm_by)) {
                 $updated++;
                 $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute ' . $kd_rute . '.';
@@ -4540,6 +4575,15 @@ class C_SalesOrder extends CI_Controller
                 'message' => 'Status SO sudah diperbarui, tetapi rute gagal dicatat ke halaman Checker.'
             ]);
             exit;
+        }
+
+        $capacity = $this->M_DeliveryTrip->validate_capacity($trip['id_trip']);
+        if (!$capacity['valid']) {
+            echo json_encode(['msg' => 'error', 'message' => $capacity['message']]);
+            exit;
+        }
+        if ($is_additional) {
+            $this->M_DeliveryTrip->set_status($trip['id_trip'], 'PROSES_TAMBAHAN');
         }
 
         echo json_encode([

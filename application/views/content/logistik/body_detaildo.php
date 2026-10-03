@@ -248,6 +248,7 @@
                                             '3' => ['label' => 'Proses DO', 'icon' => 'fas fa-clipboard-check', 'class' => 'is-success'],
                                             '4' => ['label' => 'Is Loading', 'icon' => 'fas fa-truck-loading', 'class' => 'is-muted'],
                                             '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-primary'],
+                                            '6' => ['label' => 'Menunggu Tambahan Muatan', 'icon' => 'fas fa-hourglass-half', 'class' => 'is-warning'],
                                         ];
                                         $current_status = $status_meta[$d->status] ?? ['label' => '-', 'icon' => 'fas fa-info-circle', 'class' => 'is-muted'];
                                     ?>

@@ -692,7 +692,7 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php endforeach; ?>
                                     </select>
                                 <?php else: ?>
-                                    <span class="badge <?= $badge_lk ?>"><?= str_replace('_',' ',$lk['status']) ?></span>
+                                    <span class="badge <?= $badge_lk ?>"><?= (($lk['trip_status'] ?? '') === 'PROSES_TAMBAHAN' && $lk['status'] === 'SIAP_LOADING') ? 'MUATAN TAMBAHAN' : str_replace('_',' ',$lk['status']) ?></span>
                                 <?php endif; ?>
                             </td>
                             <!-- Kolom Aksi — semua role lihat tombol Detail, role operasional lihat aksi tambahan -->
@@ -1040,7 +1040,7 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php endforeach; ?>
                                     </select>
                                 <?php else: ?>
-                                    <span class="badge <?= $badge_kk ?>"><?= str_replace('_',' ',$kk['status']) ?></span>
+                                    <span class="badge <?= $badge_kk ?>"><?= (($kk['trip_status'] ?? '') === 'PROSES_TAMBAHAN' && $kk['status'] === 'SIAP_LOADING') ? 'MUATAN TAMBAHAN' : str_replace('_',' ',$kk['status']) ?></span>
                                 <?php endif; ?>
                             </td>
                             <!-- Kolom Aksi — semua role lihat tombol Detail -->

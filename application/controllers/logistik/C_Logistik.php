@@ -1147,6 +1147,7 @@ class C_Logistik extends CI_Controller
         $data['selected_rute'] = $selected_rute;
         $data['so_list']       = $this->M_Logistik->get_so_siap_loading_by_rute($selected_rute);
         $data['loading_plan']  = $this->M_Logistik->get_so_siap_loading_plan_by_rute($selected_rute);
+        $data['is_additional_loading'] = $this->M_Logistik->is_additional_loading_route($selected_rute);
         $data['driver']        = $this->M_Logistik->getalldriver();
         $data['truck']         = $this->M_Logistik->getallplat();
 
@@ -1325,7 +1326,16 @@ class C_Logistik extends CI_Controller
             return;
         }
 
-        $plan = $this->_collectSoLoadingPlanPost();
+        $is_additional_loading = $this->M_Logistik->is_additional_loading_route($kd_rute);
+        $inherited_plan = $is_additional_loading
+            ? $this->M_Logistik->get_so_siap_loading_plan_by_rute($kd_rute)
+            : null;
+        $plan = $inherited_plan ? [
+            'tgl_pengiriman' => (string)$inherited_plan->loading_tgl_pengiriman,
+            'jenis_pengiriman' => (string)$inherited_plan->loading_jenis_pengiriman,
+            'driver' => (string)$inherited_plan->loading_driver,
+            'nolambung' => (string)$inherited_plan->loading_nolambung,
+        ] : $this->_collectSoLoadingPlanPost();
         if ($plan['tgl_pengiriman'] === '' || $plan['driver'] === '' || $plan['nolambung'] === '') {
             $this->session->set_flashdata('msg', 'Lengkapi tanggal pengiriman, driver, dan kendaraan sebelum menjadikan SO siap faktur.');
             redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));

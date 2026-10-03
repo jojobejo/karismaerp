@@ -93,6 +93,32 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
 
         <section class="content">
             <div class="container-fluid">
+                <?php if (!empty($trip)): ?>
+                <div class="card card-outline card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-truck mr-1"></i><?= htmlspecialchars($trip['kode_trip']) ?></h3>
+                        <span class="badge badge-primary float-right"><?= htmlspecialchars($trip['status']) ?></span>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row text-center">
+                            <div class="col-md-3"><small>Kapasitas</small><br><b><?= number_format($trip['kapasitas_tonase'], 3, ',', '.') ?> ton / <?= number_format($trip['kapasitas_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                            <div class="col-md-3"><small>Aktual Dimuat</small><br><b class="text-success"><?= number_format($trip['loaded_tonase'], 3, ',', '.') ?> ton / <?= number_format($trip['loaded_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                            <div class="col-md-3"><small>Dialokasikan</small><br><b class="text-warning"><?= number_format($trip['reserved_tonase'], 3, ',', '.') ?> ton / <?= number_format($trip['reserved_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                            <div class="col-md-3"><small>Sisa Tersedia</small><br><b class="text-info"><?= number_format($trip['remaining_tonase'], 3, ',', '.') ?> ton / <?= number_format($trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                        </div>
+                        <?php if ($loading_completed && $has_loading_permission && !in_array($trip['status'], ['DITUTUP','BERANGKAT','SELESAI'], true)): ?>
+                        <div class="text-right mt-3">
+                            <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN'): ?>
+                            <button type="button" class="btn btn-warning btn-sm btn-trip-action" data-action="open"><i class="fas fa-plus-circle mr-1"></i>Buka Tambahan Muatan</button>
+                            <?php else: ?>
+                            <span class="badge badge-warning p-2 mr-2">Menunggu SO tambahan dari Sales</span>
+                            <?php endif; ?>
+                            <button type="button" class="btn btn-danger btn-sm btn-trip-action ml-2" data-action="close"><i class="fas fa-lock mr-1"></i>Tutup Trip / Berangkat</button>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <div class="card card-outline card-info">
                     <div class="card-header bg-info text-white">
                         <h3 class="card-title">
@@ -274,6 +300,25 @@ $(document).ready(function() {
     var totalItems = <?= count($items) ?>;
     var kdRute = '<?= addslashes($kd_rute) ?>';
     var canOperateLoading = <?= $can_operate_loading ? 'true' : 'false' ?>;
+    var idTrip = <?= (int)($trip['id_trip'] ?? 0) ?>;
+
+    $('.btn-trip-action').on('click', function() {
+        var action = $(this).data('action');
+        var message = action === 'open'
+            ? 'Buka trip ini agar Sales dapat menambahkan SO baru ke kendaraan yang sama?'
+            : 'Tutup trip ini? Setelah ditutup, trip tidak dapat menerima tambahan muatan.';
+        if (!confirm(message)) return;
+        var button = $(this).prop('disabled', true);
+        $.ajax({
+            url: action === 'open' ? '<?= base_url("checker/so_loading/open_additional") ?>' : '<?= base_url("checker/so_loading/close_trip") ?>',
+            type: 'POST', dataType: 'json', data: {id_trip: idTrip},
+            success: function(response) {
+                alert(response.message || (response.status ? 'Berhasil.' : 'Gagal.'));
+                if (response.status) window.location.reload(); else button.prop('disabled', false);
+            },
+            error: function() { alert('Terjadi kesalahan koneksi.'); button.prop('disabled', false); }
+        });
+    });
 
     function countDone() {
         var done = 0;

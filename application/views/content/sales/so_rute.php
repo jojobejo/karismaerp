@@ -254,6 +254,21 @@
 
         <section class="content">
             <div class="container-fluid">
+                <?php if (!empty($active_trip) && in_array($active_trip['status'], ['MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'], true)): ?>
+                <div class="alert alert-warning">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <i class="fas fa-truck-loading mr-1"></i>
+                            <b><?= htmlspecialchars($active_trip['kode_trip']) ?></b> sedang menerima tambahan muatan.
+                            SO rute <b><?= htmlspecialchars($active_trip['kd_rute']) ?></b> yang diklik Siap Loading akan otomatis masuk ke trip ini.
+                        </div>
+                        <div class="mt-1 mt-md-0">
+                            Sisa: <b><?= number_format($active_trip['remaining_tonase'], 3, ',', '.') ?> ton</b> /
+                            <b><?= number_format($active_trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $key => $cls): ?>
                     <?php if ($msg = $this->session->flashdata($key)): ?>
                         <div class="alert alert-<?= $cls ?> alert-dismissible fade show">
