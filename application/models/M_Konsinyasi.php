@@ -466,10 +466,26 @@ class M_Konsinyasi extends CI_Model
     public function get_settlement_by_id($idSettlement)
     {
         return $this->db
-            ->select('s.*, g.nama_gudang, j.nomor_jurnal')
+            ->select("
+                s.*, 
+                g.nama_gudang, 
+                j.nomor_jurnal,
+                lpb.no_po AS po_no_po,
+                CASE 
+                    WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
+                    WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
+                    ELSE 'EXCLUDE'
+                END AS po_tipe_pajak,
+                COALESCE(pod.hrg_satuan, lpbd.harga_satuan, 0) AS po_hrg_satuan,
+                COALESCE(pod.harga_satuan_exclude, lpbd.harga_satuan, 0) AS po_hrg_satuan_exclude
+            ", false)
             ->from('tb_konsinyasi_settlement s')
             ->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left')
             ->join('tbkeu_jurnal j', 'j.id_jurnal = s.id_jurnal_pembelian', 'left')
+            ->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left')
+            ->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left')
+            ->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left')
+            ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang', 'left')
             ->where('s.id_settlement', (int) $idSettlement)
             ->get()
             ->row_array();
@@ -493,11 +509,18 @@ class M_Konsinyasi extends CI_Model
         }
 
         $hrgSatuanInput = (float) ($payload['hrg_satuan_input'] ?? ($payload['hrg_beli_satuan'] ?? 0));
+        if ($hrgSatuanInput <= 0 && !empty($settlement['po_hrg_satuan'])) {
+            $hrgSatuanInput = (float) $settlement['po_hrg_satuan'];
+        }
+
         if ($hrgSatuanInput <= 0) {
             return ['status' => false, 'message' => 'Harga beli satuan dari supplier harus lebih besar dari 0.'];
         }
 
-        $tipePajak = strtoupper(trim((string) ($payload['tipe_pajak'] ?? 'EXCLUDE')));
+        $tipePajak = !empty($payload['tipe_pajak']) 
+            ? strtoupper(trim((string) $payload['tipe_pajak'])) 
+            : (!empty($settlement['po_tipe_pajak']) ? $settlement['po_tipe_pajak'] : ($settlement['tipe_pajak'] ?? 'EXCLUDE'));
+
         if (!in_array($tipePajak, ['EXCLUDE', 'INCLUDE', 'NON_PPN'], true)) {
             $tipePajak = 'EXCLUDE';
         }
@@ -729,6 +752,7 @@ class M_Konsinyasi extends CI_Model
             b.kode_barang,
             b.nama_barang,
             b.satuan,
+            COALESCE(lpb_info.nomor_lpb, '') AS nomor_lpb,
             COALESCE(sup.kd_suplier, sub_sup.kd_suplier, '') AS kd_suplier,
             COALESCE(sup.nama_suplier, sub_sup.nama_suplier, 'Supplier Konsinyasi') AS nama_suplier,
             COALESCE(gudang.stok_gudang, 0) AS stok_gudang,
@@ -763,6 +787,22 @@ class M_Konsinyasi extends CI_Model
              WHERE status = 'LAKU' 
              GROUP BY kd_barang) laku
         ", "laku.kd_barang = b.kode_barang", "left", false);
+
+        // Subquery nomor LPB konsinyasi
+        $this->db->join("
+            (SELECT kd_barang, MAX(nomor_lpb) AS nomor_lpb
+             FROM (
+                 SELECT kd_barang, nomor_lpb_asal AS nomor_lpb 
+                 FROM tb_konsinyasi_settlement 
+                 WHERE nomor_lpb_asal IS NOT NULL AND nomor_lpb_asal != ''
+                 UNION
+                 SELECT d.kd_barang, h.nomor_lpb 
+                 FROM tb_lpb h 
+                 JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb 
+                 WHERE (h.gudang_id IN ($whList) OR h.jenis_lpb LIKE '%konsin%') 
+                   AND h.nomor_lpb IS NOT NULL AND h.nomor_lpb != ''
+             ) lpb_all GROUP BY kd_barang) lpb_info
+        ", "lpb_info.kd_barang = b.kode_barang", "left", false);
 
         // Subquery supplier
         $this->db->join("

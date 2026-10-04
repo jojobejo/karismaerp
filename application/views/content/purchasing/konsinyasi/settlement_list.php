@@ -191,7 +191,12 @@
                                     <?php $no = 1; foreach ($tracking_barang as $tb): ?>
                                         <tr>
                                             <td class="px-3 text-muted font-weight-bold text-center"><?= $no++ ?></td>
-                                            <td class="font-weight-bold text-primary"><?= htmlspecialchars($tb['kode_barang']) ?></td>
+                                            <td class="font-weight-bold text-primary">
+                                                <?= htmlspecialchars($tb['kode_barang']) ?>
+                                                <?php if (!empty($tb['nomor_lpb'])): ?>
+                                                    <br><small class="text-muted"><i class="fas fa-barcode mr-1 text-secondary"></i>LPB: <strong class="text-dark"><?= htmlspecialchars($tb['nomor_lpb']) ?></strong></small>
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
                                                 <strong class="text-dark"><?= htmlspecialchars($tb['nama_barang']) ?></strong>
                                                 <br><small class="text-muted">Satuan: <strong><?= htmlspecialchars($tb['satuan'] ?: 'PCS') ?></strong></small>
@@ -211,9 +216,6 @@
                                                 <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
                                                     <?= number_format($tb['stok_kios'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
                                                 </span>
-                                                <?php if ((float)$tb['stok_kios'] > 0): ?>
-                                                    <br><small class="text-warning font-weight-bold"><i class="fas fa-store mr-1"></i><?= (int)$tb['jml_kios'] ?> Kios Titipan</small>
-                                                <?php endif; ?>
                                             </td>
                                             <td class="text-right" style="background: #f6fef9;">
                                                 <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
@@ -478,9 +480,13 @@
                             <div class="col-4 text-muted">Barang Laku:</div>
                             <div class="col-8 font-weight-bold text-success" id="txt_qty_terjual">-</div>
                         </div>
-                        <div class="row small">
+                        <div class="row small mb-1">
                             <div class="col-4 text-muted">Lokasi Kios:</div>
                             <div class="col-8 text-dark" id="txt_customer_name">-</div>
+                        </div>
+                        <div class="row small">
+                            <div class="col-4 text-muted">Referensi PO:</div>
+                            <div class="col-8 font-weight-bold text-primary" id="txt_ref_po">-</div>
                         </div>
                     </div>
 
@@ -513,34 +519,19 @@
                         </div>
                     </div>
 
-                    <!-- Pilihan Tipe Harga dari Supplier -->
-                    <div class="form-group mb-3">
-                        <label class="small font-weight-bold text-dark d-block mb-1">
-                            Tipe Harga dari Faktur Supplier <span class="text-danger">*</span>
-                        </label>
-                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                            <label class="btn btn-outline-primary active btn-sm font-weight-bold py-2" id="lbl_tipe_exclude">
-                                <input type="radio" name="tipe_pajak" id="tipe_exclude" value="EXCLUDE" checked>
-                                <i class="fas fa-tag mr-1"></i> Exclude PPN
-                            </label>
-                            <label class="btn btn-outline-success btn-sm font-weight-bold py-2" id="lbl_tipe_include">
-                                <input type="radio" name="tipe_pajak" id="tipe_include" value="INCLUDE">
-                                <i class="fas fa-receipt mr-1"></i> Include PPN
-                            </label>
-                            <label class="btn btn-outline-secondary btn-sm font-weight-bold py-2" id="lbl_tipe_non_ppn">
-                                <input type="radio" name="tipe_pajak" id="tipe_non_ppn" value="NON_PPN">
-                                <i class="fas fa-ban mr-1"></i> Non-PPN
-                            </label>
-                        </div>
-                        <small class="text-muted d-block mt-1" id="tipe_pajak_help">
-                            *Pilih <strong>Include PPN</strong> jika harga dari supplier sudah termasuk PPN. Sistem otomatis mengekstrak DPP tanpa Anda hitung manual.
-                        </small>
-                    </div>
-
+                    <!-- Tipe Pajak & PPN (Otomatis dari PO Konsinyasi) -->
+                    <input type="hidden" name="tipe_pajak" id="tipe_pajak" value="EXCLUDE">
                     <input type="hidden" name="ppn_persen" id="ppn_persen" value="11">
+
                     <div class="form-group mb-3">
-                        <label class="small font-weight-bold text-dark" id="label_hrg_satuan">Harga Satuan Exclude PPN (Rp) <span class="text-danger">*</span></label>
-                        <input type="number" step="any" min="1" name="hrg_satuan_input" id="hrg_satuan_input" class="form-control font-weight-bold text-right" placeholder="0" required>
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between mb-1" id="label_hrg_satuan_wrapper">
+                            <span><span id="label_hrg_satuan">Harga Satuan Beli (Rp)</span> <span class="badge badge-secondary ml-1" style="font-size:0.75rem;"><i class="fas fa-lock mr-1"></i>Terkunci</span></span>
+                            <span class="text-muted font-italic small">*Otomatis dari PO</span>
+                        </label>
+                        <input type="number" step="any" min="1" name="hrg_satuan_input" id="hrg_satuan_input" class="form-control font-weight-bold text-right" placeholder="0" readonly style="background-color: #f1f5f9; cursor: not-allowed;" required>
+                        <small class="text-muted font-italic mt-1 d-block" id="help_hrg_satuan">
+                            <i class="fas fa-info-circle mr-1 text-primary"></i> *Harga satuan terkunci otomatis sesuai harga barang pada PO konsinyasi asal.
+                        </small>
                     </div>
 
                     <!-- Live Breakdown Box -->
@@ -715,7 +706,7 @@ var selectedContextStatus = null;
 
 // Fungsi kalkulasi rincian live
 window.calculateSettlementLive = function() {
-    var tipe = $('input[name="tipe_pajak"]:checked').val() || 'EXCLUDE';
+    var tipe = $('#tipe_pajak').val() || $('input[name="tipe_pajak"]:checked').val() || 'EXCLUDE';
     var hrg = parseFloat($('#hrg_satuan_input').val()) || 0;
     var ppnPersen = (tipe === 'NON_PPN') ? 0 : 11;
     $('#ppn_persen').val(ppnPersen);
@@ -736,19 +727,16 @@ window.calculateSettlementLive = function() {
     $('#helper_qty_laku').html('<span class="text-success font-weight-bold"><i class="fas fa-lock mr-1 text-muted"></i>Qty terkunci: <strong>' + activeQty.toFixed(2) + ' ' + currentSatuan + '</strong> (sesuai jumlah yang telah dibeli kios).</span>');
 
     if (tipe === 'NON_PPN') {
-        $('#label_hrg_satuan').text('Harga Satuan Non-PPN (Rp) *');
-        $('#tipe_pajak_help').html('Harga murni tanpa PPN. Jurnal HPP dan Utang dicatat sebesar harga ini.');
+        $('#label_hrg_satuan').text('Harga Satuan Beli Non-PPN (Rp)');
         $('#box_preview_hrg_dpp span:first').text('Harga Satuan (Non-PPN):');
         $('#box_preview_hrg_inc').hide();
     } else if (tipe === 'INCLUDE') {
-        $('#label_hrg_satuan').text('Harga Satuan Include PPN (Rp) *');
-        $('#tipe_pajak_help').html('Ketikkan harga include di faktur supplier. <strong>Sistem otomatis mengekstrak DPP dan PPN Masukan</strong>.');
+        $('#label_hrg_satuan').text('Harga Satuan Beli Include PPN (Rp)');
         $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
         $('#box_preview_hrg_inc').show();
     } else {
         // EXCLUDE
-        $('#label_hrg_satuan').text('Harga Satuan Exclude PPN (Rp) *');
-        $('#tipe_pajak_help').html('Ketikkan harga DPP sebelum PPN. PPN akan ditambahkan otomatis ke total tagihan.');
+        $('#label_hrg_satuan').text('Harga Satuan Beli Exclude PPN (Rp)');
         $('#box_preview_hrg_dpp span:first').text('Harga Satuan DPP (Sebelum Pajak):');
         $('#box_preview_hrg_inc').show();
     }
@@ -819,13 +807,19 @@ window.openModalInputTagihan = function(id) {
                 $('.span_satuan_kios').text(currentSatuan || 'pcs');
                 $('#badge_sisa_titipan_kios').text('Barang Laku: ' + currentQtyNet.toFixed(2) + ' ' + currentSatuan);
 
-                $('#hrg_satuan_input').val('');
-                $('#no_invoice_supplier').val('');
+                // Default Tipe Pajak & Harga dari PO Konsinyasi
+                var defaultTipe = d.po_tipe_pajak || d.tipe_pajak || 'EXCLUDE';
+                $('#tipe_pajak').val(defaultTipe);
 
-                // Reset ke default Exclude PPN
-                $('input[name="tipe_pajak"][value="EXCLUDE"]').prop('checked', true);
-                $('#lbl_tipe_exclude').addClass('active').siblings().removeClass('active');
-                $('#ppn_persen').val('11');
+                var defaultHrg = parseFloat(d.po_hrg_satuan || d.hrg_satuan_input || 0);
+                $('#hrg_satuan_input').val(defaultHrg > 0 ? defaultHrg : '');
+
+                var tipeKet = (defaultTipe === 'INCLUDE') ? 'Include PPN' : ((defaultTipe === 'NON_PPN') ? 'Non-PPN' : 'Exclude PPN');
+                var infoPo = d.po_no_po ? (d.po_no_po + ' (' + tipeKet + ')') : 'Tanpa PO (' + tipeKet + ')';
+                $('#txt_ref_po').text(infoPo);
+
+                $('#no_invoice_supplier').val('');
+                $('#ppn_persen').val(defaultTipe === 'NON_PPN' ? '0' : '11');
 
                 window.calculateSettlementLive();
                 $('#catatan').val('');
