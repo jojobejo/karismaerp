@@ -381,7 +381,25 @@ class M_Konsinyasi extends CI_Model
         $this->db->limit(1);
         $row = $this->db->get()->row_array();
 
-        if ($row && !empty($row['kd_suplier'])) {
+        if ($row) {
+            // LPB tetap merupakan sumber penerimaan yang sah walaupun supplier pada
+            // header lama belum terisi. Supplier dapat dilengkapi dari master barang.
+            if (empty($row['kd_suplier'])) {
+                $supplierBarang = $this->db
+                    ->select('b.kd_suplier, COALESCE(s.nama_suplier, b.kd_suplier) AS nama_suplier')
+                    ->from('tbpo_barang b')
+                    ->join('tbpo_suplier s', 's.kd_suplier = b.kd_suplier', 'left')
+                    ->  where('b.kode_barang', $kdBarang)
+                    ->limit(1)
+                    ->get()
+                    ->row_array();
+
+                if ($supplierBarang && !empty($supplierBarang['kd_suplier'])) {
+                    $row['kd_suplier'] = $supplierBarang['kd_suplier'];
+                    $row['nama_suplier'] = $supplierBarang['nama_suplier'];
+                }
+            }
+
             return $row;
         }
 
@@ -465,6 +483,29 @@ class M_Konsinyasi extends CI_Model
      */
     public function get_settlement_by_id($idSettlement)
     {
+        // Pulihkan relasi LPB untuk data lama yang gagal tertaut karena header LPB
+        // tidak memiliki supplier. Harga form tetap harus bersumber dari PO/LPB asal.
+        $settlementRef = $this->db
+            ->select('id_settlement, id_lpb_asal, nomor_lpb_asal, kd_barang, gudang_id, no_lot')
+            ->where('id_settlement', (int) $idSettlement)
+            ->get('tb_konsinyasi_settlement')
+            ->row_array();
+
+        if ($settlementRef && empty($settlementRef['id_lpb_asal']) && empty($settlementRef['nomor_lpb_asal'])) {
+            $originLpb = $this->find_origin_consignment_lpb(
+                $settlementRef['kd_barang'],
+                $settlementRef['gudang_id'],
+                $settlementRef['no_lot']
+            );
+
+            if ($originLpb && !empty($originLpb['id_lpb'])) {
+                $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', [
+                    'id_lpb_asal'    => (int) $originLpb['id_lpb'],
+                    'nomor_lpb_asal' => $originLpb['nomor_lpb']
+                ]);
+            }
+        }
+
         return $this->db
             ->select("
                 s.*, 

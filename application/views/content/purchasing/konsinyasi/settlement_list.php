@@ -451,6 +451,37 @@
     </div>
 </div>
 
+<style>
+    #modalSettlement .modal-dialog {
+        max-width: 1180px;
+    }
+
+    #modalSettlement .settlement-modal-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1rem 1.25rem;
+        align-items: start;
+    }
+
+    #modalSettlement .settlement-modal-grid > * {
+        margin-bottom: 0 !important;
+    }
+
+    @media (max-width: 767.98px) {
+        #modalSettlement .modal-dialog {
+            max-width: none;
+        }
+
+        #modalSettlement .settlement-modal-grid {
+            display: block;
+        }
+
+        #modalSettlement .settlement-modal-grid > * {
+            margin-bottom: 1rem !important;
+        }
+    }
+</style>
+
 <!-- Modal Form Penyelesaian Konsinyasi (Input Tagihan & Pembelian Kios) -->
 <div class="modal fade" id="modalSettlement" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -465,7 +496,7 @@
             </div>
             <form id="formSettlement">
                 <input type="hidden" name="id_settlement" id="set_id_settlement">
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 settlement-modal-grid">
                     <!-- Ringkasan Info Penjualan / Pengiriman ke Kios -->
                     <div class="p-3 mb-3 bg-light rounded border">
                         <div class="row small mb-1">
@@ -490,22 +521,8 @@
                         </div>
                     </div>
 
-                    <!-- Input Qty Laku (Dibeli Kios) -->
-                    <div class="form-group mb-3 p-3 rounded" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
-                        <label class="small font-weight-bold text-dark d-flex justify-content-between mb-1">
-                            <span><i class="fas fa-shopping-bag text-success mr-1"></i> Qty Laku yang Ditagihkan <span class="badge badge-secondary ml-1" style="font-size:0.75rem;"><i class="fas fa-lock mr-1"></i>Terkunci</span></span>
-                            <span class="badge badge-success font-weight-bold" id="badge_sisa_titipan_kios">Barang Laku: 0</span>
-                        </label>
-                        <div class="input-group">
-                            <input type="number" step="any" min="0.001" name="qty_laku" id="input_qty_laku" class="form-control font-weight-bold text-right text-success" placeholder="0" readonly style="background-color: #f1f5f9; cursor: not-allowed;" required>
-                            <div class="input-group-append">
-                                <span class="input-group-text font-weight-bold span_satuan_kios" style="background-color: #e2e8f0;">pcs</span>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-1 font-italic" id="helper_qty_laku">
-                            <i class="fas fa-info-circle mr-1 text-success"></i> *Qty ini terkunci otomatis sesuai jumlah barang konsinyasi yang telah dibeli oleh kios.
-                        </small>
-                    </div>
+                    <!-- Nilai qty tetap dikirim ke server tanpa menampilkan input duplikat. -->
+                    <input type="hidden" name="qty_laku" id="input_qty_laku">
 
                     <!-- Input Invoice Resmi Supplier -->
                     <div class="row">
@@ -548,7 +565,7 @@
                             <span class="font-weight-bold text-primary" id="preview_hrg_satuan_inc">Rp 0</span>
                         </div>
                         <div class="d-flex justify-content-between small mb-1">
-                            <span class="text-muted">Subtotal DPP (Masuk HPP):</span>
+                            <span class="text-muted">Subtotal DPP (Masuk Persediaan):</span>
                             <span class="font-weight-bold text-dark" id="preview_dpp">Rp 0</span>
                         </div>
                         <div class="d-flex justify-content-between small mb-1">
@@ -567,7 +584,7 @@
                     </div>
 
                     <div class="alert alert-info mt-3 py-2 px-3 small mb-0">
-                        <i class="fas fa-info-circle mr-1"></i> Sistem otomatis menjurnal: <strong>[Debit] HPP</strong> (sebesar DPP) + <strong>[Debit] PPN Masukan</strong> = <strong>[Kredit] Utang Konsinyasi</strong> (sebesar Total Tagihan).
+                        <i class="fas fa-info-circle mr-1"></i> Sistem otomatis menjurnal: <strong>[Debit] Persediaan</strong> (sebesar DPP) + <strong>[Debit] PPN Masukan</strong> = <strong>[Kredit] Hutang Usaha</strong> (sebesar Total Tagihan).
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
@@ -617,7 +634,7 @@
                     </div>
                     <div>
                         <h5 class="modal-title font-weight-bold mb-0">Voucher Jurnal Pembelian Konsinyasi</h5>
-                        <small class="text-white-50">Pengakuan Beban Pokok Pendapatan (HPP) &amp; Hutang Supplier Konsinyasi</small>
+                        <small class="text-white-50">Pengakuan Persediaan, PPN Masukan &amp; Hutang Usaha</small>
                     </div>
                 </div>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
@@ -723,9 +740,6 @@ window.calculateSettlementLive = function() {
 
     var satuanText = currentSatuan ? ' / ' + currentSatuan : '';
 
-    // Info helper qty laku terkunci
-    $('#helper_qty_laku').html('<span class="text-success font-weight-bold"><i class="fas fa-lock mr-1 text-muted"></i>Qty terkunci: <strong>' + activeQty.toFixed(2) + ' ' + currentSatuan + '</strong> (sesuai jumlah yang telah dibeli kios).</span>');
-
     if (tipe === 'NON_PPN') {
         $('#label_hrg_satuan').text('Harga Satuan Beli Non-PPN (Rp)');
         $('#box_preview_hrg_dpp span:first').text('Harga Satuan (Non-PPN):');
@@ -803,9 +817,6 @@ window.openModalInputTagihan = function(id) {
                 currentSatuan = d.satuan || '';
 
                 $('#input_qty_laku').val(currentQtyNet.toFixed(2));
-                $('#input_qty_laku').attr('max', currentQtyNet);
-                $('.span_satuan_kios').text(currentSatuan || 'pcs');
-                $('#badge_sisa_titipan_kios').text('Barang Laku: ' + currentQtyNet.toFixed(2) + ' ' + currentSatuan);
 
                 // Default Tipe Pajak & Harga dari PO Konsinyasi
                 var defaultTipe = d.po_tipe_pajak || d.tipe_pajak || 'EXCLUDE';
@@ -983,7 +994,7 @@ window.openModalDetailSettlement = function(id) {
                 html += '<div class="p-3 rounded" style="background: #f0fdf4; border: 1px solid #a7f3d0;">';
                 html += '<div class="row">';
                 html += '<div class="col-md-4 text-center">';
-                html += '<div class="small text-muted">Subtotal DPP (Masuk HPP)</div>';
+                html += '<div class="small text-muted">Subtotal DPP (Masuk Persediaan)</div>';
                 html += '<div class="font-weight-bold text-dark" style="font-size:1.05rem;">' + fmt(d.subtotal_beli) + '</div>';
                 html += '</div>';
                 html += '<div class="col-md-4 text-center">';

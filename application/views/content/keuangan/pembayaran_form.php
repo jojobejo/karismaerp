@@ -815,9 +815,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var sisaQtyKonsinyasi = <?= (float)($k_qty_kios ?? ($first_item['qty_di_kios'] ?? 0)) ?>;
     var qtyInput = document.getElementById('qty_konsinyasi');
     var btnBeliSemua = document.getElementById('btnBeliSemuaKonsinyasi');
+    var qtyKonsinyasiDiubahManual = false;
 
     if (qtyInput) {
         qtyInput.addEventListener('input', function() {
+            qtyKonsinyasiDiubahManual = true;
             var q = parseFloat(this.value) || 0;
             if (sisaQtyKonsinyasi > 0 && q > sisaQtyKonsinyasi) {
                 this.value = sisaQtyKonsinyasi;
@@ -843,6 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (jumlahInput) {
             jumlahInput.addEventListener('input', function() {
+                // Qty adalah data fisik utama. Nominal pembayaran dapat berbeda karena
+                // diskon/pembulatan sehingga tidak boleh menimpa qty yang diinput petugas.
+                if (qtyKonsinyasiDiubahManual || (qtyInput.value || '').trim() !== '') {
+                    return;
+                }
                 var bayar = parseRupiahNumber(this.value);
                 if (hrgSatuanKonsinyasi > 0) {
                     var calculatedQty = Math.round((bayar / hrgSatuanKonsinyasi) * 1000) / 1000;

@@ -371,7 +371,7 @@ class Accounting_source_service
         if ($isConsignment) {
             return [
                 'success' => true,
-                'message' => 'LPB Konsinyasi (titipan fisik) dilewati dari jurnal hutang/pembelian. Jurnal hutang & HPP diterbitkan saat Penyelesaian (Settlement) setelah barang laku/dibayar customer.',
+                'message' => 'LPB Konsinyasi (titipan fisik) dilewati dari jurnal hutang/pembelian. Jurnal persediaan, PPN masukan, dan hutang usaha diterbitkan saat Penyelesaian (Settlement) setelah barang laku/dibayar customer.',
                 'data'    => null,
                 'errors'  => []
             ];
@@ -527,8 +527,58 @@ class Accounting_source_service
             ->row();
         $idSupplier = $supRow ? (int)$supRow->id_suplier : 0;
 
+        // Tanggal jurnal pembelian konsinyasi mengikuti tanggal barang masuk pada
+        // LPB asal, bukan tanggal invoice supplier yang diinput saat settlement.
+        $lpbRow = null;
+        if (!empty($settlement->id_lpb_asal)) {
+            $lpbRow = $this->CI->db
+                ->select('id_lpb, nomor_lpb, tgl_sj, input_at')
+                ->where('id_lpb', (int)$settlement->id_lpb_asal)
+                ->get('tb_lpb')
+                ->row();
+        }
+        if (!$lpbRow && !empty($settlement->nomor_lpb_asal)) {
+            $lpbRow = $this->CI->db
+                ->select('id_lpb, nomor_lpb, tgl_sj, input_at')
+                ->where('nomor_lpb', $settlement->nomor_lpb_asal)
+                ->get('tb_lpb')
+                ->row();
+        }
+        if (!$lpbRow) {
+            $this->CI->db
+                ->select('h.id_lpb, h.nomor_lpb, h.tgl_sj, h.input_at')
+                ->from('tb_lpb h')
+                ->join('tb_lpb_detail d', 'd.id_lpb = h.id_lpb', 'inner')
+                ->where('h.gudang_id', (int)$settlement->gudang_id)
+                ->where('d.kd_barang', $settlement->kd_barang);
+            if (!empty($settlement->no_lot)) {
+                $this->CI->db->where('d.no_lot', $settlement->no_lot);
+            }
+            $lpbRow = $this->CI->db
+                ->order_by('h.id_lpb', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row();
+        }
+
+        $tanggalLpb = '';
+        if ($lpbRow && !empty($lpbRow->tgl_sj) && $lpbRow->tgl_sj !== '0000-00-00') {
+            $tanggalLpb = $lpbRow->tgl_sj;
+        } elseif ($lpbRow && !empty($lpbRow->input_at)) {
+            $tanggalLpb = date('Y-m-d', strtotime($lpbRow->input_at));
+        }
+
+        if ($tanggalLpb === '') {
+            return $this->record_failure(
+                'CONSIGNMENT_SETTLEMENT',
+                ['source_id' => (string)$idSettlement, 'source_no' => $sourceNo],
+                'Tanggal LPB asal konsinyasi tidak ditemukan. Lengkapi relasi LPB sebelum posting jurnal.',
+                ['CONSIGNMENT_LPB_DATE_NOT_FOUND']
+            );
+        }
+
         $payload = [
-            'tanggal_transaksi' => $settlement->tgl_invoice_supplier ?: date('Y-m-d'),
+            'tanggal_transaksi' => $tanggalLpb,
             'journal_type'      => 'PJ',
             'keterangan'        => 'Pembelian Konsinyasi: ' . $settlement->nama_barang . ' (' . (float)$settlement->qty_net . ' ' . $settlement->satuan . '), Supplier: ' . $settlement->nama_suplier . ' [Inv: ' . ($settlement->no_invoice_supplier ?: '-') . ']',
             'source_module'     => 'PURCHASING',
@@ -542,29 +592,16 @@ class Accounting_source_service
             'id_gudang'         => (int)$settlement->gudang_id,
         ];
 
-        $barangRow = $this->CI->db
-            ->select('kode_akun_harga_pokok, kelompok_dagang')
-            ->where('kode_barang', $settlement->kd_barang)
-            ->get('tbpo_barang')
-            ->row();
-        $kodeHpp = (!empty($barangRow->kode_akun_harga_pokok)) ? trim($barangRow->kode_akun_harga_pokok) : '51010';
-
-        $kodeHutang = '21920'; // Utang Konsinyasi
-        if ($this->account_id_by_code($kodeHutang) <= 0) {
-            $kodeHutang = '21019'; // Q Hutang Konsinyasi
-            if ($this->account_id_by_code($kodeHutang) <= 0) {
-                $kodeHutang = '21098'; // Hutang Usaha Fallback
-            }
-        }
-
         $lines = [];
-        $lines[] = $this->purchase_line_by_code($kodeHpp, 'Beban Pokok Penjualan (Konsinyasi)', $subtotalBeli, '0.0000', $payload);
+        // Pengakuan tagihan supplier konsinyasi menggunakan akun pembelian yang
+        // sama dengan LPB reguler. Perbedaannya hanya pada waktu/event posting.
+        $lines[] = $this->purchase_line_by_code('14010', 'Persediaan # 1', $subtotalBeli, '0.0000', $payload);
 
         if (bccomp($nilaiPpn, '0', 4) === 1) {
             $lines[] = $this->purchase_line_by_code('13017', 'Q PPN M Ymh Diterima', $nilaiPpn, '0.0000', $payload);
         }
 
-        $lines[] = $this->purchase_line_by_code($kodeHutang, 'Utang Konsinyasi', '0.0000', $totalTagihan, $payload);
+        $lines[] = $this->purchase_line_by_code('21098', 'Hutang Usaha', '0.0000', $totalTagihan, $payload);
 
         foreach ($lines as $line) {
             if (empty($line['id_akun'])) {

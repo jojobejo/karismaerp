@@ -6,7 +6,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * Mengelola alur Penyelesaian Konsinyasi (Consignment Settlement):
  * - Rekonsiliasi barang konsinyasi yang telah terjual ke customer
  * - Input harga beli dan invoice resmi dari supplier
- * - Posting jurnal otomatis ke Utang Konsinyasi & HPP
+ * - Posting jurnal pembelian otomatis ke Persediaan, PPN Masukan, dan Hutang Usaha
  */
 class C_Konsinyasi extends CI_Controller
 {
