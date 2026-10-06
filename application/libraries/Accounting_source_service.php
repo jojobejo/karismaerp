@@ -421,6 +421,17 @@ class Accounting_source_service
                             d.qty_diterima * COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0)
                         )
                     ELSE 0 END), 0) AS amount_bkp,
+                    COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), NULLIF(TRIM(b.kelompok_barang), ''), '') = '2' THEN
+                        CASE
+                            WHEN LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(p.keterangan_harga_ppn), ''), 'exclude')) = 'include'
+                             AND COALESCE(NULLIF(pp.harga_satuan_kecil, 0), NULLIF(pp.hrg_satuan, 0)) IS NOT NULL
+                            THEN d.qty_diterima * COALESCE(NULLIF(pp.harga_satuan_kecil, 0), NULLIF(pp.hrg_satuan, 0))
+                            ELSE COALESCE(
+                                NULLIF(d.total_harga, 0),
+                                d.qty_diterima * COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0)
+                            ) * 1.11
+                        END
+                    ELSE 0 END), 0) AS gross_bkp,
                     COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), NULLIF(TRIM(b.kelompok_barang), ''), '') = '3' THEN
                         COALESCE(
                             NULLIF(d.total_harga, 0),
@@ -456,10 +467,15 @@ class Accounting_source_service
             );
         }
 
-        $amountBkp = $this->money($totals->amount_bkp ?? 0);
+        // Nominal disimpan dengan presisi database empat desimal. Pembulatan dua
+        // desimal hanya menjadi tanggung jawab tampilan jurnal.
+        $grossBkp = $this->money($totals->gross_bkp ?? 0);
+        $amountBkp = bcdiv($grossBkp, '1.11', 4);
+        $vatBkp = bcdiv(bcmul($grossBkp, '11', 4), '111', 4);
         $amountBkps = $this->money($totals->amount_bkps ?? 0);
-        $vatBkp = $this->money(bcdiv(bcmul($amountBkp, '11', 4), '100', 4));
-        $totalPayable = $this->money(bcadd(bcadd($amountBkp, $vatBkp, 4), $amountBkps, 4));
+        // Kredit mengikuti jumlah detail debit agar jurnal tetap seimbang sampai
+        // empat desimal, termasuk selisih truncation sebesar 0,0001.
+        $totalPayable = bcadd(bcadd($amountBkp, $vatBkp, 4), $amountBkps, 4);
 
         if (bccomp($totalPayable, '0', 4) <= 0) {
             return $this->record_failure(
