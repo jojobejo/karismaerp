@@ -5,6 +5,7 @@ class M_DeliveryTrip extends CI_Model
 {
     const STATUS_LOADING = 'PROSES_LOADING';
     const STATUS_INVOICING = 'PROSES_FAKTUR';
+    const STATUS_READY_TO_GO = 'SIAP_BERANGKAT';
     const STATUS_WAITING_ADDITIONAL = 'MENUNGGU_TAMBAHAN';
     const STATUS_ADDITIONAL = 'PROSES_TAMBAHAN';
     const STATUS_CLOSED = 'DITUTUP';
@@ -18,11 +19,44 @@ class M_DeliveryTrip extends CI_Model
     {
         return $this->db
             ->where('kd_rute', strtoupper(trim((string)$kd_rute)))
-            ->where_in('status', ['DRAFT', 'VERIFIKASI', 'SIAP_LOADING', self::STATUS_LOADING, self::STATUS_INVOICING, self::STATUS_WAITING_ADDITIONAL, self::STATUS_ADDITIONAL])
+            ->where_in('status', ['DRAFT', 'VERIFIKASI', 'SIAP_LOADING', self::STATUS_LOADING, self::STATUS_INVOICING, self::STATUS_READY_TO_GO, self::STATUS_WAITING_ADDITIONAL, self::STATUS_ADDITIONAL])
             ->order_by('id_trip', 'DESC')
             ->limit(1)
             ->get('tb_delivery_trip')
             ->row_array();
+    }
+
+    /**
+     * Menyinkronkan status trip jika seluruh SO di trip sudah difakturkan atau DO sudah terbit.
+     */
+    public function sync_trip_status($id_trip)
+    {
+        $trip = $this->get($id_trip);
+        if (!$trip) return false;
+        if (in_array($trip['status'], [self::STATUS_CLOSED, 'BERANGKAT', 'SELESAI'], true)) return false;
+
+        $has_do = $this->db->where('id_trip', (int)$id_trip)->count_all_results('tb_do') > 0;
+        if ($has_do && $trip['status'] !== self::STATUS_READY_TO_GO && $trip['status'] !== self::STATUS_WAITING_ADDITIONAL) {
+            $this->set_status((int)$id_trip, self::STATUS_READY_TO_GO);
+            return self::STATUS_READY_TO_GO;
+        }
+
+        // Cek apakah seluruh SO yang terikat ke trip sudah completed / difakturkan
+        $so_list = $this->db->select('id_so, status')->where('id_trip', (int)$id_trip)->get('tbso_sales_order')->result_array();
+        if (!empty($so_list)) {
+            $all_invoiced = true;
+            foreach ($so_list as $so) {
+                if ($so['status'] !== 'completed') {
+                    $all_invoiced = false;
+                    break;
+                }
+            }
+            if ($all_invoiced && $trip['status'] === self::STATUS_INVOICING) {
+                $this->set_status((int)$id_trip, self::STATUS_READY_TO_GO);
+                return self::STATUS_READY_TO_GO;
+            }
+        }
+        return $trip['status'];
     }
 
     public function get_or_create($kd_rute, $tgl_pengiriman, $created_by)

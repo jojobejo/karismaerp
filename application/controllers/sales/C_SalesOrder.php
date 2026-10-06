@@ -2076,6 +2076,12 @@ class C_SalesOrder extends CI_Controller
             $so_fresh = $this->M_SalesOrder->get_so($id_so);
             $auto_do = $this->_autoCreateDoFromFinishedFakturRoute($so_fresh ?: $so, $this->_getUsername());
 
+            $id_trip_so = !empty($so_fresh['id_trip']) ? (int)$so_fresh['id_trip'] : (!empty($so['id_trip']) ? (int)$so['id_trip'] : 0);
+            if ($id_trip_so > 0) {
+                $this->load->model('M_DeliveryTrip');
+                $this->M_DeliveryTrip->sync_trip_status($id_trip_so);
+            }
+
             $detail_str = array_map(function($item) {
                 return $item['nama_barang'] . ' | Qty: ' . $item['qty'] . ' pcs';
             }, $faktur_items);

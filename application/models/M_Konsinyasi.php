@@ -430,10 +430,27 @@ class M_Konsinyasi extends CI_Model
      */
     public function get_settlement_list(array $filters = [])
     {
-        $this->db->select('s.*, g.nama_gudang, j.nomor_jurnal');
+        $this->db->select("
+            s.*, 
+            g.nama_gudang, 
+            j.nomor_jurnal,
+            COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS lpb_no,
+            COALESCE(lpb.no_po, po.no_po) AS po_no_po,
+            COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan,
+            COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude,
+            CASE 
+                WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
+                WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
+                ELSE 'EXCLUDE'
+            END AS po_tipe_pajak
+        ", false);
         $this->db->from('tb_konsinyasi_settlement s');
         $this->db->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left');
         $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = s.id_jurnal_pembelian', 'left');
+        $this->db->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left');
+        $this->db->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left');
+        $this->db->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left');
+        $this->db->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left');
 
         if (!empty($filters['status']) && $filters['status'] !== 'SEMUA') {
             $st = strtoupper(trim((string) $filters['status']));
@@ -471,6 +488,8 @@ class M_Konsinyasi extends CI_Model
                 $this->db->or_like('s.no_so', $search);
                 $this->db->or_like('s.no_faktur', $search);
                 $this->db->or_like('s.no_invoice_supplier', $search);
+                $this->db->or_like('lpb.nomor_lpb', $search);
+                $this->db->or_like('po.no_po', $search);
             $this->db->group_end();
         }
 
@@ -511,14 +530,16 @@ class M_Konsinyasi extends CI_Model
                 s.*, 
                 g.nama_gudang, 
                 j.nomor_jurnal,
-                lpb.no_po AS po_no_po,
+                COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS lpb_no,
+                COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS nomor_lpb_asal,
+                COALESCE(lpb.no_po, po.no_po) AS po_no_po,
                 CASE 
                     WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                     WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
                     ELSE 'EXCLUDE'
                 END AS po_tipe_pajak,
-                COALESCE(pod.hrg_satuan, lpbd.harga_satuan, 0) AS po_hrg_satuan,
-                COALESCE(pod.harga_satuan_exclude, lpbd.harga_satuan, 0) AS po_hrg_satuan_exclude
+                COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan,
+                COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude
             ", false)
             ->from('tb_konsinyasi_settlement s')
             ->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left')
@@ -526,7 +547,7 @@ class M_Konsinyasi extends CI_Model
             ->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left')
             ->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left')
             ->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left')
-            ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang', 'left')
+            ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left')
             ->where('s.id_settlement', (int) $idSettlement)
             ->get()
             ->row_array();
@@ -831,7 +852,7 @@ class M_Konsinyasi extends CI_Model
 
         // Subquery nomor LPB konsinyasi
         $this->db->join("
-            (SELECT kd_barang, MAX(nomor_lpb) AS nomor_lpb
+            (SELECT kd_barang, GROUP_CONCAT(DISTINCT nomor_lpb ORDER BY nomor_lpb ASC SEPARATOR ', ') AS nomor_lpb
              FROM (
                  SELECT kd_barang, nomor_lpb_asal AS nomor_lpb 
                  FROM tb_konsinyasi_settlement 
@@ -872,6 +893,7 @@ class M_Konsinyasi extends CI_Model
                 $this->db->or_like('b.nama_barang', $search);
                 $this->db->or_like('sup.nama_suplier', $search);
                 $this->db->or_like('sub_sup.nama_suplier', $search);
+                $this->db->or_like('lpb_info.nomor_lpb', $search);
             $this->db->group_end();
         }
 
@@ -892,6 +914,16 @@ class M_Konsinyasi extends CI_Model
                 s.customer_name,
                 s.no_so,
                 COALESCE(fp.no_faktur, s.no_faktur, '-') AS no_faktur,
+                s.id_lpb_asal,
+                COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb, '-') AS nomor_lpb,
+                COALESCE(lpb.no_po, po.no_po, '-') AS no_po,
+                COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan,
+                COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude,
+                CASE 
+                    WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
+                    WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
+                    ELSE 'EXCLUDE'
+                END AS po_tipe_pajak,
                 s.no_lot,
                 s.expired_date,
                 s.qty_terjual,
@@ -902,9 +934,13 @@ class M_Konsinyasi extends CI_Model
                 s.status,
                 s.no_invoice_supplier,
                 s.total_tagihan_beli
-            ")
+            ", false)
             ->from('tb_konsinyasi_settlement s')
             ->join('tbso_faktur_penjualan fp', 'fp.id_so = s.id_so', 'left')
+            ->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left')
+            ->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left')
+            ->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left')
+            ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left')
             ->where('s.kd_barang', trim((string) $kdBarang))
             ->order_by("(CASE WHEN s.status IN ('DI_KIOS', 'PENDING') THEN 1 WHEN s.status = 'LAKU' THEN 2 ELSE 3 END)", 'ASC', false)
             ->order_by('s.id_settlement', 'DESC')

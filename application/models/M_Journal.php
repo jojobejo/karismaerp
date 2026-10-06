@@ -491,7 +491,9 @@ class M_Journal extends CI_Model
         }
 
         // Sinkronisasi posisi stok konsinyasi: memindahkan stok di kios (PENDING) ke barang laku (BILLED)
-        $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran);
+        $selected_kd_barang = !empty($data_pembayaran['kd_barang']) ? $data_pembayaran['kd_barang'] : null;
+        $selected_id_settlement = !empty($data_pembayaran['id_settlement']) ? (int)$data_pembayaran['id_settlement'] : null;
+        $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran, $selected_kd_barang, $selected_id_settlement);
 
         return $id_jurnal_sj;
     }
@@ -499,24 +501,43 @@ class M_Journal extends CI_Model
     /**
      * Sinkronisasi data konsinyasi (tb_konsinyasi_settlement) saat kios melakukan pembayaran
      */
-    private function _sync_settlement_on_payment($id_faktur, $faktur, $firstItem, $total_nominal, $userId, $qty_konsinyasi_input = null, $id_pembayaran = null)
+    private function _sync_settlement_on_payment($id_faktur, $faktur, $firstItem, $total_nominal, $userId, $qty_konsinyasi_input = null, $id_pembayaran = null, $selected_kd_barang = null, $selected_id_settlement = null)
     {
         if (!$this->db->table_exists('tb_konsinyasi_settlement')) {
             return;
         }
 
-        $settlement = $this->db
-            ->where('id_faktur', (int)$id_faktur)
-            ->where_in('status', ['DI_KIOS', 'PENDING'])
-            ->order_by('id_settlement', 'ASC')
-            ->limit(1)
-            ->get('tb_konsinyasi_settlement')
-            ->row_array();
+        $settlement = null;
+        if (!empty($selected_id_settlement)) {
+            $settlement = $this->db
+                ->where('id_settlement', (int)$selected_id_settlement)
+                ->where_in('status', ['DI_KIOS', 'PENDING'])
+                ->get('tb_konsinyasi_settlement')
+                ->row_array();
+        }
 
         if (!$settlement) {
+            $this->db
+                ->where('id_faktur', (int)$id_faktur)
+                ->where_in('status', ['DI_KIOS', 'PENDING']);
+            if (!empty($selected_kd_barang)) {
+                $this->db->where('kd_barang', $selected_kd_barang);
+            }
             $settlement = $this->db
+                ->order_by('id_settlement', 'ASC')
+                ->limit(1)
+                ->get('tb_konsinyasi_settlement')
+                ->row_array();
+        }
+
+        if (!$settlement) {
+            $this->db
                 ->where('no_faktur', $faktur['no_faktur'])
-                ->where_in('status', ['DI_KIOS', 'PENDING'])
+                ->where_in('status', ['DI_KIOS', 'PENDING']);
+            if (!empty($selected_kd_barang)) {
+                $this->db->where('kd_barang', $selected_kd_barang);
+            }
+            $settlement = $this->db
                 ->order_by('id_settlement', 'ASC')
                 ->limit(1)
                 ->get('tb_konsinyasi_settlement')

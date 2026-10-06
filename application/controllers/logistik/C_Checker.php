@@ -1071,12 +1071,9 @@ class C_Checker extends CI_Controller
         $this->load->model('M_Logistik');
         
         // Tampilkan rute jika:
-        // 1. Item belum masuk DO; pemeriksaan dilakukan per detail barang
-        // 2. Masih ada item yang belum diverifikasi checker (checker_loaded = 0/NULL/2)
-        // 3. Status SO siap_faktur, partial, ATAU completed
-        //    - completed bisa terjadi saat Admin SC sudah memfakturkan seluruh item
-        //      tetapi checker belum melakukan verifikasi loading (muat/tidak muat)
-        // Rute baru hilang dari halaman ini setelah DO dibuat.
+        // 1. Masih ada item SO yang belum masuk DO (belum selesai dikirim)
+        // 2. Status SO siap_faktur, partial, ATAU completed
+        // Rute baru hilang dari halaman ini setelah seluruh item dibuatkan DO.
         $routes = $this->db->query("
             SELECT
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
@@ -1092,7 +1089,6 @@ class C_Checker extends CI_Controller
                 FROM tbso_sales_order_detail sod
                 WHERE sod.id_so = so.id_so
                     AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
-                    AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
                     AND NOT EXISTS (
                         SELECT 1
                         FROM tbso_faktur_detail fd
@@ -1112,10 +1108,11 @@ class C_Checker extends CI_Controller
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
         $data['routes'] = $routes;
         $data['role'] = $this->role();
-        $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+        $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','SIAP_BERANGKAT','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
             ->order_by('id_trip', 'DESC')->get('tb_delivery_trip')->result_array();
         $data['active_trips'] = [];
         foreach ($trip_rows as $trip_row) {
+            $this->M_DeliveryTrip->sync_trip_status((int)$trip_row['id_trip']);
             $summary = $this->M_DeliveryTrip->capacity_summary($trip_row['id_trip']);
             if ($summary) {
                 $summary['has_do'] = $this->db->where('id_trip', $trip_row['id_trip'])->count_all_results('tb_do') > 0;
@@ -1514,7 +1511,8 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'message' => 'Akses ditolak.']); exit;
         }
         $id_trip = (int)$this->input->post('id_trip');
-        if ($this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
+        $total_so = $this->db->where('id_trip', $id_trip)->count_all_results('tbso_sales_order');
+        if ($total_so > 0 && $this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
             echo json_encode(['status' => false, 'message' => 'Trip belum memiliki DO dan belum dapat ditutup sebagai keberangkatan.']); exit;
         }
         $by = $this->session->userdata('username') ?: $this->nama() ?: 'system';

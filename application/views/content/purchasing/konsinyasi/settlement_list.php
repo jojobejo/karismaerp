@@ -194,7 +194,12 @@
                                             <td class="font-weight-bold text-primary">
                                                 <?= htmlspecialchars($tb['kode_barang']) ?>
                                                 <?php if (!empty($tb['nomor_lpb'])): ?>
-                                                    <br><small class="text-muted"><i class="fas fa-barcode mr-1 text-secondary"></i>LPB: <strong class="text-dark"><?= htmlspecialchars($tb['nomor_lpb']) ?></strong></small>
+                                                    <div class="mt-1 d-flex flex-wrap align-items-center" style="gap: 4px;">
+                                                        <small class="text-muted"><i class="fas fa-barcode mr-1 text-secondary"></i>LPB:</small>
+                                                        <?php foreach (array_map('trim', explode(',', $tb['nomor_lpb'])) as $lpbItem): ?>
+                                                            <span class="badge badge-light border text-dark font-weight-bold" style="font-size: 0.75rem;"><?= htmlspecialchars($lpbItem) ?></span>
+                                                        <?php endforeach; ?>
+                                                    </div>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
@@ -296,7 +301,9 @@
                                     <th class="py-3">Supplier Konsinyasi</th>
                                     <th class="py-3">Lokasi Kios / Pembeli</th>
                                     <th class="py-3">Barang &amp; Batch/Lot</th>
+                                    <th class="py-3">Asal LPB &amp; PO</th>
                                     <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku (Dibeli Kios)</th>
+                                    <th class="py-3 text-right" style="background: #eff6ff; color: #1e40af;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>
                                     <th class="py-3 text-right">Harga Jual Kios</th>
                                     <th class="py-3 text-center">Status</th>
                                     <th class="py-3">Tagihan Beli Supplier</th>
@@ -306,7 +313,7 @@
                             <tbody>
                                 <?php if (empty($settlements)): ?>
                                     <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
+                                        <td colspan="12" class="text-center py-5 text-muted">
                                             <i class="fas fa-shopping-bag fa-3x mb-3 text-black-50 d-block"></i>
                                             Tidak ada data barang konsinyasi laku pada filter ini.
                                         </td>
@@ -322,9 +329,6 @@
                                             title="Klik kanan baris ini untuk opsi transaksi / lihat jurnal">
                                             <td class="px-3 font-weight-bold text-primary">
                                                 <?= htmlspecialchars($s['no_settlement']) ?>
-                                                <?php if (!empty($s['nomor_lpb_asal'])): ?>
-                                                    <br><small class="text-muted"><i class="fas fa-barcode"></i> LPB: <?= htmlspecialchars($s['nomor_lpb_asal']) ?></small>
-                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <?= date('d/m/Y', strtotime($s['tanggal_settlement'])) ?>
@@ -341,8 +345,27 @@
                                                 <strong class="text-dark"><?= htmlspecialchars($s['nama_barang']) ?></strong>
                                                 <br><small class="text-muted">Lot: <?= htmlspecialchars($s['no_lot'] ?: '-') ?> | ED: <?= !empty($s['expired_date']) ? date('d/m/Y', strtotime($s['expired_date'])) : '-' ?></small>
                                             </td>
+                                            <td>
+                                                <span class="badge badge-primary font-weight-bold px-2 py-1" style="font-size: 0.82rem;">
+                                                    <i class="fas fa-barcode mr-1"></i><?= htmlspecialchars($s['lpb_no'] ?: ($s['nomor_lpb_asal'] ?: '-')) ?>
+                                                </span>
+                                                <br><small class="text-muted"><i class="fas fa-file-invoice mr-1 text-secondary"></i>PO: <strong class="text-dark"><?= htmlspecialchars($s['po_no_po'] ?: '-') ?></strong></small>
+                                            </td>
                                             <td class="text-right font-weight-bold text-success" style="background: #fdfefe; font-size: 0.95rem;">
                                                 <?= number_format($s['qty_net'], 2) ?> <?= htmlspecialchars($s['satuan']) ?>
+                                            </td>
+                                            <td class="text-right" style="background: #f8faff;">
+                                                <strong class="text-primary" style="font-size: 0.95rem;">
+                                                    Rp <?= number_format($s['po_hrg_satuan'], 2) ?>
+                                                </strong>
+                                                <br>
+                                                <?php if ($s['po_tipe_pajak'] === 'INCLUDE'): ?>
+                                                    <span class="badge badge-success-light text-success font-weight-bold" style="background:#d1fae5; font-size:0.75rem;">Inc. PPN</span>
+                                                <?php elseif ($s['po_tipe_pajak'] === 'NON_PPN'): ?>
+                                                    <span class="badge badge-secondary" style="font-size:0.75rem;">Non-PPN</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-primary-light text-primary font-weight-bold" style="background:#dbeafe; font-size:0.75rem;">Exc. PPN</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-right text-muted">
                                                 Rp <?= number_format($s['hrg_jual'], 2) ?>
@@ -428,7 +451,7 @@
 
 <!-- Modal Rincian Kios Pemegang Barang Konsinyasi -->
 <div class="modal fade" id="modalTrackingKios" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <div class="modal-header border-0 bg-primary text-white" style="border-radius: 14px 14px 0 0;">
                 <h5 class="modal-title font-weight-bold">
@@ -515,9 +538,17 @@
                             <div class="col-4 text-muted">Lokasi Kios:</div>
                             <div class="col-8 text-dark" id="txt_customer_name">-</div>
                         </div>
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">LPB Asal:</div>
+                            <div class="col-8 font-weight-bold text-primary" id="txt_lpb_asal">-</div>
+                        </div>
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">Harga ketika PO:</div>
+                            <div class="col-8 font-weight-bold text-dark" id="txt_hrg_po">-</div>
+                        </div>
                         <div class="row small">
                             <div class="col-4 text-muted">Referensi PO:</div>
-                            <div class="col-8 font-weight-bold text-primary" id="txt_ref_po">-</div>
+                            <div class="col-8 font-weight-bold text-secondary" id="txt_ref_po">-</div>
                         </div>
                     </div>
 
@@ -807,11 +838,20 @@ window.openModalInputTagihan = function(id) {
             if ($btn.length) $btn.prop('disabled', false).html(oldHtml);
             if (res && res.status && res.data) {
                 var d = res.data;
+                var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
                 $('#set_id_settlement').val(d.id_settlement);
                 $('#txt_nama_barang').text(d.nama_barang + ' (' + (d.no_lot || '-') + ')');
                 $('#txt_nama_suplier').text(d.nama_suplier);
                 $('#txt_qty_terjual').text(parseFloat(d.qty_net).toFixed(2) + ' ' + d.satuan);
                 $('#txt_customer_name').text(d.customer_name + ' (SO: ' + d.no_so + ')');
+
+                // Info LPB Asal & Harga PO
+                $('#txt_lpb_asal').html('<i class="fas fa-barcode mr-1"></i>' + (d.nomor_lpb_asal || d.lpb_no || '-'));
+                var poPriceText = (parseFloat(d.po_hrg_satuan || 0) > 0) 
+                    ? fmt(d.po_hrg_satuan) + ' <span class="badge badge-light border ml-1">' + (d.po_tipe_pajak || 'EXCLUDE') + '</span>'
+                    : 'Belum diatur';
+                $('#txt_hrg_po').html(poPriceText);
 
                 currentQtyNet = parseFloat(d.qty_net) || 0;
                 currentSatuan = d.satuan || '';
@@ -883,13 +923,16 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 var html = '<div class="table-responsive">';
                 html += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size:0.88rem;">';
                 html += '<thead style="background:#0f172a; color:#fff;"><tr>';
-                html += '<th>Lokasi Kios</th>';
-                html += '<th>No. Faktur T</th>';
-                html += '<th>Tgl Kirim</th>';
-                html += '<th>Lot / ED</th>';
-                html += '<th class="text-right">Qty di Kios</th>';
-                html += '<th class="text-center">Status</th>';
-                html += '<th class="text-center" style="width:120px;">Aksi</th>';
+                html += '<th class="py-2">Lokasi Kios</th>';
+                html += '<th class="py-2">No. Faktur T</th>';
+                html += '<th class="py-2" style="background:#1e293b;"><i class="fas fa-barcode mr-1 text-primary"></i>Asal LPB &amp; PO</th>';
+                html += '<th class="py-2">Tgl Kirim</th>';
+                html += '<th class="py-2">Lot / ED</th>';
+                html += '<th class="py-2 text-right">Qty</th>';
+                html += '<th class="py-2 text-right" style="background:#1e3a8a; color:#fff;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>';
+                html += '<th class="py-2 text-right">Harga Jual Kios</th>';
+                html += '<th class="py-2 text-center">Status</th>';
+                html += '<th class="py-2 text-center" style="width:125px;">Aksi</th>';
                 html += '</tr></thead><tbody>';
 
                 $.each(list, function(i, r) {
@@ -904,22 +947,27 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                         badge = '<span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-store mr-1"></i>Ada di Kios</span>';
                         btnAksi = '<span class="text-muted small font-italic">Menunggu Kios</span>';
                     } else if (isLaku) {
-                        badge = '<span class="badge badge-info text-white font-weight-bold px-2 py-1"><i class="fas fa-shopping-bag mr-1"></i>Laku (Siap Ditagih)</span>';
+                        badge = '<span class="badge badge-info text-white font-weight-bold px-2 py-1"><i class="fas fa-shopping-bag mr-1"></i>Laku (Dibeli Kios)</span>';
                         btnAksi = '<button type="button" class="btn btn-sm btn-primary font-weight-bold shadow-xs" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalInputTagihan(' + r.id_settlement + '); }, 300);"><i class="fas fa-file-invoice-dollar mr-1"></i>Input Tagihan</button>';
                     } else {
-                        badge = '<span class="badge badge-success font-weight-bold px-2 py-1"><i class="fas fa-check-double mr-1"></i>Sudah Ditagih Supplier</span>';
+                        badge = '<span class="badge badge-success font-weight-bold px-2 py-1"><i class="fas fa-check-double mr-1"></i>Sudah Ditagih</span>';
                         btnAksi = '<button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalDetailSettlement(' + r.id_settlement + '); }, 300);"><i class="fas fa-eye mr-1"></i>Detail</button>';
                     }
 
                     var tglKirim = r.tanggal_settlement ? new Date(r.tanggal_settlement).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
                     var ed = r.expired_date ? new Date(r.expired_date).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
 
+                    var qtySubtext = isLaku ? '<br><small class="text-success font-weight-bold">Dibeli Kios</small>' : (isDiKios ? '<br><small class="text-muted">Di Kios</small>' : '<br><small class="text-muted">Selesai</small>');
+
                     html += '<tr>';
                     html += '<td><strong class="text-dark"><i class="fas fa-store text-warning mr-1"></i>' + (r.customer_name || '-') + '</strong><br><small class="text-muted">SO: ' + (r.no_so || '-') + '</small></td>';
                     html += '<td><strong class="text-primary">' + (r.no_faktur || '-') + '</strong></td>';
+                    html += '<td><span class="badge badge-primary font-weight-bold px-2 py-1" style="font-size:0.80rem;"><i class="fas fa-barcode mr-1"></i>' + (r.nomor_lpb || '-') + '</span><br><small class="text-muted"><i class="fas fa-file-invoice mr-1"></i>PO: <strong class="text-dark">' + (r.no_po || '-') + '</strong></small></td>';
                     html += '<td>' + tglKirim + '</td>';
-                    html += '<td><small>' + (r.no_lot || '-') + '<br>ED: ' + ed + '</small></td>';
-                    html += '<td class="text-right font-weight-bold ' + (isDiKios ? 'text-warning' : (isLaku ? 'text-info' : 'text-success')) + '" style="font-size:0.95rem;">' + parseFloat(r.qty_net || 0).toFixed(2) + ' ' + (r.satuan || '') + '</td>';
+                    html += '<td><small><strong>' + (r.no_lot || '-') + '</strong><br>ED: ' + ed + '</small></td>';
+                    html += '<td class="text-right font-weight-bold ' + (isDiKios ? 'text-warning' : (isLaku ? 'text-info' : 'text-success')) + '" style="font-size:0.95rem;">' + parseFloat(r.qty_net || 0).toFixed(2) + ' ' + (r.satuan || '') + qtySubtext + '</td>';
+                    html += '<td class="text-right" style="background:#f8faff;"><strong class="text-primary" style="font-size:0.95rem;">' + fmt(r.po_hrg_satuan) + '</strong><br><span class="badge badge-light border text-muted" style="font-size:0.75rem;">' + (r.po_tipe_pajak || 'EXCLUDE') + '</span></td>';
+                    html += '<td class="text-right text-muted">' + fmt(r.hrg_jual) + '</td>';
                     html += '<td class="text-center">' + badge + '</td>';
                     html += '<td class="text-center">' + btnAksi + '</td>';
                     html += '</tr>';
@@ -961,16 +1009,19 @@ window.openModalDetailSettlement = function(id) {
                 html += '<div class="col-md-6">';
                 html += '<div class="card border-0 bg-light" style="border-radius:10px;">';
                 html += '<div class="card-body p-3">';
-                html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-shopping-cart text-primary mr-2"></i>Info Penjualan</h6>';
+                html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-shopping-cart text-primary mr-2"></i>Info Penjualan ke Kios</h6>';
                 html += '<table class="table table-sm table-borderless mb-0 small">';
                 html += '<tr><td class="text-muted" style="width:45%">No. Settlement:</td><td class="font-weight-bold text-primary">' + (d.no_settlement || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">Barang:</td><td class="font-weight-bold">' + (d.nama_barang || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. Lot / Batch:</td><td>' + (d.no_lot || '-') + '</td></tr>';
-                html += '<tr><td class="text-muted">Customer:</td><td>' + (d.customer_name || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">LPB Asal:</td><td><span class="badge badge-primary font-weight-bold px-2 py-1"><i class="fas fa-barcode mr-1"></i>' + (d.nomor_lpb_asal || d.lpb_no || '-') + '</span></td></tr>';
+                html += '<tr><td class="text-muted">Referensi PO:</td><td><strong class="text-dark">' + (d.po_no_po || '-') + '</strong></td></tr>';
+                html += '<tr><td class="text-muted">Harga ketika PO:</td><td class="font-weight-bold text-primary">' + fmt(d.po_hrg_satuan) + ' (' + (d.po_tipe_pajak || 'EXCLUDE') + ')</td></tr>';
+                html += '<tr><td class="text-muted">Customer / Kios:</td><td>' + (d.customer_name || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. SO:</td><td>' + (d.no_so || '-') + '</td></tr>';
-                html += '<tr><td class="text-muted">No. Faktur:</td><td>' + (d.no_faktur || '-') + '</td></tr>';
-                html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-primary">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
-                html += '<tr><td class="text-muted">Harga Jual:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. Faktur T:</td><td><strong class="text-primary">' + (d.no_faktur || '-') + '</strong></td></tr>';
+                html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-success">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
+                html += '<tr><td class="text-muted">Harga Jual Kios:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
                 html += '</table>';
                 html += '</div></div>';
                 html += '</div>';

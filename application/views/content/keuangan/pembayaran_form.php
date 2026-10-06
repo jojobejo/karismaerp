@@ -397,28 +397,54 @@ $default_metode = '';
                                         <input type="date" name="tanggal_pembayaran" class="form-control" required
                                                value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_pembayaran']) : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d'))) ?>">
                                     </div>
-                                    <?php if (!empty($is_konsinyasi) && !empty($first_item)): ?>
-                                        <?php
-                                        $k_hrg_satuan = (float)($first_item['hrg_satuan'] ?? 0);
-                                        $k_qty_kios = (float)($first_item['qty_di_kios'] ?? 0);
-                                        if ($k_qty_kios <= 0 && !empty($first_item['qty'])) {
-                                            $k_qty_kios = (float)$first_item['qty'];
-                                        }
-                                        $k_satuan = htmlspecialchars(!empty($first_item['satuan']) ? $first_item['satuan'] : (!empty($first_item['b_satuan']) ? $first_item['b_satuan'] : 'PCS'));
-                                        ?>
+                                     <?php if (!empty($is_konsinyasi) && !empty($konsinyasi_items)): ?>
+                                        <!-- Hidden Inputs untuk Kode Barang & Settlement ID Konsinyasi -->
+                                        <input type="hidden" name="kd_barang_konsinyasi" id="kd_barang_konsinyasi" value="<?= htmlspecialchars($first_item['kd_barang'] ?? '') ?>">
+                                        <input type="hidden" name="id_settlement_konsinyasi" id="id_settlement_konsinyasi" value="<?= (int)($first_item['id_settlement'] ?? 0) ?>">
+
+                                         <div class="form-group">
+                                            <label>Pilih Barang yang Dibeli Kios <span class="text-danger">*</span></label>
+                                            <select name="select_barang_konsinyasi" id="select_barang_konsinyasi" class="form-control font-weight-bold" required>
+                                                <option value="" data-kd="" data-nama="" data-lot="" data-harga="0" data-qty-kios="0" data-satuan="" data-settlement="">-- Pilih Barang Konsinyasi yang Dibeli --</option>
+                                                <?php foreach ($konsinyasi_items as $kIdx => $kItem): ?>
+                                                    <?php
+                                                    $it_kd = htmlspecialchars($kItem['kd_barang']);
+                                                    $it_nama = htmlspecialchars(!empty($kItem['nama_barang']) ? $kItem['nama_barang'] : (!empty($kItem['b_nama_barang']) ? $kItem['b_nama_barang'] : $it_kd));
+                                                    $it_lot = htmlspecialchars($kItem['no_lot'] ?? '');
+                                                    $it_harga = (float)($kItem['hrg_satuan'] ?? 0);
+                                                    $it_qty_kios = (float)($kItem['qty_di_kios'] ?? 0);
+                                                    $it_satuan = htmlspecialchars(!empty($kItem['satuan']) ? $kItem['satuan'] : (!empty($kItem['b_satuan']) ? $kItem['b_satuan'] : 'PCS'));
+                                                    $it_settlement = (int)($kItem['id_settlement'] ?? 0);
+                                                    $is_selected_opt = (!empty($first_item) && $first_item['kd_barang'] === $kItem['kd_barang'] && ($first_item['no_lot'] ?? '') === ($kItem['no_lot'] ?? '')) ? 'selected' : '';
+                                                    ?>
+                                                    <option value="<?= $it_kd ?>"
+                                                            data-kd="<?= $it_kd ?>"
+                                                            data-nama="<?= $it_nama ?>"
+                                                            data-lot="<?= $it_lot ?>"
+                                                            data-harga="<?= $it_harga ?>"
+                                                            data-qty-kios="<?= $it_qty_kios ?>"
+                                                            data-satuan="<?= $it_satuan ?>"
+                                                            data-settlement="<?= $it_settlement ?>"
+                                                            <?= $is_selected_opt ?>>
+                                                        [<?= $it_kd ?>] <?= $it_nama ?> <?= !empty($it_lot) ? '(Lot: ' . $it_lot . ')' : '' ?> — Sisa di Kios: <?= number_format($it_qty_kios, 0, ',', '.') ?> <?= $it_satuan ?> @ Rp <?= number_format($it_harga, 0, ',', '.') ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+
                                         <div class="form-group">
                                             <label>Qty yang Dibeli Kios <span class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <input type="number" step="any" min="0.001" max="<?= $k_qty_kios ?>" 
+                                                <input type="number" step="any" min="0.001" 
                                                        id="qty_konsinyasi" name="qty_konsinyasi" 
                                                        class="form-control font-weight-bold" 
                                                        placeholder="0" required>
                                                 <div class="input-group-append">
-                                                    <span class="input-group-text"><?= $k_satuan ?></span>
+                                                    <span class="input-group-text font-weight-bold" id="label_satuan_konsinyasi">PCS</span>
                                                 </div>
                                             </div>
-                                            <small class="text-muted">
-                                                Maksimal <?= number_format($k_qty_kios, 0, ',', '.') ?> <?= $k_satuan ?> di kios (&times; Rp <?= number_format($k_hrg_satuan, 0, ',', '.') ?>)
+                                            <small class="text-muted" id="keterangan_qty_konsinyasi">
+                                                Silakan pilih barang terlebih dahulu di atas.
                                             </small>
                                         </div>
                                     <?php endif; ?>
@@ -810,12 +836,89 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ── Logika Sinkronisasi Qty Konsinyasi <-> Jumlah Pembayaran ──
-    <?php if (!empty($is_konsinyasi) && !empty($first_item)): ?>
-    var hrgSatuanKonsinyasi = <?= (float)($first_item['hrg_satuan'] ?? 0) ?>;
-    var sisaQtyKonsinyasi = <?= (float)($k_qty_kios ?? ($first_item['qty_di_kios'] ?? 0)) ?>;
+    <?php if (!empty($is_konsinyasi) && !empty($konsinyasi_items)): ?>
+    var selectBarangKonsinyasi = document.getElementById('select_barang_konsinyasi');
     var qtyInput = document.getElementById('qty_konsinyasi');
-    var btnBeliSemua = document.getElementById('btnBeliSemuaKonsinyasi');
+    var hrgSatuanKonsinyasi = 0;
+    var sisaQtyKonsinyasi = 0;
+    var satuanKonsinyasi = 'PCS';
     var qtyKonsinyasiDiubahManual = false;
+
+    function applyBarangKonsinyasiSelected() {
+        if (!selectBarangKonsinyasi) return;
+        var opt = selectBarangKonsinyasi.options[selectBarangKonsinyasi.selectedIndex];
+        var infoLpbEl = document.getElementById('info_lpb_po_konsinyasi');
+        if (!opt || !opt.value) {
+            if (infoLpbEl) infoLpbEl.style.display = 'none';
+            if (qtyInput) {
+                qtyInput.disabled = true;
+                qtyInput.value = '';
+            }
+            var ketEl = document.getElementById('keterangan_qty_konsinyasi');
+            if (ketEl) ketEl.textContent = 'Silakan pilih barang terlebih dahulu di atas.';
+            return;
+        }
+
+        var kd = opt.getAttribute('data-kd') || '';
+        var lpbVal = opt.getAttribute('data-lpb') || '-';
+        var noPoVal = opt.getAttribute('data-nopo') || '-';
+        var hrgPoFormat = opt.getAttribute('data-hrg-po-format') || '-';
+        hrgSatuanKonsinyasi = parseFloat(opt.getAttribute('data-harga')) || 0;
+        sisaQtyKonsinyasi = parseFloat(opt.getAttribute('data-qty-kios')) || 0;
+        satuanKonsinyasi = opt.getAttribute('data-satuan') || 'PCS';
+        var idSettlement = opt.getAttribute('data-settlement') || '';
+
+        var kdInput = document.getElementById('kd_barang_konsinyasi');
+        if (kdInput) kdInput.value = kd;
+        var stlInput = document.getElementById('id_settlement_konsinyasi');
+        if (stlInput) stlInput.value = idSettlement;
+
+        if (qtyInput) {
+            qtyInput.disabled = (sisaQtyKonsinyasi <= 0);
+            qtyInput.max = sisaQtyKonsinyasi;
+            var lblSatuan = document.getElementById('label_satuan_konsinyasi');
+            if (lblSatuan) lblSatuan.textContent = satuanKonsinyasi;
+            var ketEl = document.getElementById('keterangan_qty_konsinyasi');
+            if (ketEl) {
+                ketEl.innerHTML = 'Maksimal <b>' + sisaQtyKonsinyasi.toLocaleString('id-ID') + ' ' + satuanKonsinyasi + '</b> di kios (&times; Rp ' + hrgSatuanKonsinyasi.toLocaleString('id-ID') + ')';
+            }
+            
+            // Hitung ulang jika sudah ada nilai qty
+            var q = parseFloat(qtyInput.value) || 0;
+            if (q > 0) {
+                if (q > sisaQtyKonsinyasi) {
+                    qtyInput.value = sisaQtyKonsinyasi;
+                    q = sisaQtyKonsinyasi;
+                }
+                var calculatedBayar = Math.round(q * hrgSatuanKonsinyasi);
+                if (jumlahInput) {
+                    jumlahInput.value = formatRupiahInput(calculatedBayar);
+                    hitungJurnal();
+                }
+            }
+        }
+    }
+
+    if (selectBarangKonsinyasi) {
+        selectBarangKonsinyasi.addEventListener('change', function() {
+            qtyKonsinyasiDiubahManual = false;
+            applyBarangKonsinyasiSelected();
+        });
+
+        // Auto pilih item pertama yang masih punya sisa stok jika belum terpilih
+        if (selectBarangKonsinyasi.selectedIndex <= 0 && selectBarangKonsinyasi.options.length > 1) {
+            var selectedIdx = 1;
+            for (var i = 1; i < selectBarangKonsinyasi.options.length; i++) {
+                var sisa = parseFloat(selectBarangKonsinyasi.options[i].getAttribute('data-qty-kios')) || 0;
+                if (sisa > 0) {
+                    selectedIdx = i;
+                    break;
+                }
+            }
+            selectBarangKonsinyasi.selectedIndex = selectedIdx;
+        }
+        applyBarangKonsinyasiSelected();
+    }
 
     if (qtyInput) {
         qtyInput.addEventListener('input', function() {
@@ -836,17 +939,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        if (btnBeliSemua) {
-            btnBeliSemua.addEventListener('click', function() {
-                qtyInput.value = sisaQtyKonsinyasi;
-                qtyInput.dispatchEvent(new Event('input'));
-            });
-        }
-
         if (jumlahInput) {
             jumlahInput.addEventListener('input', function() {
-                // Qty adalah data fisik utama. Nominal pembayaran dapat berbeda karena
-                // diskon/pembulatan sehingga tidak boleh menimpa qty yang diinput petugas.
                 if (qtyKonsinyasiDiubahManual || (qtyInput.value || '').trim() !== '') {
                     return;
                 }
@@ -867,6 +961,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form) {
         form.addEventListener('submit', function(e) {
             <?php if (!empty($is_konsinyasi)): ?>
+            if (selectBarangKonsinyasi && (!selectBarangKonsinyasi.value || selectBarangKonsinyasi.selectedIndex <= 0)) {
+                e.preventDefault();
+                alert('❌ Silakan pilih barang konsinyasi yang dibeli oleh kios terlebih dahulu!');
+                selectBarangKonsinyasi.focus();
+                return false;
+            }
             if (qtyInput) {
                 var qVal = parseFloat(qtyInput.value) || 0;
                 if (qVal <= 0) {

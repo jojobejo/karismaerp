@@ -95,18 +95,24 @@
                             <div class="col-md-6 col-lg-4 mb-2">
                                 <div class="border rounded p-2 h-100">
                                     <?php
-                                    $trip_status_label = $trip['status'] === 'PROSES_FAKTUR'
-                                        ? 'Proses Faktur'
-                                        : str_replace('_', ' ', $trip['status']);
-                                    $trip_status_class = $trip['status'] === 'PROSES_FAKTUR' ? 'badge-info' : 'badge-warning';
+                                    if ($trip['status'] === 'PROSES_FAKTUR') {
+                                        $trip_status_label = 'Proses Faktur';
+                                        $trip_status_class = 'badge-info';
+                                    } elseif ($trip['status'] === 'SIAP_BERANGKAT') {
+                                        $trip_status_label = 'Siap Berangkat';
+                                        $trip_status_class = 'badge-success';
+                                    } else {
+                                        $trip_status_label = str_replace('_', ' ', $trip['status']);
+                                        $trip_status_class = 'badge-warning';
+                                    }
                                     ?>
                                     <div class="d-flex justify-content-between"><b><?= htmlspecialchars($trip['kode_trip']) ?></b><span class="badge <?= $trip_status_class ?>"><?= htmlspecialchars($trip_status_label) ?></span></div>
                                     <small>Rute <?= htmlspecialchars($trip['kd_rute']) ?> · <?= date('d/m/Y', strtotime($trip['tgl_pengiriman'])) ?></small>
                                     <div class="mt-2">Sisa <b><?= number_format($trip['remaining_tonase'], 3, ',', '.') ?> ton</b> / <b><?= number_format($trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b></div>
                                     <?php if ($trip['status'] === 'MENUNGGU_TAMBAHAN'): ?><small class="text-warning">Menunggu SO tambahan dari Sales</small><?php endif; ?>
-                                    <?php if (!empty($trip['has_do']) && in_array($role, ['CHECKER','MANAGERCK','ADMLOG'], true)): ?>
+                                    <?php if ((!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT' || (float)$trip['loaded_tonase'] == 0) && in_array($role, ['CHECKER','MANAGERCK','ADMLOG'], true)): ?>
                                     <div class="mt-2 text-right">
-                                        <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN'): ?>
+                                        <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN' && !empty($trip['has_do'])): ?>
                                         <button class="btn btn-warning btn-xs btn-trip-action" data-action="open" data-trip="<?= (int)$trip['id_trip'] ?>">Buka Tambahan</button>
                                         <?php endif; ?>
                                         <button class="btn btn-danger btn-xs btn-trip-action" data-action="close" data-trip="<?= (int)$trip['id_trip'] ?>">Tutup Trip</button>

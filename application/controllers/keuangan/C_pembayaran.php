@@ -283,13 +283,15 @@ class C_pembayaran extends CI_Controller
         $data['first_item'] = null;
 
         if ($is_konsinyasi) {
-            $k_items = $this->db->select('d.*, b.satuan AS b_satuan')
+            $k_items = $this->db->select('d.*, b.satuan AS b_satuan, b.nama_barang AS b_nama_barang')
                 ->from('tbso_faktur_detail d')
                 ->join('tbpo_barang b', 'b.kode_barang = d.kd_barang', 'left')
                 ->where('d.id_faktur', (int)$faktur['id_faktur'])
+                ->order_by('d.id', 'ASC')
                 ->get()
                 ->result_array();
 
+            $first_available = null;
             foreach ($k_items as &$it) {
                 $this->db->group_start()
                     ->where('id_faktur', (int)$faktur['id_faktur'])
@@ -300,17 +302,38 @@ class C_pembayaran extends CI_Controller
                 if (!empty($faktur['no_so'])) {
                     $this->db->or_where('no_so', $faktur['no_so']);
                 }
-                $settlements = $this->db->group_end()
-                    ->where('kd_barang', $it['kd_barang'])
-                    ->get('tb_konsinyasi_settlement')
-                    ->result_array();
+                $this->db->group_end();
+                $this->db->where('kd_barang', $it['kd_barang']);
+                if (!empty($it['no_lot'])) {
+                    $this->db->where('no_lot', $it['no_lot']);
+                }
+                $settlements = $this->db->order_by('id_settlement', 'ASC')->get('tb_konsinyasi_settlement')->result_array();
+
+                if (empty($settlements) && !empty($it['no_lot'])) {
+                    $this->db->group_start()
+                        ->where('id_faktur', (int)$faktur['id_faktur'])
+                        ->or_where('no_faktur', $faktur['no_faktur']);
+                    if (!empty($faktur['id_so'])) {
+                        $this->db->or_where('id_so', (int)$faktur['id_so']);
+                    }
+                    if (!empty($faktur['no_so'])) {
+                        $this->db->or_where('no_so', $faktur['no_so']);
+                    }
+                    $this->db->group_end();
+                    $this->db->where('kd_barang', $it['kd_barang']);
+                    $settlements = $this->db->order_by('id_settlement', 'ASC')->get('tb_konsinyasi_settlement')->result_array();
+                }
                 
                 $qty_di_kios = 0;
                 $qty_laku = 0;
+                $active_id_settlement = null;
                 if (!empty($settlements)) {
                     foreach ($settlements as $st) {
                         if (in_array($st['status'], ['DI_KIOS', 'PENDING', ''], true)) {
                             $qty_di_kios += (float)$st['qty_net'];
+                            if (!$active_id_settlement) {
+                                $active_id_settlement = (int)$st['id_settlement'];
+                            }
                         } elseif (in_array($st['status'], ['LAKU', 'BILLED'], true)) {
                             $qty_laku += (float)$st['qty_net'];
                         }
@@ -319,11 +342,77 @@ class C_pembayaran extends CI_Controller
                 if ($qty_di_kios <= 0 && $qty_laku <= 0) {
                     $qty_di_kios = (float)$it['qty'];
                 }
+                $it['nama_barang'] = !empty($it['nama_barang']) ? $it['nama_barang'] : (!empty($it['b_nama_barang']) ? $it['b_nama_barang'] : $it['kd_barang']);
                 $it['qty_di_kios'] = $qty_di_kios;
                 $it['qty_laku'] = $qty_laku;
+                $it['id_settlement'] = $active_id_settlement;
+                $it['satuan'] = !empty($it['satuan']) ? $it['satuan'] : (!empty($it['b_satuan']) ? $it['b_satuan'] : 'PCS');
+
+                // ── Ambil Data LPB Asal, Nomor PO, dan Harga ketika PO Barang Konsinyasi ──
+                $nomor_lpb = null;
+                $no_po = null;
+                $hrg_po = 0;
+
+                // 1. Cek dari settlement terlebih dahulu
+                if (!empty($settlements)) {
+                    foreach ($settlements as $st) {
+                        if (!empty($st['nomor_lpb_asal'])) {
+                            $nomor_lpb = $st['nomor_lpb_asal'];
+                        }
+                        if (!empty($st['hrg_beli_satuan']) && (float)$st['hrg_beli_satuan'] > 0) {
+                            $hrg_po = (float)$st['hrg_beli_satuan'];
+                        }
+                    }
+                }
+
+                // 2. Query ke tb_lpb dan tbpo_detail_po berdasarkan kd_barang & no_lot
+                $this->db->select('l.id_lpb, l.nomor_lpb, l.no_po, l.kd_po, ld.harga_satuan AS hrg_lpb, pd.hrg_satuan AS hrg_po, pd.harga_satuan_exclude AS hrg_po_exclude, pd.keterangan_harga_ppn');
+                $this->db->from('tb_lpb_detail ld');
+                $this->db->join('tb_lpb l', 'l.id_lpb = ld.id_lpb', 'inner');
+                $this->db->join('tbpo_detail_po pd', 'pd.kd_po = l.kd_po AND pd.no_po = l.no_po AND pd.kd_barang = ld.kd_barang', 'left');
+                $this->db->where('ld.kd_barang', $it['kd_barang']);
+                if (!empty($it['no_lot'])) {
+                    $this->db->where('ld.no_lot', trim((string)$it['no_lot']));
+                }
+                if (!empty($nomor_lpb)) {
+                    $this->db->order_by("(CASE WHEN l.nomor_lpb = " . $this->db->escape($nomor_lpb) . " THEN 1 ELSE 2 END)", 'ASC', false);
+                }
+                $this->db->order_by('l.id_lpb', 'DESC');
+                $this->db->limit(1);
+                $lpb_row = $this->db->get()->row_array();
+
+                if ($lpb_row) {
+                    if (!empty($lpb_row['nomor_lpb'])) {
+                        $nomor_lpb = $lpb_row['nomor_lpb'];
+                    }
+                    if (!empty($lpb_row['no_po'])) {
+                        $no_po = $lpb_row['no_po'];
+                    }
+                    if (!empty($lpb_row['hrg_po']) && (float)$lpb_row['hrg_po'] > 0) {
+                        $hrg_po = (float)$lpb_row['hrg_po'];
+                    } elseif (!empty($lpb_row['hrg_po_exclude']) && (float)$lpb_row['hrg_po_exclude'] > 0) {
+                        $hrg_po = (float)$lpb_row['hrg_po_exclude'];
+                    } elseif (!empty($lpb_row['hrg_lpb']) && (float)$lpb_row['hrg_lpb'] > 0) {
+                        $hrg_po = (float)$lpb_row['hrg_lpb'];
+                    }
+                }
+
+                if ($hrg_po <= 0 && !empty($it['hrg_pokok']) && (float)$it['hrg_pokok'] > 0) {
+                    $hrg_po = (float)$it['hrg_pokok'];
+                }
+
+                $it['nomor_lpb'] = !empty($nomor_lpb) ? $nomor_lpb : '-';
+                $it['no_po'] = !empty($no_po) ? $no_po : '-';
+                $it['hrg_po'] = $hrg_po;
+                $it['hrg_po_formatted'] = ($hrg_po > 0) ? 'Rp ' . number_format($hrg_po, 0, ',', '.') : '-';
+
+                if ($first_available === null && $qty_di_kios > 0) {
+                    $first_available = $it;
+                }
             }
+            unset($it);
             $data['konsinyasi_items'] = $k_items;
-            $data['first_item'] = !empty($k_items) ? $k_items[0] : null;
+            $data['first_item'] = $first_available ?: (!empty($k_items) ? $k_items[0] : null);
         }
 
         $this->load->view('partial/main/header.php', $data);
@@ -416,6 +505,8 @@ class C_pembayaran extends CI_Controller
             ?: 'system';
 
         $qty_konsinyasi = (float)$this->input->post('qty_konsinyasi', true);
+        $kd_barang_konsinyasi = trim((string)$this->input->post('kd_barang_konsinyasi', true));
+        $id_settlement_konsinyasi = (int)$this->input->post('id_settlement_konsinyasi', true);
 
         // Validasi khusus faktur konsinyasi: Qty yang dibeli harus valid
         $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
@@ -453,6 +544,8 @@ class C_pembayaran extends CI_Controller
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
             'qty_konsinyasi'      => ($is_konsinyasi && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
+            'kd_barang'           => ($is_konsinyasi && !empty($kd_barang_konsinyasi)) ? $kd_barang_konsinyasi : null,
+            'id_settlement'       => ($is_konsinyasi && $id_settlement_konsinyasi > 0) ? $id_settlement_konsinyasi : null,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
             'no_bg'               => $no_bg !== '' ? $no_bg : null,
             'nama_bank'           => $nama_bank !== '' ? $nama_bank : null,

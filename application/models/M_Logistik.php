@@ -8970,7 +8970,7 @@ FROM (
 
         if (!$id_trip && $this->db->table_exists('tb_delivery_trip')) {
             $trip = $this->db->where('kd_rute', $kd_rute)
-                ->where_in('status', ['SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+                ->where_in('status', ['SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
                 ->order_by('id_trip', 'DESC')->limit(1)->get('tb_delivery_trip')->row_array();
             $id_trip = $trip['id_trip'] ?? null;
         }
@@ -8978,6 +8978,12 @@ FROM (
         $created = $this->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by, $id_trip);
         if (!$created) {
             return false;
+        }
+
+        if ($id_trip && $this->db->table_exists('tb_delivery_trip')) {
+            $this->db->where('id_trip', (int)$id_trip)
+                ->where_in('status', ['PROSES_FAKTUR', 'PROSES_LOADING', 'SIAP_LOADING'])
+                ->update('tb_delivery_trip', ['status' => 'SIAP_BERANGKAT']);
         }
 
         $log_description = !empty($created['merged'])

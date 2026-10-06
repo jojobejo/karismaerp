@@ -38,6 +38,18 @@ class M_pembayaran extends CI_Model
                     'null'       => true,
                     'after'      => 'jumlah_diskon',
                 ],
+                'kd_barang' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'qty_konsinyasi',
+                ],
+                'id_settlement' => [
+                    'type'       => 'INT',
+                    'constraint' => 11,
+                    'null'       => true,
+                    'after'      => 'kd_barang',
+                ],
                 'tanggal_bg_cair' => [
                     'type'  => 'DATE',
                     'null'  => true,
