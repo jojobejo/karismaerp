@@ -1156,4 +1156,15 @@ $route['purchasing/konsinyasi_settlement/post']              = 'purchasing/C_Kon
 $route['purchasing/konsinyasi_settlement/sync']              = 'purchasing/C_Konsinyasi/ajax_sync';
 $route['purchasing/konsinyasi_settlement/journal']           = 'purchasing/C_Konsinyasi/ajax_view_journal';
 
+// =========================================================================
+// MODUL TUTUP BUKU & CUT-OFF (CLOSING PERIOD) — KEUANGAN & ACCOUNTING
+// =========================================================================
+$route['keuangan/tutup-buku']                                = 'keuangan/C_TutupBuku/index';
+$route['keuangan/tutup-buku/check']                          = 'keuangan/C_TutupBuku/pre_closing_check';
+$route['keuangan/tutup-buku/execute']                        = 'keuangan/C_TutupBuku/closing_execute';
+$route['keuangan/tutup-buku/detail/(:num)']                  = 'keuangan/C_TutupBuku/closing_detail/$1';
+$route['keuangan/tutup-buku/reopen-request']                 = 'keuangan/C_TutupBuku/reopen_request';
+$route['keuangan/tutup-buku/reopen-action']                  = 'keuangan/C_TutupBuku/reopen_action';
+$route['keuangan/tutup-buku/export/(:num)/(:any)']           = 'keuangan/C_TutupBuku/export_closing_snapshot/$1/$2';
+
 

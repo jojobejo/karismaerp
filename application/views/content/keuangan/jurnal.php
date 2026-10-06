@@ -159,6 +159,13 @@ $fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
                                         <span class="support-card-desc">Sajian pendapatan, beban, laba kotor, laba operasional, dan laba bersih periode.</span>
                                     </span>
                                 </a>
+                                <a href="<?= base_url('keuangan/tutup-buku') ?>" class="report-card-link" style="grid-column: 1 / -1;">
+                                    <span class="support-card-btn" style="border-left: 4px solid #1e3c72; background: #f8fafc;">
+                                        <span class="support-card-icon" style="background: #1e3c72;"><i class="fas fa-lock"></i></span>
+                                        <span class="support-card-title" style="color: #1e3c72;">Tutup Buku &amp; Cut-Off (Closing Period)</span>
+                                        <span class="support-card-desc">Penguncian periode transaksi, validasi pre-closing GL vs Subledger, snapshot saldo historis, dan jurnal penutup tahunan.</span>
+                                    </span>
+                                </a>
                             </div>
                         </div>
 

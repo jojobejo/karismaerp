@@ -426,7 +426,12 @@ class Accounting_source_service
                             NULLIF(d.total_harga, 0),
                             d.qty_diterima * COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0)
                         )
-                    ELSE 0 END), 0) AS amount_bkps
+                    ELSE 0 END), 0) AS amount_bkps,
+                    COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), NULLIF(TRIM(b.kelompok_barang), ''), '') = '2'
+                                      AND LOWER(TRIM(COALESCE(pp.keterangan_harga_ppn, ''))) = 'include'
+                                      AND COALESCE(pp.hrg_satuan, 0) > 0 THEN
+                        d.qty_diterima * pp.hrg_satuan
+                    ELSE 0 END), 0) AS gross_include_bkp
              FROM tb_lpb h
              INNER JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
              LEFT JOIN tbpo_detail_po pp
@@ -458,8 +463,19 @@ class Accounting_source_service
 
         $amountBkp = $this->money($totals->amount_bkp ?? 0);
         $amountBkps = $this->money($totals->amount_bkps ?? 0);
-        $vatBkp = $this->money(bcdiv(bcmul($amountBkp, '11', 4), '100', 4));
-        $totalPayable = $this->money(bcadd(bcadd($amountBkp, $vatBkp, 4), $amountBkps, 4));
+        $grossIncludeBkp = $this->money($totals->gross_include_bkp ?? 0);
+
+        if (bccomp($grossIncludeBkp, '0', 4) === 1) {
+            // Untuk barang include PPN, kunci nilai Hutang Usaha sama persis dengan total bruto PO (tanpa kelebihan 01 sen)
+            $totalPayableBkp = $grossIncludeBkp;
+            $vatBkp = $this->money(bcsub($totalPayableBkp, $amountBkp, 4));
+        } else {
+            // Untuk barang exclude PPN, PPN 11% ditambahkan di atas DPP
+            $vatBkp = $this->money(bcdiv(bcmul($amountBkp, '11', 4), '100', 4));
+            $totalPayableBkp = $this->money(bcadd($amountBkp, $vatBkp, 4));
+        }
+
+        $totalPayable = $this->money(bcadd($totalPayableBkp, $amountBkps, 4));
 
         if (bccomp($totalPayable, '0', 4) <= 0) {
             return $this->record_failure(
