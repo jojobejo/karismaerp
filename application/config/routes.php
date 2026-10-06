@@ -1156,4 +1156,12 @@ $route['purchasing/konsinyasi_settlement/post']              = 'purchasing/C_Kon
 $route['purchasing/konsinyasi_settlement/sync']              = 'purchasing/C_Konsinyasi/ajax_sync';
 $route['purchasing/konsinyasi_settlement/journal']           = 'purchasing/C_Konsinyasi/ajax_view_journal';
 
+// =========================================================================
+// ADMIN — Monitoring Log Perangkat & Akses Pengguna (Hostinger & Local)
+// =========================================================================
+$route['admin/access_log']                                   = 'admin/C_Access_log/index';
+$route['admin/access_log/purge']                             = 'admin/C_Access_log/purge';
+$route['admin/access_log/update_location']                   = 'admin/C_Access_log/update_location';
+
+
 

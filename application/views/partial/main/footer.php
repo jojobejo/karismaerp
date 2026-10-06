@@ -445,6 +445,82 @@
 })();
 </script>
 
+<!-- Sinkronisasi Lokasi Presisi Perangkat (GPS Browser) Karisma ERP -->
+<script>
+(function() {
+    if (!('geolocation' in navigator)) return;
+
+    var syncKey = 'karisma_geo_synced';
+    var lastSync = sessionStorage.getItem(syncKey);
+    var now = Date.now();
+    if (lastSync && (now - parseInt(lastSync, 10)) < 600000) {
+        return; // Sudah sinkron dalam 10 menit terakhir
+    }
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        var lat = pos.coords.latitude;
+        var lng = pos.coords.longitude;
+        var acc = Math.round(pos.coords.accuracy || 0);
+
+        sessionStorage.setItem(syncKey, now.toString());
+
+        var updateUrl = '<?= base_url("admin/access_log/update_location") ?>';
+
+        function sendLocationData(district, city, region, country) {
+            if (typeof $ !== 'undefined') {
+                $.ajax({
+                    url: updateUrl,
+                    type: 'POST',
+                    data: {
+                        latitude: lat,
+                        longitude: lng,
+                        accuracy: acc,
+                        district: district || '',
+                        city: city || '',
+                        region: region || '',
+                        country: country || 'Indonesia'
+                    },
+                    dataType: 'json'
+                });
+            }
+        }
+
+        // Reverse-geocoding sisi browser
+        if (window.fetch) {
+            fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lng + '&localityLanguage=id')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var district = '';
+                    if (data && data.localityInfo && data.localityInfo.administrative) {
+                        for (var i = 0; i < data.localityInfo.administrative.length; i++) {
+                            var it = data.localityInfo.administrative[i];
+                            if (it.name && (it.name.indexOf('Kecamatan') !== -1 || it.name.indexOf('Distrik') !== -1)) {
+                                district = it.name;
+                                break;
+                            }
+                        }
+                    }
+                    if (!district && data.locality) {
+                        district = 'Kec. ' + data.locality;
+                    }
+                    sendLocationData(district, data.city || data.locality || '', data.principalSubdivision || '', data.countryName || 'Indonesia');
+                })
+                .catch(function() {
+                    sendLocationData('', '', '', '');
+                });
+        } else {
+            sendLocationData('', '', '', '');
+        }
+    }, function(err) {
+        // Pengguna menolak izin lokasi atau GPS mati - fail-safe senyap
+    }, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+    });
+})();
+</script>
+
 </body>
 
 </html>
