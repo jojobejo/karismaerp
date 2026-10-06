@@ -4,6 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class C_SalesOrder extends CI_Controller
 {
     private $plafon_fetch_completed = true;
+    private $plafon_fetch_error = '';
 
     public function __construct()
     {
@@ -158,12 +159,20 @@ class C_SalesOrder extends CI_Controller
     private function _getPlafonCustomerMap($force_refresh = false)
     {
         $this->plafon_fetch_completed = true;
+        $this->plafon_fetch_error = '';
 
         $base_url = rtrim((string)$this->config->item('plafon_api_base_url'), '/');
         $api_key  = (string)$this->config->item('plafon_api_key');
 
         if ($base_url === '' || $api_key === '' || !function_exists('curl_init')) {
             $this->plafon_fetch_completed = false;
+            if ($base_url === '') {
+                $this->plafon_fetch_error = 'URL API plafon belum dikonfigurasi.';
+            } elseif ($api_key === '') {
+                $this->plafon_fetch_error = 'API key plafon belum dikonfigurasi.';
+            } else {
+                $this->plafon_fetch_error = 'Ekstensi PHP cURL belum aktif.';
+            }
             return [];
         }
 
@@ -189,12 +198,18 @@ class C_SalesOrder extends CI_Controller
 
         if ($body === false || $curl_err !== '' || $http_code < 200 || $http_code >= 300) {
             $this->plafon_fetch_completed = false;
+            $this->plafon_fetch_error = $curl_err !== ''
+                ? 'Koneksi ke API plafon gagal: ' . $curl_err
+                : 'API plafon mengembalikan HTTP ' . $http_code . '.';
+            log_message('error', 'Refresh plafon customer gagal. ' . $this->plafon_fetch_error);
             return [];
         }
 
         $first_payload = json_decode($body, true);
         if (!is_array($first_payload) || empty($first_payload['data'])) {
             $this->plafon_fetch_completed = false;
+            $this->plafon_fetch_error = 'Respons API plafon tidak memiliki data customer.';
+            log_message('error', 'Refresh plafon customer gagal. Respons JSON tidak valid atau data kosong.');
             return [];
         }
 
@@ -318,7 +333,9 @@ class C_SalesOrder extends CI_Controller
             http_response_code(500);
             echo json_encode([
                 'status'  => 'error',
-                'message' => 'Gagal mengambil data plafon customer dari API.',
+                'message' => $this->plafon_fetch_error !== ''
+                    ? $this->plafon_fetch_error
+                    : 'Gagal mengambil data plafon customer dari API.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }

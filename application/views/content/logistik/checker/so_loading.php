@@ -94,7 +94,13 @@
                         <?php foreach ($active_trips as $trip): ?>
                             <div class="col-md-6 col-lg-4 mb-2">
                                 <div class="border rounded p-2 h-100">
-                                    <div class="d-flex justify-content-between"><b><?= htmlspecialchars($trip['kode_trip']) ?></b><span class="badge badge-warning"><?= htmlspecialchars($trip['status']) ?></span></div>
+                                    <?php
+                                    $trip_status_label = $trip['status'] === 'PROSES_FAKTUR'
+                                        ? 'Proses Faktur'
+                                        : str_replace('_', ' ', $trip['status']);
+                                    $trip_status_class = $trip['status'] === 'PROSES_FAKTUR' ? 'badge-info' : 'badge-warning';
+                                    ?>
+                                    <div class="d-flex justify-content-between"><b><?= htmlspecialchars($trip['kode_trip']) ?></b><span class="badge <?= $trip_status_class ?>"><?= htmlspecialchars($trip_status_label) ?></span></div>
                                     <small>Rute <?= htmlspecialchars($trip['kd_rute']) ?> · <?= date('d/m/Y', strtotime($trip['tgl_pengiriman'])) ?></small>
                                     <div class="mt-2">Sisa <b><?= number_format($trip['remaining_tonase'], 3, ',', '.') ?> ton</b> / <b><?= number_format($trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b></div>
                                     <?php if ($trip['status'] === 'MENUNGGU_TAMBAHAN'): ?><small class="text-warning">Menunggu SO tambahan dari Sales</small><?php endif; ?>

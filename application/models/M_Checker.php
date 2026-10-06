@@ -477,13 +477,29 @@ class M_Checker extends CI_Model
         }
 
         $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
-        return $this->db->where('id', $activity['id'])->update($table, [
+        $this->db->trans_begin();
+        $this->db->where('id', $activity['id'])->update($table, [
             'status'        => 'DONE',
             'progres'       => 100,
             'waktu_selesai' => date('Y-m-d H:i:s'),
             'is_paused'     => 0,
             'paused_at'     => null,
         ]);
+
+        if (!empty($activity['id_trip'])) {
+            $this->db
+                ->where('id_trip', (int)$activity['id_trip'])
+                ->where_in('status', ['SIAP_LOADING', 'PROSES_LOADING', 'PROSES_TAMBAHAN'])
+                ->update('tb_delivery_trip', ['status' => 'PROSES_FAKTUR']);
+        }
+
+        if (!$this->db->trans_status()) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        $this->db->trans_commit();
+        return true;
     }
 
     public function set_route_loading_pause($rute, $pause)

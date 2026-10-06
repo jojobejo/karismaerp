@@ -4,6 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class M_DeliveryTrip extends CI_Model
 {
     const STATUS_LOADING = 'PROSES_LOADING';
+    const STATUS_INVOICING = 'PROSES_FAKTUR';
     const STATUS_WAITING_ADDITIONAL = 'MENUNGGU_TAMBAHAN';
     const STATUS_ADDITIONAL = 'PROSES_TAMBAHAN';
     const STATUS_CLOSED = 'DITUTUP';
@@ -17,7 +18,7 @@ class M_DeliveryTrip extends CI_Model
     {
         return $this->db
             ->where('kd_rute', strtoupper(trim((string)$kd_rute)))
-            ->where_in('status', ['DRAFT', 'VERIFIKASI', 'SIAP_LOADING', self::STATUS_LOADING, self::STATUS_WAITING_ADDITIONAL, self::STATUS_ADDITIONAL])
+            ->where_in('status', ['DRAFT', 'VERIFIKASI', 'SIAP_LOADING', self::STATUS_LOADING, self::STATUS_INVOICING, self::STATUS_WAITING_ADDITIONAL, self::STATUS_ADDITIONAL])
             ->order_by('id_trip', 'DESC')
             ->limit(1)
             ->get('tb_delivery_trip')

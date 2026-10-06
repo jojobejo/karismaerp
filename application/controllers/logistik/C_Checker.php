@@ -1112,7 +1112,7 @@ class C_Checker extends CI_Controller
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
         $data['routes'] = $routes;
         $data['role'] = $this->role();
-        $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
+        $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
             ->order_by('id_trip', 'DESC')->get('tb_delivery_trip')->result_array();
         $data['active_trips'] = [];
         foreach ($trip_rows as $trip_row) {
