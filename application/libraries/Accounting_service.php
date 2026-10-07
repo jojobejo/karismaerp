@@ -542,6 +542,9 @@ class Accounting_service
 
         $action = strtoupper(trim((string)$action));
         $reason = trim((string)$reason);
+        if (in_array($action, ['CLOSE', 'REOPEN'], true) && $this->CI->db->table_exists('tbkeu_closing_period')) {
+            return $this->fail('Gunakan workflow Tutup Buku dan Permohonan Buka Buku.', ['CLOSING_WORKFLOW_REQUIRED']);
+        }
         if (!in_array($action, ['OPEN', 'CLOSE', 'REOPEN'], true)) {
             return $this->fail('Aksi periode fiskal tidak valid.', ['INVALID_PERIOD_ACTION']);
         }
@@ -1364,6 +1367,10 @@ class Accounting_service
             $this->record_exception((array)$journal, $result['message'], $result['errors']);
             return $result;
         }
+        if ($this->period_reopen_expired((int)$period->id_periode)) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Batas waktu buka buku telah berakhir. Periode wajib ditutup ulang.', ['REOPEN_EXPIRED']);
+        }
 
         $detailRows = $this->CI->db
             ->where('id_jurnal', (int)$journal->id_jurnal)
@@ -1757,13 +1764,22 @@ class Accounting_service
 
     private function period_for_date($date)
     {
-        return $this->CI->db
+        $period = $this->CI->db
             ->where('tanggal_mulai <=', $date)
             ->where('tanggal_selesai >=', $date)
             ->where('status', 'OPEN')
             ->where('is_active', 1)
             ->get('tbkeu_periode_fiskal')
             ->row();
+        return $period && !$this->period_reopen_expired((int)$period->id_periode) ? $period : null;
+    }
+
+    private function period_reopen_expired($idPeriode)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_reopen_request')) return false;
+        $row = $this->CI->db->where('id_periode', (int)$idPeriode)->where('status', 'APPROVED')
+            ->order_by('id_reopen', 'DESC')->get('tbkeu_reopen_request')->row();
+        return $row && !empty($row->reopen_until) && strtotime($row->reopen_until) < time();
     }
 
     private function journal_type($kode)

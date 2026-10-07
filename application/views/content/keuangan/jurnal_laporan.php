@@ -7,6 +7,9 @@ $schemaReady = !empty($schema_ready);
 $dateFrom = isset($date_from) ? $date_from : date('Y-m-01');
 $dateTo = isset($date_to) ? $date_to : date('Y-m-d');
 $accountGroup = isset($account_group) && in_array(strtoupper($account_group), ['A', 'Q', 'ALL'], true) ? strtoupper($account_group) : 'ALL';
+$fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
+$selectedPeriodId = isset($selected_period_id) ? (int)$selected_period_id : 0;
+$selectedPeriod = isset($selected_period) ? $selected_period : null;
 $groupLabel = $accountGroup === 'A' ? 'Transaksi & Akun A' : ($accountGroup === 'Q' ? 'Transaksi & Akun Q' : 'Semua Akun (Gabungan)');
 $money = function ($value) {
     $number = (float)$value;
@@ -26,7 +29,7 @@ $money = function ($value) {
     .jurnal-report-page .panel-heading { background: #1788b8; color: #fff; padding: 12px 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .jurnal-report-page .panel-body { padding: 14px 16px; }
     .jurnal-report-page .active-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 700; text-transform: uppercase; background: rgba(255,255,255,0.25); color: #fff; }
-    .jurnal-report-page .filter-grid { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; }
+    .jurnal-report-page .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)) auto; gap: 12px; align-items: end; }
     .jurnal-report-page .filter-grid label { font-weight: 700; color: #3e4a59; margin-bottom: 4px; }
     .jurnal-report-page .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .jurnal-report-page .summary-box { border: 1px solid #d9e2ec; border-left: 4px solid #1788b8; border-radius: 4px; background: #fff; padding: 12px 14px; min-height: 88px; }
@@ -79,10 +82,10 @@ $money = function ($value) {
                             </div>
                         </div>
                         <div class="report-actions">
-                            <a href="<?= base_url('jurnal/neraca?date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= $isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
+                            <a href="<?= base_url('jurnal/neraca?id_periode=' . $selectedPeriodId . '&date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= $isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
                                 <i class="fas fa-balance-scale mr-1"></i> Neraca
                             </a>
-                            <a href="<?= base_url('jurnal/laba-rugi?date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= !$isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
+                            <a href="<?= base_url('jurnal/laba-rugi?id_periode=' . $selectedPeriodId . '&date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= !$isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
                                 <i class="fas fa-chart-line mr-1"></i> Laba Rugi
                             </a>
                         </div>
@@ -92,6 +95,17 @@ $money = function ($value) {
                         <div class="alert alert-warning">
                             <strong>Schema accounting belum tersedia.</strong>
                             Laporan membutuhkan tabel akun, klasifikasi akun, jurnal, dan detail jurnal.
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($selectedPeriod) : ?>
+                        <div class="alert <?= $selectedPeriod->status === 'OPEN' ? 'alert-info' : 'alert-secondary' ?>">
+                            <strong><?= $selectedPeriod->status === 'OPEN' ? 'Periode berjalan' : 'Periode historis yang sudah ditutup' ?>:</strong>
+                            <?= html_escape($selectedPeriod->kode_periode . ' - ' . $selectedPeriod->nama_periode) ?>
+                            (<?= html_escape($selectedPeriod->tanggal_mulai) ?> s/d <?= html_escape($selectedPeriod->tanggal_selesai) ?>).
+                            <?php if (!$isNeraca && $selectedPeriod->status === 'OPEN') : ?>
+                                Laba-rugi periode baru dimulai dari nol dan hanya berisi transaksi pada rentang ini.
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
@@ -108,6 +122,17 @@ $money = function ($value) {
                         <div class="panel-body">
                             <form method="get" action="<?= current_url() ?>">
                                 <div class="filter-grid">
+                                    <div>
+                                        <label for="id_periode"><i class="fas fa-calendar-alt text-primary mr-1"></i> Periode Fiskal</label>
+                                        <select class="form-control" id="id_periode" name="id_periode">
+                                            <option value="0" <?= $selectedPeriodId === 0 ? 'selected' : '' ?>>Rentang tanggal manual</option>
+                                            <?php foreach ($fiscalPeriods as $period) : ?>
+                                                <option value="<?= (int)$period->id_periode ?>" <?= $selectedPeriodId === (int)$period->id_periode ? 'selected' : '' ?>>
+                                                    <?= html_escape($period->kode_periode . ' - ' . $period->nama_periode . ' [' . $period->status . ']') ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                     <div>
                                         <label for="account_group"><i class="fas fa-layer-group text-primary mr-1"></i> Pilih Kelompok Akun</label>
                                         <select class="form-control" id="account_group" name="account_group">

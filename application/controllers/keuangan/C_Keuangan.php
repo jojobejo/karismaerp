@@ -14,6 +14,7 @@ class C_Keuangan extends CI_Controller
         $this->load->helper(array('form', 'url'));
         $this->load->library('upload');
         $this->load->library('Accounting_service');
+        $this->load->library('Closing_service');
         $this->load->database();
     }
 
@@ -1236,6 +1237,9 @@ class C_Keuangan extends CI_Controller
         $data['support_cards'] = $this->accounting_support_cards();
         $data['summary'] = $this->M_Keuangan->accounting_account_summary();
         $data['fiscal_periods'] = $data['schema_ready'] ? $this->accounting_service->fiscal_period_rows('', 18) : [];
+        $data['closing_schema_ready'] = $this->closing_service->schema_ready();
+        $data['closing_rows'] = $data['closing_schema_ready'] ? $this->closing_service->closing_rows(36) : [];
+        $data['reopen_rows'] = $data['closing_schema_ready'] ? $this->closing_service->reopen_rows(36) : [];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/jurnal.php', $data);
@@ -1386,9 +1390,33 @@ class C_Keuangan extends CI_Controller
         }
 
         $type = $type === 'laba_rugi' ? 'laba_rugi' : 'neraca';
+        $periodRows = $this->accounting_service->fiscal_period_rows('', 60);
+        $periodFilterProvided = $this->input->get('id_periode', true) !== null;
+        $selectedPeriodId = (int)$this->input->get('id_periode', true);
+        $selectedPeriod = null;
+        foreach ($periodRows as $periodRow) {
+            if ($selectedPeriodId > 0 && (int)$periodRow->id_periode === $selectedPeriodId) {
+                $selectedPeriod = $periodRow;
+                break;
+            }
+        }
+        if (!$selectedPeriod && !$periodFilterProvided) {
+            foreach ($periodRows as $periodRow) {
+                if ($periodRow->status === 'OPEN') {
+                    $selectedPeriod = $periodRow;
+                    $selectedPeriodId = (int)$periodRow->id_periode;
+                    break;
+                }
+            }
+        }
+
         $dateTo = trim((string)$this->input->get('date_to', true));
         $dateFrom = trim((string)$this->input->get('date_from', true));
-        if (!$this->valid_report_date($dateTo)) {
+        $hasExplicitDates = $this->valid_report_date($dateFrom) && $this->valid_report_date($dateTo);
+        if ($selectedPeriod) {
+            $dateFrom = $selectedPeriod->tanggal_mulai;
+            $dateTo = $selectedPeriod->tanggal_selesai;
+        } elseif (!$this->valid_report_date($dateTo)) {
             $dateTo = date('Y-m-d');
         }
         if (!$this->valid_report_date($dateFrom)) {
@@ -1418,6 +1446,9 @@ class C_Keuangan extends CI_Controller
         $data['date_from'] = $dateFrom;
         $data['date_to'] = $dateTo;
         $data['account_group'] = $accountGroup;
+        $data['fiscal_periods'] = $periodRows;
+        $data['selected_period_id'] = $selectedPeriodId;
+        $data['selected_period'] = $selectedPeriod;
         $data['schema_ready'] = $schemaReady;
         $data['sections'] = $prepared['sections'];
         $data['totals'] = $prepared['totals'];
@@ -1951,6 +1982,96 @@ class C_Keuangan extends CI_Controller
             $result['errors'],
             $result['success'] ? 200 : 422
         );
+    }
+
+    private function can_approve_reopen($level)
+    {
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        if ($username === 'admin' || (bool)$this->session->userdata('is_admin_dashboard')) {
+            return true;
+        }
+        if ($level === 'MANAGER') {
+            return in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING'], true);
+        }
+        return $level === 'DIRECTOR' && in_array($jobdesk, ['DIREKTUR', 'DIRECTOR'], true);
+    }
+
+    private function can_approve_closing()
+    {
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        return $username === 'admin'
+            || (bool)$this->session->userdata('is_admin_dashboard')
+            || in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING'], true);
+    }
+
+    private function is_closing_superuser()
+    {
+        return strtolower(trim((string)$this->session->userdata('username'))) === 'admin'
+            || (bool)$this->session->userdata('is_admin_dashboard');
+    }
+
+    public function jurnal_closing_request()
+    {
+        if (!$this->require_jurnal_access(true)) return;
+        $result = $this->closing_service->request_closing(
+            (int)$this->input->post('id_periode', true),
+            trim((string)$this->input->post('closing_type', true)),
+            trim((string)$this->input->post('notes', true)),
+            (int)$this->session->userdata('id')
+        );
+        return $this->accounting_ajax_response((bool)$result['success'], $result['message'], $result['data'], $result['errors'], $result['success'] ? 201 : 422);
+    }
+
+    public function jurnal_closing_approve()
+    {
+        if (!$this->require_jurnal_access(true)) return;
+        if (!$this->can_approve_closing()) {
+            return $this->accounting_ajax_response(false, 'Tutup buku hanya dapat disetujui oleh Manager Accounting atau admin berwenang.', null, ['FORBIDDEN_CLOSING_APPROVAL'], 403);
+        }
+        $result = $this->closing_service->approve_and_execute(
+            (int)$this->input->post('id_closing', true),
+            (int)$this->session->userdata('id'),
+            $this->is_closing_superuser()
+        );
+        return $this->accounting_ajax_response((bool)$result['success'], $result['message'], $result['data'], $result['errors'], $result['success'] ? 200 : 422);
+    }
+
+    public function jurnal_closing_validate()
+    {
+        if (!$this->require_jurnal_access(true)) return;
+        $result = $this->closing_service->run_validation(
+            (int)$this->input->post('id_closing', true),
+            (int)$this->session->userdata('id')
+        );
+        return $this->accounting_ajax_response((bool)$result['success'], $result['message'], $result['data'], $result['errors'], $result['success'] ? 200 : 422);
+    }
+
+    public function jurnal_reopen_request()
+    {
+        if (!$this->require_jurnal_access(true)) return;
+        $result = $this->closing_service->request_reopen(
+            (int)$this->input->post('id_periode', true),
+            trim((string)$this->input->post('reason', true)),
+            trim((string)$this->input->post('correction_plan', true)),
+            (int)$this->session->userdata('id')
+        );
+        return $this->accounting_ajax_response((bool)$result['success'], $result['message'], $result['data'], $result['errors'], $result['success'] ? 201 : 422);
+    }
+
+    public function jurnal_reopen_approve()
+    {
+        if (!$this->require_jurnal_access(true)) return;
+        $level = strtoupper(trim((string)$this->input->post('approval_level', true)));
+        if (!$this->can_approve_reopen($level)) {
+            return $this->accounting_ajax_response(false, 'Jabatan pengguna tidak berwenang untuk tingkat approval ini.', null, ['FORBIDDEN_APPROVAL_LEVEL'], 403);
+        }
+        $result = $this->closing_service->approve_reopen(
+            (int)$this->input->post('id_reopen', true), $level,
+            trim((string)$this->input->post('note', true)), (int)$this->session->userdata('id')
+        );
+        return $this->accounting_ajax_response((bool)$result['success'], $result['message'], $result['data'], $result['errors'], $result['success'] ? 200 : 422);
     }
 
     public function jurnal_store()

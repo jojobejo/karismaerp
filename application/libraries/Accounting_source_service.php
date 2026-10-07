@@ -423,7 +423,7 @@ class Accounting_source_service
                     ELSE 0 END), 0) AS amount_bkp,
                     COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), NULLIF(TRIM(b.kelompok_barang), ''), '') = '2' THEN
                         CASE
-                            WHEN LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(p.keterangan_harga_ppn), ''), 'exclude')) = 'include'
+                            WHEN LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), 'exclude')) = 'include'
                              AND COALESCE(NULLIF(pp.harga_satuan_kecil, 0), NULLIF(pp.hrg_satuan, 0)) IS NOT NULL
                             THEN d.qty_diterima * COALESCE(NULLIF(pp.harga_satuan_kecil, 0), NULLIF(pp.hrg_satuan, 0))
                             ELSE COALESCE(

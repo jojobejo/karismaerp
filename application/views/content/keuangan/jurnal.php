@@ -7,6 +7,9 @@ $saldoNormalOptions = isset($saldo_normal_options) ? $saldo_normal_options : [];
 $tipeKontrolOptions = isset($tipe_kontrol_options) ? $tipe_kontrol_options : [];
 $supportCards = isset($support_cards) && is_array($support_cards) ? $support_cards : [];
 $fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
+$closingSchemaReady = !empty($closing_schema_ready);
+$closingRows = isset($closing_rows) ? $closing_rows : [];
+$reopenRows = isset($reopen_rows) ? $reopen_rows : [];
 ?>
 <style>
     .jurnal-page .content-header { padding: 6px .5rem 0; }
@@ -204,14 +207,56 @@ $fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
                                                 <td><?= html_escape($period->tanggal_mulai) ?> s/d <?= html_escape($period->tanggal_selesai) ?></td>
                                                 <td><span class="badge <?= $period->status === 'OPEN' ? 'badge-success' : 'badge-secondary' ?>"><?= html_escape($period->status) ?></span></td>
                                                 <td class="fiscal-action-cell">
-                                                    <button type="button" class="btn btn-xs btn-outline-warning btn-jurnal-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="CLOSE">Close</button>
-                                                    <button type="button" class="btn btn-xs btn-outline-primary btn-jurnal-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="REOPEN">Reopen</button>
+                                                    <?php if ($closingSchemaReady && $period->status === 'OPEN') : ?>
+                                                        <button type="button" class="btn btn-xs btn-outline-warning btn-closing-request" data-id="<?= (int)$period->id_periode ?>" data-type="MONTH_END">Tutup Bulan</button>
+                                                        <?php if (date('m', strtotime($period->tanggal_selesai)) === '12') : ?>
+                                                            <button type="button" class="btn btn-xs btn-outline-danger btn-closing-request" data-id="<?= (int)$period->id_periode ?>" data-type="YEAR_END">Tutup Tahun</button>
+                                                        <?php endif; ?>
+                                                    <?php elseif ($closingSchemaReady && $period->status === 'CLOSED') : ?>
+                                                        <button type="button" class="btn btn-xs btn-outline-primary btn-reopen-request" data-id="<?= (int)$period->id_periode ?>">Ajukan Buka</button>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
                             </div>
+                            <?php if (!$closingSchemaReady) : ?>
+                                <div class="alert alert-warning m-2">Jalankan migration <code>accounting_closing_period_20261007.sql</code> untuk mengaktifkan workflow tutup buku.</div>
+                            <?php elseif (!empty($closingRows)) : ?>
+                                <div class="border-top p-2">
+                                    <strong>Riwayat Tutup Buku</strong>
+                                    <?php foreach (array_slice($closingRows, 0, 6) as $closing) : ?>
+                                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                            <small>
+                                                <strong><?= html_escape($closing->kode_periode) ?></strong>
+                                                <?= html_escape($closing->closing_type) ?> v<?= (int)$closing->closing_version ?><br>
+                                                <span class="text-muted"><?= html_escape($closing->status) ?></span>
+                                            </small>
+                                            <?php if ($closing->status === 'READY_TO_APPROVE') : ?>
+                                                <button type="button" class="btn btn-xs btn-success btn-closing-approve" data-id="<?= (int)$closing->id_closing ?>">Setujui &amp; Eksekusi</button>
+                                            <?php elseif (in_array($closing->status, ['DRAFT', 'FAILED'], true)) : ?>
+                                                <button type="button" class="btn btn-xs btn-info btn-closing-validate" data-id="<?= (int)$closing->id_closing ?>">Validasi Ulang</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($closingSchemaReady && !empty($reopenRows)) : ?>
+                                <div class="border-top p-2">
+                                    <strong>Permohonan Buka Buku</strong>
+                                    <?php foreach (array_slice($reopenRows, 0, 6) as $reopen) : ?>
+                                        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                                            <small><strong><?= html_escape($reopen->kode_periode) ?></strong><br><span class="text-muted"><?= html_escape($reopen->status) ?></span></small>
+                                            <?php if ($reopen->status === 'PENDING_MANAGER') : ?>
+                                                <button type="button" class="btn btn-xs btn-success btn-reopen-approve" data-id="<?= (int)$reopen->id_reopen ?>" data-level="MANAGER">Approval Manager</button>
+                                            <?php elseif ($reopen->status === 'PENDING_DIRECTOR') : ?>
+                                                <button type="button" class="btn btn-xs btn-danger btn-reopen-approve" data-id="<?= (int)$reopen->id_reopen ?>" data-level="DIRECTOR">Approval Direktur</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 

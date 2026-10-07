@@ -4533,7 +4533,7 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
         $is_additional = in_array($trip['status'], ['MENUNGGU_TAMBAHAN', 'PROSES_TAMBAHAN'], true);
-        $trip_has_do = $this->db->where('id_trip', $trip['id_trip'])->count_all_results('tb_do') > 0;
+        $trip_has_do = $this->M_DeliveryTrip->check_has_do($trip['id_trip']);
         if ($existing_trip && $trip_has_do && !$is_additional) {
             echo json_encode([
                 'msg' => 'error',

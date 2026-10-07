@@ -27,6 +27,46 @@ class M_DeliveryTrip extends CI_Model
     }
 
     /**
+     * Mengecek apakah trip sudah memiliki DO, baik secara langsung di tb_do
+     * maupun melalui relasi SO -> Faktur Penjualan -> Detail DO.
+     */
+    public function check_has_do($id_trip)
+    {
+        $id_trip = (int)$id_trip;
+        if ($id_trip <= 0) return false;
+
+        // 1. Cek langsung via kolom id_trip pada tb_do
+        if ($this->db->where('id_trip', $id_trip)->count_all_results('tb_do') > 0) {
+            return true;
+        }
+
+        // 2. Cek relasional via SO -> Faktur -> Detail DO
+        $row = $this->db->query("
+            SELECT dd.kd_do
+            FROM tbso_sales_order so
+            JOIN tbso_faktur_penjualan f ON f.id_so = so.id_so
+            JOIN tb_detail_do dd ON dd.kd_faktur = f.no_faktur
+            WHERE so.id_trip = ?
+            LIMIT 1
+        ", [$id_trip])->row_array();
+
+        if (!empty($row['kd_do'])) {
+            // Otomatis sinkronkan id_trip pada header tb_do jika belum terisi
+            if ($this->db->field_exists('id_trip', 'tb_do')) {
+                $this->db->where('kd_do', $row['kd_do'])
+                    ->group_start()
+                        ->where('id_trip IS NULL', null, false)
+                        ->or_where('id_trip', 0)
+                    ->group_end()
+                    ->update('tb_do', ['id_trip' => $id_trip]);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Menyinkronkan status trip jika seluruh SO di trip sudah difakturkan atau DO sudah terbit.
      */
     public function sync_trip_status($id_trip)
@@ -35,8 +75,8 @@ class M_DeliveryTrip extends CI_Model
         if (!$trip) return false;
         if (in_array($trip['status'], [self::STATUS_CLOSED, 'BERANGKAT', 'SELESAI'], true)) return false;
 
-        $has_do = $this->db->where('id_trip', (int)$id_trip)->count_all_results('tb_do') > 0;
-        if ($has_do && $trip['status'] !== self::STATUS_READY_TO_GO && $trip['status'] !== self::STATUS_WAITING_ADDITIONAL) {
+        $has_do = $this->check_has_do($id_trip);
+        if ($has_do && $trip['status'] !== self::STATUS_READY_TO_GO && $trip['status'] !== self::STATUS_WAITING_ADDITIONAL && $trip['status'] !== self::STATUS_ADDITIONAL) {
             $this->set_status((int)$id_trip, self::STATUS_READY_TO_GO);
             return self::STATUS_READY_TO_GO;
         }
@@ -168,7 +208,30 @@ class M_DeliveryTrip extends CI_Model
         $trip = $this->get($id_trip);
         if (!$trip) return null;
 
+        // Nilai nolambung dari plan pengiriman internal menyimpan ID kendaraan.
+        // Siapkan label yang dapat langsung dipakai oleh halaman checker.
+        $trip['nomor_lambung'] = trim((string)($trip['nolambung'] ?? ''));
+        $trip['nomor_polisi'] = '';
+        if ($trip['nomor_lambung'] !== '' && $this->db->table_exists('tb_op_plat')) {
+            $truck = $this->db
+                ->select('noplat, nm_truk')
+                ->where('id', $trip['nomor_lambung'])
+                ->limit(1)
+                ->get('tb_op_plat')
+                ->row_array();
+            if ($truck) {
+                $trip['nomor_lambung'] = trim((string)($truck['nm_truk'] ?? ''));
+                $trip['nomor_polisi'] = trim((string)($truck['noplat'] ?? ''));
+            }
+        }
+
         $row = $this->db->query("\n            SELECT\n                COALESCE(SUM(CASE WHEN sod.checker_loaded = 1 THEN sod.qty * sod.berat_gram / 1000000 ELSE 0 END), 0) loaded_tonase,\n                COALESCE(SUM(CASE WHEN sod.checker_loaded = 1 THEN sod.qty * sod.kubikasi_m3 ELSE 0 END), 0) loaded_kubikasi,\n                COALESCE(SUM(CASE WHEN sod.checker_loaded = 0 THEN sod.qty * sod.berat_gram / 1000000 ELSE 0 END), 0) reserved_tonase,\n                COALESCE(SUM(CASE WHEN sod.checker_loaded = 0 THEN sod.qty * sod.kubikasi_m3 ELSE 0 END), 0) reserved_kubikasi\n            FROM tbso_sales_order_detail sod\n            JOIN tbso_sales_order so ON so.id_so = sod.id_so\n            WHERE so.id_trip = ?\n        ", [(int)$id_trip])->row_array();
+
+        if ($this->db->field_exists('qty_checker_loaded', 'tbso_sales_order_detail')) {
+            $actual = $this->db->query("\n                SELECT\n                    COALESCE(SUM(CASE WHEN sod.checker_loaded = 1 THEN COALESCE(sod.qty_checker_loaded, sod.qty_siap_faktur, sod.qty) * sod.berat_gram / 1000000 ELSE 0 END), 0) loaded_tonase,\n                    COALESCE(SUM(CASE WHEN sod.checker_loaded = 1 THEN COALESCE(sod.qty_checker_loaded, sod.qty_siap_faktur, sod.qty) * sod.kubikasi_m3 ELSE 0 END), 0) loaded_kubikasi\n                FROM tbso_sales_order_detail sod\n                JOIN tbso_sales_order so ON so.id_so = sod.id_so\n                WHERE so.id_trip = ?\n            ", [(int)$id_trip])->row_array();
+            $row['loaded_tonase'] = $actual['loaded_tonase'] ?? 0;
+            $row['loaded_kubikasi'] = $actual['loaded_kubikasi'] ?? 0;
+        }
 
         $trip['loaded_tonase'] = (float)$row['loaded_tonase'];
         $trip['loaded_kubikasi'] = (float)$row['loaded_kubikasi'];

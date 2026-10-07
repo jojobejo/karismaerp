@@ -8,6 +8,22 @@ class M_Checker extends CI_Model
         parent::__construct();
         $this->load->database();
         date_default_timezone_set('Asia/Jakarta'); // WIB UTC+7
+        $this->ensure_partial_loading_column();
+    }
+
+    private function ensure_partial_loading_column()
+    {
+        if (!$this->db->field_exists('qty_checker_loaded', 'tbso_sales_order_detail')) {
+            $this->load->dbforge();
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_checker_loaded' => [
+                    'type' => 'DECIMAL',
+                    'constraint' => '15,3',
+                    'null' => true,
+                    'after' => 'checker_loaded',
+                ],
+            ]);
+        }
     }
 
     // ================================================================

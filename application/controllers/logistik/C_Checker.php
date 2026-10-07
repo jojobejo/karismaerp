@@ -1115,7 +1115,7 @@ class C_Checker extends CI_Controller
             $this->M_DeliveryTrip->sync_trip_status((int)$trip_row['id_trip']);
             $summary = $this->M_DeliveryTrip->capacity_summary($trip_row['id_trip']);
             if ($summary) {
-                $summary['has_do'] = $this->db->where('id_trip', $trip_row['id_trip'])->count_all_results('tb_do') > 0;
+                $summary['has_do'] = $this->M_DeliveryTrip->check_has_do($trip_row['id_trip']);
                 $data['active_trips'][] = $summary;
             }
         }
@@ -1159,6 +1159,7 @@ class C_Checker extends CI_Controller
                 c.nama_kios,
                 b.nama_barang, b.satuan,
                 (CASE 
+                    WHEN COALESCE(sod.isi_per_box, 0) > 0 THEN sod.isi_per_box
                     WHEN COALESCE(b.isi, 0) > 0 THEN b.isi
                     WHEN (COALESCE(b.panjang, 0) * COALESCE(b.lebar, 0) * COALESCE(b.tinggi, 0)) > 0 
                         THEN (COALESCE(b.panjang, 0) * COALESCE(b.lebar, 0) * COALESCE(b.tinggi, 0))
@@ -1307,6 +1308,7 @@ class C_Checker extends CI_Controller
 
         $id_detail = (int)$this->input->post('id_detail');
         $loaded = (int)$this->input->post('loaded');
+        $qty_loaded_input = $this->input->post('qty_loaded', true);
         if (!in_array($loaded, [0, 1, 2])) $loaded = 0;
 
         if ($id_detail <= 0) {
@@ -1334,8 +1336,29 @@ class C_Checker extends CI_Controller
             exit;
         }
 
+        $qty_siap = $detail['qty_siap_faktur'] !== null
+            ? (float)$detail['qty_siap_faktur']
+            : (float)$detail['qty'];
+        $qty_faktur = (float)($detail['qty_faktur'] ?? 0);
+        $qty_maks_muat = max(0, $qty_siap - $qty_faktur);
+        $qty_loaded = $loaded === 1
+            ? ($qty_loaded_input === null || $qty_loaded_input === '' ? $qty_maks_muat : (float)$qty_loaded_input)
+            : 0;
+
+        if ($loaded === 1 && ($qty_loaded <= 0 || $qty_loaded > $qty_maks_muat + 0.001)) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Qty dimuat harus lebih dari 0 dan tidak boleh melebihi qty siap (' . $qty_maks_muat . ').'
+            ]);
+            exit;
+        }
+
         $this->db->where('id', $id_detail);
-        $this->db->update('tbso_sales_order_detail', ['checker_loaded' => $loaded]);
+        $this->db->update('tbso_sales_order_detail', [
+            'checker_loaded' => $loaded,
+            'qty_checker_loaded' => $loaded === 1 ? $qty_loaded : null,
+            'qty_tidak_terkirim' => $loaded === 1 ? max(0, $qty_maks_muat - $qty_loaded) : $qty_maks_muat,
+        ]);
 
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
         $progress = $this->M_Checker->update_route_loading_progress(
@@ -1346,6 +1369,8 @@ class C_Checker extends CI_Controller
         echo json_encode([
             'status' => true,
             'message' => 'Status muat berhasil diperbarui',
+            'qty_loaded' => $qty_loaded,
+            'qty_remaining' => max(0, $qty_maks_muat - $qty_loaded),
             'progress' => $progress,
             'created_do' => null
         ]);
@@ -1489,7 +1514,8 @@ class C_Checker extends CI_Controller
         if (!$trip) {
             echo json_encode(['status' => false, 'message' => 'Trip tidak ditemukan.']); exit;
         }
-        if ($this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
+        $has_do = $this->M_DeliveryTrip->check_has_do($id_trip);
+        if (!$has_do && ($trip['status'] ?? '') !== 'SIAP_BERANGKAT') {
             echo json_encode(['status' => false, 'message' => 'Tambahan muatan hanya dapat dibuka setelah DO awal terbentuk.']); exit;
         }
         if ($trip['remaining_tonase'] <= 0 || $trip['remaining_kubikasi'] <= 0) {
@@ -1512,7 +1538,8 @@ class C_Checker extends CI_Controller
         }
         $id_trip = (int)$this->input->post('id_trip');
         $total_so = $this->db->where('id_trip', $id_trip)->count_all_results('tbso_sales_order');
-        if ($total_so > 0 && $this->db->where('id_trip', $id_trip)->count_all_results('tb_do') < 1) {
+        $has_do = $this->M_DeliveryTrip->check_has_do($id_trip);
+        if ($total_so > 0 && !$has_do && ($trip['status'] ?? '') !== 'SIAP_BERANGKAT') {
             echo json_encode(['status' => false, 'message' => 'Trip belum memiliki DO dan belum dapat ditutup sebagai keberangkatan.']); exit;
         }
         $by = $this->session->userdata('username') ?: $this->nama() ?: 'system';

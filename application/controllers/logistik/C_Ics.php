@@ -2905,13 +2905,37 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $this->db->trans_commit();
+        try {
+            // Status POST dan jurnal harus menjadi satu kesatuan transaksi agar
+            // LPB pembelian biasa tidak berstatus POST tanpa jurnal aktif.
+            $this->load->library('Accounting_source_service');
+            $accountingResult = $this->accounting_source_service->post_goods_receipt(
+                $id_lpb,
+                (int) $this->session->userdata('id') ?: null
+            );
+        } catch (Throwable $e) {
+            $this->db->trans_rollback();
+            log_message('error', 'Posting jurnal LPB #' . $id_lpb . ' gagal: ' . $e->getMessage());
+            $this->json_response([
+                'status'  => 'error',
+                'message' => 'LPB tidak jadi diposting karena jurnal gagal dibuat.',
+                'html'    => ''
+            ]);
+            return;
+        }
 
-        $this->load->library('Accounting_source_service');
-        $accountingResult = $this->accounting_source_service->post_goods_receipt(
-            $id_lpb,
-            (int) $this->session->userdata('id') ?: null
-        );
+        if (empty($accountingResult['success']) || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response([
+                'status'  => 'error',
+                'message' => 'LPB tidak jadi diposting. ' . ($accountingResult['message'] ?? 'Jurnal gagal dibuat.'),
+                'accounting' => $accountingResult,
+                'html'    => ''
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
 
         $journalSummary = $this->M_Logistik->get_lpb_goods_receipt_journal_summary($id_lpb);
         $hasJournal = !empty($journalSummary['has_active_lpb_journal']);

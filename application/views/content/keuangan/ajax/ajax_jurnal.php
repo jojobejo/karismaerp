@@ -885,6 +885,60 @@
             });
         });
 
+        $('#jurnalPeriodTable').on('click', '.btn-closing-request', function() {
+            const notes = prompt('Catatan pengajuan tutup buku:');
+            if (notes === null) return;
+            $.ajax({
+                url: '<?= base_url('jurnal/closing/request') ?>', type: 'POST', dataType: 'json',
+                data: { id_periode: $(this).data('id'), closing_type: $(this).data('type'), notes: notes },
+                success: function(resp) { notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || ''); if (resp.success) location.reload(); },
+                error: function(xhr) { notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal mengajukan tutup buku.'); }
+            });
+        });
+
+        $('.btn-closing-approve').on('click', function() {
+            if (!confirm('Setujui dan eksekusi tutup buku ini? Proses akan mengunci periode.')) return;
+            $.ajax({
+                url: '<?= base_url('jurnal/closing/approve') ?>', type: 'POST', dataType: 'json',
+                data: { id_closing: $(this).data('id') },
+                success: function(resp) { notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || ''); if (resp.success) location.reload(); },
+                error: function(xhr) { notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal mengeksekusi tutup buku.'); }
+            });
+        });
+
+        $('.btn-closing-validate').on('click', function() {
+            $.ajax({
+                url: '<?= base_url('jurnal/closing/validate') ?>', type: 'POST', dataType: 'json',
+                data: { id_closing: $(this).data('id') },
+                success: function(resp) { notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || ''); location.reload(); },
+                error: function(xhr) { notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Validasi tutup buku gagal.'); }
+            });
+        });
+
+        $('#jurnalPeriodTable').on('click', '.btn-reopen-request', function() {
+            const reason = prompt('Alasan membuka kembali periode:');
+            if (!reason) return;
+            const plan = prompt('Rencana koreksi yang akan dilakukan:');
+            if (!plan) return;
+            $.ajax({
+                url: '<?= base_url('jurnal/reopen/request') ?>', type: 'POST', dataType: 'json',
+                data: { id_periode: $(this).data('id'), reason: reason, correction_plan: plan },
+                success: function(resp) { notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || ''); if (resp.success) location.reload(); },
+                error: function(xhr) { notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal mengajukan buka buku.'); }
+            });
+        });
+
+        $('.btn-reopen-approve').on('click', function() {
+            const note = prompt('Catatan approval ' + $(this).data('level') + ':');
+            if (!note) return;
+            $.ajax({
+                url: '<?= base_url('jurnal/reopen/approve') ?>', type: 'POST', dataType: 'json',
+                data: { id_reopen: $(this).data('id'), approval_level: $(this).data('level'), note: note },
+                success: function(resp) { notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || ''); if (resp.success) location.reload(); },
+                error: function(xhr) { notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal menyetujui buka buku.'); }
+            });
+        });
+
         $('#salesJournalRows').on('click', 'tr', function() {
             const id = $(this).data('id');
             if (!id) return;

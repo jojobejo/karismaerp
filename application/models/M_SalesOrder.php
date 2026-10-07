@@ -1194,9 +1194,14 @@ class M_SalesOrder extends CI_Model
             if ((int)($row['checker_loaded'] ?? 0) === 2) {
                 $row['qty_available_faktur'] = 0;
             } else {
+                $qty_lolos_checker = (int)($row['checker_loaded'] ?? 0) === 1
+                    && isset($row['qty_checker_loaded'])
+                    && $row['qty_checker_loaded'] !== null
+                    ? (float)$row['qty_checker_loaded']
+                    : $row['qty_siap_faktur'];
                 $row['qty_available_faktur'] = max(0, min(
                     $row['qty_outstanding'],
-                    $row['qty_siap_faktur'] - $row['qty_faktur']
+                    $qty_lolos_checker - $row['qty_faktur']
                 ));
             }
 
@@ -1941,7 +1946,12 @@ class M_SalesOrder extends CI_Model
             $qty_siap = array_key_exists('qty_siap_faktur', $sd) && $sd['qty_siap_faktur'] !== null
                 ? (float)$sd['qty_siap_faktur']
                 : (float)$sd['qty'];
-            $available_faktur = max(0, min($outstanding, $qty_siap - (float)$sd['qty_faktur']));
+            $qty_lolos_checker = (int)($sd['checker_loaded'] ?? 0) === 1
+                && isset($sd['qty_checker_loaded'])
+                && $sd['qty_checker_loaded'] !== null
+                ? (float)$sd['qty_checker_loaded']
+                : $qty_siap;
+            $available_faktur = max(0, min($outstanding, $qty_lolos_checker - (float)$sd['qty_faktur']));
             $diminta     = (float)$item['qty'];
 
             if ($diminta <= 0) {
@@ -2397,7 +2407,10 @@ class M_SalesOrder extends CI_Model
             $current_detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
             if ($current_detail && (int)($current_detail['checker_loaded'] ?? 0) !== 2) {
                 $this->db->where('id', $id_so_detail);
-                $this->db->update('tbso_sales_order_detail', ['checker_loaded' => 0]);
+                $this->db->update('tbso_sales_order_detail', [
+                    'checker_loaded' => 0,
+                    'qty_checker_loaded' => null,
+                ]);
             }
         }
 
@@ -3960,7 +3973,8 @@ class M_SalesOrder extends CI_Model
         // agar rute tidak muncul kembali di halaman so_loading setelah DO dibuat.
         $this->db->query("
             UPDATE tbso_sales_order_detail
-            SET checker_loaded = 0
+            SET checker_loaded = 0,
+                qty_checker_loaded = NULL
             WHERE id_so = ?
             AND GREATEST(COALESCE(qty_siap_faktur, qty) - COALESCE(qty_faktur, 0), 0) > 0.001
         ", [$id_so]);

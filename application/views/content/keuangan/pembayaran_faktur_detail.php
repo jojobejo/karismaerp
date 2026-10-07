@@ -138,11 +138,11 @@
                     </a>
                 </div>
 
-                <!-- TABEL ATAS: Faktur Selesai DO Belum Lunas -->
+                <!-- TABEL ATAS: Faktur aktif dan faktur lunas yang mempunyai histori pembayaran -->
                 <div class="card card-outline card-primary shadow-sm mb-4">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h3 class="card-title font-weight-bold mb-0">
-                            <i class="fas fa-list mr-2"></i>Faktur Selesai DO Belum Lunas
+                            <i class="fas fa-list mr-2"></i>Faktur dan Histori Pembayaran Customer
                         </h3>
                         <div class="card-tools ml-auto">
                             <small class="text-white-50 mr-2"><i class="fas fa-hand-pointer mr-1"></i>Klik baris faktur untuk melihat riwayat pembayaran</small>
@@ -215,11 +215,15 @@
                                                             <i class="fas fa-check-circle mr-1"></i>Cairkan BG
                                                         </a>
                                                     <?php endif; ?>
-                                                    <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" 
-                                                       class="btn btn-success btn-sm btn-bayar-action" 
-                                                       title="Input Pembayaran Baru (Cash, Transfer, Retur, dll.)">
-                                                        <i class="fas fa-money-bill-wave mr-1"></i>Bayar
-                                                    </a>
+                                                        <?php if ((float)$faktur['sisa_tagihan'] > 0): ?>
+                                                            <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>"
+                                                               class="btn btn-success btn-sm btn-bayar-action"
+                                                               title="Input Pembayaran Baru (Cash, Transfer, Retur, dll.)">
+                                                                <i class="fas fa-money-bill-wave mr-1"></i>Bayar
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Lunas</span>
+                                                        <?php endif; ?>
                                                 </div>
                                             </td>
                                         </tr>

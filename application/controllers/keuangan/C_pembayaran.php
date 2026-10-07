@@ -181,7 +181,9 @@ class C_pembayaran extends CI_Controller
         }
 
         $kd_customer = rawurldecode($kd_customer);
-        $fakturs = $this->M_pembayaran->get_unpaid_faktur_by_customer($kd_customer);
+        // Faktur yang sudah lunas tetap ditampilkan apabila mempunyai histori
+        // pembayaran agar jurnalnya masih dapat ditelusuri dari halaman customer.
+        $fakturs = $this->M_pembayaran->get_faktur_with_payment_history_by_customer($kd_customer);
 
         $data['page_title'] = 'KARISMA - DETAIL PEMBAYARAN CUSTOMER';
         $data['kd_customer'] = $kd_customer;

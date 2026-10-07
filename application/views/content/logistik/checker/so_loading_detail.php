@@ -181,6 +181,11 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                 <p class="mb-0 font-weight-bold">Semua barang SO rute ini telah selesai dimuat atau diproses.</p>
                             </div>
                         <?php else: ?>
+                            <div class="alert alert-light border py-2">
+                                <i class="fas fa-info-circle text-info mr-1"></i>
+                                Isi <b>Qty Dimuat</b> sesuai jumlah aktual yang masuk kendaraan, lalu klik tombol centang.
+                                Jika hanya 9 dari 10 box yang muat, isi <b>9 box</b>. Sisanya tetap menjadi outstanding pengiriman berikutnya.
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover table-sm verify-table" id="tabelSoLoadingDetail">
                                     <thead class="thead-dark text-center">
@@ -192,6 +197,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                             <th>No Lot</th>
                                             <th>Expired Date</th>
                                             <th style="width: 140px;" class="text-right">Qty Siap</th>
+                                            <th style="width: 145px;" class="text-center">Qty Dimuat</th>
                                             <th style="width: 80px;">Satuan</th>
                                             <th style="width: 120px;" class="text-center">Muat / Tidak</th>
                                         </tr>
@@ -200,6 +206,16 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                         <?php $no = 1; foreach ($items as $item): 
                                             $status_muat = (int)($item['checker_loaded'] ?? 0);
                                             $row_class = $status_muat === 1 ? 'loaded-row' : ($status_muat === 2 ? 'rejected-row' : 'unloaded-row');
+                                            $qty_siap_item = (float)($item['qty_siap_faktur'] !== null ? $item['qty_siap_faktur'] : $item['qty']);
+                                            $qty_faktur_item = (float)($item['qty_faktur'] ?? 0);
+                                            $qty_maks_muat = max(0, $qty_siap_item - $qty_faktur_item);
+                                            $isi_item = max(1, (int)($item['isi_per_box'] ?? 1));
+                                            $qty_aktual = $status_muat === 1 && $item['qty_checker_loaded'] !== null
+                                                ? (float)$item['qty_checker_loaded']
+                                                : $qty_maks_muat;
+                                            $qty_input = $isi_item > 1 ? $qty_aktual / $isi_item : $qty_aktual;
+                                            $qty_input_max = $isi_item > 1 ? $qty_maks_muat / $isi_item : $qty_maks_muat;
+                                            $unit_input = $isi_item > 1 ? 'box' : $item['satuan'];
                                         ?>
                                             <tr class="<?= $row_class ?>" id="row-<?= $item['id'] ?>">
                                                 <td class="text-center"><?= $no++ ?></td>
@@ -242,6 +258,25 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                         echo number_format($qty, 2);
                                                     }
                                                     ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number"
+                                                               class="form-control text-right qty-loaded-input"
+                                                               id="qty-loaded-<?= (int)$item['id'] ?>"
+                                                               value="<?= rtrim(rtrim(number_format($qty_input, 3, '.', ''), '0'), '.') ?>"
+                                                               min="0"
+                                                               max="<?= number_format($qty_input_max, 3, '.', '') ?>"
+                                                               step="0.001"
+                                                               data-isi="<?= $isi_item ?>"
+                                                               <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text"><?= htmlspecialchars($unit_input) ?></span>
+                                                        </div>
+                                                    </div>
+                                                    <small class="text-muted qty-loading-info" id="qty-info-<?= (int)$item['id'] ?>">
+                                                        Maks. <?= number_format($qty_input_max, 3, ',', '.') ?> <?= htmlspecialchars($unit_input) ?>
+                                                    </small>
                                                 </td>
                                                 <td class="text-center"><?= htmlspecialchars($item['satuan']) ?></td>
                                                 <td class="text-center" style="white-space:nowrap;">
@@ -407,6 +442,16 @@ $(document).ready(function() {
         var idDetail = btn.data('id');
         var action = btn.data('action'); // 1=dimuat, 2=tidak dimuat
         var row = $('#row-' + idDetail);
+        var qtyInput = $('#qty-loaded-' + idDetail);
+        var qtyDisplayed = parseFloat(qtyInput.val()) || 0;
+        var isiPerBox = parseFloat(qtyInput.data('isi')) || 1;
+        var qtyLoaded = action === 1 ? qtyDisplayed * isiPerBox : 0;
+
+        if (action === 1 && qtyLoaded <= 0) {
+            alert('Qty dimuat harus lebih dari 0.');
+            qtyInput.focus();
+            return;
+        }
 
         btn.prop('disabled', true);
         row.find('.btn-load-yes, .btn-load-no').prop('disabled', true);
@@ -414,7 +459,7 @@ $(document).ready(function() {
         $.ajax({
             url: '<?= base_url("checker/toggle_so_item_loaded") ?>',
             type: 'POST',
-            data: { id_detail: idDetail, loaded: action },
+            data: { id_detail: idDetail, loaded: action, qty_loaded: qtyLoaded },
             dataType: 'JSON',
             success: function(response) {
                 if (response.status) {
@@ -430,6 +475,15 @@ $(document).ready(function() {
                     row.removeClass('loaded-row rejected-row unloaded-row');
                     if (action === 1) row.addClass('loaded-row');
                     else if (action === 2) row.addClass('rejected-row');
+
+                    if (action === 1) {
+                        var remainingDisplayed = (parseFloat(response.qty_remaining) || 0) / isiPerBox;
+                        $('#qty-info-' + idDetail).text(
+                            remainingDisplayed > 0
+                                ? 'Sisa tidak termuat: ' + remainingDisplayed.toLocaleString('id-ID') + ' ' + (isiPerBox > 1 ? 'box' : '')
+                                : 'Seluruh qty siap dimuat'
+                        );
+                    }
 
                     updateProgress();
                 } else {

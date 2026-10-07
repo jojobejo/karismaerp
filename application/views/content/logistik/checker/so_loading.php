@@ -109,10 +109,17 @@
                                     <div class="d-flex justify-content-between"><b><?= htmlspecialchars($trip['kode_trip']) ?></b><span class="badge <?= $trip_status_class ?>"><?= htmlspecialchars($trip_status_label) ?></span></div>
                                     <small>Rute <?= htmlspecialchars($trip['kd_rute']) ?> · <?= date('d/m/Y', strtotime($trip['tgl_pengiriman'])) ?></small>
                                     <div class="mt-2">Sisa <b><?= number_format($trip['remaining_tonase'], 3, ',', '.') ?> ton</b> / <b><?= number_format($trip['remaining_kubikasi'], 4, ',', '.') ?> m³</b></div>
+                                    <div class="mt-2">
+                                        <i class="fas fa-truck text-primary mr-1"></i>
+                                        No. Lambung: <b><?= htmlspecialchars($trip['nomor_lambung'] !== '' ? $trip['nomor_lambung'] : '-') ?></b>
+                                        <?php if (!empty($trip['nomor_polisi'])): ?>
+                                            <small class="text-muted ml-1">(<?= htmlspecialchars($trip['nomor_polisi']) ?>)</small>
+                                        <?php endif; ?>
+                                    </div>
                                     <?php if ($trip['status'] === 'MENUNGGU_TAMBAHAN'): ?><small class="text-warning">Menunggu SO tambahan dari Sales</small><?php endif; ?>
                                     <?php if ((!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT' || (float)$trip['loaded_tonase'] == 0) && in_array($role, ['CHECKER','MANAGERCK','ADMLOG'], true)): ?>
                                     <div class="mt-2 text-right">
-                                        <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN' && !empty($trip['has_do'])): ?>
+                                        <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN' && (!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT')): ?>
                                         <button class="btn btn-warning btn-xs btn-trip-action" data-action="open" data-trip="<?= (int)$trip['id_trip'] ?>">Buka Tambahan</button>
                                         <?php endif; ?>
                                         <button class="btn btn-danger btn-xs btn-trip-action" data-action="close" data-trip="<?= (int)$trip['id_trip'] ?>">Tutup Trip</button>

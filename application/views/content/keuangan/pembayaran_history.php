@@ -56,14 +56,17 @@
                                         <th>Customer</th>
                                         <th>Metode</th>
                                         <th>Status Cair</th>
+                                        <th>Status Posting</th>
+                                        <th>No. Jurnal</th>
                                         <th class="text-right">Jumlah Pembayaran</th>
                                         <th class="text-right">Diskon</th>
+                                        <th class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($recent_payments)): ?>
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted py-4">Belum ada histori pembayaran.</td>
+                                            <td colspan="10" class="text-center text-muted py-4">Belum ada histori pembayaran.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($recent_payments as $row):
@@ -91,8 +94,26 @@
                                                         <span class="badge badge-secondary">Langsung Masuk</span>
                                                     <?php endif; ?>
                                                 </td>
+                                                <td>
+                                                    <?php $paymentStatus = strtoupper((string)($row['status'] ?? 'POSTED')); ?>
+                                                    <span class="badge badge-<?= $paymentStatus === 'POSTED' ? 'success' : 'warning' ?>">
+                                                        <?= htmlspecialchars($paymentStatus) ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <?= !empty($row['nomor_jurnal']) ? htmlspecialchars($row['nomor_jurnal']) : '-' ?>
+                                                </td>
                                                 <td class="text-right font-weight-bold">Rp <?= number_format((float)$row['jumlah_pembayaran'], 0, ',', '.') ?></td>
                                                 <td class="text-right text-success"><?= (float)$row['jumlah_diskon'] > 0 ? 'Rp ' . number_format((float)$row['jumlah_diskon'], 0, ',', '.') : '-' ?></td>
+                                                <td class="text-center">
+                                                    <?php if (!empty($row['can_unpost'])): ?>
+                                                        <button type="button" class="btn btn-danger btn-sm js-unpost-payment" data-id-pembayaran="<?= (int)$row['id_pembayaran'] ?>">
+                                                            <i class="fas fa-undo-alt mr-1"></i>UNPOST
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
+                                                    <?php endif; ?>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
@@ -118,5 +139,52 @@ $(function () {
             "order": [[0, "desc"]]
         });
     }
+
+    $(document).on('click', '.js-unpost-payment', function () {
+        var idPembayaran = $(this).data('id-pembayaran');
+        Swal.fire({
+            title: 'UNPOST pembayaran terakhir?',
+            text: 'Pembayaran dan jurnal terkait akan dikembalikan menjadi DRAFT. Sisa piutang customer akan dihitung ulang.',
+            icon: 'warning',
+            input: 'textarea',
+            inputLabel: 'Alasan UNPOST',
+            inputPlaceholder: 'Masukkan alasan UNPOST',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, UNPOST',
+            cancelButtonText: 'Batal',
+            inputValidator: function (value) {
+                if (!$.trim(value || '')) {
+                    return 'Alasan UNPOST wajib diisi.';
+                }
+            }
+        }).then(function (result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            $.ajax({
+                url: '<?= base_url('keuangan/pembayaran/ajax_unpost_pembayaran') ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    id_pembayaran: idPembayaran,
+                    reason: result.value
+                },
+                success: function (res) {
+                    if (!res || !res.success) {
+                        Swal.fire('Gagal', (res && res.message) || 'Pembayaran gagal di-unpost.', 'error');
+                        return;
+                    }
+                    Swal.fire('Berhasil', res.message, 'success').then(function () {
+                        window.location.reload();
+                    });
+                },
+                error: function () {
+                    Swal.fire('Gagal', 'Terjadi kesalahan saat meng-unpost pembayaran.', 'error');
+                }
+            });
+        });
+    });
 });
 </script>

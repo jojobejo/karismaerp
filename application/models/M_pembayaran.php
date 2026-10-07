@@ -473,6 +473,18 @@ class M_pembayaran extends CI_Model
         return $this->db->get()->result_array();
     }
 
+    public function get_faktur_with_payment_history_by_customer($kd_customer)
+    {
+        $this->_select_invoice_summary();
+        $this->db->where('f.kd_customer', $kd_customer);
+        $this->db->having("(sisa_tagihan > 0 OR EXISTS (SELECT 1 FROM {$this->payment_table} ph WHERE ph.id_faktur = f.id_faktur))", null, false);
+        $this->db->order_by('sisa_tagihan > 0', 'DESC', false);
+        $this->db->order_by('tanggal_selesai_do', 'DESC');
+        $this->db->order_by('f.tanggal_faktur', 'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
     public function get_all_unpaid_fakturs_kasir($keyword = '')
     {
         $this->_select_invoice_summary();
@@ -659,10 +671,21 @@ class M_pembayaran extends CI_Model
 
     public function get_recent_payments($keyword = '', $limit = 50)
     {
-        $this->db->select('p.*, c.nama_customer, c.kd_customer');
+        $this->db->select("p.*, c.nama_customer, c.kd_customer,
+            j.id_jurnal, j.nomor_jurnal, j.status AS status_jurnal,
+            CASE
+                WHEN COALESCE(p.status, 'POSTED') = 'POSTED'
+                 AND p.id_pembayaran = (
+                    SELECT MAX(px.id_pembayaran)
+                    FROM {$this->payment_table} px
+                    WHERE COALESCE(px.status, 'POSTED') = 'POSTED'
+                 ) THEN 1 ELSE 0
+            END AS can_unpost", false);
         $this->db->from($this->payment_table . ' p');
         $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->join('(SELECT source_id, MAX(id_jurnal) AS id_jurnal FROM tbkeu_jurnal WHERE source_module = "KEUANGAN" AND source_type = "PEMBAYARAN_FAKTUR" GROUP BY source_id) jm', 'CAST(jm.source_id AS UNSIGNED) = p.id_pembayaran', 'left', false);
+        $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = jm.id_jurnal', 'left');
         
         if ($keyword !== '') {
             $this->db->group_start();
@@ -783,6 +806,15 @@ class M_pembayaran extends CI_Model
             return ['success' => false, 'message' => 'Pembayaran ini sudah berstatus DRAFT.'];
         }
 
+        $latestPostedId = (int)($this->db
+            ->select_max('id_pembayaran', 'id_pembayaran')
+            ->where("COALESCE(status, 'POSTED') = 'POSTED'", null, false)
+            ->get($this->payment_table)
+            ->row_array()['id_pembayaran'] ?? 0);
+        if ($latestPostedId !== $id_pembayaran) {
+            return ['success' => false, 'message' => 'Hanya pembayaran POSTED paling terakhir yang dapat di-unpost.'];
+        }
+
         $this->db->trans_start();
 
         // 1. Update status pembayaran menjadi UNPOST
@@ -802,9 +834,25 @@ class M_pembayaran extends CI_Model
                 ?: 0);
 
             $this->db->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR')
                 ->group_start()
                     ->where('source_id', (string)$id_pembayaran)
                     ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->update('tbkeu_jurnal', [
+                    'status'      => 'DRAFT',
+                    'updated_at'  => date('Y-m-d H:i:s'),
+                    'reversed_by' => $user_id > 0 ? $user_id : null,
+                    'reversed_at' => date('Y-m-d H:i:s'),
+                ]);
+
+            // Pembayaran konsinyasi dapat sekaligus menerbitkan jurnal realisasi
+            // penjualan. Jurnal tersebut ikut dibatalkan bersama pembayarannya.
+            $this->db->where('source_module', 'SALES')
+                ->where('source_type', 'FAKTUR_PENJUALAN_KONSINYASI')
+                ->group_start()
+                    ->where('source_id', ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
+                    ->or_where('idempotency_key', 'SALES_INVOICE-KONSINYASI-' . ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
                 ->group_end()
                 ->update('tbkeu_jurnal', [
                     'status'      => 'DRAFT',
