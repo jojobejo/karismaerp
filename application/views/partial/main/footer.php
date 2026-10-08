@@ -453,8 +453,9 @@
     var syncKey = 'karisma_geo_synced';
     var lastSync = sessionStorage.getItem(syncKey);
     var now = Date.now();
-    if (lastSync && (now - parseInt(lastSync, 10)) < 600000) {
-        return; // Sudah sinkron dalam 10 menit terakhir
+    // Jika sudah sinkron dengan sukses dalam 15 menit terakhir, hindari request berlebih
+    if (lastSync && (now - parseInt(lastSync, 10)) < 900000) {
+        return;
     }
 
     navigator.geolocation.getCurrentPosition(function(pos) {
@@ -480,12 +481,15 @@
                         region: region || '',
                         country: country || 'Indonesia'
                     },
-                    dataType: 'json'
+                    dataType: 'json',
+                    success: function() {
+                        // Koordinat presisi GPS berhasil diperbarui
+                    }
                 });
             }
         }
 
-        // Reverse-geocoding sisi browser
+        // Reverse-geocoding sisi browser untuk mendeteksi nama kecamatan presisi
         if (window.fetch) {
             fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lng + '&localityLanguage=id')
                 .then(function(res) { return res.json(); })
@@ -512,11 +516,11 @@
             sendLocationData('', '', '', '');
         }
     }, function(err) {
-        // Pengguna menolak izin lokasi atau GPS mati - fail-safe senyap
+        // User belum mengizinkan akses lokasi atau perangkat belum mengaktifkan GPS/Location service
     }, {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000
+        timeout: 15000,
+        maximumAge: 60000
     });
 })();
 </script>

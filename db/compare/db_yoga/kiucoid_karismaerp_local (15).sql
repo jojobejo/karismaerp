@@ -19,7 +19,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Basis data: `kiucoid_karismaerp_local`
+-- Basis data: `u676129830_kiu_accounting`
 --
 
 -- --------------------------------------------------------

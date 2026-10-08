@@ -87,6 +87,13 @@ class M_Access_Log extends CI_Model
                     ADD INDEX `idx_location_source` (`location_source`);
                 ");
             }
+
+            // Bersihkan data koordinat dummy perkiraan lama yang tidak akurat
+            try {
+                $this->db->query("UPDATE `{$this->table}` SET `latitude` = NULL, `longitude` = NULL, `accuracy` = NULL WHERE `latitude` BETWEEN -8.1725000 AND -8.1723000");
+            } catch (Exception $e) {
+                // Abaikan jika query gagal
+            }
         }
     }
 
@@ -160,9 +167,9 @@ class M_Access_Log extends CI_Model
                 'country'         => 'Indonesia (Lokal)',
                 'country_code'    => 'ID',
                 'isp'             => 'Localhost / Jaringan Kantor',
-                'latitude'        => -8.1724000,
-                'longitude'       => 113.7208000,
-                'accuracy'        => 5,
+                'latitude'        => null,
+                'longitude'       => null,
+                'accuracy'        => null,
                 'location_source' => 'Lokal'
             ];
         }

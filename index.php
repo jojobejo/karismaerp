@@ -53,7 +53,15 @@
  *
  * NOTE: If you change these, also change the error_reporting() code below
  */
-	define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
+	$isLocalhost = (
+		in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1']) ||
+		strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false
+	);
+
+	define('ENVIRONMENT', isset($_SERVER['CI_ENV'])
+		? $_SERVER['CI_ENV']
+		: ($isLocalhost ? 'development' : 'production')
+	);
 
 /*
  *---------------------------------------------------------------
@@ -66,7 +74,8 @@
 switch (ENVIRONMENT)
 {
 	case 'development':
-		error_reporting(-1);
+		// Abaikan E_DEPRECATED agar kompatibel dengan PHP 8.2+ dan tidak merusak header session
+		error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED & ~E_NOTICE);
 		ini_set('display_errors', 1);
 	break;
 
