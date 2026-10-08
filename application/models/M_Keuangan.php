@@ -1130,12 +1130,13 @@ class M_Keuangan extends CI_Model
             j.keterangan,
             j.total_debit AS nilai,
             j.status,
-            COALESCE(f.no_so, '') AS no_so,
-            COALESCE(f.customer_name, '') AS pelanggan,
+            COALESCE(NULLIF(kf.no_so, ''), NULLIF(f.no_so, ''), '') AS no_so,
+            COALESCE(NULLIF(kf.nama_customer, ''), NULLIF(f.customer_name, ''), '') AS pelanggan,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
-        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id OR f.no_faktur = j.source_no', 'left');
+        $this->db->join('tb_konsinyasi_faktur kf', 'j.source_type = "FAKTUR_PENJUALAN_KONSINYASI" AND (kf.no_faktur_konsinyasi = j.source_no OR CONCAT(kf.no_faktur_induk, "-", kf.id_pembayaran) = j.source_id)', 'left');
+        $this->db->join('tbso_faktur_penjualan f', '((j.source_type = "FAKTUR_PENJUALAN_KONSINYASI" AND f.no_faktur = kf.no_faktur_induk) OR (j.source_type != "FAKTUR_PENJUALAN_KONSINYASI" AND (f.no_faktur = j.source_id OR f.no_faktur = j.source_no)))', 'left');
         $this->db->where('j.source_module', 'SALES');
         $this->db->group_start();
         $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
@@ -1150,6 +1151,8 @@ class M_Keuangan extends CI_Model
             $this->db->group_start();
             $this->db->like('j.source_no', $search);
             $this->db->or_like('j.nomor_jurnal', $search);
+            $this->db->or_like('kf.no_so', $search);
+            $this->db->or_like('kf.nama_customer', $search);
             $this->db->or_like('f.no_so', $search);
             $this->db->or_like('f.customer_name', $search);
             $this->db->group_end();

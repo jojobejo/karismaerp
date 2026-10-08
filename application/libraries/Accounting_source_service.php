@@ -354,10 +354,21 @@ class Accounting_source_service
     public function post_goods_receipt($idLpb, $userId = null)
     {
         $idLpb = (int)$idLpb;
-        $this->CI->db->select("h.*, p.kd_suplier, COALESCE(s.id_suplier, 0) AS id_supplier_source, COALESCE(s.nama_suplier, '') AS nama_suplier", false);
+        // LPB Manual tidak mempunyai relasi PO, sehingga supplier harus dapat
+        // dibaca langsung dari header LPB dengan fallback ke supplier PO.
+        $hasManualSupplier = $this->CI->db->field_exists('kd_suplier', 'tb_lpb');
+        $hasManualSupplierName = $this->CI->db->field_exists('nama_suplier', 'tb_lpb');
+        $supplierCodeExpression = $hasManualSupplier
+            ? "COALESCE(NULLIF(h.kd_suplier, ''), p.kd_suplier)"
+            : 'p.kd_suplier';
+        $supplierNameExpression = $hasManualSupplierName
+            ? "COALESCE(NULLIF(h.nama_suplier, ''), s.nama_suplier, '')"
+            : "COALESCE(s.nama_suplier, '')";
+
+        $this->CI->db->select("h.*, {$supplierCodeExpression} AS kd_suplier_source, COALESCE(s.id_suplier, 0) AS id_supplier_source, {$supplierNameExpression} AS nama_suplier_source", false);
         $this->CI->db->from('tb_lpb h');
         $this->CI->db->join('tbpo_po p', 'p.kd_po = h.kd_po AND p.no_po = h.no_po', 'left');
-        $this->CI->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+        $this->CI->db->join('tbpo_suplier s', "s.kd_suplier = {$supplierCodeExpression}", 'left', false);
         $this->CI->db->where('h.id_lpb', $idLpb);
         $header = $this->CI->db->get()->row();
         if (!$header) {
@@ -382,7 +393,7 @@ class Accounting_source_service
         $payload = [
             'tanggal_transaksi' => $header->tgl_sj ?: date('Y-m-d'),
             'journal_type' => 'PJ',
-            'keterangan' => 'Pembelian, ' . (trim((string)$header->nama_suplier) !== '' ? $header->nama_suplier : 'Supplier'),
+            'keterangan' => 'Pembelian, ' . (trim((string)$header->nama_suplier_source) !== '' ? $header->nama_suplier_source : 'Supplier'),
             'source_module' => 'LOGISTIK',
             'source_type' => 'LPB_FINAL',
             'source_id' => (string)$idLpb,

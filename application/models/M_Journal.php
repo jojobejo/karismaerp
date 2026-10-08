@@ -299,6 +299,18 @@ class M_Journal extends CI_Model
 
         $customer_name = !empty($faktur['customer_name']) ? trim($faktur['customer_name']) : 'Kios Customer';
         $tanggal = $data_pembayaran['tanggal_pembayaran'] ?? date('Y-m-d');
+        $no_faktur_konsinyasi = trim((string)($data_pembayaran['no_faktur_konsinyasi'] ?? ''));
+        if ($no_faktur_konsinyasi === '') {
+            $paymentRow = $this->db
+                ->select('no_faktur_konsinyasi')
+                ->where('id_pembayaran', (int)$id_pembayaran)
+                ->get('tbkeu_pembayaran_faktur')
+                ->row_array();
+            $no_faktur_konsinyasi = trim((string)($paymentRow['no_faktur_konsinyasi'] ?? ''));
+        }
+        if ($no_faktur_konsinyasi === '') {
+            $no_faktur_konsinyasi = $faktur['no_faktur'];
+        }
         $nomor_jurnal_sj = $this->generate_no_jurnal('penjualan', 'SJ');
 
         // Cari ID Jenis Jurnal SJ (Sales)
@@ -317,12 +329,12 @@ class M_Journal extends CI_Model
             'nomor_jurnal'      => $nomor_jurnal_sj,
             'id_jenis_jurnal'   => $id_jenis_jurnal,
             'tanggal_transaksi' => $tanggal,
-            'keterangan'        => 'Penjualan Konsinyasi: ' . $faktur['no_faktur'] . ' - ' . $customer_name . ' (Realisasi Pembelian Kios)',
+            'keterangan'        => 'Penjualan Konsinyasi: ' . $no_faktur_konsinyasi . ' - ' . $customer_name . ' (Realisasi Pembelian Kios)',
             'status'            => 'POSTED',
             'source_module'     => 'SALES',
             'source_type'       => 'FAKTUR_PENJUALAN_KONSINYASI',
             'source_id'         => $faktur['no_faktur'] . '-' . $id_pembayaran,
-            'source_no'         => $faktur['no_faktur'],
+            'source_no'         => $no_faktur_konsinyasi,
             'posting_event'     => 'SALES_INVOICE',
             'idempotency_key'   => 'SALES_INVOICE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran,
             'total_debit'       => $total_nominal,
@@ -373,7 +385,7 @@ class M_Journal extends CI_Model
             'id_jurnal'   => $id_jurnal_sj,
             'nomor_baris' => $baris++,
             'id_akun'     => $id_akun_piutang,
-            'keterangan'  => 'Piutang Penjualan Konsinyasi ' . $faktur['no_faktur'],
+            'keterangan'  => 'Piutang Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
             'debit'       => $total_nominal,
             'kredit'      => 0
         ]);
@@ -383,7 +395,7 @@ class M_Journal extends CI_Model
             'id_jurnal'   => $id_jurnal_sj,
             'nomor_baris' => $baris++,
             'id_akun'     => $id_akun_penjualan,
-            'keterangan'  => 'Pendapatan Penjualan Konsinyasi ' . $faktur['no_faktur'],
+            'keterangan'  => 'Pendapatan Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
             'debit'       => 0,
             'kredit'      => $nilai_penjualan
         ]);
@@ -394,7 +406,7 @@ class M_Journal extends CI_Model
                 'id_jurnal'   => $id_jurnal_sj,
                 'nomor_baris' => $baris++,
                 'id_akun'     => $id_akun_ppn,
-                'keterangan'  => 'PPN Keluaran Penjualan Konsinyasi ' . $faktur['no_faktur'],
+                'keterangan'  => 'PPN Keluaran Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
                 'debit'       => 0,
                 'kredit'      => $nilai_ppn
             ]);
@@ -455,7 +467,7 @@ class M_Journal extends CI_Model
                     'source_module'     => 'SALES',
                     'source_type'       => 'FAKTUR_PENJUALAN_KONSINYASI',
                     'source_id'         => $faktur['no_faktur'] . '-' . $id_pembayaran,
-                    'source_no'         => $faktur['no_faktur'],
+                    'source_no'         => $no_faktur_konsinyasi,
                     'posting_event'     => 'GOODS_ISSUE',
                     'idempotency_key'   => 'GOODS_ISSUE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran,
                     'total_debit'       => $total_cogs,
@@ -473,7 +485,7 @@ class M_Journal extends CI_Model
                     'id_jurnal'   => $id_jurnal_gi,
                     'nomor_baris' => 1,
                     'id_akun'     => $id_akun_cogs,
-                    'keterangan'  => 'Harga Pokok Penjualan Konsinyasi ' . $faktur['no_faktur'],
+                    'keterangan'  => 'Harga Pokok Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
                     'debit'       => $total_cogs,
                     'kredit'      => 0
                 ]);
@@ -483,7 +495,7 @@ class M_Journal extends CI_Model
                     'id_jurnal'   => $id_jurnal_gi,
                     'nomor_baris' => 2,
                     'id_akun'     => $id_akun_inv,
-                    'keterangan'  => 'Persediaan Konsinyasi ' . $faktur['no_faktur'],
+                    'keterangan'  => 'Persediaan Konsinyasi ' . $no_faktur_konsinyasi,
                     'debit'       => 0,
                     'kredit'      => $total_cogs
                 ]);
@@ -657,12 +669,13 @@ class M_Journal extends CI_Model
             j.keterangan,
             j.total_debit AS nilai,
             j.status,
-            COALESCE(f.no_so, '') AS no_so,
-            COALESCE(f.customer_name, '') AS pelanggan,
+            COALESCE(NULLIF(kf.no_so, ''), NULLIF(f.no_so, ''), '') AS no_so,
+            COALESCE(NULLIF(kf.nama_customer, ''), NULLIF(f.customer_name, ''), '') AS pelanggan,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
-        $this->db->join('tbso_faktur_penjualan f', 'j.source_module = "SALES" AND (f.no_faktur = j.source_id OR f.no_faktur = j.source_no)', 'left');
+        $this->db->join('tb_konsinyasi_faktur kf', 'j.source_type = "FAKTUR_PENJUALAN_KONSINYASI" AND (kf.no_faktur_konsinyasi = j.source_no OR CONCAT(kf.no_faktur_induk, "-", kf.id_pembayaran) = j.source_id)', 'left');
+        $this->db->join('tbso_faktur_penjualan f', 'j.source_module = "SALES" AND ((j.source_type = "FAKTUR_PENJUALAN_KONSINYASI" AND f.no_faktur = kf.no_faktur_induk) OR (j.source_type != "FAKTUR_PENJUALAN_KONSINYASI" AND (f.no_faktur = j.source_id OR f.no_faktur = j.source_no)))', 'left');
         $this->db->where('j.source_module', 'SALES');
         $this->db->group_start();
         $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
@@ -678,6 +691,8 @@ class M_Journal extends CI_Model
             $this->db->group_start();
             $this->db->like('j.source_no', $search);
             $this->db->or_like('j.nomor_jurnal', $search);
+            $this->db->or_like('kf.no_so', $search);
+            $this->db->or_like('kf.nama_customer', $search);
             $this->db->or_like('f.no_so', $search);
             $this->db->or_like('f.customer_name', $search);
             $this->db->group_end();

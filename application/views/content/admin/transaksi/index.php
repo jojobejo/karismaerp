@@ -122,6 +122,11 @@
                                     <i class="fas fa-file-invoice-dollar mr-1"></i> Penjualan (Faktur)
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" href="javascript:void(0)" data-category="faktur_konsinyasi">
+                                    <i class="fas fa-handshake mr-1"></i> Faktur Konsinyasi
+                                </a>
+                            </li>
                             <?php if (empty($is_admpnj_only)): ?>
                             <li class="nav-item">
                                 <a class="nav-link" href="javascript:void(0)" data-category="pembelian">
@@ -703,6 +708,7 @@ $(document).ready(function() {
         let bg = 'secondary';
         switch (cat) {
             case 'penjualan': bg = 'primary'; break;
+            case 'faktur_konsinyasi': bg = 'teal text-white'; break;
             case 'pembelian': bg = 'success'; break;
             case 'pembayaran_customer': bg = 'info'; break;
             case 'pembayaran_supplier': bg = 'indigo'; break;
@@ -718,7 +724,7 @@ $(document).ready(function() {
 
     function getStatusBadge(status) {
         const s = String(status || '').toLowerCase();
-        if (s === 'posted' || s === 'done' || s === 'selesai' || s === 'valid' || s === 'confirmed') {
+        if (s === 'posted' || s === 'done' || s === 'selesai' || s === 'valid' || s === 'confirmed' || s === 'laku' || s === 'billed') {
             return `<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>${status}</span>`;
         } else if (s === 'draft' || s === 'pending' || s === 'diajukan' || s === 'menunggu_verifikasi') {
             return `<span class="badge badge-warning text-dark px-2 py-1"><i class="fas fa-clock mr-1"></i>${status}</span>`;
@@ -1090,7 +1096,7 @@ $(document).ready(function() {
         const items = res.items || [];
 
         $('#edit-category').val(cat);
-        $('#edit-id-transaksi').val(h.id_faktur || h.id_lpb || h.id_pembayaran || h.id_retur || h.id_retur_pembelian || '');
+        $('#edit-id-transaksi').val(h.id_faktur_konsinyasi || h.id_faktur || h.id_lpb || h.id_pembayaran || h.id_retur || h.id_retur_pembelian || '');
         $('#edit-no-dokumen').val(h.no_faktur || h.nomor_lpb || h.no_dokumen || h.no_retur || h.no_retur_pembelian || h.no_referensi || '');
         $('#edit-tanggal-transaksi').val(h.tanggal_faktur || h.tgl_sj || h.tanggal_pembayaran || h.tanggal_retur || h.tanggal || '');
         $('#edit-nama-entitas').val(h.nama_customer || h.customer_name || h.nama_suplier || h.diterima_dari || h.dibayar_kepada || '');
@@ -1098,7 +1104,7 @@ $(document).ready(function() {
 
         let itemHtml = '';
 
-        if (cat === 'penjualan' || cat === 'faktur_penjualan') {
+        if (cat === 'penjualan' || cat === 'faktur_penjualan' || cat === 'faktur_konsinyasi') {
             itemHtml = `
                 <div class="card card-outline card-primary shadow-sm">
                     <div class="card-header py-2 font-weight-bold bg-white">

@@ -1128,11 +1128,68 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $accountingResult = null;
+        if (!$isDraft) {
+            try {
+                // Samakan LPB Manual dengan LPB berbasis PO: jenis LPB menjadi
+                // dasar layanan akuntansi untuk membuat atau melewati jurnal.
+                $this->load->library('Accounting_source_service');
+                $accountingResult = $this->accounting_source_service->post_goods_receipt(
+                    $idLpb,
+                    (int) $this->session->userdata('id') ?: null
+                );
+            } catch (Throwable $e) {
+                $this->db->trans_rollback();
+                log_message('error', 'Posting jurnal LPB Manual #' . $idLpb . ' gagal: ' . $e->getMessage());
+                $this->M_Logistik->insert_lpb_manual_system_log([
+                    'action_type' => 'POST_JOURNAL_LPB_MANUAL',
+                    'status' => 'FAILED',
+                    'manual_ref_no' => $payload['manual_ref_no'],
+                    'message' => 'LPB Manual dibatalkan karena proses jurnal mengalami kesalahan.',
+                    'payload' => ['error' => $e->getMessage()],
+                    'created_by' => $this->active_user_name(),
+                    'ip_address' => $this->input->ip_address(),
+                    'user_agent' => $this->input->user_agent()
+                ]);
+                $this->json_response([
+                    'status' => 'error',
+                    'message' => 'LPB Manual tidak jadi disimpan karena jurnal gagal dibuat.'
+                ]);
+                return;
+            }
+
+            if (empty($accountingResult['success']) || $this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                $accountingMessage = $accountingResult['message'] ?? 'Jurnal gagal dibuat.';
+                $this->M_Logistik->insert_lpb_manual_system_log([
+                    'action_type' => 'POST_JOURNAL_LPB_MANUAL',
+                    'status' => 'FAILED',
+                    'manual_ref_no' => $payload['manual_ref_no'],
+                    'message' => $accountingMessage,
+                    'payload' => ['accounting' => $accountingResult],
+                    'created_by' => $this->active_user_name(),
+                    'ip_address' => $this->input->ip_address(),
+                    'user_agent' => $this->input->user_agent()
+                ]);
+                $this->json_response([
+                    'status' => 'error',
+                    'message' => 'LPB Manual tidak jadi disimpan. ' . $accountingMessage,
+                    'accounting' => $accountingResult
+                ]);
+                return;
+            }
+        }
+
         $this->db->trans_commit();
 
-        $successMessage = $isDraft
-            ? 'LPB Manual berhasil disimpan sebagai DRAFT. Menunggu pengisian harga dan posting final oleh Purchasing.'
-            : 'LPB Manual berhasil disimpan dan stok tercatat di batch serta ledger.';
+        if ($isDraft) {
+            $successMessage = 'LPB Manual berhasil disimpan sebagai DRAFT. Menunggu pengisian harga dan posting final oleh Purchasing.';
+        } else {
+            $successMessage = 'LPB Manual berhasil disimpan dan stok tercatat di batch serta ledger.';
+            if (!empty($accountingResult['message'])) {
+                $successMessage .= ' ' . $accountingResult['message'];
+            }
+        }
 
         $this->json_response([
             'status' => 'success',
@@ -1140,6 +1197,7 @@ class C_Ics extends CI_Controller
             'is_draft' => $isDraft ? 1 : 0,
             'id_lpb' => (int) $idLpb,
             'manual_ref_no' => $payload['manual_ref_no'],
+            'accounting' => $accountingResult,
             'redirect_url' => base_url('ics/data_lpb?tab=lpb-manual')
         ]);
     }

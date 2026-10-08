@@ -881,7 +881,8 @@ class M_pembayaran extends CI_Model
                 }
             }
         }
-        // 4. Reversal Konsinyasi Settlement (Kembalikan LAKU menjadi DI_KIOS)
+        // 4. Reversal Konsinyasi Settlement. Jika pembayaran parsial sebelumnya
+        // memecah settlement, gabungkan kembali qty ke baris sisa di kios.
         if ($this->db->table_exists('tb_konsinyasi_settlement')) {
             $linkedSettlements = $this->db->get_where('tb_konsinyasi_settlement', ['id_pembayaran' => $id_pembayaran])->result_array();
             foreach ($linkedSettlements as $st) {
@@ -891,13 +892,49 @@ class M_pembayaran extends CI_Model
                     if (preg_match('/^(.*?)-\d+$/', (string)$st['no_faktur'], $matches)) {
                         $origNoFaktur = $matches[1];
                     }
-                    
-                    $this->db->where('id_settlement', $st['id_settlement'])->update('tb_konsinyasi_settlement', [
-                        'status' => 'DI_KIOS',
-                        'id_pembayaran' => null,
-                        'no_faktur' => $origNoFaktur,
-                        'catatan' => 'Pembayaran dibatalkan/di-unpost, barang kembali berstatus titipan di kios.'
-                    ]);
+
+                    $this->db
+                        ->where('id_settlement !=', (int)$st['id_settlement'])
+                        ->where('id_faktur', (int)$st['id_faktur'])
+                        ->where('kd_barang', $st['kd_barang'])
+                        ->where('no_lot', $st['no_lot'])
+                        ->where_in('status', ['DI_KIOS', 'PENDING'])
+                        ->where('id_pembayaran IS NULL', null, false)
+                        ->like('catatan', 'Sisa titipan di kios setelah pelunasan', 'after')
+                        ->order_by('id_settlement', 'DESC');
+                    $remainingSettlement = $this->db->get('tb_konsinyasi_settlement')->row_array();
+
+                    if ($remainingSettlement) {
+                        $restoredQty = (float)$remainingSettlement['qty_net'] + (float)$st['qty_net'];
+                        $sellingPrice = (float)$remainingSettlement['hrg_jual'];
+                        $this->db->where('id_settlement', (int)$remainingSettlement['id_settlement'])
+                            ->update('tb_konsinyasi_settlement', [
+                                'qty_terjual' => $restoredQty,
+                                'qty_net' => $restoredQty,
+                                'subtotal_jual' => round($restoredQty * $sellingPrice, 2),
+                                'no_faktur' => $origNoFaktur,
+                                'status' => 'DI_KIOS',
+                                'settled_at' => null,
+                                'settled_by' => null,
+                                'catatan' => 'Qty titipan dipulihkan setelah pembayaran dibatalkan/di-unpost.'
+                            ]);
+
+                        // Baris ini merupakan pecahan qty yang sempat dibayar.
+                        // Setelah qty dipulihkan ke baris sisa, pecahan harus dihapus.
+                        $this->db->where('id_settlement', (int)$st['id_settlement'])
+                            ->delete('tb_konsinyasi_settlement');
+                    } else {
+                        // Pembayaran penuh tidak menghasilkan baris sisa, sehingga
+                        // settlement yang sama cukup dikembalikan menjadi titipan.
+                        $this->db->where('id_settlement', $st['id_settlement'])->update('tb_konsinyasi_settlement', [
+                            'status' => 'DI_KIOS',
+                            'id_pembayaran' => null,
+                            'no_faktur' => $origNoFaktur,
+                            'settled_at' => null,
+                            'settled_by' => null,
+                            'catatan' => 'Pembayaran dibatalkan/di-unpost, barang kembali berstatus titipan di kios.'
+                        ]);
+                    }
                 }
             }
         }
@@ -1174,10 +1211,22 @@ class M_pembayaran extends CI_Model
 
         // 1. Hapus jurnal terkait jika ada
         if ($this->db->table_exists('tbkeu_jurnal')) {
-            $journals = $this->db->where('source_module', 'KEUANGAN')
+            $salesSourceId = ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran;
+            $journals = $this->db
                 ->group_start()
-                    ->where('source_id', (string)$id_pembayaran)
-                    ->or_where('source_id', $id_pembayaran)
+                    ->group_start()
+                        ->where('source_module', 'KEUANGAN')
+                        ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                        ->group_start()
+                            ->where('source_id', (string)$id_pembayaran)
+                            ->or_where('source_id', $id_pembayaran)
+                        ->group_end()
+                    ->group_end()
+                    ->or_group_start()
+                        ->where('source_module', 'SALES')
+                        ->where('source_type', 'FAKTUR_PENJUALAN_KONSINYASI')
+                        ->where('source_id', $salesSourceId)
+                    ->group_end()
                 ->group_end()
                 ->get('tbkeu_jurnal')
                 ->result_array();

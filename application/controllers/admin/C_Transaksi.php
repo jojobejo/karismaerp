@@ -78,7 +78,7 @@ class C_Transaksi extends CI_Controller
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
             $category = $this->input->get_post('category') ?: ($is_admpnj_only ? 'penjualan' : 'all');
-            if ($is_admpnj_only) {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $category = 'penjualan';
             }
 
@@ -158,7 +158,7 @@ class C_Transaksi extends CI_Controller
             $jobdesk = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
-            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat mengedit Faktur Penjualan.'], 403);
                 return;
             }
@@ -188,7 +188,7 @@ class C_Transaksi extends CI_Controller
             $jobdesk = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
-            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat mengedit Faktur Penjualan.'], 403);
                 return;
             }
@@ -232,7 +232,7 @@ class C_Transaksi extends CI_Controller
             $jobdesk = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
-            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat memproses Faktur Penjualan.'], 403);
                 return;
             }
@@ -267,7 +267,7 @@ class C_Transaksi extends CI_Controller
             $jobdesk  = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
-            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat memproses Faktur Penjualan.'], 403);
                 return;
             }
@@ -303,7 +303,7 @@ class C_Transaksi extends CI_Controller
             $jobdesk = strtoupper((string)($this->user_context['jobdesk'] ?? ''));
             $is_admpnj_only = (!$is_admin && in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true));
 
-            if ($is_admpnj_only && $category !== 'penjualan' && $category !== 'faktur_penjualan') {
+            if ($is_admpnj_only && !in_array($category, ['penjualan', 'faktur_penjualan', 'faktur_konsinyasi'], true)) {
                 $this->_json(['success' => false, 'message' => 'Akses ditolak. Admin Penjualan hanya dapat menghapus Faktur Penjualan.'], 403);
                 return;
             }

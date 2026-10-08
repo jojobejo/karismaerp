@@ -294,6 +294,26 @@ class M_Konsinyasi extends CI_Model
                 if (empty($exists['id_faktur']) && !empty($item['id_faktur'])) {
                     $updates['id_faktur'] = (int) $item['id_faktur'];
                 }
+
+                // Lengkapi relasi LPB lama yang gagal ditemukan ketika barang
+                // berpindah dari gudang penerimaan ke gudang konsinyasi.
+                if (empty($exists['id_lpb_asal']) || empty($exists['nomor_lpb_asal'])) {
+                    $originLpb = $this->find_origin_consignment_lpb(
+                        $item['kd_barang'],
+                        $item['gudang_id'],
+                        $item['no_lot']
+                    );
+                    if (!empty($originLpb['id_lpb'])) {
+                        $updates['id_lpb_asal'] = (int) $originLpb['id_lpb'];
+                        $updates['nomor_lpb_asal'] = $originLpb['nomor_lpb'];
+                        if (!empty($originLpb['kd_suplier'])) {
+                            $updates['kd_suplier'] = $originLpb['kd_suplier'];
+                        }
+                        if (!empty($originLpb['nama_suplier'])) {
+                            $updates['nama_suplier'] = $originLpb['nama_suplier'];
+                        }
+                    }
+                }
                 if (!empty($updates)) {
                     $this->db->where('id_settlement', $exists['id_settlement'])->update('tb_konsinyasi_settlement', $updates);
                 }
@@ -380,6 +400,23 @@ class M_Konsinyasi extends CI_Model
         $this->db->order_by('h.id_lpb', 'DESC');
         $this->db->limit(1);
         $row = $this->db->get()->row_array();
+
+        // Barang dapat diterima lebih dahulu di gudang reguler lalu dipindahkan
+        // ke gudang konsinyasi. Jika gudang berbeda, lot tetap menjadi identitas
+        // asal yang paling spesifik untuk menelusuri LPB Konsinyasi.
+        if (!$row && trim((string) $noLot) !== '' && $this->db->field_exists('jenis_lpb', 'tb_lpb')) {
+            $row = $this->db
+                ->select('h.id_lpb, h.nomor_lpb, h.kd_suplier, h.nama_suplier')
+                ->from('tb_lpb h')
+                ->join('tb_lpb_detail d', 'd.id_lpb = h.id_lpb', 'inner')
+                ->where('d.kd_barang', $kdBarang)
+                ->where('d.no_lot', trim((string) $noLot))
+                ->where('h.jenis_lpb', 'LPB Konsinyasi')
+                ->order_by('h.id_lpb', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row_array();
+        }
 
         if ($row) {
             // LPB tetap merupakan sumber penerimaan yang sah walaupun supplier pada
