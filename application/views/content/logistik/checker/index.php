@@ -120,6 +120,13 @@ tr.row-pending { background:#fafafa !important; }
                         </a>
                     </div>
                     <?php endif; ?>
+                    <?php if (in_array($role, ['MANAGERCK', 'MANAGERWH', 'ADMLOG'])) : ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/kedatangan_truk') ?>" class="btn btn-warning font-weight-bold">
+                            <i class="fas fa-truck-moving mr-1"></i> Antrean & Pintu Truk
+                        </a>
+                    </div>
+                    <?php endif; ?>
                     <?php if ($role === 'ADMLOG') : ?>
                     <!-- <div class="col-auto">
                         <button class="btn btn-info" data-toggle="modal" data-target="#modalTambahKK">
@@ -440,7 +447,12 @@ tr.row-pending { background:#fafafa !important; }
                             <td class="text-center" style="min-width:200px;">
                                 <?php if ($role === 'CHECKER') : ?>
                                     <?php if (!$is_taken && $my_active_id === null) : ?>
-                                        <button class="btn btn-sm btn-success btn-start" data-id="<?= $b['id'] ?>"><i class="fas fa-play"></i> Start</button>
+                                        <button class="btn btn-sm btn-success btn-start" 
+                                                data-id="<?= $b['id'] ?>" 
+                                                data-pintu="<?= $b['pintu'] ?? '' ?>" 
+                                                data-labelpintu="<?= !empty($b['pintu']) ? $fn_pintu($b['pintu']) : '' ?>">
+                                            <i class="fas fa-play"></i> Start
+                                        </button>
                                     <?php elseif (!$is_taken && $my_active_id !== null) : ?>
                                         <span class="badge badge-secondary">Selesaikan job Anda dulu</span>
                                     <?php elseif ($is_my_job && $b['status_checker'] === 'PROSES') : ?>
@@ -1702,7 +1714,22 @@ $(document).ready(function () {
         ajaxPost('checker/siap_loading_kk',{id:id},function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
     $(document).on('click', '.btn-start', function () {
-        $('#pp_id').val($(this).data('id')); $('#pp_type').val('bongkaran'); $('#pp_pintu').val('');
+        var id = $(this).data('id');
+        var pintu = $(this).data('pintu');
+        var labelPintu = $(this).data('labelpintu');
+
+        // Jika pintu sudah ditentukan oleh Manager Checker, Checker langsung start tanpa pilih pintu!
+        if (pintu && pintu !== '' && pintu !== '0') {
+            if (!confirm('Mulai bongkaran di ' + (labelPintu ? 'Pintu ' + labelPintu : 'pintu ini') + ' sekarang?')) return;
+            ajaxPost('checker/start', {id: id, pintu: pintu}, function(res){
+                alert(res.msg);
+                if (res.status) location.reload();
+            });
+            return;
+        }
+
+        // Fallback jika belum ada pintu (data manual/lama)
+        $('#pp_id').val(id); $('#pp_type').val('bongkaran'); $('#pp_pintu').val('');
         $('#modalPilihPintu').modal('show');
     });
     $(document).on('click', '.btn-start-siapkan-lk', function () {

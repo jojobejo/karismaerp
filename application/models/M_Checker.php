@@ -107,10 +107,20 @@ class M_Checker extends CI_Model
 
     public function start($id, $nik, $nama, $pintu = null)
     {
-        $this->db->where('id', $id)->update('tb_bongkaran', [
-            'status' => 'PROSES',
-            'pintu'  => $pintu,
-        ]);
+        $update_data = ['status' => 'PROSES'];
+        if ($pintu !== null) {
+            $update_data['pintu'] = $pintu;
+        }
+        $this->db->where('id', $id)->update('tb_bongkaran', $update_data);
+
+        // Update relasi tb_kedatangan_truk jika ada
+        $b = $this->db->get_where('tb_bongkaran', ['id' => $id])->row_array();
+        if ($b && !empty($b['id_kedatangan_truk'])) {
+            $this->db->where('id', $b['id_kedatangan_truk'])->update('tb_kedatangan_truk', [
+                'status' => 'PROSES_BONGKAR'
+            ]);
+        }
+
         return $this->db->insert('tb_bongkaran_checker', [
             'id_bongkaran'   => $id,
             'nik_checker'    => $nik,
@@ -131,6 +141,15 @@ class M_Checker extends CI_Model
         $this->db->where('id_bongkaran', $id)->update('tb_bongkaran_checker', [
             'progres' => 100, 'waktu_selesai' => date('Y-m-d H:i:s'), 'status_checker' => 'DONE',
         ]);
+
+        // Update relasi tb_kedatangan_truk jika ada
+        $b = $this->db->get_where('tb_bongkaran', ['id' => $id])->row_array();
+        if ($b && !empty($b['id_kedatangan_truk'])) {
+            $this->db->where('id', $b['id_kedatangan_truk'])->update('tb_kedatangan_truk', [
+                'status' => 'DONE'
+            ]);
+        }
+
         return $this->db->where('id', $id)->update('tb_bongkaran', ['status' => 'DONE']);
     }
 
@@ -779,5 +798,219 @@ class M_Checker extends CI_Model
     public function mark_notif_read()
     {
         return $this->db->where('is_read', 0)->update('tb_notifikasi', ['is_read' => 1]);
+    }
+
+    // ================================================================
+    // KEDATANGAN TRUK & PENENTUAN PINTU BONGKARAN (MANAGER CK)
+    // ================================================================
+    public function get_truk_kedatangan_list($status_filter = null)
+    {
+        $this->db->select('
+            t.*,
+            b.kode_bongkar,
+            b.status as status_bongkaran,
+            bc.nm_checker,
+            bc.progres,
+            bc.waktu_mulai as waktu_mulai_bongkar,
+            bc.waktu_selesai as waktu_selesai_bongkar
+        ');
+        $this->db->from('tb_kedatangan_truk t');
+        $this->db->join('tb_bongkaran b', 'b.id = t.id_bongkaran', 'left');
+        $this->db->join('tb_bongkaran_checker bc', 'bc.id_bongkaran = b.id', 'left');
+
+        if (!empty($status_filter)) {
+            if (is_array($status_filter)) {
+                $this->db->where_in('t.status', $status_filter);
+            } else {
+                $this->db->where('t.status', $status_filter);
+            }
+        }
+
+        // Urutkan: Truk sudah datang di pos tapi belum dapat pintu di paling atas
+        $this->db->order_by("CASE 
+            WHEN t.status = 'SUDAH_DATANG' THEN 1 
+            WHEN t.status = 'MENUNGGU_BONGKAR' THEN 2 
+            WHEN t.status = 'PROSES_BONGKAR' THEN 3 
+            WHEN t.status = 'TERJADWAL' THEN 4 
+            ELSE 5 END", 'ASC');
+        $this->db->order_by('t.waktu_kedatangan', 'DESC');
+        $this->db->order_by('t.id', 'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_truk_sudah_datang()
+    {
+        return $this->get_truk_kedatangan_list('SUDAH_DATANG');
+    }
+
+    public function get_truk_by_id($id)
+    {
+        $this->db->select('
+            t.*,
+            b.kode_bongkar,
+            b.status as status_bongkaran,
+            bc.nm_checker
+        ');
+        $this->db->from('tb_kedatangan_truk t');
+        $this->db->join('tb_bongkaran b', 'b.id = t.id_bongkaran', 'left');
+        $this->db->join('tb_bongkaran_checker bc', 'bc.id_bongkaran = b.id', 'left');
+        $this->db->where('t.id', (int)$id);
+        return $this->db->get()->row_array();
+    }
+
+    public function assign_pintu_truk($id_truk, $pintu, $assigned_by, $catatan_mck = null)
+    {
+        $truk = $this->db->get_where('tb_kedatangan_truk', ['id' => (int)$id_truk])->row_array();
+        if (!$truk) return false;
+
+        $id_bongkaran = $truk['id_bongkaran'];
+
+        // Jika belum memiliki relasi di tb_bongkaran, otomatis buatkan aktivitas bongkaran baru
+        if (empty($id_bongkaran)) {
+            $kode_bongkar = $this->generate_kode();
+            $keterangan = '[' . $truk['nopol'] . '] ' . ($truk['supplier'] ? $truk['supplier'] . ' - ' : '') . ($truk['jenis_muatan'] ?: 'Bongkaran Truk');
+            if (!empty($truk['jumlah_muatan'])) {
+                $keterangan .= ' (' . $truk['jumlah_muatan'] . ')';
+            }
+
+            $this->db->insert('tb_bongkaran', [
+                'kode_bongkar'       => $kode_bongkar,
+                'keterangan'         => $keterangan,
+                'pintu'              => (int)$pintu,
+                'status'             => 'MENUNGGU',
+                'created_by'         => $assigned_by,
+                'created_at'         => date('Y-m-d H:i:s'),
+                'id_kedatangan_truk' => (int)$id_truk
+            ]);
+            $id_bongkaran = $this->db->insert_id();
+        } else {
+            // Jika sudah ada bongkaran, sinkronkan pintunya
+            $this->db->where('id', $id_bongkaran)->update('tb_bongkaran', [
+                'pintu' => (int)$pintu
+            ]);
+        }
+
+        // Update status di tb_kedatangan_truk menjadi MENUNGGU_BONGKAR (pintu sudah ditentukan oleh Manager CK)
+        $this->db->where('id', (int)$id_truk)->update('tb_kedatangan_truk', [
+            'pintu'             => (int)$pintu,
+            'assigned_pintu_at' => date('Y-m-d H:i:s'),
+            'assigned_pintu_by' => $assigned_by,
+            'catatan_managerck' => $catatan_mck,
+            'id_bongkaran'      => $id_bongkaran,
+            'status'            => 'MENUNGGU_BONGKAR'
+        ]);
+
+        return true;
+    }
+
+    public function security_konfirmasi_datang($id_truk, $petugas, $catatan = null)
+    {
+        return $this->db->where('id', (int)$id_truk)->update('tb_kedatangan_truk', [
+            'is_datang'        => 1,
+            'waktu_kedatangan' => date('Y-m-d H:i:s'),
+            'petugas_security' => $petugas,
+            'catatan_security' => $catatan,
+            'status'           => 'SUDAH_DATANG'
+        ]);
+    }
+
+    public function create_truk_jadwal($data)
+    {
+        if (empty($data['no_antrean'])) {
+            $prefix = 'TRK' . date('ymd');
+            $last   = $this->db->like('no_antrean', $prefix, 'after')
+                               ->order_by('id', 'DESC')->limit(1)
+                               ->get('tb_kedatangan_truk')->row();
+            $urut = $last ? ((int) substr($last->no_antrean, -4)) + 1 : 1;
+            $data['no_antrean'] = $prefix . str_pad($urut, 4, '0', STR_PAD_LEFT);
+        }
+        if (!isset($data['created_at'])) {
+            $data['created_at'] = date('Y-m-d H:i:s');
+        }
+        $this->db->insert('tb_kedatangan_truk', $data);
+        return $this->db->insert_id();
+    }
+
+    public function get_status_pintu_live()
+    {
+        $nama_pintu_map = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
+        $pintu_status = [];
+
+        // Ambil bongkaran aktif
+        $bongkar_aktif = $this->db->select('b.id, b.pintu, b.keterangan, b.status, bc.nm_checker, bc.waktu_mulai, bc.progres')
+            ->from('tb_bongkaran b')
+            ->join('tb_bongkaran_checker bc', 'bc.id_bongkaran = b.id', 'left')
+            ->where('b.is_archived', 0)
+            ->where_in('b.status', ['MENUNGGU', 'PROSES'])
+            ->get()->result_array();
+
+        // Ambil loading KK & LK aktif
+        $lk_aktif = $this->db->select('id, pintu, keterangan, status, nm_checker, waktu_mulai, progres')
+            ->from('tb_loading_lk')
+            ->where('is_archived', 0)
+            ->where_in('status', ['MENUNGGU', 'PROSES_LOADING', 'PENYIAPAN_BARANG'])
+            ->get()->result_array();
+
+        $kk_aktif = $this->db->select('id, pintu, keterangan, status, nm_checker, waktu_mulai, progres')
+            ->from('tb_loading_kk')
+            ->where('is_archived', 0)
+            ->where_in('status', ['MENUNGGU', 'PROSES_LOADING', 'PENYIAPAN_BARANG'])
+            ->get()->result_array();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $label = $nama_pintu_map[$i - 1];
+            $item = [
+                'pintu'     => $i,
+                'label'     => $label,
+                'status'    => 'KOSONG',
+                'tipe'      => '-',
+                'info'      => 'Tersedia / Kosong',
+                'checker'   => '-',
+                'progres'   => 0,
+            ];
+
+            // Cek bongkaran pada pintu ini
+            foreach ($bongkar_aktif as $b) {
+                if ((int)$b['pintu'] === $i) {
+                    $item['status']  = ($b['status'] === 'PROSES') ? 'PROSES' : 'MENUNGGU';
+                    $item['tipe']    = 'Bongkaran';
+                    $item['info']    = $b['keterangan'];
+                    $item['checker'] = $b['nm_checker'] ?: '-';
+                    $item['progres'] = (int)($b['progres'] ?? 0);
+                    break;
+                }
+            }
+
+            // Cek jika belum terisi di bongkaran, cek di LK atau KK
+            if ($item['status'] === 'KOSONG') {
+                foreach ($lk_aktif as $lk) {
+                    if ((int)$lk['pintu'] === $i) {
+                        $item['status']  = in_array($lk['status'], ['PROSES_LOADING', 'PROSES']) ? 'PROSES' : 'MENUNGGU';
+                        $item['tipe']    = 'Loading LK';
+                        $item['info']    = $lk['keterangan'] ? 'LK: ' . $lk['keterangan'] : 'Loading LK';
+                        $item['checker'] = $lk['nm_checker'] ?: '-';
+                        $item['progres'] = (int)($lk['progres'] ?? 0);
+                        break;
+                    }
+                }
+            }
+            if ($item['status'] === 'KOSONG') {
+                foreach ($kk_aktif as $kk) {
+                    if ((int)$kk['pintu'] === $i) {
+                        $item['status']  = in_array($kk['status'], ['PROSES_LOADING', 'PROSES']) ? 'PROSES' : 'MENUNGGU';
+                        $item['tipe']    = 'Loading KK';
+                        $item['info']    = $kk['keterangan'] ? 'KK: ' . $kk['keterangan'] : 'Loading KK';
+                        $item['checker'] = $kk['nm_checker'] ?: '-';
+                        $item['progres'] = (int)($kk['progres'] ?? 0);
+                        break;
+                    }
+                }
+            }
+
+            $pintu_status[$i] = $item;
+        }
+
+        return $pintu_status;
     }
 }

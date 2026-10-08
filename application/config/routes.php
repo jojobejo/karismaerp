@@ -307,6 +307,10 @@ $route['checker/done_kk']                           = 'logistik/C_Checker/done_k
 $route['checker/ganti_checker']                     = 'logistik/C_Checker/ganti_checker';
 $route['checker/ganti_checker_kk']                  = 'logistik/C_Checker/ganti_checker_kk';
 $route['checker/ganti_checker_lk']                  = 'logistik/C_Checker/ganti_checker_lk';
+$route['checker/kedatangan_truk']                   = 'logistik/C_Checker/kedatangan_truk';
+$route['checker/assign_pintu_truk']                 = 'logistik/C_Checker/assign_pintu_truk';
+$route['checker/confirm_truk_datang']               = 'logistik/C_Checker/confirm_truk_datang';
+$route['checker/store_truk_jadwal']                 = 'logistik/C_Checker/store_truk_jadwal';
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';

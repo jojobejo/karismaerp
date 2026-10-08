@@ -7,7 +7,7 @@
     </a>
 
     <?php 
-    $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK'];
+    $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK', 'CHECKER'];
     ?>
 
     <!-- Sidebar -->
@@ -222,6 +222,14 @@
                 <i class="nav-icon fas fa-warehouse"></i>
                 <p>
                   Warehouse Activity
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('checker/kedatangan_truk') ?>" class="nav-link">
+                <i class="nav-icon fas fa-truck-moving"></i>
+                <p>
+                  Antrean & Pintu Truk
                 </p>
               </a>
             </li>

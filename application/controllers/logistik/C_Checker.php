@@ -213,6 +213,21 @@ class C_Checker extends CI_Controller
         $id    = (int)$this->input->post('id');
         $pintu = (int)$this->input->post('pintu') ?: null;
 
+        // Ambil data bongkaran saat ini
+        $b_curr = $this->M_Checker->get_by_id($id);
+        if (!$b_curr) {
+            echo json_encode(['status' => false, 'msg' => 'Data bongkaran tidak ditemukan']); return;
+        }
+
+        // Jika pintu tidak disertakan di POST, ambil pintu yang sudah ditentukan Manager CK
+        if (empty($pintu) && !empty($b_curr['pintu'])) {
+            $pintu = (int)$b_curr['pintu'];
+        }
+
+        if (empty($pintu)) {
+            echo json_encode(['status' => false, 'msg' => 'Pintu belum dialokasikan oleh Manager Checker! Hubungi Manager Checker.']); return;
+        }
+
         if ($this->M_Checker->is_taken($id)) {
             echo json_encode(['status' => false, 'msg' => 'Bongkaran sudah diambil checker lain']); return;
         }
@@ -1075,5 +1090,109 @@ class C_Checker extends CI_Controller
         }
         $ok = $this->M_Checker->mark_notif_read();
         echo json_encode(['status' => (bool)$ok]);
+    }
+
+    // ================================================================
+    // KEDATANGAN TRUK & PENENTUAN PINTU (MANAGER CK)
+    // ================================================================
+    public function kedatangan_truk()
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+
+        $status_filter = $this->input->get('status', true);
+
+        $data['page_title']        = 'KARISMA - Antrean Truk & Alokasi Pintu';
+        $data['role']              = $this->role();
+        $data['is_mck']            = $this->isMCK();
+        $data['truk_sudah_datang'] = $this->M_Checker->get_truk_sudah_datang();
+        $data['truk_semua']        = $this->M_Checker->get_truk_kedatangan_list($status_filter);
+        $data['status_pintu']      = $this->M_Checker->get_status_pintu_live();
+        $data['nama_pintu_map']    = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
+        $data['status_filter']     = $status_filter;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/kedatangan_truk.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function assign_pintu_truk()
+    {
+        if (!in_array($this->role(), [self::ROLE_MANAGERCK, self::ROLE_MANAGER_WH])) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak: Hanya Manager Checker yang berhak menentukan pintu']); return;
+        }
+
+        $id_truk = (int)$this->input->post('id_truk');
+        $pintu   = (int)$this->input->post('pintu');
+        $catatan = $this->input->post('catatan_managerck', true);
+
+        if (!$id_truk || !$pintu) {
+            echo json_encode(['status' => false, 'msg' => 'ID Truk dan Pintu wajib dipilih']); return;
+        }
+
+        if ($pintu < 1 || $pintu > 10) {
+            echo json_encode(['status' => false, 'msg' => 'Pintu tidak valid (1 s/d 10)']); return;
+        }
+
+        $ok = $this->M_Checker->assign_pintu_truk($id_truk, $pintu, $this->nama(), $catatan);
+        $nama_pintu_map = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
+        $label_pintu = $nama_pintu_map[$pintu - 1] ?? ('P' . $pintu);
+
+        echo json_encode([
+            'status' => (bool)$ok,
+            'msg'    => $ok ? "Truk berhasil dialokasikan ke Pintu {$label_pintu}! Checker dapat langsung start bongkaran." : "Gagal menentukan pintu"
+        ]);
+    }
+
+    public function confirm_truk_datang()
+    {
+        // Pos Security atau role logistik/checker berhak konfirmasi kedatangan truk fisik
+        $id_truk  = (int)$this->input->post('id_truk');
+        $petugas  = $this->input->post('petugas_security', true) ?: $this->nama();
+        $catatan  = $this->input->post('catatan_security', true);
+
+        if (!$id_truk) {
+            echo json_encode(['status' => false, 'msg' => 'ID Truk tidak valid']); return;
+        }
+
+        $ok = $this->M_Checker->security_konfirmasi_datang($id_truk, $petugas, $catatan);
+        echo json_encode([
+            'status' => (bool)$ok,
+            'msg'    => $ok ? 'Kedatangan truk berhasil dikonfirmasi! Truk siap dialokasikan pintu oleh Manager Checker.' : 'Gagal konfirmasi kedatangan'
+        ]);
+    }
+
+    public function store_truk_jadwal()
+    {
+        // Input jadwal kedatangan truk baru
+        $nopol = strtoupper(trim($this->input->post('nopol', true)));
+        if (empty($nopol)) {
+            echo json_encode(['status' => false, 'msg' => 'Nomor polisi truk wajib diisi']); return;
+        }
+
+        $is_langsung_datang = (int)$this->input->post('is_langsung_datang');
+
+        $data_insert = [
+            'no_po'            => $this->input->post('no_po', true),
+            'no_sj'            => $this->input->post('no_sj', true),
+            'supplier'         => $this->input->post('supplier', true),
+            'nopol'            => $nopol,
+            'nama_sopir'       => $this->input->post('nama_sopir', true),
+            'no_telp_sopir'    => $this->input->post('no_telp_sopir', true),
+            'ekspedisi'        => $this->input->post('ekspedisi', true),
+            'jenis_muatan'     => $this->input->post('jenis_muatan', true),
+            'jumlah_muatan'    => $this->input->post('jumlah_muatan', true),
+            'tgl_jadwal'       => $this->input->post('tgl_jadwal', true) ?: date('Y-m-d H:i:s'),
+            'is_datang'        => $is_langsung_datang ? 1 : 0,
+            'waktu_kedatangan' => $is_langsung_datang ? date('Y-m-d H:i:s') : null,
+            'petugas_security' => $is_langsung_datang ? ($this->input->post('petugas_security', true) ?: $this->nama()) : null,
+            'catatan_security' => $this->input->post('catatan_security', true),
+            'status'           => $is_langsung_datang ? 'SUDAH_DATANG' : 'TERJADWAL',
+        ];
+
+        $new_id = $this->M_Checker->create_truk_jadwal($data_insert);
+        echo json_encode([
+            'status' => (bool)$new_id,
+            'msg'    => $new_id ? 'Jadwal truk berhasil ditambahkan' : 'Gagal menyimpan jadwal'
+        ]);
     }
 }
