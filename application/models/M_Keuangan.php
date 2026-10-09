@@ -1170,6 +1170,18 @@ class M_Keuangan extends CI_Model
             return [];
         }
 
+        // LPB manual tidak memiliki relasi ke tbpo_po. Supplier LPB manual
+        // disimpan langsung pada header tb_lpb, sedangkan LPB PO tetap memakai
+        // supplier dari PO sebagai fallback.
+        $hasLpbSupplierCode = $this->db->field_exists('kd_suplier', 'tb_lpb');
+        $hasLpbSupplierName = $this->db->field_exists('nama_suplier', 'tb_lpb');
+        $supplierCodeExpression = $hasLpbSupplierCode
+            ? "COALESCE(NULLIF(h.kd_suplier, ''), p.kd_suplier)"
+            : 'p.kd_suplier';
+        $supplierNameExpression = $hasLpbSupplierName
+            ? "COALESCE(NULLIF(h.nama_suplier, ''), NULLIF(s.nama_suplier, ''), NULLIF(ks.nama_suplier, ''), '')"
+            : "COALESCE(NULLIF(s.nama_suplier, ''), NULLIF(ks.nama_suplier, ''), '')";
+
         // --- Bagian 1: Jurnal LPB reguler (LOGISTIK) ---
         $this->db->select("
             j.id_jurnal,
@@ -1183,13 +1195,13 @@ class M_Keuangan extends CI_Model
             j.source_type,
             COALESCE(h.nomor_lpb, j.source_no, '') AS nomor_lpb,
             COALESCE(h.no_po, '') AS no_po,
-            COALESCE(s.nama_suplier, ks.nama_suplier, '') AS supplier,
+            {$supplierNameExpression} AS supplier,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tb_lpb h', 'h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'LOGISTIK\'', 'left', false);
         $this->db->join('tbpo_po p', 'p.kd_po = h.kd_po AND p.no_po = h.no_po', 'left');
-        $this->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+        $this->db->join('tbpo_suplier s', "s.kd_suplier = {$supplierCodeExpression}", 'left', false);
         // JOIN ke tabel settlement konsinyasi untuk mengambil nama supplier
         $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
         // Filter: LPB reguler ATAU konsinyasi settlement
@@ -1210,6 +1222,9 @@ class M_Keuangan extends CI_Model
             $this->db->or_like('j.nomor_jurnal', $search);
             $this->db->or_like('h.no_po', $search);
             $this->db->or_like('h.nomor_lpb', $search);
+            if ($hasLpbSupplierName) {
+                $this->db->or_like('h.nama_suplier', $search);
+            }
             $this->db->or_like('s.nama_suplier', $search);
             $this->db->or_like('ks.nama_suplier', $search);
             $this->db->or_like('ks.nama_barang', $search);
@@ -1312,12 +1327,23 @@ class M_Keuangan extends CI_Model
 
         $isKonsinyasi = ($jrnlCheck->source_module === 'PURCHASING' && $jrnlCheck->source_type === 'CONSIGNMENT_SETTLEMENT');
 
+        // LPB manual mengambil identitas supplier dari header LPB karena tidak
+        // mempunyai PO. LPB reguler tetap menggunakan supplier dari PO.
+        $hasLpbSupplierCode = $this->db->field_exists('kd_suplier', 'tb_lpb');
+        $hasLpbSupplierName = $this->db->field_exists('nama_suplier', 'tb_lpb');
+        $supplierCodeExpression = $hasLpbSupplierCode
+            ? "COALESCE(NULLIF(h.kd_suplier, ''), p.kd_suplier)"
+            : 'p.kd_suplier';
+        $supplierNameExpression = $hasLpbSupplierName
+            ? "COALESCE(NULLIF(h.nama_suplier, ''), NULLIF(s.nama_suplier, ''), NULLIF(ks.nama_suplier, ''), '')"
+            : "COALESCE(NULLIF(s.nama_suplier, ''), NULLIF(ks.nama_suplier, ''), '')";
+
         $this->db->select("
             j.*,
             jj.kode_jenis_jurnal,
             COALESCE(h.nomor_lpb, ks.no_settlement, j.source_no, '') AS nomor_lpb,
             COALESCE(h.no_po, ks.no_invoice_supplier, '') AS no_po,
-            COALESCE(s.nama_suplier, ks.nama_suplier, '') AS supplier,
+            {$supplierNameExpression} AS supplier,
             COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(u.nama_lngkp, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
             'IDR' AS kurs
         ", false);
@@ -1325,7 +1351,7 @@ class M_Keuangan extends CI_Model
         $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
         $this->db->join('tb_lpb h', 'h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'LOGISTIK\'', 'left', false);
         $this->db->join('tbpo_po p', 'p.kd_po = h.kd_po AND p.no_po = h.no_po', 'left');
-        $this->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+        $this->db->join('tbpo_suplier s', "s.kd_suplier = {$supplierCodeExpression}", 'left', false);
         // JOIN tabel konsinyasi untuk ambil info supplier dan invoice
         $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
         $this->db->join('tb_karyawan k', 'k.id = j.created_by', 'left');

@@ -1640,11 +1640,11 @@ class M_Transaksi extends CI_Model
         if (!empty($postData['items']) && is_array($postData['items'])) {
             foreach ($postData['items'] as $item) {
                 $idDetail = (int)($item['id_detail_lpb'] ?? $item['id_lpb_detail'] ?? 0);
-                $qty = (float)($item['qty_diterima'] ?? 0);
-                $harga = (float)($item['harga_satuan'] ?? 0);
+                $qty = $this->_parse_localized_number($item['qty_diterima'] ?? 0);
+                $harga = $this->_parse_localized_number($item['harga_satuan'] ?? 0);
 
-                if (isset($item['total_harga']) && $item['total_harga'] !== '' && is_numeric(str_replace([',', ' '], '', $item['total_harga']))) {
-                    $total = (float)str_replace([',', ' '], '', $item['total_harga']);
+                if (isset($item['total_harga']) && trim((string)$item['total_harga']) !== '') {
+                    $total = $this->_parse_localized_number($item['total_harga']);
                     if ($qty > 0 && $harga <= 0) {
                         $harga = round($total / $qty, 2);
                     }
@@ -1675,6 +1675,36 @@ class M_Transaksi extends CI_Model
         }
 
         return ['success' => true, 'message' => 'LPB pembelian dan jurnal akuntansi berhasil diperbarui.'];
+    }
+
+    /**
+     * Mengubah angka format Indonesia maupun format mesin menjadi float.
+     * Contoh: 63.963,96 menjadi 63963.96 dan 63963.96 tetap 63963.96.
+     */
+    private function _parse_localized_number($value)
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float)$value;
+        }
+
+        $normalized = preg_replace('/\s+/', '', trim((string)$value));
+        $normalized = preg_replace('/[^0-9,\.\-]/', '', $normalized);
+        if ($normalized === '' || $normalized === '-') {
+            return 0.0;
+        }
+
+        $commaPosition = strrpos($normalized, ',');
+        $dotPosition = strrpos($normalized, '.');
+        if ($commaPosition !== false && ($dotPosition === false || $commaPosition > $dotPosition)) {
+            $normalized = str_replace('.', '', $normalized);
+            $normalized = str_replace(',', '.', $normalized);
+        } elseif ($commaPosition !== false && $dotPosition !== false) {
+            $normalized = str_replace(',', '', $normalized);
+        } elseif ($commaPosition !== false) {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        return is_numeric($normalized) ? (float)$normalized : 0.0;
     }
 
     private function _update_pembayaran_customer($idPembayaran, $postData, $userId)

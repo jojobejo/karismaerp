@@ -17,6 +17,15 @@ LPB Manual mengikuti aturan posting akuntansi yang sama dengan LPB berbasis PO. 
 
 Untuk LPB berbasis PO, supplier tetap diperoleh dari PO. Untuk LPB Manual, supplier dibaca dari kolom `kd_suplier` dan `nama_suplier` pada header `tb_lpb`, karena transaksi tidak memiliki relasi ke PO.
 
+Daftar dan detail pada menu **Jurnal Pembelian** menggunakan urutan sumber supplier berikut:
+
+1. Nama supplier pada header LPB Manual.
+2. Master supplier berdasarkan kode supplier header LPB.
+3. Supplier dari PO untuk LPB reguler.
+4. Supplier settlement untuk transaksi konsinyasi.
+
+Dengan urutan tersebut, LPB Manual tetap menampilkan supplier meskipun `no_po` berisi nomor referensi manual dan tidak ditemukan pada tabel PO.
+
 ## Catatan Operasional
 
 Data LPB Manual lama yang sudah berstatus POST sebelum perbaikan ini tidak otomatis dibuatkan jurnal. Data tersebut perlu diposting ulang melalui workflow yang tersedia atau direkonsiliasi secara terkontrol oleh Accounting.

@@ -80,7 +80,8 @@ class Accounting_source_service
         }
 
         $items = $this->CI->db->query(
-            "SELECT d.*, b.kelompok_dagang, b.kode_akun_penjualan, b.kode_akun_harga_pokok, b.kode_akun_persediaan
+            "SELECT d.*, b.kelompok_dagang, b.kode_akun_penjualan, b.kode_akun_harga_pokok, b.kode_akun_persediaan,
+                    b.hpp_average, b.hpp_fifo, b.hpp_lifo
              FROM tbso_faktur_detail d
              LEFT JOIN tbpo_barang b ON d.kd_barang = b.kode_barang
              WHERE d.id_faktur = ? AND d.no_faktur = ?",
@@ -94,6 +95,31 @@ class Accounting_source_service
                 'source_id' => $noFaktur,
                 'source_no' => $noFaktur,
             ], 'Detail atau nilai faktur final belum valid.', ['SOURCE_AMOUNT_INVALID']);
+        }
+
+        // HPP jurnal harus mengikuti moving average Kartu Stok Gudang, bukan
+        // harga LPB terakhir yang mungkin tersimpan pada detail SO/faktur.
+        // Nilai pada detail faktur tetap menjadi snapshot dokumen, sedangkan
+        // posting akuntansi membaca ulang HPP persediaan per gudang.
+        $this->CI->load->model('M_PenyesuaianBarang');
+        $averageHppMap = [];
+        foreach ($items as $item) {
+            $itemCode = trim((string)($item->kd_barang ?? ''));
+            $usesAverage = strtoupper(trim((string)($item->hpp_average ?? 'T'))) === 'T';
+            if ($itemCode === '' || !$usesAverage) {
+                continue;
+            }
+
+            if (!array_key_exists($itemCode, $averageHppMap)) {
+                $averageHppMap[$itemCode] = (float)$this->CI->M_PenyesuaianBarang->get_item_hpp(
+                    $itemCode,
+                    !empty($header->gudang_id) ? (int)$header->gudang_id : null
+                );
+            }
+
+            if ($averageHppMap[$itemCode] > 0) {
+                $item->hrg_pokok = $averageHppMap[$itemCode];
+            }
         }
 
         $kodes = [];

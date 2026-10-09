@@ -558,6 +558,21 @@ class M_SalesOrder extends CI_Model
 
         $master = $this->_get_master_bulk(array_column($stocks, 'kd_barang'));
 
+        // Harga pokok yang ditampilkan/dibawa ke SO mengikuti moving average
+        // Kartu Stok Gudang. Jangan memakai harga LPB terakhir dari master bulk.
+        $this->load->model('M_PenyesuaianBarang');
+        $average_hpp_map = [];
+        foreach (array_unique(array_column($stocks, 'kd_barang')) as $stock_kd_barang) {
+            $stock_kd_barang = trim((string)$stock_kd_barang);
+            if ($stock_kd_barang === '') {
+                continue;
+            }
+            $average_hpp_map[$stock_kd_barang] = (float)$this->M_PenyesuaianBarang->get_item_hpp(
+                $stock_kd_barang,
+                $gudang_id
+            );
+        }
+
         foreach ($stocks as &$row) {
             $kd = $row['kd_barang'];
             $m  = $master[$kd] ?? [];
@@ -568,7 +583,10 @@ class M_SalesOrder extends CI_Model
 
             $row['berat_gram']  = $m['berat_gram']  ?? 0;
             $row['kubikasi_m3'] = $m['kubikasi_m3'] ?? 0;
-            $row['hpp']         = $m['hpp']         ?? 0;
+            $uses_average_hpp   = strtoupper(trim((string)($m['hpp_average'] ?? 'T'))) === 'T';
+            $row['hpp']         = $uses_average_hpp && !empty($average_hpp_map[$kd])
+                ? $average_hpp_map[$kd]
+                : ($m['hpp'] ?? 0);
             $row['p']           = $m['p']           ?? 0;
             $row['l']           = $m['l']           ?? 0;
             $row['t']           = $m['t']           ?? 0;

@@ -1090,6 +1090,36 @@ $(document).ready(function() {
     });
 
     // Populate Edit Modal
+    function parseLocalizedNumber(value) {
+        let normalized = String(value === null || value === undefined ? '' : value)
+            .trim()
+            .replace(/Rp/gi, '')
+            .replace(/\s/g, '');
+
+        if (normalized === '') return 0;
+
+        const commaPos = normalized.lastIndexOf(',');
+        const dotPos = normalized.lastIndexOf('.');
+        if (commaPos > dotPos) {
+            normalized = normalized.replace(/\./g, '').replace(',', '.');
+        } else if (dotPos > commaPos && commaPos >= 0) {
+            normalized = normalized.replace(/,/g, '');
+        } else if (commaPos >= 0) {
+            normalized = normalized.replace(',', '.');
+        }
+
+        normalized = normalized.replace(/[^0-9.-]/g, '');
+        const result = Number(normalized);
+        return Number.isFinite(result) ? result : 0;
+    }
+
+    function formatLocalizedNumber(value, maximumFractionDigits = 4) {
+        return parseLocalizedNumber(value).toLocaleString('id-ID', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: maximumFractionDigits
+        });
+    }
+
     function showEditModal(res) {
         const h = res.header || {};
         const cat = res.category || '';
@@ -1137,10 +1167,10 @@ $(document).ready(function() {
                         <input type="hidden" name="items[${idx}][id_faktur_detail]" value="${itemId}">
                         <td><strong>${escapeHtml(it.nama_barang || it.kd_barang)}</strong><br><small class="text-muted">${escapeHtml(it.kd_barang || '')}</small></td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-qty" name="items[${idx}][qty]" value="${itemQty}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right edit-harga" name="items[${idx}][harga_satuan]" value="${itemHarga}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right edit-harga localized-number" name="items[${idx}][harga_satuan]" value="${formatLocalizedNumber(itemHarga)}" required></td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-disc-pct" name="items[${idx}][diskon_persen]" value="${itemDisc}"></td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-disc-rp" name="items[${idx}][diskon_rp]" value="${itemDiscRp}"></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right font-weight-bold text-teal edit-subtotal" name="items[${idx}][total_harga]" value="${itemSubtotal}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right font-weight-bold text-teal edit-subtotal localized-number" name="items[${idx}][total_harga]" value="${formatLocalizedNumber(itemSubtotal)}" required></td>
                     </tr>
                 `;
             });
@@ -1174,8 +1204,8 @@ $(document).ready(function() {
                         <input type="hidden" name="items[${idx}][id_detail_lpb]" value="${itemId}">
                         <td><strong>${escapeHtml(it.nama_barang || it.kd_barang)}</strong><br><small class="text-muted">${escapeHtml(it.kd_barang || '')}</small></td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-qty" name="items[${idx}][qty_diterima]" value="${itemQty}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right edit-harga" name="items[${idx}][harga_satuan]" value="${itemHarga}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right font-weight-bold text-success edit-subtotal" name="items[${idx}][total_harga]" value="${itemTotal}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right edit-harga localized-number" name="items[${idx}][harga_satuan]" value="${formatLocalizedNumber(itemHarga)}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right font-weight-bold text-success edit-subtotal localized-number" name="items[${idx}][total_harga]" value="${formatLocalizedNumber(itemTotal)}" required></td>
                     </tr>
                 `;
             });
@@ -1209,8 +1239,8 @@ $(document).ready(function() {
                         <input type="hidden" name="items[${idx}][id_retur_detail]" value="${itemId}">
                         <td><strong>${escapeHtml(it.nama_barang || it.nm_barang || 'Barang Retur')}</strong>${it.kd_barang || it.kd_barang_master ? `<br><small class="text-muted">${escapeHtml(it.kd_barang || it.kd_barang_master)}</small>` : ''}</td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-qty" name="items[${idx}][qty_retur]" value="${itemQty}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right edit-harga" name="items[${idx}][harga_satuan]" value="${itemHarga}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right font-weight-bold text-warning edit-subtotal" name="items[${idx}][subtotal]" value="${itemTotal}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right edit-harga localized-number" name="items[${idx}][harga_satuan]" value="${formatLocalizedNumber(itemHarga)}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right font-weight-bold text-warning edit-subtotal localized-number" name="items[${idx}][subtotal]" value="${formatLocalizedNumber(itemTotal)}" required></td>
                     </tr>
                 `;
             });
@@ -1244,8 +1274,8 @@ $(document).ready(function() {
                         <input type="hidden" name="items[${idx}][id_detail_retur_pembelian]" value="${itemId}">
                         <td><strong>${escapeHtml(it.nama_barang || it.nm_barang || 'Barang')}</strong>${it.kd_barang || it.kode_barang ? `<br><small class="text-muted">${escapeHtml(it.kd_barang || it.kode_barang)}</small>` : ''}</td>
                         <td><input type="number" step="any" class="form-control form-control-sm text-right edit-qty" name="items[${idx}][qty_retur]" value="${itemQty}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right edit-harga" name="items[${idx}][harga_satuan]" value="${itemHarga}" required></td>
-                        <td><input type="number" step="any" class="form-control form-control-sm text-right font-weight-bold text-orange edit-subtotal" name="items[${idx}][total]" value="${itemTotal}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right edit-harga localized-number" name="items[${idx}][harga_satuan]" value="${formatLocalizedNumber(itemHarga)}" required></td>
+                        <td><input type="text" inputmode="decimal" class="form-control form-control-sm text-right font-weight-bold text-orange edit-subtotal localized-number" name="items[${idx}][total]" value="${formatLocalizedNumber(itemTotal)}" required></td>
                     </tr>
                 `;
             });
@@ -1290,7 +1320,7 @@ $(document).ready(function() {
     $(document).on('input', '.edit-qty, .edit-harga, .edit-disc-pct, .edit-disc-rp', function() {
         const row = $(this).closest('.edit-item-row');
         const qty = parseFloat(row.find('.edit-qty').val()) || 0;
-        const harga = parseFloat(row.find('.edit-harga').val()) || 0;
+        const harga = parseLocalizedNumber(row.find('.edit-harga').val());
         const discPct = parseFloat(row.find('.edit-disc-pct').val()) || 0;
         let discRp = parseFloat(row.find('.edit-disc-rp').val()) || 0;
 
@@ -1300,13 +1330,13 @@ $(document).ready(function() {
             row.find('.edit-disc-rp').val(discRp);
         }
         let total = Math.max(0, subtotal - discRp);
-        row.find('.edit-subtotal').val(total);
+        row.find('.edit-subtotal').val(formatLocalizedNumber(total, 2));
     });
 
     // When Subtotal is directly modified
     $(document).on('input', '.edit-subtotal', function() {
         const row = $(this).closest('.edit-item-row');
-        const subtotal = parseFloat($(this).val()) || 0;
+        const subtotal = parseLocalizedNumber($(this).val());
         const qty = parseFloat(row.find('.edit-qty').val()) || 0;
         const discPct = parseFloat(row.find('.edit-disc-pct').val()) || 0;
         const discRp = parseFloat(row.find('.edit-disc-rp').val()) || 0;
@@ -1314,7 +1344,7 @@ $(document).ready(function() {
         // Jika tidak ada diskon dan qty > 0, otomatis sesuaikan harga satuan
         if (discPct === 0 && discRp === 0 && qty > 0) {
             const harga = Math.round((subtotal / qty) * 100) / 100;
-            row.find('.edit-harga').val(harga);
+            row.find('.edit-harga').val(formatLocalizedNumber(harga));
         }
     });
 
@@ -1335,6 +1365,11 @@ $(document).ready(function() {
             if (result.isConfirmed) {
                 $('#btn-save-edit').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
 
+                // Kirim angka dalam format mesin agar PHP tidak salah membaca
+                // pemisah ribuan dan desimal Indonesia.
+                $('#form-edit-transaksi .localized-number').each(function() {
+                    $(this).val(parseLocalizedNumber($(this).val()));
+                });
                 const formData = $('#form-edit-transaksi').serialize();
 
                 $.ajax({
