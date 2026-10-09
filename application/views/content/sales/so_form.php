@@ -971,7 +971,7 @@ function renderStock(data) {
         html+='<td class="text-right"><small>'+(parseFloat(d.berat_gram||0)/1000).toFixed(3)+' kg</small></td>';
         html+='<td class="text-right"><small>'+parseFloat(d.kubikasi_m3||0).toFixed(6)+' m³</small></td>';
         html+='<td><small class="text-muted">'+esc(gdgNm)+'</small></td>';
-        html+='<td class="text-center"><button type="button" class="btn btn-sm btn-primary btn-pick-stock"'
+        html+='<td class="text-center"><button type="button" tabindex="-1" class="btn btn-sm btn-primary btn-pick-stock"'
             +' data-kd="'+esc(kd)+'" data-nm="'+esc(d.nama_barang||'')+'" data-exp="'+esc(exp)+'"'
             +' data-lot="'+esc(d.no_lot||'')+'" data-sat="'+esc(d.satuan||'')+'" data-av="'+avT+'"'
             +' data-ton="'+parseFloat(d.berat_gram||0)+'" data-kub="'+parseFloat(d.kubikasi_m3||0)+'"'
@@ -1233,6 +1233,51 @@ function chooseStockRow(tr) {
 }
 
 /* ================================================================
+   NAVIGASI KEYBOARD
+================================================================ */
+function keyboardFocusables(container) {
+    if (!container) return [];
+    return Array.prototype.slice.call(container.querySelectorAll(
+        'input:not([type="hidden"]), select, textarea, button, a[href], [tabindex]'
+    )).filter(function(el) {
+        if (el.disabled || el.tabIndex < 0 || el.offsetParent === null) return false;
+        if (el.readOnly && el.id !== 'customer_display') return false;
+        return true;
+    });
+}
+
+function keepTabInside(container, event) {
+    var focusables = keyboardFocusables(container);
+    if (!focusables.length) return;
+
+    var currentIndex = focusables.indexOf(document.activeElement);
+    var nextIndex;
+    if (event.shiftKey) {
+        nextIndex = currentIndex <= 0 ? focusables.length - 1 : currentIndex - 1;
+    } else {
+        nextIndex = currentIndex < 0 || currentIndex >= focusables.length - 1 ? 0 : currentIndex + 1;
+    }
+
+    event.preventDefault();
+    focusables[nextIndex].focus();
+    if (typeof focusables[nextIndex].select === 'function' && focusables[nextIndex].tagName === 'INPUT') {
+        focusables[nextIndex].select();
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+
+    var activeModal = document.querySelector('.modal.show');
+    if (activeModal) {
+        keepTabInside(activeModal, e);
+        return;
+    }
+
+    keepTabInside(document.getElementById('form-so'), e);
+});
+
+/* ================================================================
    EVENTS
 ================================================================ */
 
@@ -1361,6 +1406,10 @@ function focusCustomerSearch() {
 $('#modal-customer').on('shown.bs.modal', function(){
     focusCustomerSearch();
 });
+$('#modal-customer').on('hidden.bs.modal', function(){
+    var gudang = document.getElementById('gudang_id_input');
+    if (gudang) gudang.focus();
+});
 $('#modal-customer').on('click', function(e){
     if (e.target === this) focusCustomerSearch();
 });
@@ -1370,6 +1419,14 @@ $('#modal-stock').on('shown.bs.modal', function(){
         el.focus();
         el.select();
     }, 50);
+});
+$('#modal-stock').on('hidden.bs.modal', function(){
+    if (currentRowIdx === null) return;
+    var qtyBox = document.getElementById('qtybox_' + currentRowIdx);
+    if (qtyBox) {
+        qtyBox.focus();
+        qtyBox.select();
+    }
 });
 
 document.getElementById('customer-search').addEventListener('input', function(){ renderCustomers(this.value); });
@@ -1539,6 +1596,13 @@ document.getElementById('form-so').addEventListener('submit', function(e){
 (function(){
     var elG = document.getElementById('gudang_id_input');
 
+    // Navbar, sidebar, breadcrumb, dan footer tidak ikut urutan Tab pada
+    // halaman input SO. Fokus keyboard dibatasi pada form serta modal aktif.
+    document.querySelectorAll('body a, body button, body input, body select, body textarea, body [tabindex]').forEach(function(el) {
+        if (el.closest('#form-so') || el.closest('#modal-stock') || el.closest('#modal-customer')) return;
+        el.setAttribute('tabindex', '-1');
+    });
+
     if (EDIT_DETAILS.length) {
         if (elG) elG.dataset.prevVal = GUDANG_AWAL;
         EDIT_DETAILS.forEach(function(d){ tambahBaris(d); });
@@ -1559,6 +1623,14 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         updateSelectedCustomerPlafon(initialKdCustomer, initialPlafon);
         updateCustomerPiutangView(initialKdCustomer);
     }
+
+    setTimeout(function() {
+        var firstField = document.querySelector('#form-so input[name="no_so"]');
+        if (firstField) {
+            firstField.focus();
+            firstField.select();
+        }
+    }, 100);
 })();
 </script>
 </body>
