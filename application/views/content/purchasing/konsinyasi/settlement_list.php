@@ -27,53 +27,70 @@
     <section class="content">
         <div class="container-fluid">
 
-            <!-- 3 Summary Cards Tracking Posisi Barang Konsinyasi -->
+            <!-- 4 Summary Cards Tracking Posisi Barang Konsinyasi -->
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
                     <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #2563eb !important;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">1. Barang di Gudang</span>
-                                    <h3 class="mb-0 font-weight-bold text-primary mt-1"><?= number_format($tracking_summary['total_di_gudang'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
-                                    <small class="text-muted"><?= $tracking_summary['item_di_gudang'] ?> jenis barang fisik (belum dikirim ke kios)</small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">1. Gdg. Konsinyasi</span>
+                                    <h4 class="mb-0 font-weight-bold text-primary mt-1"><?= number_format($tracking_summary['total_di_gudang'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h4>
+                                    <small class="text-muted"><?= $tracking_summary['item_di_gudang'] ?> jenis fisik (belum dikirim)</small>
                                 </div>
-                                <div class="p-3 rounded-circle text-primary" style="background: #dbeafe;">
-                                    <i class="fas fa-warehouse fa-2x"></i>
+                                <div class="p-2 rounded-circle text-primary" style="background: #dbeafe;">
+                                    <i class="fas fa-warehouse fa-lg"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
                     <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #f59e0b !important;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">2. Barang di Kios</span>
-                                    <h3 class="mb-0 font-weight-bold text-warning mt-1"><?= number_format($tracking_summary['total_di_kios'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
-                                    <small class="text-muted"><?= $tracking_summary['total_kios_count'] ?> kios pemegang titipan (belum laku/dibeli)</small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">2. Titipan di Kios</span>
+                                    <h4 class="mb-0 font-weight-bold text-warning mt-1"><?= number_format($tracking_summary['total_di_kios'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h4>
+                                    <small class="text-muted"><?= $tracking_summary['total_kios_count'] ?> kios (belum dibeli)</small>
                                 </div>
-                                <div class="p-3 rounded-circle text-warning" style="background: #fef3c7;">
-                                    <i class="fas fa-store fa-2x"></i>
+                                <div class="p-2 rounded-circle text-warning" style="background: #fef3c7;">
+                                    <i class="fas fa-store fa-lg"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #ea580c !important;">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted font-weight-bold small text-uppercase">3. Barang Laku</span>
+                                    <h4 class="mb-0 font-weight-bold mt-1" style="color: #ea580c;"><?= number_format($tracking_summary['total_laku'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h4>
+                                    <small class="text-muted"><?= $tracking_summary['item_laku'] ?> jenis (siap dilunasi)</small>
+                                </div>
+                                <div class="p-2 rounded-circle" style="background: #ffedd5; color: #ea580c;">
+                                    <i class="fas fa-shopping-bag fa-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
                     <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; border-left: 5px solid #10b981 !important;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <span class="text-muted font-weight-bold small text-uppercase">3. Barang Laku (Siap Ditagih)</span>
-                                    <h3 class="mb-0 font-weight-bold text-success mt-1"><?= number_format($tracking_summary['total_laku'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h3>
-                                    <small class="text-muted"><?= $tracking_summary['item_laku'] ?> jenis barang laku (belum diinput tagihan supplier)</small>
+                                    <span class="text-muted font-weight-bold small text-uppercase">4. Konsinyasi Lunas</span>
+                                    <h4 class="mb-0 font-weight-bold text-success mt-1"><?= number_format($tracking_summary['total_lunas'], 2) ?> <span class="small font-weight-normal text-muted">pcs</span></h4>
+                                    <small class="text-muted"><?= $tracking_summary['item_lunas'] ?> jenis (sudah dibeli kita)</small>
                                 </div>
-                                <div class="p-3 rounded-circle text-success" style="background: #d1fae5;">
-                                    <i class="fas fa-check-circle fa-2x"></i>
+                                <div class="p-2 rounded-circle text-success" style="background: #d1fae5;">
+                                    <i class="fas fa-check-double fa-lg"></i>
                                 </div>
                             </div>
                         </div>
@@ -160,29 +177,32 @@
                         <table class="table table-hover align-middle mb-0" style="font-size: 0.90rem;">
                             <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
-                                    <th class="py-3 px-3" style="width: 50px;">No</th>
-                                    <th class="py-3" style="width: 140px;">Kode Barang</th>
+                                    <th class="py-3 px-3" style="width: 45px;">No</th>
+                                    <th class="py-3" style="width: 135px;">Kode Barang</th>
                                     <th class="py-3">Nama Barang</th>
                                     <th class="py-3">Supplier Konsinyasi</th>
                                     <th class="py-3 text-right" style="background: #eff6ff; color: #1e40af;">
-                                        <i class="fas fa-warehouse mr-1"></i> Barang di Gudang
+                                        <i class="fas fa-warehouse mr-1"></i> 1. Gdg. Konsinyasi
                                     </th>
                                     <th class="py-3 text-right" style="background: #fffbeb; color: #b45309;">
-                                        <i class="fas fa-store mr-1"></i> Di Kios
+                                        <i class="fas fa-store mr-1"></i> 2. Titipan di Kios
+                                    </th>
+                                    <th class="py-3 text-right" style="background: #fff7ed; color: #c2410c;">
+                                        <i class="fas fa-shopping-bag mr-1"></i> 3. Barang Laku
                                     </th>
                                     <th class="py-3 text-right" style="background: #f0fdf4; color: #15803d;">
-                                        <i class="fas fa-shopping-bag mr-1"></i> Barang Laku (Siap Ditagih)
+                                        <i class="fas fa-check-double mr-1"></i> 4. Konsinyasi Lunas
                                     </th>
                                     <th class="py-3 text-right" style="background: #f8fafc; font-weight: bold;">
-                                        Total Konsinyasi Aktif
+                                        Total Stok
                                     </th>
-                                    <th class="py-3 text-center" style="width: 140px;">Aksi</th>
+                                    <th class="py-3 text-center" style="width: 130px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($tracking_barang)): ?>
                                     <tr>
-                                        <td colspan="9" class="text-center py-5 text-muted">
+                                        <td colspan="10" class="text-center py-5 text-muted">
                                             <i class="fas fa-box-open fa-3x mb-3 text-black-50 d-block"></i>
                                             Tidak ada data barang konsinyasi yang ditemukan pada filter ini.
                                         </td>
@@ -222,9 +242,14 @@
                                                     <?= number_format($tb['stok_kios'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
                                                 </span>
                                             </td>
+                                            <td class="text-right" style="background: #fffaf5;">
+                                                <span class="badge px-2 py-1 font-weight-bold" style="background: #ffedd5; color: #c2410c; font-size: 0.90rem;">
+                                                    <?= number_format($tb['stok_laku'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                                </span>
+                                            </td>
                                             <td class="text-right" style="background: #f6fef9;">
                                                 <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
-                                                    <?= number_format($tb['stok_laku'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
+                                                    <?= number_format($tb['stok_lunas'] ?? 0, 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
                                                 </span>
                                             </td>
                                             <td class="text-right font-weight-bold text-dark" style="background: #f8fafc; font-size: 0.95rem;">
@@ -264,7 +289,7 @@
                        class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
                        <?= ($filters['status'] === 'BILLED') ? 'text-success' : 'text-muted' ?>"
                        style="border-bottom: <?= ($filters['status'] === 'BILLED') ? '3px solid #10b981' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'BILLED') ? '#f0fdf4' : 'white' ?>; margin-bottom: -1px;">
-                        <i class="fas fa-check-circle mr-2"></i> Riwayat Sudah Ditagih
+                        <i class="fas fa-check-double mr-2"></i> Riwayat Barang Lunas
                         <span class="badge badge-success ml-2"><?= $stats['billed_count'] ?></span>
                     </a>
                     <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=SEMUA&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
@@ -279,7 +304,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-dark">
                             <?php if ($filters['status'] === 'BILLED'): ?>
-                                <i class="fas fa-history text-success mr-1"></i> Riwayat Barang Konsinyasi Sudah Ditagih Supplier
+                                <i class="fas fa-check-double text-success mr-1"></i> Riwayat Barang Konsinyasi Lunas
                             <?php elseif ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING'): ?>
                                 <i class="fas fa-shopping-bag text-warning mr-1"></i> Barang Konsinyasi Laku (Menunggu Input Tagihan Supplier)
                             <?php else: ?>
@@ -377,7 +402,7 @@
                                                     </span>
                                                 <?php elseif ($s['status'] === 'BILLED'): ?>
                                                     <span class="badge badge-success px-2 py-1 shadow-xs">
-                                                        <i class="fas fa-check-double mr-1"></i> Sudah Ditagih
+                                                        <i class="fas fa-check-double mr-1"></i> Lunas
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">
@@ -412,8 +437,8 @@
                                                         <a href="<?= site_url('purchasing/konsinyasi/print_faktur/' . (int) $s['id_settlement']) ?>" target="_blank" class="btn btn-outline-primary font-weight-bold shadow-xs" title="Cetak Faktur Realisasi Penjualan Konsinyasi untuk Dilaporkan ke Supplier">
                                                             <i class="fas fa-print mr-1"></i> Faktur
                                                         </a>
-                                                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>)" title="Input Tagihan/Faktur Pembelian dari Supplier">
-                                                            <i class="fas fa-file-invoice-dollar mr-1"></i> Tagihan
+                                                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>)" title="Lunasi Barang Konsinyasi ke Supplier (Posting Jurnal Pembelian)">
+                                                            <i class="fas fa-check-circle mr-1"></i> Lunasi
                                                         </button>
                                                     </div>
                                                 <?php else: ?>
@@ -442,7 +467,7 @@
 
             <!-- Hint Klik Kanan untuk pengguna -->
             <div class="text-muted small text-right mt-1 mb-3">
-                <i class="fas fa-mouse text-primary mr-1"></i> <em>Tip: Klik kanan pada baris tabel barang yang sudah ditagih untuk langsung membuka menu <strong>Lihat Jurnal Pembelian</strong>.</em>
+                <i class="fas fa-mouse text-primary mr-1"></i> <em>Tip: Klik kanan pada baris tabel barang lunas untuk langsung membuka menu <strong>Lihat Jurnal Pembelian</strong>.</em>
             </div>
 
         </div>
@@ -505,13 +530,13 @@
     }
 </style>
 
-<!-- Modal Form Penyelesaian Konsinyasi (Input Tagihan & Pembelian Kios) -->
+<!-- Modal Form Penyelesaian Konsinyasi (Pelunasan Barang Konsinyasi ke Supplier) -->
 <div class="modal fade" id="modalSettlement" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <div class="modal-header bg-primary text-white border-0">
                 <h5 class="modal-title font-weight-bold" id="modalTitle">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i> Input Tagihan Supplier Konsinyasi
+                    <i class="fas fa-check-circle mr-2"></i> Pelunasan Barang Konsinyasi ke Supplier
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -621,7 +646,7 @@
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary font-weight-bold px-4" id="btnSubmitSettlement">
-                        <i class="fas fa-check mr-1"></i> Posting Jurnal Pembelian
+                        <i class="fas fa-check-circle mr-1"></i> Lunasi &amp; Posting Jurnal Pembelian
                     </button>
                 </div>
             </form>
@@ -703,8 +728,8 @@
         <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-detail text-dark" href="javascript:void(0)" onclick="ctxTriggerViewDetail()" style="font-size: 0.90rem;">
             <i class="fas fa-eye mr-2 fa-fw text-secondary"></i> Detail Settlement
         </a>
-        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-input text-warning font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerInputTagihan()" style="display: none; font-size: 0.90rem;">
-            <i class="fas fa-file-invoice-dollar mr-2 fa-fw text-warning"></i> Input Tagihan Supplier
+        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-input text-success font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerInputTagihan()" style="display: none; font-size: 0.90rem;">
+            <i class="fas fa-check-circle mr-2 fa-fw text-success"></i> Lunasi Tagihan Supplier
         </a>
     </div>
 </div>
@@ -915,7 +940,7 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
             if (res && res.status && res.data) {
                 var list = res.data;
                 if (list.length === 0) {
-                    $('#modalTrackingKiosBody').html('<div class="alert alert-info py-4 text-center"><i class="fas fa-info-circle fa-2x mb-2 d-block"></i>Belum ada pengiriman barang konsinyasi ini ke kios (belum ada Faktur T).</div>');
+                    $('#modalTrackingKiosBody').html('<div class="alert alert-info py-4 text-center"><i class="fas fa-info-circle fa-2x mb-2 d-block"></i>Belum ada pengiriman barang konsinyasi ini ke kios (belum ada Faktur K).</div>');
                     return;
                 }
 
@@ -923,41 +948,45 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 var html = '<div class="table-responsive">';
                 html += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size:0.88rem;">';
                 html += '<thead style="background:#0f172a; color:#fff;"><tr>';
-                html += '<th class="py-2">Lokasi Kios</th>';
-                html += '<th class="py-2">No. Faktur T</th>';
+                html += '<th class="py-2" style="width:17%;">Lokasi Kios</th>';
+                html += '<th class="py-2">No. Faktur K</th>';
                 html += '<th class="py-2" style="background:#1e293b;"><i class="fas fa-barcode mr-1 text-primary"></i>Asal LPB &amp; PO</th>';
                 html += '<th class="py-2">Tgl Kirim</th>';
                 html += '<th class="py-2">Lot / ED</th>';
-                html += '<th class="py-2 text-right">Qty</th>';
+                html += '<th class="py-2 text-right" style="background:#854d0e; color:#fff;"><i class="fas fa-store mr-1"></i>Qty di Kios</th>';
+                html += '<th class="py-2 text-right" style="background:#166534; color:#fff;"><i class="fas fa-shopping-bag mr-1"></i>Qty Laku</th>';
                 html += '<th class="py-2 text-right" style="background:#1e3a8a; color:#fff;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>';
                 html += '<th class="py-2 text-right">Harga Jual Kios</th>';
-                html += '<th class="py-2 text-center">Status</th>';
-                html += '<th class="py-2 text-center" style="width:125px;">Aksi</th>';
+                html += '<th class="py-2 text-center" style="width:130px;">Status</th>';
                 html += '</tr></thead><tbody>';
 
+                var grandQtyKios = 0;
+                var grandQtyLaku = 0;
+                var grandQtyTotal = 0;
+                var grandSatuan = '';
+
                 $.each(list, function(i, r) {
-                    var isDiKios = (r.status === 'DI_KIOS' || r.status === 'PENDING');
-                    var isLaku = (r.status === 'LAKU');
-                    var isBilled = (r.status === 'BILLED');
+                    var qtyKios = parseFloat(r.qty_kios || 0);
+                    var qtyLaku = parseFloat(r.qty_laku || 0);
+                    var qtyTot = parseFloat(r.qty_total || 0);
+                    grandQtyKios += qtyKios;
+                    grandQtyLaku += qtyLaku;
+                    grandQtyTotal += qtyTot;
+                    if (!grandSatuan && r.satuan) grandSatuan = r.satuan;
 
                     var badge = '';
-                    var btnAksi = '';
-
-                    if (isDiKios) {
-                        badge = '<span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-store mr-1"></i>Ada di Kios</span>';
-                        btnAksi = '<span class="text-muted small font-italic">Menunggu Kios</span>';
-                    } else if (isLaku) {
-                        badge = '<span class="badge badge-info text-white font-weight-bold px-2 py-1"><i class="fas fa-shopping-bag mr-1"></i>Laku (Dibeli Kios)</span>';
-                        btnAksi = '<button type="button" class="btn btn-sm btn-primary font-weight-bold shadow-xs" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalInputTagihan(' + r.id_settlement + '); }, 300);"><i class="fas fa-file-invoice-dollar mr-1"></i>Input Tagihan</button>';
+                    if (qtyKios > 0 && qtyLaku <= 0) {
+                        badge = '<span class="badge badge-warning text-dark font-weight-bold px-2 py-1"><i class="fas fa-store mr-1"></i>Titipan di Kios</span>';
+                    } else if (qtyKios > 0 && qtyLaku > 0) {
+                        badge = '<span class="badge badge-info text-white font-weight-bold px-2 py-1"><i class="fas fa-shopping-bag mr-1"></i>Sebagian Laku</span>';
+                    } else if (qtyKios <= 0 && qtyLaku > 0) {
+                        badge = '<span class="badge font-weight-bold px-2 py-1" style="background:#ffedd5; color:#c2410c;"><i class="fas fa-shopping-bag mr-1"></i>Siap Dilunasi</span>';
                     } else {
-                        badge = '<span class="badge badge-success font-weight-bold px-2 py-1"><i class="fas fa-check-double mr-1"></i>Sudah Ditagih</span>';
-                        btnAksi = '<button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="hideModalSafe(\'modalTrackingKios\'); setTimeout(function(){ openModalDetailSettlement(' + r.id_settlement + '); }, 300);"><i class="fas fa-eye mr-1"></i>Detail</button>';
+                        badge = '<span class="badge badge-success font-weight-bold px-2 py-1"><i class="fas fa-check-double mr-1"></i>Sudah Lunas</span>';
                     }
 
                     var tglKirim = r.tanggal_settlement ? new Date(r.tanggal_settlement).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
                     var ed = r.expired_date ? new Date(r.expired_date).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
-
-                    var qtySubtext = isLaku ? '<br><small class="text-success font-weight-bold">Dibeli Kios</small>' : (isDiKios ? '<br><small class="text-muted">Di Kios</small>' : '<br><small class="text-muted">Selesai</small>');
 
                     html += '<tr>';
                     html += '<td><strong class="text-dark"><i class="fas fa-store text-warning mr-1"></i>' + (r.customer_name || '-') + '</strong><br><small class="text-muted">SO: ' + (r.no_so || '-') + '</small></td>';
@@ -965,15 +994,22 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                     html += '<td><span class="badge badge-primary font-weight-bold px-2 py-1" style="font-size:0.80rem;"><i class="fas fa-barcode mr-1"></i>' + (r.nomor_lpb || '-') + '</span><br><small class="text-muted"><i class="fas fa-file-invoice mr-1"></i>PO: <strong class="text-dark">' + (r.no_po || '-') + '</strong></small></td>';
                     html += '<td>' + tglKirim + '</td>';
                     html += '<td><small><strong>' + (r.no_lot || '-') + '</strong><br>ED: ' + ed + '</small></td>';
-                    html += '<td class="text-right font-weight-bold ' + (isDiKios ? 'text-warning' : (isLaku ? 'text-info' : 'text-success')) + '" style="font-size:0.95rem;">' + parseFloat(r.qty_net || 0).toFixed(2) + ' ' + (r.satuan || '') + qtySubtext + '</td>';
+                    html += '<td class="text-right font-weight-bold ' + (qtyKios > 0 ? 'text-warning' : 'text-muted') + '" style="font-size:0.95rem;">' + qtyKios.toFixed(2) + ' <small class="text-dark">' + (r.satuan || '') + '</small></td>';
+                    html += '<td class="text-right font-weight-bold ' + (qtyLaku > 0 ? 'text-success' : 'text-muted') + '" style="font-size:0.95rem;">' + qtyLaku.toFixed(2) + ' <small class="text-dark">' + (r.satuan || '') + '</small></td>';
                     html += '<td class="text-right" style="background:#f8faff;"><strong class="text-primary" style="font-size:0.95rem;">' + fmt(r.po_hrg_satuan) + '</strong><br><span class="badge badge-light border text-muted" style="font-size:0.75rem;">' + (r.po_tipe_pajak || 'EXCLUDE') + '</span></td>';
                     html += '<td class="text-right text-muted">' + fmt(r.hrg_jual) + '</td>';
                     html += '<td class="text-center">' + badge + '</td>';
-                    html += '<td class="text-center">' + btnAksi + '</td>';
                     html += '</tr>';
                 });
 
-                html += '</tbody></table></div>';
+                html += '</tbody>';
+                html += '<tfoot style="background:#f1f5f9; font-weight:bold;"><tr>';
+                html += '<td colspan="5" class="text-right py-2 font-weight-bold">TOTAL TITIPAN &amp; LAKU DI KIOS:</td>';
+                html += '<td class="text-right text-warning py-2" style="font-size:0.95rem;">' + grandQtyKios.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<td class="text-right text-success py-2" style="font-size:0.95rem;">' + grandQtyLaku.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<td colspan="3" class="text-muted small py-2 font-italic text-center">Total Kirim ke Kios: ' + grandQtyTotal.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '</tr></tfoot>';
+                html += '</table></div>';
                 $('#modalTrackingKiosBody').html(html);
             } else {
                 $('#modalTrackingKiosBody').html('<div class="alert alert-danger">Gagal memuat rincian kios.</div>');
@@ -1019,7 +1055,7 @@ window.openModalDetailSettlement = function(id) {
                 html += '<tr><td class="text-muted">Harga ketika PO:</td><td class="font-weight-bold text-primary">' + fmt(d.po_hrg_satuan) + ' (' + (d.po_tipe_pajak || 'EXCLUDE') + ')</td></tr>';
                 html += '<tr><td class="text-muted">Customer / Kios:</td><td>' + (d.customer_name || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. SO:</td><td>' + (d.no_so || '-') + '</td></tr>';
-                html += '<tr><td class="text-muted">No. Faktur T:</td><td><strong class="text-primary">' + (d.no_faktur || '-') + '</strong></td></tr>';
+                html += '<tr><td class="text-muted">No. Faktur K:</td><td><strong class="text-primary">' + (d.no_faktur || '-') + '</strong></td></tr>';
                 html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-success">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
                 html += '<tr><td class="text-muted">Harga Jual Kios:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
                 html += '</table>';

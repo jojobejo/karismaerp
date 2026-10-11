@@ -269,7 +269,7 @@ class C_pembayaran extends CI_Controller
         $data['akun_harta'] = $this->M_pembayaran->get_harta_accounts();
 
         // ── Data Barang Konsinyasi untuk Input Qty Pelunasan ────────
-        $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+        $is_konsinyasi = in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
         if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
             if ((int)$faktur['gudang_id'] === 13) {
                 $is_konsinyasi = true;
@@ -511,7 +511,7 @@ class C_pembayaran extends CI_Controller
         $id_settlement_konsinyasi = (int)$this->input->post('id_settlement_konsinyasi', true);
 
         // Validasi khusus faktur konsinyasi: Qty yang dibeli harus valid
-        $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+        $is_konsinyasi = in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
         if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
             if ((int)$faktur['gudang_id'] === 13) {
                 $is_konsinyasi = true;

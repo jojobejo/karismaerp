@@ -23,8 +23,8 @@ class Accounting_source_service
             return $this->fail('Nomor faktur kosong.', ['SOURCE_ID_REQUIRED']);
         }
 
-        // Faktur barang konsinyasi (kode berawalan 'T') tidak dijurnal saat penerbitan faktur
-        if (strtoupper(substr($noFaktur, 0, 1)) === 'T') {
+        // Faktur barang konsinyasi (kode berawalan 'K' atau 'T') tidak dijurnal saat penerbitan faktur
+        if (in_array(strtoupper(substr($noFaktur, 0, 1)), ['K', 'T'], true)) {
             return [
                 'success' => true,
                 'message' => 'Faktur konsinyasi tidak dijurnal otomatis saat penerbitan faktur.',

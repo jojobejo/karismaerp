@@ -230,8 +230,8 @@ class M_Journal extends CI_Model
             return false;
         }
 
-        // Cek apakah faktur ini merupakan faktur konsinyasi (awalan T atau gudang konsinyasi)
-        $is_konsinyasi = (strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'T');
+        // Cek apakah faktur ini merupakan faktur konsinyasi (awalan K / T atau gudang konsinyasi)
+        $is_konsinyasi = in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
         if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
             if ((int)$faktur['gudang_id'] === 13) {
                 $is_konsinyasi = true;

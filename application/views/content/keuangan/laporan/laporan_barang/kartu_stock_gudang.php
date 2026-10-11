@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update display labels
         $('#lblPeriode').text(formatDateFull(start) + ' - ' + formatDateFull(end));
         var whName = $('#filterWarehouseText').val();
-        $('#lblWarehouse').text(wh === 'all' ? '-- Semua Gudang --' : whName);
+        $('#lblWarehouse').text(wh === 'all' ? '-- Semua Gudang (Terpisah per Gudang) --' : whName);
 
         $('#reportContentArea').html('<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i><p>Sedang memuat data...</p></div>');
         $('#grandTotalBox').addClass('d-none');
@@ -514,9 +514,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         grandTotalNilai += parseFloat(p.final_saldo_nilai);
                         
                         html += '<div class="product-section">';
-                        html += '  <div class="product-header-row">';
-                        html += '    <span>' + p.product_code + ' &nbsp;|&nbsp; ' + p.product_name + '</span>';
-                        html += '    <span class="text-danger">' + (p.kelompok_barang || 'Tanpa Kelompok') + '</span>';
+                        html += '  <div class="product-header-row d-flex justify-content-between align-items-center">';
+                        html += '    <div>';
+                        html += '      <span class="badge badge-primary px-2 py-1 mr-2" style="font-size: 0.85rem;"><i class="fas fa-warehouse mr-1"></i> ' + (p.warehouse_name || 'Gudang') + '</span>';
+                        html += '      <strong style="font-size: 0.95rem;">' + p.product_code + ' &nbsp;|&nbsp; ' + p.product_name + '</strong>';
+                        html += '    </div>';
+                        html += '    <div><span class="badge badge-secondary px-2 py-1">' + (p.kelompok_barang || 'Tanpa Kelompok') + '</span></div>';
                         html += '  </div>';
                         html += '  <table class="report-table">';
                         html += '    <thead>';
@@ -579,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Render Subtotal row
                         html += '      <tr class="subtotal-row">';
                         var shortName = p.product_name.length > 25 ? p.product_name.substr(0, 22) + '...' : p.product_name;
-                        html += '        <td colspan="3" class="text-right">' + shortName + ' :</td>';
+                        html += '        <td colspan="3" class="text-right">Subtotal [' + (p.warehouse_name || 'Gudang') + '] ' + shortName + ' :</td>';
                         
                         html += '        <td class="text-right">' + formatNumber(p.sub_masuk_qty) + '</td>';
                         html += '        <td class="text-right">' + formatNumber(p.sub_masuk_harga) + '</td>';
@@ -606,8 +609,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#reportContentArea').html('<div class="text-center py-5 text-muted"><i class="fas fa-exclamation-triangle fa-2x mb-3 text-warning"></i><p>Tidak ada data kartu stok yang ditemukan untuk periode dan kriteria filter ini.</p></div>');
                 }
             },
-            error: function(err) {
-                $('#reportContentArea').html('<div class="text-center py-5 text-danger"><i class="fas fa-times-circle fa-2x mb-3"></i><p>Gagal memuat data laporan dari server.</p></div>');
+            error: function(xhr, status, error) {
+                if (xhr.status === 401) {
+                    $('#reportContentArea').html('<div class="text-center py-5 text-warning"><i class="fas fa-sign-in-alt fa-2x mb-3"></i><p>Sesi login telah berakhir. Silakan <a href="<?= base_url('Auth') ?>" class="font-weight-bold">login kembali</a>.</p></div>');
+                } else {
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : error;
+                    $('#reportContentArea').html('<div class="text-center py-5 text-danger"><i class="fas fa-times-circle fa-2x mb-3"></i><p>Gagal memuat data laporan dari server' + (msg ? ': ' + msg : '') + '.</p></div>');
+                }
             }
         });
     });

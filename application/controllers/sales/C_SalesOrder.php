@@ -1904,7 +1904,7 @@ class C_SalesOrder extends CI_Controller
             // Faktur Z Induk nominal aslinya tetap utuh (potongan 20% baru diterapkan saat dipecah menjadi Faktur H)
             return $item;
         }, array_values($items_outstanding));
-        $faktur_prefix             = $is_konsinyasi ? 'T' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix());
+        $faktur_prefix             = $is_konsinyasi ? 'K' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix());
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
@@ -2007,7 +2007,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         $is_konsinyasi = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
-        $faktur_prefix = $is_konsinyasi ? 'T' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix());
+        $faktur_prefix = $is_konsinyasi ? 'K' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix());
         $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
         $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
         $no_faktur = $posted_no_faktur;

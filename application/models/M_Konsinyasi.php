@@ -168,6 +168,106 @@ class M_Konsinyasi extends CI_Model
         if ($this->db->table_exists('tbkeu_pembayaran_faktur') && !$this->db->field_exists('no_faktur_konsinyasi', 'tbkeu_pembayaran_faktur')) {
             $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur ADD COLUMN no_faktur_konsinyasi VARCHAR(50) NULL DEFAULT NULL AFTER no_faktur, ADD INDEX idx_no_faktur_konsinyasi (no_faktur_konsinyasi)");
         }
+
+        // Pastikan Master Gudang Konsinyasi, Gudang Titipan di Kios, dan Gudang Konsinyasi Lunas tersedia di tb_gudang
+        $this->ensure_consignment_warehouses();
+    }
+
+    /**
+     * Memastikan 3 jenis gudang konsinyasi tersedia di database:
+     * 1. Gudang Konsinyasi (Stok fisik konsinyasi masuk dari supplier)
+     * 2. Gudang Titipan di Kios (Barang saat difakturkan ke kios sebagai titipan)
+     * 3. Gudang Konsinyasi Lunas (Barang konsinyasi yang telah dilunasi ke supplier dan diakui perusahaan)
+     */
+    public function ensure_consignment_warehouses()
+    {
+        if (!$this->db->table_exists('tb_gudang')) {
+            return;
+        }
+
+        // 1. Gudang Konsinyasi Utama (default id 13 jika belum ada)
+        $whKons = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->group_start()
+                ->where('id_gudang', 13)
+                ->or_like('nama_gudang', 'Konsi')
+            ->group_end()
+            ->limit(1)->get()->row_array();
+        if (!$whKons) {
+            $this->db->insert('tb_gudang', [
+                'nama_gudang' => 'Gdg. Konsinyasi',
+                'tipe'        => 'INDUK',
+                'is_active'   => 1,
+                'created_at'  => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        // 2. Gudang Titipan di Kios
+        $whKios = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Titipan di Kios')
+            ->limit(1)->get()->row_array();
+        if (!$whKios) {
+            $this->db->insert('tb_gudang', [
+                'nama_gudang' => 'Gdg. Titipan di Kios',
+                'tipe'        => 'INDUK',
+                'is_active'   => 1,
+                'created_at'  => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        // 3. Gudang Konsinyasi Lunas
+        $whLunas = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Konsinyasi Lunas')
+            ->limit(1)->get()->row_array();
+        if (!$whLunas) {
+            $this->db->insert('tb_gudang', [
+                'nama_gudang' => 'Gdg. Konsinyasi Lunas',
+                'tipe'        => 'INDUK',
+                'is_active'   => 1,
+                'created_at'  => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    /**
+     * Mendapatkan ID Gudang Konsinyasi Utama
+     */
+    public function get_warehouse_konsinyasi_id()
+    {
+        $row = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->group_start()
+                ->where('id_gudang', 13)
+                ->or_like('nama_gudang', 'Konsi')
+            ->group_end()
+            ->limit(1)->get()->row_array();
+        return $row ? (int)$row['id_gudang'] : 13;
+    }
+
+    /**
+     * Mendapatkan ID Gudang Titipan di Kios
+     */
+    public function get_warehouse_titipan_kios_id()
+    {
+        $row = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Titipan di Kios')
+            ->limit(1)->get()->row_array();
+        return $row ? (int)$row['id_gudang'] : 14;
+    }
+
+    /**
+     * Mendapatkan ID Gudang Konsinyasi Lunas
+     */
+    public function get_warehouse_konsinyasi_lunas_id()
+    {
+        $row = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Konsinyasi Lunas')
+            ->limit(1)->get()->row_array();
+        return $row ? (int)$row['id_gudang'] : 15;
     }
 
     /**
@@ -766,9 +866,38 @@ class M_Konsinyasi extends CI_Model
             ]);
         }
 
+        // Catat stok barang yang telah lunas dibeli ke Gudang Konsinyasi Lunas
+        $whLunasId = $this->get_warehouse_konsinyasi_lunas_id();
+        if ($this->db->table_exists('tberp_stock_batch') && $whLunasId) {
+            $existBatch = $this->db
+                ->where('kd_barang', $settlement['kd_barang'])
+                ->where('gudang_id', (string)$whLunasId)
+                ->where('no_lot', trim((string)$settlement['no_lot']))
+                ->get('tberp_stock_batch')
+                ->row_array();
+
+            if ($existBatch) {
+                $this->db->where('id', $existBatch['id'])->update('tberp_stock_batch', [
+                    'qty_on_hand' => (float)$existBatch['qty_on_hand'] + $qtyLaku,
+                    'update_at'   => date('Y-m-d H:i:s')
+                ]);
+            } else {
+                $this->db->insert('tberp_stock_batch', [
+                    'kd_barang'    => $settlement['kd_barang'],
+                    'gudang_id'    => (string)$whLunasId,
+                    'no_lot'       => trim((string)$settlement['no_lot']),
+                    'expired_date' => !empty($settlement['expired_date']) ? $settlement['expired_date'] : null,
+                    'qty_on_hand'  => $qtyLaku,
+                    'qty_reserved' => 0.000,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                    'update_at'    => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
+
         $this->db->trans_commit();
 
-        $pesanSukses = 'Penyelesaian konsinyasi berhasil diposting. Qty laku: ' . $qtyLaku . ' ' . $settlement['satuan'] . ' telah diakui sebagai pembelian.';
+        $pesanSukses = 'Penyelesaian konsinyasi berhasil diposting. Qty laku: ' . $qtyLaku . ' ' . $settlement['satuan'] . ' telah dilunasi dan resmi masuk ke Gudang Konsinyasi Lunas.';
         if ($isPartial) {
             $pesanSukses .= ' Sisa ' . $qtySisaDiKios . ' ' . $settlement['satuan'] . ' tetap tercatat sebagai titipan di kios.';
         }
@@ -786,10 +915,11 @@ class M_Konsinyasi extends CI_Model
 
     /**
      * Ringkasan global tracking posisi barang konsinyasi:
-     * 1. Total di Gudang Konsinyasi (Stok fisik kita yang belum dikirim)
+     * 1. Total di Gudang Konsinyasi (Stok fisik konsinyasi sebelum dikirim ke kios)
      * 2. Total di Kios (Barang yang sudah difakturkan ke kios tapi belum laku/dibeli)
-     * 3. Total Laku (Barang yang telah resmi dibeli oleh kios & diselesaikan)
-     * 4. Total Keseluruhan Barang Konsinyasi
+     * 3. Total Laku (Barang yang telah resmi dibeli oleh kios & menunggu pelunasan)
+     * 4. Total Konsinyasi Lunas (Barang konsinyasi yang sudah lunas dibeli & resmi jadi milik kita)
+     * 5. Total Keseluruhan Barang Konsinyasi
      */
     public function get_tracking_summary()
     {
@@ -811,16 +941,24 @@ class M_Konsinyasi extends CI_Model
             ->get('tb_konsinyasi_settlement')
             ->row_array();
 
-        // 3. Total Barang Laku (Status LAKU = Sudah dibeli kios & menunggu tagihan supplier, berkurang saat status BILLED)
+        // 3. Total Barang Laku (Status LAKU = Sudah dibeli kios & menunggu tagihan/pelunasan supplier)
         $qLaku = $this->db
             ->select('COALESCE(SUM(qty_net), 0) AS total_laku, COUNT(DISTINCT kd_barang) AS item_laku, COALESCE(SUM(subtotal_jual), 0) AS total_nominal_laku')
             ->where('status', 'LAKU')
             ->get('tb_konsinyasi_settlement')
             ->row_array();
 
+        // 4. Total Barang Konsinyasi Lunas (Status BILLED = Sudah dilunasi ke supplier & stok masuk Gudang Konsinyasi Lunas)
+        $qLunas = $this->db
+            ->select('COALESCE(SUM(qty_net), 0) AS total_lunas, COUNT(DISTINCT kd_barang) AS item_lunas, COALESCE(SUM(total_tagihan_beli), 0) AS total_nominal_lunas')
+            ->where('status', 'BILLED')
+            ->get('tb_konsinyasi_settlement')
+            ->row_array();
+
         $totalGudang = (float) ($qGudang['total_gudang'] ?? 0);
         $totalKios   = (float) ($qKios['total_kios'] ?? 0);
         $totalLaku   = (float) ($qLaku['total_laku'] ?? 0);
+        $totalLunas  = (float) ($qLunas['total_lunas'] ?? 0);
 
         return [
             'total_di_gudang'      => $totalGudang,
@@ -831,15 +969,19 @@ class M_Konsinyasi extends CI_Model
             'total_laku'           => $totalLaku,
             'item_laku'            => (int) ($qLaku['item_laku'] ?? 0),
             'total_nominal_laku'   => (float) ($qLaku['total_nominal_laku'] ?? 0),
-            'total_semua'          => $totalGudang + $totalKios + $totalLaku
+            'total_lunas'          => $totalLunas,
+            'item_lunas'           => (int) ($qLunas['item_lunas'] ?? 0),
+            'total_nominal_lunas'  => (float) ($qLunas['total_nominal_lunas'] ?? 0),
+            'total_semua'          => $totalGudang + $totalKios + $totalLaku + $totalLunas
         ];
     }
 
     /**
-     * Mengambil daftar inventaris barang konsinyasi dengan posisi stok:
+     * Mengambil daftar inventaris barang konsinyasi dengan posisi stok lengkap:
      * - Di Gudang Konsinyasi
-     * - Di Kios (Titipan Aktif)
-     * - Barang Laku
+     * - Di Kios (Titipan di Kios)
+     * - Barang Laku (Siap Dilunasi)
+     * - Konsinyasi Lunas (Gudang Konsinyasi Lunas)
      * - Total Stok
      */
     public function get_tracking_barang_list(array $filters = [])
@@ -858,12 +1000,13 @@ class M_Konsinyasi extends CI_Model
             COALESCE(kios.stok_kios, 0) AS stok_kios,
             COALESCE(kios.jml_kios, 0) AS jml_kios,
             COALESCE(laku.stok_laku, 0) AS stok_laku,
-            (COALESCE(gudang.stok_gudang, 0) + COALESCE(kios.stok_kios, 0) + COALESCE(laku.stok_laku, 0)) AS total_stok
+            COALESCE(lunas.stok_lunas, 0) AS stok_lunas,
+            (COALESCE(gudang.stok_gudang, 0) + COALESCE(kios.stok_kios, 0) + COALESCE(laku.stok_laku, 0) + COALESCE(lunas.stok_lunas, 0)) AS total_stok
         ", false);
 
         $this->db->from('tbpo_barang b');
 
-        // Subquery stok gudang
+        // Subquery stok gudang konsinyasi
         $this->db->join("
             (SELECT kd_barang, SUM(qty_on_hand) AS stok_gudang 
              FROM tberp_stock_batch 
@@ -871,7 +1014,7 @@ class M_Konsinyasi extends CI_Model
              GROUP BY kd_barang) gudang
         ", "gudang.kd_barang = b.kode_barang", "left", false);
 
-        // Subquery stok di kios (DI_KIOS / PENDING)
+        // Subquery stok titipan di kios (DI_KIOS / PENDING)
         $this->db->join("
             (SELECT kd_barang, SUM(qty_net) AS stok_kios, COUNT(DISTINCT customer_name) AS jml_kios
              FROM tb_konsinyasi_settlement 
@@ -879,13 +1022,21 @@ class M_Konsinyasi extends CI_Model
              GROUP BY kd_barang) kios
         ", "kios.kd_barang = b.kode_barang", "left", false);
 
-        // Subquery stok laku (Hanya yang status LAKU / belum diinput tagihan supplier)
+        // Subquery stok laku (Hanya yang status LAKU / belum dilunasi ke supplier)
         $this->db->join("
             (SELECT kd_barang, SUM(qty_net) AS stok_laku 
              FROM tb_konsinyasi_settlement 
              WHERE status = 'LAKU' 
              GROUP BY kd_barang) laku
         ", "laku.kd_barang = b.kode_barang", "left", false);
+
+        // Subquery stok konsinyasi lunas (Status BILLED / sudah dilunasi ke supplier)
+        $this->db->join("
+            (SELECT kd_barang, SUM(qty_net) AS stok_lunas 
+             FROM tb_konsinyasi_settlement 
+             WHERE status = 'BILLED' 
+             GROUP BY kd_barang) lunas
+        ", "lunas.kd_barang = b.kode_barang", "left", false);
 
         // Subquery nomor LPB konsinyasi
         $this->db->join("
@@ -915,8 +1066,8 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->join('tbpo_suplier sup', 'sup.kd_suplier = b.kd_suplier', 'left');
 
-        // Filter hanya barang yang memiliki stok di gudang, di kios, atau laku
-        $this->db->where("(COALESCE(gudang.stok_gudang, 0) > 0 OR COALESCE(kios.stok_kios, 0) > 0 OR COALESCE(laku.stok_laku, 0) > 0)", null, false);
+        // Filter hanya barang yang memiliki stok di salah satu posisi
+        $this->db->where("(COALESCE(gudang.stok_gudang, 0) > 0 OR COALESCE(kios.stok_kios, 0) > 0 OR COALESCE(laku.stok_laku, 0) > 0 OR COALESCE(lunas.stok_lunas, 0) > 0)", null, false);
 
         if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
             $kdSup = $this->db->escape(trim((string)$filters['kd_suplier']));
@@ -943,13 +1094,15 @@ class M_Konsinyasi extends CI_Model
      */
     public function get_tracking_kios_by_barang($kdBarang)
     {
-        return $this->db
+        $raw = $this->db
             ->select("
                 s.id_settlement,
                 s.no_settlement,
                 s.tanggal_settlement,
                 s.customer_name,
+                s.id_so,
                 s.no_so,
+                s.id_faktur,
                 COALESCE(fp.no_faktur, s.no_faktur, '-') AS no_faktur,
                 s.id_lpb_asal,
                 COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb, '-') AS nomor_lpb,
@@ -979,10 +1132,77 @@ class M_Konsinyasi extends CI_Model
             ->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left')
             ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left')
             ->where('s.kd_barang', trim((string) $kdBarang))
-            ->order_by("(CASE WHEN s.status IN ('DI_KIOS', 'PENDING') THEN 1 WHEN s.status = 'LAKU' THEN 2 ELSE 3 END)", 'ASC', false)
-            ->order_by('s.id_settlement', 'DESC')
+            ->order_by('s.id_settlement', 'ASC')
             ->get()
             ->result_array();
+
+        // Kelompokkan per transaksi pengiriman faktur/SO + no_lot agar tidak memecah baris
+        $grouped = [];
+        foreach ($raw as $r) {
+            $cleanNoFaktur = preg_replace('/-\d+$/', '', (string)$r['no_faktur']);
+            $groupKey = ($r['id_so'] ?: 'SO') . '_' . ($r['id_faktur'] ?: $cleanNoFaktur) . '_' . trim((string)$r['no_lot']);
+
+            if (!isset($grouped[$groupKey])) {
+                $grouped[$groupKey] = [
+                    'id_settlement'        => $r['id_settlement'],
+                    'no_settlement'        => $r['no_settlement'],
+                    'tanggal_settlement'   => $r['tanggal_settlement'],
+                    'customer_name'        => $r['customer_name'],
+                    'id_so'                => $r['id_so'],
+                    'no_so'                => $r['no_so'],
+                    'id_faktur'            => $r['id_faktur'],
+                    'no_faktur'            => $cleanNoFaktur,
+                    'nomor_lpb'            => $r['nomor_lpb'],
+                    'no_po'                => $r['no_po'],
+                    'po_hrg_satuan'        => (float)$r['po_hrg_satuan'],
+                    'po_hrg_satuan_exclude'=> (float)$r['po_hrg_satuan_exclude'],
+                    'po_tipe_pajak'        => $r['po_tipe_pajak'],
+                    'no_lot'               => $r['no_lot'],
+                    'expired_date'         => $r['expired_date'],
+                    'satuan'               => $r['satuan'],
+                    'hrg_jual'             => (float)$r['hrg_jual'],
+                    'qty_kios'             => 0.0,
+                    'qty_laku'             => 0.0,
+                    'qty_lunas'            => 0.0,
+                    'qty_total'            => 0.0,
+                    'status'               => $r['status']
+                ];
+            }
+
+            $qty = (float)$r['qty_net'];
+            $st = strtoupper((string)$r['status']);
+
+            if ($st === 'DI_KIOS' || $st === 'PENDING') {
+                $grouped[$groupKey]['qty_kios'] += $qty;
+            } else if ($st === 'LAKU') {
+                // Barang laku dibeli kios & siap dilunasi ke supplier
+                $grouped[$groupKey]['qty_laku'] += $qty;
+            } else if ($st === 'BILLED') {
+                // Barang sudah dilunasi ke pihak supplier
+                $grouped[$groupKey]['qty_lunas'] += $qty;
+            }
+            $grouped[$groupKey]['qty_total'] += $qty;
+        }
+
+        $results = [];
+        foreach ($grouped as $item) {
+            if ($item['qty_kios'] > 0 && $item['qty_laku'] > 0) {
+                $item['status'] = 'PARTIAL_LAKU';
+            } else if ($item['qty_kios'] > 0 && $item['qty_lunas'] > 0 && $item['qty_laku'] <= 0) {
+                $item['status'] = 'PARTIAL_LUNAS';
+            } else if ($item['qty_kios'] > 0 && $item['qty_laku'] <= 0 && $item['qty_lunas'] <= 0) {
+                $item['status'] = 'DI_KIOS';
+            } else if ($item['qty_kios'] <= 0 && $item['qty_laku'] > 0) {
+                $item['status'] = 'LAKU';
+            } else if ($item['qty_kios'] <= 0 && $item['qty_laku'] <= 0 && $item['qty_lunas'] > 0) {
+                $item['status'] = 'LUNAS';
+            } else {
+                $item['status'] = !empty($item['status']) ? $item['status'] : 'DI_KIOS';
+            }
+            $results[] = $item;
+        }
+
+        return $results;
     }
 
     /**

@@ -601,7 +601,7 @@ $(function () {
         }
 
         let rowNoFaktur = (($(this).data('no-faktur') || activeFakturNo || '') + '').toUpperCase();
-        let isKonsinyasi = (rowNoFaktur.indexOf('TINV') !== -1 || rowNoFaktur.indexOf('T') === 0);
+        let isKonsinyasi = (rowNoFaktur.indexOf('KINV') !== -1 || rowNoFaktur.indexOf('K') === 0 || rowNoFaktur.indexOf('TINV') !== -1 || rowNoFaktur.indexOf('T') === 0);
         if (isKonsinyasi) {
             $('#menu-print-konsinyasi').show();
         } else {
