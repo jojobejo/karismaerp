@@ -105,9 +105,74 @@ class M_Hrd extends CI_Model
 
     public function get_all_laporan_expedisi()
     {
-        return $this->db->query("SELECT a.*
-         FROM tb_expedisi a
-         ");
+        return $this->db->select('a.*, penerima.nama_user AS nama_penerima, penerima.username AS username_penerima, penerima_konfirmasi.nama_user AS nama_penerima_konfirmasi')
+            ->from('tb_expedisi a')
+            ->join('tb_user penerima', 'penerima.id = a.penerima_berkas_id', 'left')
+            ->join('tb_user penerima_konfirmasi', 'penerima_konfirmasi.id = a.diterima_oleh_id', 'left')
+            ->order_by('a.tanggal', 'DESC')
+            ->get();
+    }
+
+    public function get_penerima_berkas_logistik()
+    {
+        return $this->db->select('id, nama_user, username')
+            ->from('tb_user')
+            ->where('departemen', 'LOGISTIK')
+            ->order_by('nama_user', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function get_expedisi_by_id($id)
+    {
+        return $this->db->select('a.*, penerima.nama_user AS nama_penerima, penerima.username AS username_penerima, penerima_konfirmasi.nama_user AS nama_penerima_konfirmasi')
+            ->from('tb_expedisi a')
+            ->join('tb_user penerima', 'penerima.id = a.penerima_berkas_id', 'left')
+            ->join('tb_user penerima_konfirmasi', 'penerima_konfirmasi.id = a.diterima_oleh_id', 'left')
+            ->where('a.id', $id)
+            ->get()
+            ->row();
+    }
+
+    public function get_riwayat_penerimaan_expedisi($expedisiId)
+    {
+        return $this->db->select('r.*, u.nama_user AS nama_penerima')
+            ->from('tb_expedisi_penerimaan_riwayat r')
+            ->join('tb_user u', 'u.id = r.penerima_id', 'left')
+            ->where('r.expedisi_id', $expedisiId)
+            ->order_by('r.diterima_pada', 'DESC')
+            ->get()
+            ->result();
+    }
+
+    public function konfirmasi_penerimaan_expedisi($expedisiId, $penerimaId, $catatan)
+    {
+        $this->db->trans_start();
+
+        $this->db->where('id', $expedisiId);
+        $this->db->where('penerima_berkas_id', $penerimaId);
+        $this->db->where('status_berkas', 'BELUM_DITERIMA');
+        $this->db->update('tb_expedisi', [
+            'status_berkas' => 'SUDAH_DITERIMA',
+            'diterima_oleh_id' => $penerimaId,
+            'diterima_pada' => date('Y-m-d H:i:s'),
+            'catatan_penerimaan' => $catatan,
+        ]);
+
+        $updated = $this->db->affected_rows();
+        if ($updated === 1) {
+            $this->db->insert('tb_expedisi_penerimaan_riwayat', [
+                'expedisi_id' => $expedisiId,
+                'penerima_id' => $penerimaId,
+                'status_berkas' => 'SUDAH_DITERIMA',
+                'catatan' => $catatan,
+                'diterima_pada' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $this->db->trans_complete();
+
+        return $this->db->trans_status() && $updated === 1;
     }
 
     public function addlapexpedisi($data)
@@ -396,7 +461,8 @@ class M_Hrd extends CI_Model
     var $table_expedisi = 'tb_expedisi';
     var $column_order_expedisi = [
         'tanggal', 'jamkeluar', 'jammasuk', 'nopol', 'namadriver',
-        'notlpndriver', 'perusahaanpengirim', 'namabarang', 'jumlahbarang', 'keterangan'
+        'notlpndriver', 'perusahaanpengirim', 'namabarang', 'jumlahbarang', 'keterangan',
+        'penerima_berkas_id', 'status_berkas'
     ];
     var $column_search_expedisi = [
         'nopol', 'namadriver', 'perusahaanpengirim', 'namabarang'
@@ -405,7 +471,13 @@ class M_Hrd extends CI_Model
 
     private function _get_query_expedisi()
     {
-        $this->db->from($this->table_expedisi);
+        $this->db->select('a.*, penerima.nama_user AS nama_penerima');
+        $this->db->from($this->table_expedisi . ' a');
+        $this->db->join('tb_user penerima', 'penerima.id = a.penerima_berkas_id', 'left');
+
+        if ($this->session->userdata('departemen') === 'LOGISTIK') {
+            $this->db->where('a.penerima_berkas_id', (int) $this->session->userdata('id'));
+        }
 
         $i = 0;
         foreach ($this->column_search_expedisi as $item) {
@@ -448,6 +520,11 @@ class M_Hrd extends CI_Model
 
     public function count_all_expedisi()
     {
+        if ($this->session->userdata('departemen') === 'LOGISTIK') {
+            return $this->db->where('penerima_berkas_id', (int) $this->session->userdata('id'))
+                ->count_all_results($this->table_expedisi);
+        }
+
         return $this->db->count_all($this->table_expedisi);
     }
 
