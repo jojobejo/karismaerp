@@ -40,7 +40,7 @@ class M_ReturPenjualan extends CI_Model
             CREATE TABLE IF NOT EXISTS `tbrp_spr_header` (
                 `id_spr`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_spr`               VARCHAR(30)  NOT NULL,
-                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+                `tipe_retur`           ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa',
                 `tanggal`              DATE         NOT NULL,
                 `kd_customer`          VARCHAR(30)  DEFAULT NULL,
                 `nama_customer`        VARCHAR(200) DEFAULT NULL,
@@ -143,7 +143,7 @@ class M_ReturPenjualan extends CI_Model
         }
         // Tambah tipe_retur ke tbrp_spr_header jika belum ada
         if (!$this->db->field_exists('tipe_retur', 'tbrp_spr_header')) {
-            $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
+            $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
         }
         // Tambah is_jagung ke tbrp_spr_header jika belum ada
         if (!$this->db->field_exists('is_jagung', 'tbrp_spr_header')) {
@@ -161,8 +161,12 @@ class M_ReturPenjualan extends CI_Model
         }
         // Tambah tipe_retur ke tbrp_retur_penjualan_header jika belum ada
         if (!$this->db->field_exists('tipe_retur', 'tbrp_retur_penjualan_header')) {
-            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
         }
+
+        // Pastikan enum tipe retur mendukung alur pengembalian barang konsinyasi.
+        $this->db->query("ALTER TABLE `tbrp_spr_header` MODIFY COLUMN `tipe_retur` ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa'");
+        $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` MODIFY COLUMN `tipe_retur` ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa'");
         
         // Tambah total_nilai_retur ke tbrp_retur_penjualan_header jika belum ada
         if (!$this->db->field_exists('total_nilai_retur', 'tbrp_retur_penjualan_header')) {
@@ -525,7 +529,7 @@ class M_ReturPenjualan extends CI_Model
             CREATE TABLE IF NOT EXISTS `tbrp_retur_penjualan_header` (
                 `id_retur`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_retur`              VARCHAR(40)  NOT NULL,
-                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+                `tipe_retur`           ENUM('biasa','replace','service','konsinyasi') NOT NULL DEFAULT 'biasa',
                 `id_spr`                INT UNSIGNED NOT NULL,
                 `no_spr`               VARCHAR(30)  NOT NULL,
                 `tanggal_retur`        DATE         NOT NULL,
@@ -631,7 +635,7 @@ class M_ReturPenjualan extends CI_Model
         ");
     }
 
-    /** Generate nomor Retur Penjualan: RP/ddmmyy/0001, RPR/ddmmyy/0001, RPS/ddmmyy/0001 */
+    /** Generate nomor Retur Penjualan: RP, RPR, RPS, atau RPK berdasarkan tipe retur. */
     public function generate_no_retur($tipe = 'biasa')
     {
         $prefix_code = 'RP';
@@ -639,6 +643,8 @@ class M_ReturPenjualan extends CI_Model
             $prefix_code = 'RPR';
         } elseif ($tipe === 'service') {
             $prefix_code = 'RPS';
+        } elseif ($tipe === 'konsinyasi') {
+            $prefix_code = 'RPK';
         }
         
         $prefix = $prefix_code . '/' . date('dmy') . '/';
@@ -658,7 +664,7 @@ class M_ReturPenjualan extends CI_Model
 
     // ================================================================
     // RETUR PENJUALAN — CRUD
-    // Alur: ADMLPB2 buat → Admin Retur verifikasi → Collection → Kasir selesai
+    // Alur: ADMLPB buat → Admin Retur verifikasi → Collection → Kasir selesai
     // ================================================================
 
     /** Simpan header Retur Penjualan */
@@ -673,6 +679,151 @@ class M_ReturPenjualan extends CI_Model
     {
         if (empty($rows)) return;
         $this->db->insert_batch('tbrp_retur_penjualan_detail', $rows);
+    }
+
+    /**
+     * Memindahkan barang retur konsinyasi dari saldo titipan kios ke gudang konsinyasi.
+     * Saldo kios bersumber dari settlement karena gudang titipan menggunakan stok virtual.
+     */
+    public function process_consignment_return($noRetur, $targetWarehouseId, array $items)
+    {
+        $sourceWarehouse = $this->db
+            ->select('id_gudang')
+            ->like('nama_gudang', 'Titipan di Kios')
+            ->limit(1)
+            ->get('tb_gudang')
+            ->row_array();
+        $sourceWarehouseId = (int)($sourceWarehouse['id_gudang'] ?? 14);
+
+        $duplicate = $this->db
+            ->where('ref_no', $noRetur)
+            ->where('ref_type', 'RETUR_KONSINYASI_MASUK_GUDANG')
+            ->count_all_results('tberp_stock_ledger');
+        if ($duplicate > 0) {
+            return ['success' => false, 'message' => 'Mutasi stok retur konsinyasi sudah pernah diproses.'];
+        }
+
+        foreach ($items as $item) {
+            $kdBarang = trim((string)($item['kd_barang'] ?? ''));
+            $noFaktur = trim((string)($item['no_faktur'] ?? ''));
+            $noLot = trim((string)($item['no_batch'] ?? ''));
+            $expiredDate = !empty($item['expired_date']) ? $item['expired_date'] : null;
+            $qtyRetur = (float)($item['qty_retur'] ?? 0);
+
+            if ($kdBarang === '' || $noFaktur === '' || $qtyRetur <= 0) {
+                return ['success' => false, 'message' => 'Kode barang, nomor faktur, dan qty retur konsinyasi wajib diisi.'];
+            }
+
+            $this->db->from('tb_konsinyasi_settlement');
+            $this->db->where('kd_barang', $kdBarang);
+            $this->db->where_in('status', ['DI_KIOS', 'PENDING']);
+            $this->db->where('qty_net >', 0);
+            $this->db->group_start()
+                ->where('no_faktur', $noFaktur)
+                ->or_like('no_faktur', $noFaktur . '-', 'after')
+                ->group_end();
+            if ($noLot !== '') {
+                $this->db->where('no_lot', $noLot);
+            }
+            $settlements = $this->db
+                ->order_by('id_settlement', 'ASC')
+                ->get()
+                ->result_array();
+
+            $available = 0.0;
+            foreach ($settlements as $settlement) {
+                $available += (float)$settlement['qty_net'];
+            }
+            if ($available + 0.0001 < $qtyRetur) {
+                return [
+                    'success' => false,
+                    'message' => 'Qty titipan kios tidak mencukupi untuk ' . $kdBarang . ' lot ' . ($noLot ?: '-') . '. Tersedia: ' . $available . '.'
+                ];
+            }
+
+            $remaining = $qtyRetur;
+            foreach ($settlements as $settlement) {
+                if ($remaining <= 0.0001) {
+                    break;
+                }
+                $currentQty = (float)$settlement['qty_net'];
+                $allocated = min($currentQty, $remaining);
+                $newQty = round($currentQty - $allocated, 3);
+                $newReturned = round((float)$settlement['qty_retur'] + $allocated, 3);
+                $sellingPrice = (float)$settlement['hrg_jual'];
+                $oldNote = trim((string)($settlement['catatan'] ?? ''));
+                $returnNote = 'Retur konsinyasi ' . $noRetur . ': ' . $allocated . ' ' . ($settlement['satuan'] ?: 'PCS');
+
+                $this->db->where('id_settlement', (int)$settlement['id_settlement'])->update('tb_konsinyasi_settlement', [
+                    'qty_retur'     => $newReturned,
+                    'qty_net'       => $newQty,
+                    'subtotal_jual' => round($newQty * $sellingPrice, 2),
+                    'status'        => $newQty > 0 ? $settlement['status'] : 'CANCELLED',
+                    'catatan'       => $oldNote === '' ? $returnNote : $oldNote . ' | ' . $returnNote,
+                ]);
+                $remaining = round($remaining - $allocated, 3);
+            }
+
+            // Kurangi batch gudang titipan bila implementasi stok fisiknya tersedia.
+            $sourceBatch = $this->db
+                ->where('kd_barang', $kdBarang)
+                ->where('gudang_id', (string)$sourceWarehouseId)
+                ->where('no_lot', $noLot)
+                ->get('tberp_stock_batch')
+                ->row_array();
+            if ($sourceBatch) {
+                $sourceAvailable = (float)$sourceBatch['qty_on_hand'] - (float)$sourceBatch['qty_reserved'];
+                if ($sourceAvailable + 0.0001 < $qtyRetur) {
+                    return ['success' => false, 'message' => 'Batch fisik Titipan di Kios tidak mencukupi untuk ' . $kdBarang . '.'];
+                }
+                $this->db->where('id', (int)$sourceBatch['id'])->set('qty_on_hand', 'qty_on_hand - ' . $qtyRetur, false)->update('tberp_stock_batch');
+            }
+
+            $targetBatch = $this->db
+                ->where('kd_barang', $kdBarang)
+                ->where('gudang_id', (string)$targetWarehouseId)
+                ->where('no_lot', $noLot)
+                ->get('tberp_stock_batch')
+                ->row_array();
+            if ($targetBatch) {
+                $this->db->where('id', (int)$targetBatch['id'])
+                    ->set('qty_on_hand', 'qty_on_hand + ' . $qtyRetur, false)
+                    ->set('update_at', date('Y-m-d H:i:s'))
+                    ->update('tberp_stock_batch');
+            } else {
+                $this->db->insert('tberp_stock_batch', [
+                    'kd_barang'    => $kdBarang,
+                    'gudang_id'    => (string)$targetWarehouseId,
+                    'no_lot'       => $noLot,
+                    'expired_date' => $expiredDate,
+                    'qty_on_hand'  => $qtyRetur,
+                    'qty_reserved' => 0,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                    'update_at'    => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $ledgerBase = [
+                'kd_barang'    => $kdBarang,
+                'no_lot'       => $noLot,
+                'expired_date' => $expiredDate,
+                'qty'          => $qtyRetur,
+                'ref_no'       => $noRetur,
+                'created_at'   => date('Y-m-d H:i:s'),
+            ];
+            $this->db->insert('tberp_stock_ledger', array_merge($ledgerBase, [
+                'gudang_id' => (string)$sourceWarehouseId,
+                'tipe'      => 'ADJOUT',
+                'ref_type'  => 'RETUR_KONSINYASI_KELUAR_KIOS',
+            ]));
+            $this->db->insert('tberp_stock_ledger', array_merge($ledgerBase, [
+                'gudang_id' => (string)$targetWarehouseId,
+                'tipe'      => 'RJUAL',
+                'ref_type'  => 'RETUR_KONSINYASI_MASUK_GUDANG',
+            ]));
+        }
+
+        return ['success' => true];
     }
 
     /** Ambil semua Retur Penjualan dengan filter */

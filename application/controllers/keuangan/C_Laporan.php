@@ -243,7 +243,15 @@ class C_Laporan extends CI_Controller
                         r.tanggal_retur AS tanggal,
                         r.no_retur AS referensi,
                         rd.qty_retur AS qty,
-                        0 AS harga,
+                        COALESCE((
+                            SELECT fd.hrg_pokok
+                            FROM tbso_faktur_detail fd
+                            WHERE fd.no_faktur = rd.no_faktur
+                              AND fd.kd_barang = b.kode_barang
+                              AND (fd.no_lot = rd.no_batch OR rd.no_batch IS NULL OR rd.no_batch = '')
+                            ORDER BY fd.id DESC
+                            LIMIT 1
+                        ), 0) AS harga,
                         'IN' AS type,
                         'RJ ' AS ref_prefix,
                         b.satuan,
@@ -268,7 +276,7 @@ class C_Laporan extends CI_Controller
                         f.tanggal_faktur AS tanggal,
                         f.no_faktur AS referensi,
                         fd.qty,
-                        fd.hrg_satuan AS harga,
+                        fd.hrg_pokok AS harga,
                         'OUT' AS type,
                         'SJ ' AS ref_prefix,
                         b.satuan,
@@ -323,7 +331,7 @@ class C_Laporan extends CI_Controller
                                 f.tanggal_faktur AS tanggal,
                                 CONCAT(f.no_faktur, ' (', COALESCE(f.customer_name, 'Kios'), ')') AS referensi,
                                 fd.qty,
-                                fd.hrg_satuan AS harga,
+                                fd.hrg_pokok AS harga,
                                 'IN' AS type,
                                 'TITIP-IN ' AS ref_prefix,
                                 b.satuan,
@@ -337,6 +345,36 @@ class C_Laporan extends CI_Controller
                               AND f.tanggal_faktur <= " . $this->db->escape($end_date) . "
                               {$prod_filter_clause}";
             $queries[] = "($sql_kios_in)";
+
+            // OUT: Barang konsinyasi diretur dari kios kembali ke gudang konsinyasi.
+            $sql_kios_return_out = "SELECT
+                                rd.kd_barang,
+                                {$id_wh_titipan_kios} AS gudang_id,
+                                r.tanggal_retur AS tanggal,
+                                CONCAT(r.no_retur, ' / Kembali ke Gudang Konsinyasi') AS referensi,
+                                rd.qty_retur AS qty,
+                                COALESCE((
+                                    SELECT fd.hrg_pokok
+                                    FROM tbso_faktur_detail fd
+                                    WHERE fd.no_faktur = rd.no_faktur
+                                      AND fd.kd_barang = rd.kd_barang
+                                      AND (fd.no_lot = rd.no_batch OR rd.no_batch IS NULL OR rd.no_batch = '')
+                                    ORDER BY fd.id DESC
+                                    LIMIT 1
+                                ), 0) AS harga,
+                                'OUT' AS type,
+                                'RETUR-KONSINYASI ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                b.kelompok_dagang
+                            FROM tbrp_retur_penjualan_header r
+                            JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
+                            JOIN tbpo_barang b ON rd.kd_barang = b.kode_barang
+                            WHERE r.tipe_retur = 'konsinyasi'
+                              AND r.status_retur NOT IN ('ditolak', 'batal')
+                              AND r.tanggal_retur <= " . $this->db->escape($end_date) . "
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_kios_return_out)";
 
             // OUT: Titipan di Kios saat dilunasi / dibeli ke supplier (status BILLED)
             if ($this->db->table_exists('tb_konsinyasi_settlement')) {

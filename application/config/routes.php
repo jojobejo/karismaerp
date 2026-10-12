@@ -959,7 +959,8 @@ $route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPen
 $route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
 $route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
 
-// ---- ADMLPB2 — Buat Retur dari SPR disetujui Kadep ----
+// ---- ADMLPB — Buat Retur dari SPR disetujui Kadep ----
+$route['retur_penjualan/admlpb']                             = 'sales/C_ReturPenjualan/admlpb2_index';
 $route['retur_penjualan/admlpb2']                            = 'sales/C_ReturPenjualan/admlpb2_index';
 $route['retur_penjualan/retur/buat/(:any)']                  = 'sales/C_ReturPenjualan/retur_buat/$1';
 $route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';

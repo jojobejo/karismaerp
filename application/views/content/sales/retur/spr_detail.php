@@ -208,6 +208,8 @@ if (!function_exists('hitung_durasi')) {
                                                 <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
                                             <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                 <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                <span class="badge badge-info px-2 py-1">RETUR BARANG KONSINYASI</span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
                                             <?php endif; ?>

@@ -93,6 +93,8 @@
                         REPLACE (Ganti Barang)
                     <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
                         SERVICE (Servis Barang)
+                    <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                        RETUR BARANG KONSINYASI
                     <?php else: ?>
                         RETUR (Potong Faktur)
                     <?php endif; ?>
@@ -157,7 +159,7 @@
 
     <!-- CATATAN -->
     <?php if ($retur['catatan_logistik']): ?>
-        <p style="font-size:10pt; margin-bottom:6px;"><strong>Catatan ADMLPB2:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></p>
+        <p style="font-size:10pt; margin-bottom:6px;"><strong>Catatan ADMLPB:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></p>
     <?php endif; ?>
     <?php if ($retur['no_faktur_potong']): ?>
         <p style="font-size:10pt; margin-bottom:6px; color:#0056b3;"><strong>No. Faktur Potong:</strong> <?= htmlspecialchars($retur['no_faktur_potong']) ?></p>

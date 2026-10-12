@@ -196,7 +196,8 @@ class M_Dashboard extends CI_Model
             'ADMPNJ' => 'sales',
             'ADMRETUR' => 'logistik',
             'LOGISTIC' => 'logistik',
-            'ADMLPB2' => 'logistik',
+            'ADMLPB' => 'logistik',
+            'ADMINLOGLPB' => 'logistik',
             'COLLECTION' => 'keuangan',
             'KOLEKTOR' => 'keuangan',
             'KASIR' => 'keuangan',
@@ -211,8 +212,10 @@ class M_Dashboard extends CI_Model
 
     private function apply_access_rules(array $sections, array $context)
     {
-        $allowed_retur_pj = array('SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA');
-        $has_retur_pj = in_array(strtoupper((string)($context['jobdesk'] ?? '')), $allowed_retur_pj, true) || !empty($context['is_admin']);
+        $allowed_retur_pj = array('SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA');
+        $has_retur_pj = in_array(strtoupper((string)($context['jobdesk'] ?? '')), $allowed_retur_pj, true)
+            || strtolower((string)($context['username'] ?? '')) === 'admlpb'
+            || !empty($context['is_admin']);
 
         foreach ($sections as $key => $section) {
             if (empty($section['menus']) || !is_array($section['menus'])) {
@@ -245,8 +248,8 @@ class M_Dashboard extends CI_Model
         $username = strtolower((string)($context['username'] ?? ''));
         $departemen = strtoupper((string)($context['departemen'] ?? ''));
 
-        if (in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'), true)
-            || in_array($username, array('admlpb', 'adminloglpb', 'admlpb2'), true)
+        if (in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB'), true)
+            || in_array($username, array('admlpb', 'adminloglpb'), true)
             || ($departemen === 'LOGISTIK' && strpos($jobdesk, 'LPB') !== false)) {
             return 'ics/retur/pembelian/monitoring';
         }
@@ -256,10 +259,11 @@ class M_Dashboard extends CI_Model
     private function get_retur_penjualan_route($context)
     {
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
+        $username = strtolower((string)($context['username'] ?? ''));
         if ($jobdesk === 'LOGISTIC') {
             return 'retur_penjualan/logistik';
-        } elseif ($jobdesk === 'ADMLPB2') {
-            return 'retur_penjualan/admlpb2';
+        } elseif ($username === 'admlpb' || in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB'), true)) {
+            return 'retur_penjualan/admlpb';
         } elseif (in_array($jobdesk, array('ADMRETUR', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'), true)) {
             return 'retur_penjualan/retur';
         }
@@ -292,8 +296,8 @@ class M_Dashboard extends CI_Model
 
         return in_array($jobdesk, array(
             'LOGISTIK',
+            'ADMLPB',
             'ADMINLOGLPB',
-            'ADMLPB2',
             'ADMINICS',
             'ADMLOG',
             'ADMINPURCHASING',

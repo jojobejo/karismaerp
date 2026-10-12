@@ -106,6 +106,8 @@
                         REPLACE (Ganti Barang)
                     <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
                         SERVICE (Servis Barang)
+                    <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                        RETUR BARANG KONSINYASI
                     <?php else: ?>
                         RETUR (Refund)
                     <?php endif; ?>

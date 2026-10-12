@@ -114,7 +114,7 @@ $faktur_back_url = $is_admin_sc_context
                                     <?php endif; ?>
                                     <?php if (!empty($is_konsinyasi)): ?>
                                         <small class="text-warning font-weight-bold d-block mt-1">
-                                            <i class="fas fa-info-circle mr-1"></i>Faktur Barang Konsinyasi (Kode Awalan <b>T</b> &bull; Tidak Terjurnal Otomatis).
+                                            <i class="fas fa-info-circle mr-1"></i>Faktur Barang Konsinyasi (Kode Awalan <b>K</b> &bull; Tidak Terjurnal Otomatis).
                                         </small>
                                     <?php endif; ?>
                                 </div>

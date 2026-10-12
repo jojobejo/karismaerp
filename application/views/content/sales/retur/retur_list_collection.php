@@ -47,7 +47,7 @@
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
                 $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
                 $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
                 $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
@@ -63,7 +63,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb2 || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>

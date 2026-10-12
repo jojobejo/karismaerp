@@ -35,7 +35,7 @@ class C_ReturPenjualan extends CI_Controller
 
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
+        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
         if (!in_array($jobdesk, $allowed_jobdesks)) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
@@ -108,7 +108,7 @@ class C_ReturPenjualan extends CI_Controller
     /** Logistik */
     private function _isLogistik()
     {
-        return $this->_isJobdesk(['ADMLPB2', 'LOGISTIC', 'ADMIN']);
+        return $this->_isAdmlpb() || $this->_isJobdesk(['LOGISTIC', 'LOGISTIK', 'ADMIN']);
     }
 
     /** Cek apakah boleh lihat semua SPR (bukan SC biasa) */
@@ -126,6 +126,25 @@ class C_ReturPenjualan extends CI_Controller
         } else {
             redirect('retur_penjualan');
         }
+    }
+
+    private function _normalizeReturnType($type)
+    {
+        $type = strtolower(trim((string)$type));
+        return in_array($type, ['biasa', 'replace', 'service', 'konsinyasi'], true) ? $type : 'biasa';
+    }
+
+    private function _getConsignmentWarehouse()
+    {
+        $warehouse = $this->db
+            ->where('id_gudang', 13)
+            ->or_like('nama_gudang', 'Konsi')
+            ->order_by('id_gudang', 'ASC')
+            ->limit(1)
+            ->get('tb_gudang')
+            ->row_array();
+
+        return $warehouse ?: ['id_gudang' => 13, 'nama_gudang' => 'Gdg. Konsiyasi'];
     }
 
     // ================================================================
@@ -263,7 +282,7 @@ class C_ReturPenjualan extends CI_Controller
         // ---- Header SPR ----
         $no_spr  = $this->M_ReturPenjualan->generate_no_spr();
         $status  = $as_draft ? 'draft' : 'diajukan';
-        $tipe_retur = $this->input->post('tipe_retur') ?: 'biasa';
+        $tipe_retur = $this->_normalizeReturnType($this->input->post('tipe_retur'));
         $is_jagung  = $this->input->post('is_jagung') ? 1 : 0;
 
         $header = [
@@ -385,7 +404,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $header = [
             'tanggal'       => $this->input->post('tanggal'),
-            'tipe_retur'    => $this->input->post('tipe_retur') ?: 'biasa',
+            'tipe_retur'    => $this->_normalizeReturnType($this->input->post('tipe_retur')),
             'is_jagung'     => $this->input->post('is_jagung') ? 1 : 0,
             'kd_customer'   => $this->input->post('kd_customer'),
             'nama_customer' => $this->input->post('nama_customer'),
@@ -1130,12 +1149,13 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
     // ================================================================
-    // ADMLPB2 — Daftar SPR yang disetujui Kadep (buat Retur)
+    // ADMLPB — Daftar SPR yang disetujui Kadep (buat Retur)
     // ================================================================
 
-    private function _isAdmlpb2()
+    private function _isAdmlpb()
     {
-        return $this->_isJobdesk(['ADMLPB2', 'ADMIN']);
+        $username = strtolower((string)($this->session->userdata('username') ?? ''));
+        return $username === 'admlpb' || $this->_isJobdesk(['ADMLPB', 'ADMINLOGLPB', 'ADMIN']);
     }
 
     private function _isCollection()
@@ -1168,10 +1188,10 @@ class C_ReturPenjualan extends CI_Controller
         return $this->_isJobdesk(['DIREKTURUTAMA', 'ADMIN']);
     }
 
-    /** ADMLPB2: list SPR disetujui kadep yang siap dibuat Retur */
+    /** ADMLPB: daftar SPR disetujui Kadep yang siap dibuat retur. */
     public function admlpb2_index()
     {
-        if (!$this->_isAdmlpb2()) {
+        if (!$this->_isAdmlpb()) {
             $this->_denyAccess('Akses ditolak.');
             return;
         }
@@ -1183,7 +1203,7 @@ class C_ReturPenjualan extends CI_Controller
             'status' => $this->input->get('status', true) ?: 'disetujui_kadep',
         ];
 
-        $data['page_title'] = 'KARISMA — ADMLPB2: SPR Siap Retur';
+        $data['page_title'] = 'KARISMA — ADMLPB: SPR Siap Retur';
         $data['spr_list']   = $this->M_ReturPenjualan->get_all_spr($filter);
         $data['filter']     = $filter;
         $data['user']       = $user;
@@ -1194,7 +1214,7 @@ class C_ReturPenjualan extends CI_Controller
     }
 
     // ================================================================
-    // RETUR PENJUALAN — Dibuat oleh ADMLPB2 dari SPR disetujui Kadep
+    // RETUR PENJUALAN — Dibuat oleh ADMLPB dari SPR disetujui Kadep
     // ================================================================
 
     public function retur_list()
@@ -1274,18 +1294,18 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    /** ADMLPB2: Form buat Retur Penjualan dari SPR */
+    /** ADMLPB: form buat Retur Penjualan dari SPR. */
     public function retur_buat($id_spr)
     {
-        if (!$this->_isAdmlpb2()) {
-            $this->_denyAccess('Hanya ADMLPB2 yang dapat membuat Retur Penjualan.');
+        if (!$this->_isAdmlpb()) {
+            $this->_denyAccess('Hanya ADMLPB yang dapat membuat Retur Penjualan.');
             return;
         }
 
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr || $spr['status'] !== 'disetujui_kadep') {
             $this->session->set_flashdata('error', 'SPR harus berstatus Disetujui Kadep untuk membuat Retur Penjualan.');
-            redirect('retur_penjualan/admlpb2');
+            redirect('retur_penjualan/admlpb');
             return;
         }
 
@@ -1293,7 +1313,7 @@ class C_ReturPenjualan extends CI_Controller
         $existing = $this->M_ReturPenjualan->get_retur_by_spr($id_spr);
         if ($existing) {
             $this->session->set_flashdata('error', 'Retur Penjualan untuk SPR ini sudah dibuat (No. Retur: ' . $existing['no_retur'] . ').');
-            redirect('retur_penjualan/admlpb2');
+            redirect('retur_penjualan/admlpb');
             return;
         }
 
@@ -1303,40 +1323,55 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
         $data['no_retur']   = $this->M_ReturPenjualan->generate_no_retur($spr['tipe_retur'] ?? 'biasa');
-        $data['gudang_list'] = $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
+        $data['is_consignment_return'] = (($spr['tipe_retur'] ?? '') === 'konsinyasi');
+        $data['consignment_warehouse'] = $this->_getConsignmentWarehouse();
+        $data['gudang_list'] = $data['is_consignment_return']
+            ? [$data['consignment_warehouse']]
+            : $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/retur_form.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    /** ADMLPB2: Simpan Retur Penjualan baru */
+    /** ADMLPB: simpan Retur Penjualan baru. */
     public function retur_simpan($id_spr)
     {
-        if (!$this->_isAdmlpb2() || $this->input->server('REQUEST_METHOD') !== 'POST') {
-            redirect('retur_penjualan/admlpb2');
+        if (!$this->_isAdmlpb() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            redirect('retur_penjualan/admlpb');
             return;
         }
 
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr || $spr['status'] !== 'disetujui_kadep') {
             $this->session->set_flashdata('error', 'SPR tidak valid atau statusnya bukan Disetujui Kadep.');
-            redirect('retur_penjualan/admlpb2');
+            redirect('retur_penjualan/admlpb');
             return;
         }
 
         $existing = $this->M_ReturPenjualan->get_retur_by_spr($id_spr);
         if ($existing) {
             $this->session->set_flashdata('error', 'Retur Penjualan untuk SPR ini sudah ada.');
-            redirect('retur_penjualan/admlpb2');
+            redirect('retur_penjualan/admlpb');
             return;
         }
 
         $user        = $this->_getUser();
         $no_retur    = $this->M_ReturPenjualan->generate_no_retur($spr['tipe_retur'] ?? 'biasa');
         $tanggal     = $this->input->post('tanggal_retur');
-        $catatan_log = $this->input->post('catatan_admlpb2');
-        $gudang_id   = $this->input->post('gudang_id');
+        $catatan_log = $this->input->post('catatan_admlpb');
+        $isConsignmentReturn = (($spr['tipe_retur'] ?? '') === 'konsinyasi');
+        $gudang_id   = $isConsignmentReturn
+            ? (int)$this->_getConsignmentWarehouse()['id_gudang']
+            : (int)$this->input->post('gudang_id');
+
+        if ($gudang_id <= 0) {
+            $this->session->set_flashdata('error', 'Gudang tujuan retur wajib dipilih.');
+            redirect('retur_penjualan/retur/buat/' . $id_spr);
+            return;
+        }
+
+        $this->db->trans_begin();
 
         $header = [
             'no_retur'          => $no_retur,
@@ -1364,6 +1399,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $id_retur = $this->M_ReturPenjualan->save_retur_penjualan($header);
         if (!$id_retur) {
+            $this->db->trans_rollback();
             $this->session->set_flashdata('error', 'Gagal menyimpan Retur Penjualan.');
             redirect('retur_penjualan/retur/buat/' . $id_spr);
             return;
@@ -1416,7 +1452,7 @@ class C_ReturPenjualan extends CI_Controller
             $stockNoLot = trim((string)($no_batch_arr[$i] ?? ''));
             $normalizedExpired = !empty($expired_arr[$i]) ? date('Y-m-d', strtotime($expired_arr[$i])) : null;
 
-            if ($stockQty > 0 && !empty($kb)) {
+            if (!$isConsignmentReturn && $stockQty > 0 && !empty($kb)) {
                 if ($this->db->table_exists('tberp_stock_batch')) {
                     $this->db->where('kd_barang', $kb);
                     $this->db->where('gudang_id', $gudang_id);
@@ -1462,6 +1498,16 @@ class C_ReturPenjualan extends CI_Controller
         }
         $this->M_ReturPenjualan->save_retur_penjualan_detail($rows);
 
+        if ($isConsignmentReturn) {
+            $stockResult = $this->M_ReturPenjualan->process_consignment_return($no_retur, $gudang_id, $rows);
+            if (!$stockResult['success']) {
+                $this->db->trans_rollback();
+                $this->session->set_flashdata('error', $stockResult['message']);
+                redirect('retur_penjualan/retur/buat/' . $id_spr);
+                return;
+            }
+        }
+
         // Update SPR status jadi selesai
         $this->M_ReturPenjualan->update_spr_status($id_spr, 'selesai', [
             'logistik_by'      => $user['nama'],
@@ -1473,6 +1519,14 @@ class C_ReturPenjualan extends CI_Controller
         // Record Log for SPR completed and Retur created
         $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'logistik_process', $spr['status'], 'selesai', 'Retur Penjualan dibuat: ' . $no_retur, $user['nama']);
         $this->M_ReturPenjualan->record_log($no_retur, 'retur', 'retur_create', null, 'menunggu_verifikasi', $catatan_log, $user['nama']);
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $this->session->set_flashdata('error', 'Gagal menyimpan retur dan mutasi stok. Seluruh perubahan dibatalkan.');
+            redirect('retur_penjualan/retur/buat/' . $id_spr);
+            return;
+        }
+        $this->db->trans_commit();
 
         $this->session->set_flashdata('success', "Retur Penjualan <strong>{$no_retur}</strong> berhasil dibuat dan menunggu verifikasi Admin Retur.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
@@ -1827,11 +1881,11 @@ class C_ReturPenjualan extends CI_Controller
 
 
 
-    /** ADMLPB2: Form edit Retur Penjualan yang ditolak */
+    /** ADMLPB: form edit Retur Penjualan yang ditolak. */
     public function retur_edit($id_retur)
     {
-        if (!$this->_isAdmlpb2()) {
-            $this->_denyAccess('Hanya ADMLPB2 yang dapat mengedit Retur Penjualan.');
+        if (!$this->_isAdmlpb()) {
+            $this->_denyAccess('Hanya ADMLPB yang dapat mengedit Retur Penjualan.');
             return;
         }
 
@@ -1848,7 +1902,11 @@ class C_ReturPenjualan extends CI_Controller
         $data['retur_detail'] = $this->M_ReturPenjualan->get_retur_penjualan_detail($id_retur);
         $data['user']        = $this->_getUser();
         $data['no_retur']    = $retur['no_retur'];
-        $data['gudang_list'] = $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
+        $data['is_consignment_return'] = (($retur['tipe_retur'] ?? '') === 'konsinyasi');
+        $data['consignment_warehouse'] = $this->_getConsignmentWarehouse();
+        $data['gudang_list'] = $data['is_consignment_return']
+            ? [$data['consignment_warehouse']]
+            : $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
 
         // Agar retur_form.php reuseable, kita mapping $spr ke info dasar
         $data['spr'] = [
@@ -1881,10 +1939,10 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    /** ADMLPB2: Update Retur Penjualan yang ditolak */
+    /** ADMLPB: update Retur Penjualan yang ditolak. */
     public function retur_update($id_retur)
     {
-        if (!$this->_isAdmlpb2() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+        if (!$this->_isAdmlpb() || $this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan/retur');
             return;
         }
@@ -1898,8 +1956,10 @@ class C_ReturPenjualan extends CI_Controller
 
         $user        = $this->_getUser();
         $tanggal     = $this->input->post('tanggal_retur');
-        $catatan_log = $this->input->post('catatan_admlpb2');
-        $gudang_id   = $this->input->post('gudang_id');
+        $catatan_log = $this->input->post('catatan_admlpb');
+        $gudang_id   = (($retur['tipe_retur'] ?? '') === 'konsinyasi')
+            ? (int)$this->_getConsignmentWarehouse()['id_gudang']
+            : $this->input->post('gudang_id');
         $submit_action = $this->input->post('submit_action');
 
         $header = [
@@ -1931,11 +1991,11 @@ class C_ReturPenjualan extends CI_Controller
         redirect('retur_penjualan/retur/detail/' . $id_retur);
     }
 
-    /** ADMLPB2: Ajukan kembali Retur Penjualan yang ditolak */
+    /** ADMLPB: ajukan kembali Retur Penjualan yang ditolak. */
     public function retur_submit($id_retur)
     {
-        if (!$this->_isAdmlpb2()) {
-            $this->_denyAccess('Hanya ADMLPB2 yang dapat mengajukan Retur Penjualan.');
+        if (!$this->_isAdmlpb()) {
+            $this->_denyAccess('Hanya ADMLPB yang dapat mengajukan Retur Penjualan.');
             return;
         }
 
@@ -2043,10 +2103,10 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 4. Logistik / ADMLPB2 / LOGISTIC (sprlog)
+        // 4. Logistik / ADMLPB / LOGISTIC (sprlog)
         $user_info = $this->_getUser();
         $username = strtoupper((string)$user_info['username']);
-        if (in_array($jobdesk, ['ADMLPB2', 'LOGISTIC', 'ADMIN']) || $username === 'SPRLOG') {
+        if (in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'ADMIN'], true) || in_array(strtolower($username), ['admlpb', 'sprlog'], true)) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'disetujui_kadep'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2274,11 +2334,11 @@ class C_ReturPenjualan extends CI_Controller
             }
             
             $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
-            $is_non_journal = in_array($tipe_retur, ['replace', 'service']);
+            $is_non_journal = in_array($tipe_retur, ['replace', 'service', 'konsinyasi'], true);
 
             $sisa_saldo = $total_retur;
             if ((isset($retur['is_revisi']) && $retur['is_revisi'] == 1) || $is_non_journal) {
-                $sisa_saldo = 0; // Jika retur revisi / replace / service, saldo = 0 (tidak bisa potong tagihan / tidak ada refund)
+                $sisa_saldo = 0; // Retur revisi, replace, service, dan konsinyasi tidak membentuk saldo refund.
             }
 
             $this->db->where('id_retur', $id_retur);
@@ -2290,7 +2350,7 @@ class C_ReturPenjualan extends CI_Controller
             $is_refund = ($tipe_retur === 'biasa' || $tipe_retur === 'refund');
             
             if ($is_non_journal) {
-                // Tipe replace / service tidak menghasilkan jurnal akuntansi
+                // Tipe replace, service, dan konsinyasi tidak menghasilkan jurnal akuntansi.
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_retur_penjualan($id_retur); // Memastikan jika ada jurnal lama akan dibersihkan
                 $msg = "Retur {$retur['no_retur']} (tipe " . ucfirst($tipe_retur) . ") berhasil disetujui tanpa jurnal akuntansi.";

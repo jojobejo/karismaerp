@@ -996,9 +996,9 @@ class M_Journal extends CI_Model
             return false;
         }
 
-        // Retur tipe replace (ganti barang) dan service (servis barang) tidak membentuk jurnal akuntansi
+        // Retur replace, service, dan konsinyasi tidak membentuk jurnal akuntansi.
         $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
-        if (in_array($tipe_retur, ['replace', 'service'])) {
+        if (in_array($tipe_retur, ['replace', 'service', 'konsinyasi'], true)) {
             // Hapus jurnal lama jika sebelumnya pernah terposting
             $existing_journals = $this->db->get_where('tbkeu_jurnal', [
                 'source_module' => 'SALES',

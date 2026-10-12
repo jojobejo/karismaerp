@@ -24,7 +24,7 @@
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                            <li class="breadcrumb-item"><a href="<?= base_url('retur_penjualan/admlpb2') ?>">SPR Siap Retur</a></li>
+                            <li class="breadcrumb-item"><a href="<?= base_url('retur_penjualan/admlpb') ?>">SPR Siap Retur</a></li>
                             <li class="breadcrumb-item active">Buat Retur</li>
                         </ol>
                     </div>
@@ -83,12 +83,19 @@
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label col-form-label-sm font-weight-bold text-danger">Masukkan Ke Gudang *</label>
                                         <div class="col-sm-8">
-                                            <select name="gudang_id" class="form-control form-control-sm" required>
-                                                <option value="">-- Pilih Gudang --</option>
-                                                <?php foreach ($gudang_list as $g): ?>
-                                                    <option value="<?= $g['id_gudang'] ?>" <?= (isset($retur['gudang_id']) && $retur['gudang_id'] == $g['id_gudang']) ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_gudang']) ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
+                                            <?php if (!empty($is_consignment_return)): ?>
+                                                <input type="hidden" name="gudang_id" value="<?= (int)$consignment_warehouse['id_gudang'] ?>">
+                                                <input type="text" class="form-control form-control-sm bg-light font-weight-bold"
+                                                       value="<?= htmlspecialchars($consignment_warehouse['nama_gudang']) ?>" readonly>
+                                                <small class="text-muted">Retur konsinyasi wajib kembali ke gudang konsinyasi.</small>
+                                            <?php else: ?>
+                                                <select name="gudang_id" class="form-control form-control-sm" required>
+                                                    <option value="">-- Pilih Gudang --</option>
+                                                    <?php foreach ($gudang_list as $g): ?>
+                                                        <option value="<?= $g['id_gudang'] ?>" <?= (isset($retur['gudang_id']) && $retur['gudang_id'] == $g['id_gudang']) ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_gudang']) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -115,7 +122,7 @@
                                 <div class="col-12">
                                     <div class="form-group mb-0">
                                         <label class="small font-weight-bold">Catatan (Opsional)</label>
-                                        <textarea name="catatan_admlpb2" class="form-control form-control-sm" rows="2" placeholder="Catatan tambahan..."><?= isset($retur['catatan_logistik']) ? htmlspecialchars($retur['catatan_logistik']) : '' ?></textarea>
+                                        <textarea name="catatan_admlpb" class="form-control form-control-sm" rows="2" placeholder="Catatan tambahan..."><?= isset($retur['catatan_logistik']) ? htmlspecialchars($retur['catatan_logistik']) : '' ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -142,7 +149,7 @@
                                             <th>No. Batch/Lot</th>
                                             <th>Expired Date</th>
                                             <th class="text-center" style="width:100px;">Qty Retur</th>
-                                            <?php $hide_harga = isset($user['jobdesk']) && in_array($user['jobdesk'], ['ADMLPB2']); ?>
+                                            <?php $hide_harga = isset($user['jobdesk']) && in_array($user['jobdesk'], ['ADMLPB', 'ADMINLOGLPB'], true); ?>
                                             <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>" style="width:130px;">Harga Satuan</th>
                                             <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>" style="width:140px;">Subtotal</th>
                                         </tr>

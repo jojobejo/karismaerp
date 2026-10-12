@@ -2114,7 +2114,7 @@ class C_SalesOrder extends CI_Controller
             if (is_array($result) && !empty($result['journal']['sales_invoice']['nomor_jurnal'])) {
                 $journal_message = ' Jurnal <b>' . htmlspecialchars($result['journal']['sales_invoice']['nomor_jurnal']) . '</b> otomatis dibuat.';
             } elseif ($is_konsinyasi) {
-                $journal_message = ' <span class="badge badge-warning text-dark">Faktur Konsinyasi (Kode Awalan T &bull; Tidak Terjurnal)</span>';
+                $journal_message = ' <span class="badge badge-warning text-dark">Faktur Konsinyasi (Kode Awalan K &bull; Tidak Terjurnal)</span>';
             }
 
             if (($so_fresh['status'] ?? '') === 'completed') {

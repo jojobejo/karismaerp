@@ -13,7 +13,7 @@
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
-                        <h1 class="m-0"><i class="fas fa-file-invoice mr-2 text-success"></i> SPR Siap Retur (Admin LPB2)</h1>
+                        <h1 class="m-0"><i class="fas fa-file-invoice mr-2 text-success"></i> SPR Siap Retur</h1>
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
@@ -57,7 +57,7 @@
                         </div>
                     </div>
                     <div class="card-body py-2">
-                        <form method="get" action="<?= base_url('retur_penjualan/admlpb2') ?>">
+                        <form method="get" action="<?= base_url('retur_penjualan/admlpb') ?>">
                             <div class="row">
                                 <div class="col-md-2">
                                     <label class="small mb-0">Dari Tanggal</label>
@@ -76,7 +76,7 @@
                                 </div>
                                 <div class="col-md-3 d-flex align-items-end">
                                     <button class="btn btn-success btn-sm mr-1"><i class="fas fa-search"></i> Tampil</button>
-                                    <a href="<?= base_url('retur_penjualan/admlpb2') ?>" class="btn btn-secondary btn-sm">Reset</a>
+                                    <a href="<?= base_url('retur_penjualan/admlpb') ?>" class="btn btn-secondary btn-sm">Reset</a>
                                 </div>
                             </div>
                         </form>
@@ -132,6 +132,8 @@
                                                     <span class="badge badge-success px-2 py-1">REPLACE</span>
                                                 <?php elseif (($row['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                     <span class="badge badge-warning px-2 py-1">SERVICE</span>
+                                                <?php elseif (($row['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                    <span class="badge badge-info px-2 py-1">KONSINYASI</span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">RETUR</span>
                                                 <?php endif; ?>

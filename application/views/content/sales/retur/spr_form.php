@@ -217,6 +217,7 @@
                                          <option value="biasa" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'biasa') ? 'selected' : '' ?>>Retur (Refund/Potong Faktur)</option>
                                          <option value="replace" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'replace') ? 'selected' : '' ?>>Replace (Ganti Barang)</option>
                                          <option value="service" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'service') ? 'selected' : '' ?>>Service (Servis Barang)</option>
+                                         <option value="konsinyasi" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'konsinyasi') ? 'selected' : '' ?>>Retur Barang Konsinyasi</option>
                                      </select>
                                  </div>
                                  <div class="col-md-2 d-flex align-items-center" style="margin-top: 24px;">

@@ -66,7 +66,7 @@
                     $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                     $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                     $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                    $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                    $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
                     $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
                     $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
                     $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
@@ -84,7 +84,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb2 || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MANAGERSE','DIREKTUROP','DIREKTURUTAMA'])): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MANAGERSE','DIREKTUROP','DIREKTURUTAMA'])): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -226,6 +226,8 @@
                                                     <span class="badge badge-success px-2 py-1">REPLACE</span>
                                                 <?php elseif (($row['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                     <span class="badge badge-warning px-2 py-1">SERVICE</span>
+                                                <?php elseif (($row['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                    <span class="badge badge-info px-2 py-1">KONSINYASI</span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">RETUR</span>
                                                 <?php endif; ?>
