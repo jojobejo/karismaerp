@@ -25,12 +25,20 @@ class C_Checker extends CI_Controller
         return $this->role() === self::ROLE_MANAGERCK;
     }
 
+    private function isDirektur()
+    {
+        return in_array($this->role(), [self::ROLE_DIREKTUR, 'DIREKTUR'])
+            || in_array($this->session->userdata('username'), ['kiudir', 'direktur2'])
+            || $this->session->userdata('nik') === 'QIUK00010001';
+    }
+
     private function canView()
     {
         return in_array($this->role(), [
             self::ROLE_CHECKER, self::ROLE_MANAGERCK, self::ROLE_ADMLOG,
             self::ROLE_MANAGER_WH, self::ROLE_SALES, self::ROLE_DIREKTUR,
-        ]);
+            'DIREKTUR',
+        ]) || $this->isDirektur();
     }
 
     public function __construct()

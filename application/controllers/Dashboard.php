@@ -16,6 +16,12 @@ class Dashboard extends CI_Controller
 
         $lvuser     = $this->session->userdata('lv');
         $jobdesk    = $this->session->userdata('jobdesk');
+        $username   = $this->session->userdata('username');
+        $nik        = $this->session->userdata('nik');
+
+        if (in_array(strtolower(trim((string)$username)), ['direktur2', 'kiudir']) || $nik === 'QIUK00010001' || $jobdesk === 'DIREKTURCK') {
+            redirect('checker/dashboard');
+        }
 
         // LV-1 = ADMIN
         // LV-2 = karyawan

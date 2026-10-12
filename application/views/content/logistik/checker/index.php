@@ -113,7 +113,7 @@ tr.row-pending { background:#fafafa !important; }
                         </a>
                     </div>
                     <?php endif; ?>
-                    <?php if ($role === 'DIREKTURCK') : ?>
+                    <?php if (in_array($role, ['DIREKTURCK', 'DIREKTUR'])) : ?>
                     <div class="col-auto">
                         <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
                             <i class="fas fa-archive mr-1"></i> Lihat Arsip

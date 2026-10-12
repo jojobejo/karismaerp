@@ -31,6 +31,7 @@ class Auth extends CI_Controller
                     $data_session = array(
                         'id'            => $key->id,
                         'nik'           => $key->nik,
+                        'username'      => $key->username,
                         'departemen'    => $key->departemen,
                         'lv'            => $key->akses_lv,
                         'jobdesk'       => $key->jobdesk,
@@ -40,7 +41,9 @@ class Auth extends CI_Controller
                     );
                     $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);
-                    if ($key->jobdesk == 'LOGISTIK') {
+                    if (in_array(strtolower(trim((string)$key->username)), ['direktur2', 'kiudir']) || $key->nik == 'QIUK00010001' || $key->jobdesk == 'DIREKTURCK') {
+                        redirect('checker/dashboard');
+                    } else if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
                     } else if ($key->jobdesk == 'ADMINICS') {
                         redirect('ics/ics_diffrent');

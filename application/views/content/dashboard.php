@@ -28,7 +28,16 @@
                         <div class="card">
                             <div class="card-body">
                                 <h2>Modules List</h2>
+                                <?php 
+                                $user_name = $this->session->userdata('username');
+                                $user_nik  = $this->session->userdata('nik');
+                                $is_dir2   = ($user_name === 'direktur2' || $user_nik === 'QIUK00010001' || strtolower((string)$this->session->userdata('nama')) === 'direktur 2');
+                                ?>
+                                <?php if ($is_dir2) : ?>
+                                <a href="<?= base_url('checker') ?>" class="btn btn-warning mb-2"><i class="fas fa-warehouse mr-1"></i> Warehouse Activity</a>
+                                <?php else : ?>
                                 <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2">Daily Stock</a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

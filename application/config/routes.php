@@ -418,3 +418,8 @@ $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail
 $route['checker/push_notif']                        = 'logistik/C_Checker/push_notif';
 $route['checker/get_notif']                         = 'logistik/C_Checker/get_notif';
 $route['checker/read_notif']                        = 'logistik/C_Checker/read_notif';
+
+// PROFILE SETTING
+$route['profile']                                   = 'Profile/index';
+$route['profile/update_password']                   = 'Profile/update_password';
+$route['profile/update_info']                       = 'Profile/update_info';
