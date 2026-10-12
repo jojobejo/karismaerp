@@ -35,6 +35,17 @@ class C_Pelanggan extends CI_Controller
         );
 
         $this->M_Pelanggan->addnilai($ainput);
+
+        if ($this->input->is_ajax_request() || $this->input->get('ajax') == '1') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status'  => 'success',
+                'message' => 'Penilaian berhasil disimpan',
+                'nilai'   => (int)$nilai
+            ]);
+            return;
+        }
+
         redirect('kepuasan_pelanggan');
     }
 

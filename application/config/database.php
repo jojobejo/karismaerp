@@ -79,7 +79,7 @@ $query_builder = TRUE;
 // 	'hostname' => 'localhost',
 // 	'username' => 'root',
 // 	'password' => '',
-// 	'database' => 'u471548307_karismaerp',
+// 	'database' => 'kiucoid_karismaerp',
 // 	'dbdriver' => 'mysqli',
 // 	'dbprefix' => '',
 // 	'pconnect' => FALSE,
@@ -99,9 +99,9 @@ $query_builder = TRUE;
 $db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => '',
-	'database' => 'kiucoid_karismaerp_local',
+	'username' => 'u676129830_karismaerp',
+	'password' => '#Kiuerp89',
+	'database' => 'u676129830_karismaerp',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -117,25 +117,3 @@ $db['default'] = array(
 	'failover' => array(),
 	'save_queries' => TRUE
 );
-
-// $db['default'] = array(
-// 	'dsn'	=> '',
-// 	'hostname' => 'localhost',
-// 	'username' => 'u471548307_adminkarisma',
-// 	'password' => 'Z3VyQQSsZ',
-// 	'database' => 'u471548307_karismaerp',
-// 	'dbdriver' => 'mysqli',
-// 	'dbprefix' => '',
-// 	'pconnect' => FALSE,
-// 	'db_debug' => (ENVIRONMENT !== 'production'),
-// 	'cache_on' => FALSE,
-// 	'cachedir' => '',
-// 	'char_set' => 'utf8',
-// 	'dbcollat' => 'utf8_general_ci',
-// 	'swap_pre' => '',
-// 	'encrypt' => FALSE,
-// 	'compress' => FALSE,
-// 	'stricton' => FALSE,
-// 	'failover' => array(),
-// 	'save_queries' => TRUE
-// );
