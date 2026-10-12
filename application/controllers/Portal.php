@@ -85,6 +85,20 @@ class Portal extends CI_Controller
                 'description' => 'Overdue Invoices & Receivables Monitoring.',
                 'accent' => '#e11d48',
             ],
+            [
+                'name' => 'Kios Transfer',
+                'url' => 'https://kiostransfer.karismaerp.com',
+                'icon' => 'fa-cash-register',
+                'description' => 'Pencatatan metode pembayaran kios.',
+                'accent' => '#0891b2',
+            ],
+            [
+                'name' => 'Sapa Karisma',
+                'url' => 'https://sapakarisma.karismaerp.com',
+                'icon' => 'fa-users-cog',
+                'description' => 'HRIS untuk manajemen SDM yang dikelola HRD.',
+                'accent' => '#7c3aed',
+            ],
    
         ];
 
