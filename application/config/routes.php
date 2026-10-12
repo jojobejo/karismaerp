@@ -60,6 +60,11 @@ $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard';
 
+// Profile Setting
+$route['profile']                                   = 'Profile/index';
+$route['profile/update_password']                   = 'Profile/update_password';
+$route['profile/update_info']                       = 'Profile/update_info';
+
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
 $route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';

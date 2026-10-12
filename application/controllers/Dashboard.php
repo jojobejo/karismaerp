@@ -17,6 +17,11 @@ class Dashboard extends CI_Controller
         $lvuser     = $this->session->userdata('lv');
         $jobdesk    = $this->session->userdata('jobdesk');
 
+        // Jika user adalah direktur2, arahkan ke dashboard KMT
+        if ($this->session->userdata('username') == 'direktur2') {
+            redirect('kmt/dashboard');
+        }
+
         // LV-1 = ADMIN
         // LV-2 = karyawan
         // LV-3 = Kadep

@@ -14,8 +14,8 @@ class Gaji extends CI_Controller {
     public function __construct() {
         parent::__construct();
         if (!$this->session->userdata('logged_in')) redirect('login');
-        // Hanya KADEP yang bisa akses gaji
-        if ((int)$this->session->userdata('lv') > 1) {
+        // Hanya KADEP dan Direksi yang bisa akses gaji
+        if ((int)$this->session->userdata('lv') > 1 && (int)$this->session->userdata('lv') !== 5 && $this->session->userdata('username') !== 'direktur2') {
             $this->session->set_flashdata('error', 'Hanya KADEP yang dapat mengakses menu Gaji.');
             redirect('kmt/dashboard');
         }
