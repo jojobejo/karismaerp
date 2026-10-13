@@ -47,7 +47,7 @@
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
                 $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
                 $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
                 $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
@@ -63,7 +63,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb2 || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -174,7 +174,7 @@
                                         $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                                         $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                                         $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                                        $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                                        $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
 
                                         $badge_map = [
                                             'retur_menunggu_kadepub' => ['info',     'Menunggu Kadep UB'],
@@ -206,6 +206,8 @@
                                                     <span class="badge badge-success px-2 py-1">REPLACE</span>
                                                 <?php elseif (($r['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                     <span class="badge badge-warning px-2 py-1">SERVICE</span>
+                                                <?php elseif (($r['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                    <span class="badge badge-info px-2 py-1">KONSINYASI</span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">RETUR</span>
                                                 <?php endif; ?>
@@ -250,7 +252,7 @@
                                                        class="btn btn-sm btn-info" title="Proses Collection">
                                                         <i class="fas fa-handshake"></i> Proses
                                                       </a>
-                                                <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
+                                                <?php elseif ($st === 'ditolak' && $is_admlpb): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/edit/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-primary" title="Edit Retur">
                                                         <i class="fas fa-edit"></i>

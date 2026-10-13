@@ -73,7 +73,7 @@ if (!function_exists('hitung_durasi')) {
                 $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
                 $st = $retur['status_retur'];
 
                 $show_approval_card = false;
@@ -159,6 +159,8 @@ if (!function_exists('hitung_durasi')) {
                                                 <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
                                             <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                 <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                <span class="badge badge-info px-2 py-1">RETUR BARANG KONSINYASI</span>
                                             <?php else: ?>
                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
                                             <?php endif; ?>
@@ -178,7 +180,7 @@ if (!function_exists('hitung_durasi')) {
                                                 <th>No. Batch</th>
                                                 <th class="text-center">Exp. Date</th>
                                                 <th class="text-center">Qty</th>
-                                                <?php $hide_harga = ($jobdesk === 'ADMLPB2'); ?>
+                                                <?php $hide_harga = in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB'], true); ?>
                                                 <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Harga</th>
                                                 <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Subtotal</th>
                                             </tr>
@@ -213,7 +215,7 @@ if (!function_exists('hitung_durasi')) {
                                 </div>
 
                                 <?php if ($retur['catatan_logistik']): ?>
-                                    <div class="mt-2 small text-muted"><strong>Catatan ADMLPB2:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></div>
+                                    <div class="mt-2 small text-muted"><strong>Catatan ADMLPB:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></div>
                                 <?php endif; ?>
                                 <?php if ($retur['no_faktur_potong']): ?>
                                     <div class="mt-2 small text-info"><strong>No. Faktur Potong:</strong> <?= htmlspecialchars($retur['no_faktur_potong']) ?></div>
@@ -232,7 +234,7 @@ if (!function_exists('hitung_durasi')) {
                                         <a href="<?= base_url('retur_penjualan/retur/kasir/' . $retur['id_retur']) ?>" class="btn btn-success mr-2">
                                             <i class="fas fa-cash-register"></i> Proses Kasir
                                         </a>
-                                    <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
+                                    <?php elseif ($st === 'ditolak' && $is_admlpb): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/edit/' . $retur['id_retur']) ?>" class="btn btn-primary mr-2">
                                             <i class="fas fa-edit"></i> Edit Retur
                                         </a>
@@ -325,7 +327,7 @@ if (!function_exists('hitung_durasi')) {
                                 <?php
                                 $steps_retur = [
                                     [
-                                        'label' => 'Dibuat ADMLPB2',
+                                        'label' => 'Dibuat ADMLPB',
                                         'icon' => 'file-alt',
                                         'done_statuses' => ['menunggu_verifikasi', 'retur_menunggu_mngacc', 'retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai', 'ditolak'],
                                         'by' => $retur['create_by_retur'],

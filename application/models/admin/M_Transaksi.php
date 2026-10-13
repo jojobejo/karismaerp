@@ -260,23 +260,23 @@ class M_Transaksi extends CI_Model
                         COALESCE((SELECT SUM(rpd.qty_retur * rpd.harga_satuan) FROM tbrp_retur_penjualan_detail rpd WHERE rpd.id_retur = rp.id_retur), 0) AS total_nominal,
                         CONCAT('Retur Penjualan: ', rp.no_retur, ' (Tipe: ', UPPER(COALESCE(rp.tipe_retur, 'BIASA')), ', SPR: ', COALESCE(rp.no_spr, ''), ')') AS keterangan,
                         CASE 
-                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN NULL 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service', 'konsinyasi') THEN NULL
                             ELSE j.id_jurnal 
                         END AS id_jurnal,
                         CASE 
-                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN NULL 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service', 'konsinyasi') THEN NULL
                             ELSE j.nomor_jurnal 
                         END AS nomor_jurnal,
                         CASE 
-                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 'NON_JURNAL' 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service', 'konsinyasi') THEN 'NON_JURNAL'
                             ELSE j.status 
                         END AS status_jurnal,
                         CASE 
-                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 0 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service', 'konsinyasi') THEN 0
                             ELSE j.total_debit 
                         END AS journal_debit,
                         CASE 
-                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service') THEN 0 
+                            WHEN LOWER(COALESCE(rp.tipe_retur, 'biasa')) IN ('replace', 'service', 'konsinyasi') THEN 0
                             ELSE j.total_kredit 
                         END AS journal_kredit,
                         rp.create_at_retur AS created_at
@@ -691,7 +691,7 @@ class M_Transaksi extends CI_Model
                     $header['status_transaksi'] = $header['status_retur'] ?: 'selesai';
                     
                     $tipeRetur = strtolower(trim($header['tipe_retur'] ?? 'biasa'));
-                    $isNonJournal = in_array($tipeRetur, ['replace', 'service']);
+                    $isNonJournal = in_array($tipeRetur, ['replace', 'service', 'konsinyasi'], true);
                     $header['is_non_journal'] = $isNonJournal;
                     $header['keterangan'] = 'Retur Penjualan: ' . $header['no_retur'] . ' (Tipe: ' . strtoupper($tipeRetur) . ', SPR: ' . ($header['no_spr'] ?? '') . ')';
 
@@ -1149,7 +1149,7 @@ class M_Transaksi extends CI_Model
 
                     $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$rp['id_retur'], '', $rp['no_retur']);
                     $tipe_retur = strtolower(trim($rp['tipe_retur'] ?? 'biasa'));
-                    if (!in_array($tipe_retur, ['replace', 'service'])) {
+                    if (!in_array($tipe_retur, ['replace', 'service', 'konsinyasi'], true)) {
                         $this->M_Journal->post_jurnal_retur_penjualan((int)$rp['id_retur']);
                     }
                     break;
@@ -1314,11 +1314,12 @@ class M_Transaksi extends CI_Model
 
                     $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$rp['id_retur'], '', $rp['no_retur']);
 
-                    // Kembalikan status retur ke draft
+                    // Kembalikan status transaksi retur ke draft agar dapat diposting ulang.
                     $this->db->where('id_retur', (int)$rp['id_retur'])
                         ->update('tbrp_retur_penjualan_header', [
-                            'status_retur' => 'draft',
-                            'updated_at'   => $now,
+                            'status_retur'    => 'draft',
+                            'update_by_retur' => $user_nama . ' (' . $user_username . ')',
+                            'update_at_retur' => $now,
                         ]);
                     break;
 
@@ -1792,7 +1793,7 @@ class M_Transaksi extends CI_Model
         // Sinkronisasi Jurnal Retur Penjualan
         $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$idRetur, '', $rp['no_retur']);
         $tipe_retur = strtolower(trim($rp['tipe_retur'] ?? 'biasa'));
-        if (!in_array($tipe_retur, ['replace', 'service'])) {
+        if (!in_array($tipe_retur, ['replace', 'service', 'konsinyasi'], true)) {
             $this->M_Journal->post_jurnal_retur_penjualan($idRetur);
         }
 

@@ -127,6 +127,8 @@ if (!function_exists('hitung_durasi')) {
                                                 <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
                                             <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
                                                 <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'konsinyasi'): ?>
+                                                <span class="badge badge-info px-2 py-1">RETUR BARANG KONSINYASI</span>
                                             <?php else: ?>
                                                  <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
                                             <?php endif; ?>
@@ -175,7 +177,7 @@ if (!function_exists('hitung_durasi')) {
                                 </div>
 
                                 <?php if (!empty($retur['catatan_logistik'])): ?>
-                                    <div class="mt-2 small"><strong>Catatan ADMLPB2:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></div>
+                                    <div class="mt-2 small"><strong>Catatan ADMLPB:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></div>
                                 <?php endif; ?>
 
                                 <div class="spr-note-bottom mt-3">

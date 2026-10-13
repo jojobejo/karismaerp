@@ -724,12 +724,8 @@ class M_Konsinyasi extends CI_Model
             $tipePajak = 'EXCLUDE';
         }
 
-        $noInvoiceSupplier = trim((string) ($payload['no_invoice_supplier'] ?? ''));
-        if ($noInvoiceSupplier === '') {
-            return ['status' => false, 'message' => 'Nomor invoice/tagihan dari supplier wajib diisi.'];
-        }
-
-        $tglInvoiceSupplier = !empty($payload['tgl_invoice_supplier']) ? $payload['tgl_invoice_supplier'] : date('Y-m-d');
+        $noInvoiceSupplier = !empty($payload['no_invoice_supplier']) ? trim((string) $payload['no_invoice_supplier']) : null;
+        $tglInvoiceSupplier = !empty($payload['tgl_invoice_supplier']) ? $payload['tgl_invoice_supplier'] : null;
         $ppnPersen = ($tipePajak === 'NON_PPN') ? 0.00 : (!empty($payload['ppn_persen']) ? (float) $payload['ppn_persen'] : 11.00);
 
         // Qty yang dilaporkan laku / dibeli oleh kios
@@ -910,6 +906,46 @@ class M_Konsinyasi extends CI_Model
             'total_tagihan' => $totalTagihanBeli,
             'qty_laku'      => $qtyLaku,
             'qty_sisa_kios' => $qtySisaDiKios
+        ];
+    }
+
+    /**
+     * Memperbarui nomor faktur dan tanggal invoice supplier pada transaksi konsinyasi yang telah lunas
+     */
+    public function update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING')
+    {
+        $settlement = $this->get_settlement_by_id((int) $idSettlement);
+        if (!$settlement) {
+            return ['status' => false, 'message' => 'Data settlement tidak ditemukan.'];
+        }
+
+        $this->db->trans_begin();
+
+        $updatePayload = [
+            'no_invoice_supplier'  => $noInvoice,
+            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d')
+        ];
+
+        $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', $updatePayload);
+
+        // Jika terdapat jurnal pembelian terkait, sinkronkan catatan keterangan pada jurnal
+        if (!empty($settlement['id_jurnal_pembelian'])) {
+            $keterangan = 'Pembelian Konsinyasi: ' . $settlement['nama_barang'] . ' (' . (float)$settlement['qty_net'] . ' ' . $settlement['satuan'] . '), Supplier: ' . $settlement['nama_suplier'] . ' [Inv: ' . $noInvoice . ']';
+            $this->db->where('id_jurnal', (int) $settlement['id_jurnal_pembelian'])->update('tbkeu_jurnal', [
+                'keterangan' => $keterangan
+            ]);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Gagal memperbarui invoice supplier ke database.'];
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'status'  => true,
+            'message' => 'Faktur / Invoice supplier berhasil diperbarui (No: ' . $noInvoice . ').'
         ];
     }
 
@@ -1208,19 +1244,33 @@ class M_Konsinyasi extends CI_Model
     /**
      * Mengambil ringkasan statistik konsinyasi
      */
-    public function get_summary_stats()
+    public function get_summary_stats(array $filters = [])
     {
-        $pending = $this->db
-            ->select('COUNT(*) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(subtotal_jual), 0) as total_omzet')
-            ->where_in('status', ['LAKU', 'PENDING'])
-            ->get('tb_konsinyasi_settlement')
-            ->row_array();
+        $this->db->select('COUNT(*) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(subtotal_jual), 0) as total_omzet');
+        $this->db->where_in('status', ['LAKU', 'PENDING']);
+        if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
+            $this->db->where('kd_suplier', trim((string) $filters['kd_suplier']));
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('tanggal_settlement >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('tanggal_settlement <=', $filters['date_to']);
+        }
+        $pending = $this->db->get('tb_konsinyasi_settlement')->row_array();
 
-        $billed = $this->db
-            ->select('COUNT(*) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(total_tagihan_beli), 0) as total_hutang')
-            ->where('status', 'BILLED')
-            ->get('tb_konsinyasi_settlement')
-            ->row_array();
+        $this->db->select('COUNT(*) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(total_tagihan_beli), 0) as total_hutang');
+        $this->db->where('status', 'BILLED');
+        if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
+            $this->db->where('kd_suplier', trim((string) $filters['kd_suplier']));
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('tanggal_settlement >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('tanggal_settlement <=', $filters['date_to']);
+        }
+        $billed = $this->db->get('tb_konsinyasi_settlement')->row_array();
 
         return [
             'pending_count'  => (int) ($pending['total_item'] ?? 0),

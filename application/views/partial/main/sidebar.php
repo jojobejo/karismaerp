@@ -817,7 +817,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMLPB2') : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && (strtolower((string)$this->session->userdata('username')) === 'admlpb' || in_array($this->session->userdata('jobdesk'), ['ADMLPB', 'ADMINLOGLPB'], true))) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -831,7 +831,7 @@
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('retur_penjualan/admlpb2') ?>" class="nav-link">
+              <a href="<?php echo base_url('retur_penjualan/admlpb') ?>" class="nav-link">
                 <i class="nav-icon fas fa-truck-loading"></i>
                 <p>
                   SPR Siap Retur
