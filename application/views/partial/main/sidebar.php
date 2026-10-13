@@ -1,13 +1,13 @@
   <!-- Main Sidebar Container -->
   <aside class="main-sidebar sidebar-dark-primary elevation-2">
     <!-- Brand Logo -->
-    <a href="<?php echo base_url($this->session->userdata('username') == 'direktur2' ? 'kmt/dashboard' : 'dashboard') ?>" class="brand-link">
+    <a href="<?php echo base_url(in_array($this->session->userdata('username'), ['direktur2', 'direktur4']) ? 'kmt/dashboard' : 'dashboard') ?>" class="brand-link">
       <img src="<?php echo base_url("assets/images/Karisma.png") ?>" style="width: 50px; height: 30px;" alt="Karisma Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
       <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
 
     <!-- Sidebar -->
-    <?php if ($this->session->userdata('username') == 'direktur2') : ?>
+    <?php if (in_array($this->session->userdata('username'), ['direktur2', 'direktur4'])) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">

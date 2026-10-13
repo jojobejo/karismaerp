@@ -20,7 +20,7 @@
                         </div>
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-right">
-                                <li class="breadcrumb-item"><a href="<?php echo base_url($this->session->userdata('username') == 'direktur2' ? 'kmt/dashboard' : 'dashboard') ?>">Home</a></li>
+                                <li class="breadcrumb-item"><a href="<?php echo base_url(in_array($this->session->userdata('username'), ['direktur2', 'direktur4']) ? 'kmt/dashboard' : 'dashboard') ?>">Home</a></li>
                                 <li class="breadcrumb-item active">Profile Setting</li>
                             </ol>
                         </div>
