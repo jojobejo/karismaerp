@@ -87,25 +87,33 @@ Sesuai SOP operasional Karisma ERP, penerimaan fisik barang konsinyasi **terpusa
 
 ---
 
-## 6. Alur Penyelesaian Tagihan Supplier (Settlement di Purchasing)
-1. Buka menu **Purchasing -> Barang Konsinyasi** atau URL: `https://karismaerp.test/purchasing/konsinyasi`.
-2. Antrean menampilkan barang konsinyasi yang telah terjual / dibayar oleh pelanggan.
-3. Klik tombol **"Input Tagihan"** pada baris yang ingin diselesaikan.
+## 6. Alur Pelunasan Barang Konsinyasi ke Supplier (Settlement di Purchasing)
+1. Buka menu **Purchasing -> Barang Konsinyasi** atau URL: `https://karismaerp.test/purchasing/konsinyasi?tab=penyelesaian&status=LAKU`.
+2. Antrean menampilkan barang konsinyasi yang telah laku/terjual ke customer atau dibeli kios.
+3. Klik tombol **"Lunasi"** pada baris barang konsinyasi yang ingin dilunasi ke supplier.
+4. Pada modal **Pelunasan Barang Konsinyasi ke Supplier**:
+   - Kolom No Faktur dan Tanggal Supplier **tidak perlu diisi** (dihilangkan dari modal), karena faktur/invoice resmi supplier sering kali baru diterbitkan beberapa hari setelah barang dilunasi.
+   - Harga Beli Satuan terkunci otomatis dari PO/LPB konsinyasi asal.
+   - Rincian otomatis sistem (DPP, PPN, dan Total Tagihan) dihitung secara live.
+5. Klik **"Lunasi & Posting Jurnal Pembelian"**:
+   - Sistem memposting Jurnal Pembelian:
+     - `[Debit] Persediaan` (sebesar DPP)
+     - `[Debit] PPN Masukan` (jika ada PPN)
+     - `[Kredit] Hutang Usaha` (sebesar Total Tagihan)
+   - Status transaksi berubah menjadi `BILLED` (Riwayat Barang Lunas).
+
+---
+
+## 7. Alur Update Invoice Supplier (Tab Barang Lunas)
+1. Buka sub-tab **Riwayat Barang Lunas** (`?tab=penyelesaian&status=BILLED`).
+2. Setelah fisik faktur / invoice resmi dari supplier tiba di kantor:
+3. Klik tombol **"Input Inv"** / **"Edit Inv"** pada baris transaksi (atau melalui klik kanan -> *Update Invoice Supplier*).
 4. Masukkan:
-   - Nomor Invoice / Faktur dari Supplier.
-   - Tanggal Invoice Supplier.
-   - Pilih **Tipe Harga Supplier**: `Include PPN`, `Exclude PPN`, atau `Non-PPN`.
-   - Ketik **Harga Satuan Supplier (Rp)** persis sesuai invoice supplier.
-   - Pilih tarif PPN (11%, 12%, atau 0%).
-5. Kotak **Rincian Otomatis Sistem** di bawahnya akan menghitung secara live:
-   - Subtotal DPP (yang masuk ke HPP)
-   - Nilai PPN Masukan
-   - Total Hutang ke Supplier
-6. Klik **"Posting Jurnal Pembelian"**.
-7. Sistem otomatis menerbitkan jurnal:
-   - `[Debit]  HPP Konsinyasi` (sebesar DPP)
-   - `[Debit]  PPN Masukan` (jika ada PPN)
-   - `[Kredit] Utang Konsinyasi Supplier` (sebesar Total Tagihan)
+   - **Nomor Faktur / Invoice Supplier** (e.g. `INV-SUPP-2026/10/001`).
+   - **Tanggal Faktur / Invoice**.
+5. Klik **"Simpan Invoice Supplier"**:
+   - Nomor invoice dan tanggal tersimpan ke database.
+   - Keterangan pada voucher jurnal pembelian terkait otomatis tersinkronisasi dengan nomor invoice terbaru.
 
 
 

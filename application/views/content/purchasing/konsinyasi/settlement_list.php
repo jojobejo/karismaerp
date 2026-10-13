@@ -111,7 +111,7 @@
                             <i class="fas fa-boxes mr-2"></i> Tracking Posisi Barang (Gudang vs Kios vs Laku)
                             <span class="badge badge-primary ml-2"><?= count($tracking_barang) ?> Barang</span>
                         </a>
-                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=<?= urlencode($filters['status']) ?>&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?>"
+                        <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian') ?>&status=<?= urlencode($filters['status']) ?>&kd_suplier=<?= urlencode($filters['kd_suplier']) ?>&search=<?= urlencode($filters['search']) ?><?= !empty($filters['date_from']) ? '&date_from=' . urlencode($filters['date_from']) : '' ?><?= !empty($filters['date_to']) ? '&date_to=' . urlencode($filters['date_to']) : '' ?>"
                            class="px-4 py-3 font-weight-bold text-decoration-none d-flex align-items-center
                            <?= ($filters['tab'] === 'penyelesaian') ? 'text-warning' : 'text-muted' ?>"
                            style="border-bottom: <?= ($filters['tab'] === 'penyelesaian') ? '3px solid #f59e0b' : '3px solid transparent' ?>; background: <?= ($filters['tab'] === 'penyelesaian') ? '#fffbeb' : 'white' ?>; margin-bottom: -1px; font-size: 1rem;">
@@ -121,38 +121,99 @@
                     </div>
 
                     <!-- Filter Bar -->
-                    <form method="get" action="<?= site_url('purchasing/konsinyasi') ?>" class="row align-items-end p-3">
+                    <form method="get" action="<?= site_url('purchasing/konsinyasi') ?>" class="p-3" id="formFilterKonsinyasi">
                         <input type="hidden" name="tab" value="<?= htmlspecialchars($filters['tab']) ?>">
                         <?php if ($filters['tab'] === 'penyelesaian'): ?>
                             <input type="hidden" name="status" value="<?= htmlspecialchars($filters['status']) ?>">
                         <?php endif; ?>
-                        <div class="col-md-4">
-                            <label class="small font-weight-bold text-muted mb-1">Supplier Konsinyasi</label>
-                            <select name="kd_suplier" class="form-control form-control-sm font-weight-bold" onchange="this.form.submit()">
-                                <option value="SEMUA">Semua Supplier</option>
-                                <?php foreach ($suppliers as $sup): ?>
-                                    <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" <?= ($filters['kd_suplier'] == $sup['kd_suplier']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($sup['nama_suplier']) ?> (<?= $sup['total_transaksi'] ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="small font-weight-bold text-muted mb-1">Pencarian Barang / Customer / SO / Invoice</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" name="search" class="form-control" placeholder="Cari nama barang, customer, nomor faktur..." value="<?= htmlspecialchars($filters['search']) ?>">
-                                <div class="input-group-append">
-                                    <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+
+                        <?php if ($filters['tab'] === 'penyelesaian'): ?>
+                            <div class="row align-items-end">
+                                <div class="col-lg-3 col-md-6 mb-2 mb-lg-0">
+                                    <label class="small font-weight-bold text-muted mb-1">Supplier Konsinyasi</label>
+                                    <select name="kd_suplier" class="form-control form-control-sm font-weight-bold" onchange="this.form.submit()">
+                                        <option value="SEMUA">Semua Supplier</option>
+                                        <?php foreach ($suppliers as $sup): ?>
+                                            <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" <?= ($filters['kd_suplier'] == $sup['kd_suplier']) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($sup['nama_suplier']) ?> (<?= $sup['total_transaksi'] ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-lg-2 col-md-3 col-6 mb-2 mb-lg-0">
+                                    <label class="small font-weight-bold text-muted mb-1">
+                                        <i class="far fa-calendar-alt text-primary mr-1"></i> Dari Tanggal
+                                    </label>
+                                    <input type="date" name="date_from" id="filter_date_from" class="form-control form-control-sm" value="<?= htmlspecialchars($filters['date_from']) ?>">
+                                </div>
+                                <div class="col-lg-2 col-md-3 col-6 mb-2 mb-lg-0">
+                                    <label class="small font-weight-bold text-muted mb-1">
+                                        <i class="far fa-calendar-alt text-primary mr-1"></i> Sampai Tanggal
+                                    </label>
+                                    <input type="date" name="date_to" id="filter_date_to" class="form-control form-control-sm" value="<?= htmlspecialchars($filters['date_to']) ?>">
+                                </div>
+                                <div class="col-lg-3 col-md-8 col-12 mb-2 mb-lg-0">
+                                    <label class="small font-weight-bold text-muted mb-1">Pencarian Barang / Customer / SO / Invoice</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="search" class="form-control" placeholder="Cari nama barang, customer, nomor faktur..." value="<?= htmlspecialchars($filters['search']) ?>">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-2 col-md-4 col-12 mb-2 mb-lg-0 text-right">
+                                    <div class="d-flex" style="gap: 5px;">
+                                        <button class="btn btn-sm btn-primary flex-fill font-weight-bold shadow-xs" type="submit">
+                                            <i class="fas fa-filter mr-1"></i> Filter
+                                        </button>
+                                        <?php if (!empty($filters['search']) || $filters['kd_suplier'] !== 'SEMUA' || !empty($filters['date_from']) || !empty($filters['date_to'])): ?>
+                                            <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=' . urlencode($filters['status'])) ?>" class="btn btn-sm btn-outline-danger shadow-xs" title="Reset Semua Filter">
+                                                <i class="fas fa-times-circle mr-1"></i> Reset
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-2 text-right pt-2">
-                            <?php if (!empty($filters['search']) || $filters['kd_suplier'] !== 'SEMUA'): ?>
-                                <a href="<?= site_url('purchasing/konsinyasi?tab=' . $filters['tab']) ?>" class="btn btn-sm btn-outline-danger btn-block">
-                                    <i class="fas fa-times-circle mr-1"></i> Reset
-                                </a>
-                            <?php endif; ?>
-                        </div>
+                            
+                            <!-- Shortcut Presets Tanggal -->
+                            <div class="d-flex align-items-center flex-wrap mt-2 pt-2 border-top" style="gap: 6px; font-size: 0.8rem;">
+                                <span class="text-muted small mr-1"><i class="fas fa-bolt text-warning mr-1"></i>Shortcut Periode:</span>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="applyPresetDate('today')">Hari Ini</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="applyPresetDate('this_month')">Bulan Ini</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="applyPresetDate('last_month')">Bulan Lalu</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="applyPresetDate('clear')">Semua Tanggal</button>
+                            </div>
+                        <?php else: ?>
+                            <div class="row align-items-end">
+                                <div class="col-md-4 mb-2 mb-md-0">
+                                    <label class="small font-weight-bold text-muted mb-1">Supplier Konsinyasi</label>
+                                    <select name="kd_suplier" class="form-control form-control-sm font-weight-bold" onchange="this.form.submit()">
+                                        <option value="SEMUA">Semua Supplier</option>
+                                        <?php foreach ($suppliers as $sup): ?>
+                                            <option value="<?= htmlspecialchars($sup['kd_suplier']) ?>" <?= ($filters['kd_suplier'] == $sup['kd_suplier']) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($sup['nama_suplier']) ?> (<?= $sup['total_transaksi'] ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <label class="small font-weight-bold text-muted mb-1">Pencarian Barang / Customer / SO / Invoice</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="search" class="form-control" placeholder="Cari nama barang, customer, nomor faktur..." value="<?= htmlspecialchars($filters['search']) ?>">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 mb-2 mb-md-0 text-right">
+                                    <?php if (!empty($filters['search']) || $filters['kd_suplier'] !== 'SEMUA'): ?>
+                                        <a href="<?= site_url('purchasing/konsinyasi?tab=tracking') ?>" class="btn btn-sm btn-outline-danger btn-block shadow-xs">
+                                            <i class="fas fa-times-circle mr-1"></i> Reset
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </form>
                 </div>
             </div>
@@ -278,21 +339,30 @@
             <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; overflow: hidden;">
                 <!-- Sub-tab filter status settlement -->
                 <div class="d-flex border-bottom bg-white" style="border-radius: 12px 12px 0 0;">
-                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=LAKU&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                    <?php 
+                        $dateParams = '';
+                        if (!empty($filters['date_from'])) {
+                            $dateParams .= '&date_from=' . urlencode($filters['date_from']);
+                        }
+                        if (!empty($filters['date_to'])) {
+                            $dateParams .= '&date_to=' . urlencode($filters['date_to']);
+                        }
+                    ?>
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=LAKU&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search']) . $dateParams) ?>"
                        class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
                        <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? 'text-warning border-bottom border-warning' : 'text-muted' ?>"
                        style="border-bottom: <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? '3px solid #f59e0b' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') ? '#fffbeb' : 'white' ?>; margin-bottom: -1px;">
                         <i class="fas fa-shopping-bag mr-2"></i> Menunggu Tagihan Supplier (Barang Laku)
                         <span class="badge badge-warning text-dark ml-2"><?= $stats['pending_count'] ?></span>
                     </a>
-                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=BILLED&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=BILLED&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search']) . $dateParams) ?>"
                        class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
                        <?= ($filters['status'] === 'BILLED') ? 'text-success' : 'text-muted' ?>"
                        style="border-bottom: <?= ($filters['status'] === 'BILLED') ? '3px solid #10b981' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'BILLED') ? '#f0fdf4' : 'white' ?>; margin-bottom: -1px;">
                         <i class="fas fa-check-double mr-2"></i> Riwayat Barang Lunas
                         <span class="badge badge-success ml-2"><?= $stats['billed_count'] ?></span>
                     </a>
-                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=SEMUA&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search'])) ?>"
+                    <a href="<?= site_url('purchasing/konsinyasi?tab=penyelesaian&status=SEMUA&kd_suplier=' . urlencode($filters['kd_suplier']) . '&search=' . urlencode($filters['search']) . $dateParams) ?>"
                        class="px-4 py-2 font-weight-bold text-decoration-none d-flex align-items-center
                        <?= ($filters['status'] === 'SEMUA') ? 'text-primary' : 'text-muted' ?>"
                        style="border-bottom: <?= ($filters['status'] === 'SEMUA') ? '3px solid #3b82f6' : '3px solid transparent' ?>; background: <?= ($filters['status'] === 'SEMUA') ? '#eff6ff' : 'white' ?>; margin-bottom: -1px;">
@@ -301,7 +371,7 @@
                 </div>
 
                 <div class="card-header bg-white py-3 border-0">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
                         <h6 class="m-0 font-weight-bold text-dark">
                             <?php if ($filters['status'] === 'BILLED'): ?>
                                 <i class="fas fa-check-double text-success mr-1"></i> Riwayat Barang Konsinyasi Lunas
@@ -309,6 +379,14 @@
                                 <i class="fas fa-shopping-bag text-warning mr-1"></i> Barang Konsinyasi Laku (Menunggu Input Tagihan Supplier)
                             <?php else: ?>
                                 <i class="fas fa-list text-muted mr-1"></i> Semua Daftar Transaksi Barang Konsinyasi Laku
+                            <?php endif; ?>
+                            <?php if (!empty($filters['date_from']) || !empty($filters['date_to'])): ?>
+                                <span class="badge badge-light border text-primary ml-2 font-weight-bold" style="font-size: 0.8rem;">
+                                    <i class="far fa-calendar-alt mr-1"></i>
+                                    <?= !empty($filters['date_from']) ? date('d/m/Y', strtotime($filters['date_from'])) : 'Awal' ?> 
+                                    s/d 
+                                    <?= !empty($filters['date_to']) ? date('d/m/Y', strtotime($filters['date_to'])) : 'Sekarang' ?>
+                                </span>
                             <?php endif; ?>
                         </h6>
                         <span class="badge badge-light border text-muted px-2 py-1">
@@ -421,7 +499,10 @@
                                                         <?php else: ?>
                                                             <span class="badge badge-secondary ml-1">Non-PPN</span>
                                                         <?php endif; ?>
-                                                        <br><span class="text-dark">Inv: <?= htmlspecialchars($s['no_invoice_supplier']) ?></span>
+                                                        <br><span class="text-dark">Inv: <?= !empty($s['no_invoice_supplier']) ? htmlspecialchars($s['no_invoice_supplier']) : '<span class="badge badge-warning text-dark font-weight-bold" style="cursor:pointer;" onclick="openModalUpdateInvoice(' . (int)$s['id_settlement'] . ')" title="Klik untuk input nomor faktur supplier"><i class="fas fa-exclamation-circle mr-1"></i>Belum Ada Inv (Klik Input)</span>' ?></span>
+                                                        <?php if (!empty($s['tgl_invoice_supplier'])): ?>
+                                                            <br><small class="text-muted"><i class="far fa-calendar-alt mr-1"></i>Tgl Inv: <?= date('d/m/Y', strtotime($s['tgl_invoice_supplier'])) ?></small>
+                                                        <?php endif; ?>
                                                         <br><span class="text-muted">DPP: Rp <?= number_format($s['subtotal_beli'], 2) ?> | PPN: Rp <?= number_format($s['nilai_ppn'], 2) ?></span>
                                                         <?php if (!empty($s['nomor_jurnal'])): ?>
                                                             <br><a href="javascript:void(0)" class="badge badge-info mt-1 py-1 px-2 text-white shadow-xs" onclick="openModalViewJournal(<?= (int) $s['id_settlement'] ?>)" title="Klik untuk lihat voucher jurnal (Bisa juga Klik Kanan baris ini)"><i class="fas fa-book mr-1"></i><?= htmlspecialchars($s['nomor_jurnal']) ?></a>
@@ -443,6 +524,9 @@
                                                     </div>
                                                 <?php else: ?>
                                                     <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>)" title="<?= empty($s['no_invoice_supplier']) ? 'Input Faktur/Invoice Supplier' : 'Update Faktur/Invoice Supplier' ?>">
+                                                            <i class="fas fa-file-invoice mr-1"></i> <?= empty($s['no_invoice_supplier']) ? 'Input Inv' : 'Edit Inv' ?>
+                                                        </button>
                                                         <a href="<?= site_url('purchasing/konsinyasi/print_faktur/' . (int) $s['id_settlement']) ?>" target="_blank" class="btn btn-outline-secondary font-weight-bold shadow-xs" title="Cetak Faktur Realisasi Penjualan Konsinyasi untuk Supplier">
                                                             <i class="fas fa-print"></i>
                                                         </a>
@@ -580,16 +664,9 @@
                     <!-- Nilai qty tetap dikirim ke server tanpa menampilkan input duplikat. -->
                     <input type="hidden" name="qty_laku" id="input_qty_laku">
 
-                    <!-- Input Invoice Resmi Supplier -->
-                    <div class="row">
-                        <div class="col-md-7 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">Nomor Faktur / Invoice Supplier <span class="text-danger">*</span></label>
-                            <input type="text" name="no_invoice_supplier" id="no_invoice_supplier" class="form-control" placeholder="Contoh: INV-SUPP-2026/09/101" required>
-                        </div>
-                        <div class="col-md-5 form-group mb-3">
-                            <label class="small font-weight-bold text-dark">Tanggal Invoice <span class="text-danger">*</span></label>
-                            <input type="date" name="tgl_invoice_supplier" id="tgl_invoice_supplier" class="form-control" value="<?= date('Y-m-d') ?>" required>
-                        </div>
+                    <!-- Info: Invoice Supplier diisi setelah diterbitkan oleh supplier -->
+                    <div class="alert alert-light border py-2 px-3 small mb-3 text-muted" style="border-radius: 8px;">
+                        <i class="fas fa-info-circle text-info mr-1"></i> <em>Nomor faktur / invoice supplier tidak perlu diisi sekarang. Anda dapat menginputnya kapan saja pada tab <strong>Riwayat Barang Lunas</strong> setelah diterbitkan oleh supplier.</em>
                     </div>
 
                     <!-- Tipe Pajak & PPN (Otomatis dari PO Konsinyasi) -->
@@ -679,6 +756,85 @@
     </div>
 </div>
 
+<!-- Modal Update Invoice Supplier (Barang Konsinyasi Lunas) -->
+<div class="modal fade" id="modalUpdateInvoice" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
+            <div class="modal-header border-0 bg-primary text-white" style="border-radius: 14px 14px 0 0;">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-file-invoice mr-2"></i> Update Faktur / Invoice Supplier
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="formUpdateInvoice">
+                <input type="hidden" name="id_settlement" id="upd_id_settlement">
+                <div class="modal-body p-4">
+                    <!-- Ringkasan Info Transaksi -->
+                    <div class="p-3 mb-3 bg-light rounded border">
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">No. Settlement:</div>
+                            <div class="col-8 font-weight-bold text-primary" id="upd_txt_no_settle">-</div>
+                        </div>
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">Barang:</div>
+                            <div class="col-8 font-weight-bold text-dark" id="upd_txt_nama_barang">-</div>
+                        </div>
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">Supplier:</div>
+                            <div class="col-8 font-weight-bold text-dark" id="upd_txt_nama_suplier">-</div>
+                        </div>
+                        <div class="row small mb-1">
+                            <div class="col-4 text-muted">Qty Lunas:</div>
+                            <div class="col-8 font-weight-bold text-success" id="upd_txt_qty">-</div>
+                        </div>
+                        <div class="row small">
+                            <div class="col-4 text-muted">Total Tagihan:</div>
+                            <div class="col-8 font-weight-bold text-dark" id="upd_txt_total_tagihan">-</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold text-dark">
+                            Nomor Faktur / Invoice Supplier <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                            </div>
+                            <input type="text" name="no_invoice_supplier" id="upd_no_invoice_supplier" class="form-control font-weight-bold" placeholder="Contoh: INV-SUPP-2026/09/101" required>
+                        </div>
+                        <small class="text-muted mt-1 d-block">Masukkan nomor faktur/invoice resmi yang diterbitkan oleh supplier.</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold text-dark">
+                            Tanggal Faktur / Invoice <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                            </div>
+                            <input type="date" name="tgl_invoice_supplier" id="upd_tgl_invoice_supplier" class="form-control font-weight-bold" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small mb-0">
+                        <i class="fas fa-info-circle mr-1"></i> Menyimpan nomor faktur ini akan otomatis memperbarui data settlement dan menyinkronkan keterangan voucher jurnal pembelian.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary font-weight-bold" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary font-weight-bold px-4" id="btnSubmitUpdateInvoice">
+                        <i class="fas fa-save mr-1"></i> Simpan Invoice Supplier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Lihat Jurnal Pembelian Konsinyasi -->
 <div class="modal fade" id="modalViewJournal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -722,6 +878,9 @@
         <span class="badge badge-success px-2 py-1" id="ctxMenuStatus">BILLED</span>
     </div>
     <div class="py-1">
+        <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-update-invoice text-warning font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerUpdateInvoice()" style="font-size: 0.90rem;">
+            <i class="fas fa-file-invoice mr-2 fa-fw"></i> Update Invoice Supplier
+        </a>
         <a class="dropdown-item py-2 px-3 d-flex align-items-center ctx-item-journal text-info font-weight-bold" href="javascript:void(0)" onclick="ctxTriggerViewJournal()" style="font-size: 0.90rem;">
             <i class="fas fa-book mr-2 fa-fw"></i> Lihat Jurnal Pembelian
         </a>
@@ -894,7 +1053,6 @@ window.openModalInputTagihan = function(id) {
                 var infoPo = d.po_no_po ? (d.po_no_po + ' (' + tipeKet + ')') : 'Tanpa PO (' + tipeKet + ')';
                 $('#txt_ref_po').text(infoPo);
 
-                $('#no_invoice_supplier').val('');
                 $('#ppn_persen').val(defaultTipe === 'NON_PPN' ? '0' : '11');
 
                 window.calculateSettlementLive();
@@ -1068,7 +1226,7 @@ window.openModalDetailSettlement = function(id) {
                 html += '<h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-file-invoice-dollar text-success mr-2"></i>Tagihan Supplier ' + tipeBadge + '</h6>';
                 html += '<table class="table table-sm table-borderless mb-0 small">';
                 html += '<tr><td class="text-muted" style="width:50%">Supplier:</td><td class="font-weight-bold">' + (d.nama_suplier || '-') + '</td></tr>';
-                html += '<tr><td class="text-muted">No. Invoice Supplier:</td><td class="font-weight-bold text-dark">' + (d.no_invoice_supplier || '-') + '</td></tr>';
+                html += '<tr><td class="text-muted">No. Invoice Supplier:</td><td class="font-weight-bold text-dark">' + (d.no_invoice_supplier ? ('<span class="text-primary font-weight-bold">' + d.no_invoice_supplier + '</span> <a href="javascript:void(0)" class="badge badge-light border text-primary ml-1" onclick="openModalUpdateInvoice(' + d.id_settlement + ')"><i class="fas fa-edit"></i> Ubah</a>') : '<span class="badge badge-warning text-dark font-weight-bold" style="cursor:pointer;" onclick="openModalUpdateInvoice(' + d.id_settlement + ')"><i class="fas fa-edit mr-1"></i>Belum Diisi (Klik Input)</span>') + '</td></tr>';
                 html += '<tr><td class="text-muted">Tgl. Invoice:</td><td>' + (d.tgl_invoice_supplier ? new Date(d.tgl_invoice_supplier).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) : '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">Harga Satuan (Input):</td><td class="font-weight-bold">' + fmt(d.hrg_satuan_input) + '</td></tr>';
                 html += '<tr><td class="text-muted">Harga Satuan DPP:</td><td>' + fmt(d.hrg_beli_satuan) + '</td></tr>';
@@ -1338,6 +1496,7 @@ $(document).ready(function() {
         if (status === 'BILLED') {
             $('#ctxMenuStatus').removeClass('badge-warning').addClass('badge-success').text('BILLED');
             $('.ctx-item-journal').show();
+            $('.ctx-item-update-invoice').show();
             if (noJurnal) {
                 $('.ctx-item-journal').html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal: <strong>' + noJurnal + '</strong>');
             } else {
@@ -1346,6 +1505,7 @@ $(document).ready(function() {
             $('.ctx-item-input').hide();
         } else {
             $('#ctxMenuStatus').removeClass('badge-success').addClass('badge-warning').text('LAKU');
+            $('.ctx-item-update-invoice').hide();
             if (hasJournal == '1') {
                 $('.ctx-item-journal').show().html('<i class="fas fa-book mr-2 fa-fw text-info"></i> Lihat Jurnal Pembelian');
             } else {
@@ -1454,5 +1614,135 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Submit Form Update Invoice Supplier
+    $('#formUpdateInvoice').on('submit', function(e) {
+        e.preventDefault();
+        var $btn = $('#btnSubmitUpdateInvoice');
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+        $.ajax({
+            url: '<?= site_url("purchasing/konsinyasi/ajax_update_invoice") ?>',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(res) {
+                $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Invoice Supplier');
+                if (res && res.status) {
+                    hideModalSafe('modalUpdateInvoice');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil Diperbarui!',
+                            text: res.message,
+                            confirmButtonText: 'OK'
+                        }).then(function() {
+                            location.reload();
+                        });
+                    } else {
+                        alert(res.message);
+                        location.reload();
+                    }
+                } else {
+                    var errMsg = (res && res.message) ? res.message : 'Gagal memperbarui invoice supplier.';
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: errMsg });
+                    } else {
+                        alert(errMsg);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Invoice Supplier');
+                var errMsg = xhr.status === 401 ? 'Sesi login telah berakhir.' : 'Terjadi kesalahan sistem (' + status + ').';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: errMsg });
+                } else {
+                    alert(errMsg);
+                }
+            }
+        });
+    });
 });
+
+/**
+ * Global function membuka Modal Update Invoice Supplier
+ */
+window.openModalUpdateInvoice = function(id) {
+    if (!id) return;
+    $.ajax({
+        url: '<?= site_url("purchasing/konsinyasi/ajax_detail") ?>',
+        type: 'GET',
+        data: { id_settlement: id },
+        dataType: 'json',
+        success: function(res) {
+            if (res && res.status && res.data) {
+                var d = res.data;
+                $('#upd_id_settlement').val(d.id_settlement);
+                $('#upd_txt_no_settle').text(d.no_settlement || '-');
+                $('#upd_txt_nama_barang').text(d.nama_barang || '-');
+                $('#upd_txt_nama_suplier').text(d.nama_suplier || '-');
+                $('#upd_txt_qty').text((parseFloat(d.qty_net || 0).toFixed(2)) + ' ' + (d.satuan || ''));
+                $('#upd_txt_total_tagihan').text('Rp ' + Number(d.total_tagihan_beli || 0).toLocaleString('id-ID', {minimumFractionDigits: 2}));
+                $('#upd_no_invoice_supplier').val(d.no_invoice_supplier || '');
+                $('#upd_tgl_invoice_supplier').val(d.tgl_invoice_supplier || '<?= date("Y-m-d") ?>');
+                showModalSafe('modalUpdateInvoice');
+            } else {
+                var msg = (res && res.message) ? res.message : 'Gagal mengambil data settlement.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Perhatian', text: msg });
+                } else {
+                    alert(msg);
+                }
+            }
+        },
+        error: function(xhr, status, error) {
+            var errMsg = 'Terjadi kesalahan sistem saat mengambil data settlement (' + status + ').';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Koneksi Gagal', text: errMsg });
+            } else {
+                alert(errMsg);
+            }
+        }
+    });
+};
+
+window.ctxTriggerUpdateInvoice = function() {
+    $('#settlementContextMenu').hide();
+    if (selectedContextId) {
+        window.openModalUpdateInvoice(selectedContextId);
+    }
+};
+
+/**
+ * Shortcut pengaturan filter tanggal cepat
+ */
+function applyPresetDate(preset) {
+    var today = new Date();
+    var pad = function(n) { return String(n).padStart(2, '0'); };
+    var formatDate = function(d) {
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    };
+
+    if (preset === 'today') {
+        var todayStr = formatDate(today);
+        $('#filter_date_from').val(todayStr);
+        $('#filter_date_to').val(todayStr);
+    } else if (preset === 'this_month') {
+        var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        var lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        $('#filter_date_from').val(formatDate(firstDay));
+        $('#filter_date_to').val(formatDate(lastDay));
+    } else if (preset === 'last_month') {
+        var firstDayPrev = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        var lastDayPrev = new Date(today.getFullYear(), today.getMonth(), 0);
+        $('#filter_date_from').val(formatDate(firstDayPrev));
+        $('#filter_date_to').val(formatDate(lastDayPrev));
+    } else if (preset === 'clear') {
+        $('#filter_date_from').val('');
+        $('#filter_date_to').val('');
+    }
+
+    $('#formFilterKonsinyasi').submit();
+}
 </script>

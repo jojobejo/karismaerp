@@ -50,7 +50,7 @@ class C_Konsinyasi extends CI_Controller
 
         $data['page_title']       = 'Tracking & Penyelesaian Barang Konsinyasi - Purchasing';
         $data['filters']          = $filters;
-        $data['stats']            = $this->M_Konsinyasi->get_summary_stats();
+        $data['stats']            = $this->M_Konsinyasi->get_summary_stats($filters);
         $data['tracking_summary'] = $this->M_Konsinyasi->get_tracking_summary();
         $data['tracking_barang']  = $this->M_Konsinyasi->get_tracking_barang_list($filters);
         $data['suppliers']        = $this->M_Konsinyasi->get_suppliers_list();
@@ -102,6 +102,43 @@ class C_Konsinyasi extends CI_Controller
         $userName = (string) ($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'PURCHASING');
 
         $result = $this->M_Konsinyasi->process_settlement($idSettlement, $payload, $userId, $userName);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($result));
+    }
+
+    /**
+     * AJAX: Update nomor faktur & tanggal invoice supplier untuk barang konsinyasi lunas
+     */
+    public function ajax_update_invoice()
+    {
+        $idSettlement = (int) $this->input->post('id_settlement');
+        $noInvoice = trim((string) $this->input->post('no_invoice_supplier', TRUE));
+        $tglInvoice = trim((string) $this->input->post('tgl_invoice_supplier', TRUE));
+
+        if ($idSettlement <= 0) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['status' => false, 'message' => 'ID settlement tidak valid.']));
+            return;
+        }
+
+        if ($noInvoice === '') {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['status' => false, 'message' => 'Nomor Faktur / Invoice Supplier wajib diisi.']));
+            return;
+        }
+
+        if ($tglInvoice === '') {
+            $tglInvoice = date('Y-m-d');
+        }
+
+        $userId = (int) ($this->session->userdata('id') ?: $this->session->userdata('user_id') ?: 1);
+        $userName = (string) ($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'PURCHASING');
+
+        $result = $this->M_Konsinyasi->update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId, $userName);
 
         $this->output
             ->set_content_type('application/json')

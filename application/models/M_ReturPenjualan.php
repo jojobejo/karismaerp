@@ -180,6 +180,7 @@ class M_ReturPenjualan extends CI_Model
 
         // Modify status_retur enum to include new approval stages
         $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` MODIFY COLUMN `status_retur` ENUM(
+            'draft',
             'menunggu_verifikasi',
             'retur_menunggu_kadepub',
             'retur_menunggu_mngacc',
@@ -538,7 +539,7 @@ class M_ReturPenjualan extends CI_Model
                 `alamat`               VARCHAR(300) DEFAULT NULL,
                 `nama_sales`           VARCHAR(150) DEFAULT NULL,
                 `catatan_logistik`     TEXT         DEFAULT NULL,
-                `status_retur`         ENUM('menunggu_verifikasi','retur_menunggu_kadepub','retur_menunggu_mngacc','retur_menunggu_mngsc','retur_menunggu_mngse','retur_menunggu_kadepsc','retur_menunggu_dirop','retur_menunggu_dirut','menunggu_collection','menunggu_kasir','selesai','ditolak')
+                `status_retur`         ENUM('draft','menunggu_verifikasi','retur_menunggu_kadepub','retur_menunggu_mngacc','retur_menunggu_mngsc','retur_menunggu_mngse','retur_menunggu_kadepsc','retur_menunggu_dirop','retur_menunggu_dirut','menunggu_collection','menunggu_kasir','selesai','ditolak')
                                        NOT NULL DEFAULT 'menunggu_verifikasi',
                 -- Admin Retur
                 `admretur_by_retur` VARCHAR(150) DEFAULT NULL,

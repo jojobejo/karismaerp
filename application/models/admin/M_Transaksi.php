@@ -1314,11 +1314,12 @@ class M_Transaksi extends CI_Model
 
                     $this->_delete_old_journals('SALES', 'RETUR_PENJUALAN', (string)$rp['id_retur'], '', $rp['no_retur']);
 
-                    // Kembalikan status retur ke draft
+                    // Kembalikan status transaksi retur ke draft agar dapat diposting ulang.
                     $this->db->where('id_retur', (int)$rp['id_retur'])
                         ->update('tbrp_retur_penjualan_header', [
-                            'status_retur' => 'draft',
-                            'updated_at'   => $now,
+                            'status_retur'    => 'draft',
+                            'update_by_retur' => $user_nama . ' (' . $user_username . ')',
+                            'update_at_retur' => $now,
                         ]);
                     break;
 

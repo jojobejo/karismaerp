@@ -2443,7 +2443,7 @@ CREATE TABLE `tbrp_retur_penjualan_header` (
   `alamat` varchar(300) DEFAULT NULL,
   `nama_sales` varchar(150) DEFAULT NULL,
   `catatan_logistik` text DEFAULT NULL,
-  `status_retur` enum('menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak') NOT NULL DEFAULT 'menunggu_verifikasi',
+  `status_retur` enum('draft','menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak') NOT NULL DEFAULT 'menunggu_verifikasi',
   `admin_stock_by_retur` varchar(150) DEFAULT NULL,
   `admin_stock_at_retur` datetime DEFAULT NULL,
   `catatan_admin_stock` text DEFAULT NULL,
