@@ -1373,6 +1373,7 @@ class C_SalesOrder extends CI_Controller
             'catatan'           => $post['catatan'] ?? null,
             'cara_pembayaran'   => $cara_pembayaran_so,
             'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
+            'is_test_market'    => !empty($post['is_test_market']) ? 1 : 0,
             'create_by'         => $this->_getUsername(),
         ];
 
@@ -1663,6 +1664,7 @@ class C_SalesOrder extends CI_Controller
             'catatan'           => $post['catatan'] ?? null,
             'cara_pembayaran'   => $cara_pembayaran_so,
             'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
+            'is_test_market'    => !empty($post['is_test_market']) ? 1 : 0,
             'update_by'         => $this->_getUsername(),
         ];
 
@@ -1896,15 +1898,17 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
         $data['so']                = $so;
         $is_faktur_z               = !empty($so['is_faktur_z']);
+        $is_test_market            = !empty($so['is_test_market']);
         $is_konsinyasi             = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
         $data['is_faktur_z']       = $is_faktur_z;
+        $data['is_test_market']    = $is_test_market;
         $data['is_konsinyasi']     = $is_konsinyasi;
         $data['details']           = array_map(function($item) use ($tax_rate) {
             $item['pajak'] = $tax_rate;
             // Faktur Z Induk nominal aslinya tetap utuh (potongan 20% baru diterapkan saat dipecah menjadi Faktur H)
             return $item;
         }, array_values($items_outstanding));
-        $faktur_prefix             = $is_konsinyasi ? 'K' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix());
+        $faktur_prefix             = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix()));
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
@@ -2006,8 +2010,9 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $is_test_market = !empty($so['is_test_market']);
         $is_konsinyasi = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
-        $faktur_prefix = $is_konsinyasi ? 'K' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix());
+        $faktur_prefix = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix()));
         $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
         $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
         $no_faktur = $posted_no_faktur;
@@ -2034,6 +2039,7 @@ class C_SalesOrder extends CI_Controller
             'cara_pembayaran'       => $cara_pembayaran,
             'jtempo'                => $jtempo,
             'tempo'                 => $jtempo,
+            'is_test_market'        => $is_test_market ? 1 : 0,
             'catatan'               => $post['catatan'] ?? null,
             'create_by'             => $this->_getUsername(),
             'created_by_id'         => (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0),

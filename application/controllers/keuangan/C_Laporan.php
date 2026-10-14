@@ -124,7 +124,45 @@ class C_Laporan extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/laporan/laporan_barang/kartu_stock_gudang.php', $data);
         $this->load->view('partial/main/footergdg.php');
-        }
+    }
+
+    public function kartu_stock_konsinyasi_report()
+    {
+        $data['page_title'] = 'KARISMA - KARTU STOK BARANG KONSINYASI (FIFO)';
+        
+        // Ambil 3 gudang konsinyasi aktif
+        $data['warehouses'] = $this->db->select('id_gudang, nama_gudang')
+            ->from('tb_gudang')
+            ->where_in('id_gudang', [13, 14, 15])
+            ->or_like('nama_gudang', 'Konsi')
+            ->or_like('nama_gudang', 'Titipan di Kios')
+            ->get()->result_array();
+            
+        // Ambil daftar supplier konsinyasi
+        $data['suppliers'] = $this->db->select('kd_suplier, nama_suplier')
+            ->from('tb_konsinyasi_settlement')
+            ->where('kd_suplier IS NOT NULL', null, false)
+            ->where('kd_suplier !=', '')
+            ->group_by(['kd_suplier', 'nama_suplier'])
+            ->order_by('nama_suplier', 'ASC')
+            ->get()->result_array();
+
+        // Ambil daftar barang konsinyasi
+        $data['products'] = $this->db->query("
+            SELECT DISTINCT b.kode_barang, b.nama_barang
+            FROM tbpo_barang b
+            WHERE b.kode_barang IN (
+                SELECT DISTINCT kd_barang FROM tb_konsinyasi_settlement
+                UNION
+                SELECT DISTINCT ld.kd_barang FROM tb_lpb_detail ld JOIN tb_lpb l ON ld.id_lpb = l.id_lpb WHERE l.gudang_id IN (13, 14, 15)
+            )
+            ORDER BY b.nama_barang ASC
+        ")->result_array();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_barang/kartu_stock_konsinyasi.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
 
     // ====================================================
     // Laporan Jurnal Transaksi
@@ -376,15 +414,16 @@ class C_Laporan extends CI_Controller
                               {$prod_filter_clause}";
             $queries[] = "($sql_kios_return_out)";
 
-            // OUT: Titipan di Kios saat dilunasi / dibeli ke supplier (status BILLED)
+            // OUT: Barang keluar dari Gudang Titipan di Kios ketika dilakukan pembayaran di Keuangan (keuangan/pembayaran/bayar)
+            // Yaitu saat kios membeli/membayar barang konsinyasi yang laku (tercatat di pembayaran faktur & settlement)
             if ($this->db->table_exists('tb_konsinyasi_settlement')) {
                 $sql_kios_out = "SELECT 
                                     s.kd_barang,
                                     {$id_wh_titipan_kios} AS gudang_id,
-                                    COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) AS tanggal,
-                                    CONCAT(s.no_settlement, ' / Pelunasan ', COALESCE(s.customer_name, 'Kios')) AS referensi,
+                                    COALESCE(p.tanggal_pembayaran, s.tanggal_settlement, DATE(s.created_at)) AS tanggal,
+                                    CONCAT(COALESCE(p.no_faktur_konsinyasi, s.no_faktur, s.no_settlement), ' (', COALESCE(s.customer_name, 'Kios'), ')') AS referensi,
                                     s.qty_net AS qty,
-                                    s.hrg_beli_satuan AS harga,
+                                    COALESCE(fd.hrg_pokok, s.hrg_jual, 0) AS harga,
                                     'OUT' AS type,
                                     'TITIP-OUT ' AS ref_prefix,
                                     b.satuan,
@@ -392,8 +431,11 @@ class C_Laporan extends CI_Controller
                                     b.kelompok_dagang
                                 FROM tb_konsinyasi_settlement s
                                 JOIN tbpo_barang b ON s.kd_barang = b.kode_barang
-                                WHERE s.status = 'BILLED'
-                                  AND COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) <= " . $this->db->escape($end_date) . "
+                                LEFT JOIN tbkeu_pembayaran_faktur p ON p.id_pembayaran = s.id_pembayaran
+                                LEFT JOIN tbso_faktur_detail fd ON fd.id_faktur = s.id_faktur AND fd.kd_barang = s.kd_barang AND (fd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = '')
+                                WHERE (s.id_pembayaran IS NOT NULL OR s.status IN ('LAKU', 'BILLED'))
+                                  AND (p.status IS NULL OR p.status NOT IN ('CANCELLED', 'UNPOST', 'DRAFT'))
+                                  AND COALESCE(p.tanggal_pembayaran, s.tanggal_settlement, DATE(s.created_at)) <= " . $this->db->escape($end_date) . "
                                   {$prod_filter_clause}";
                 $queries[] = "($sql_kios_out)";
             }
@@ -401,6 +443,7 @@ class C_Laporan extends CI_Controller
 
         // 6. Khusus Konsinyasi Lunas
         if ((!$wh_target_id || $wh_target_id == $id_wh_konsinyasi_lunas) && $this->db->table_exists('tb_konsinyasi_settlement')) {
+            // IN: Penerimaan pembelian resmi dari Supplier (status BILLED)
             $sql_lunas_in = "SELECT 
                                 s.kd_barang,
                                 {$id_wh_konsinyasi_lunas} AS gudang_id,
@@ -419,6 +462,27 @@ class C_Laporan extends CI_Controller
                               AND COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) <= " . $this->db->escape($end_date) . "
                               {$prod_filter_clause}";
             $queries[] = "($sql_lunas_in)";
+
+            // OUT: Pengeluaran barang konsinyasi lunas karena telah dibeli/diserahkan ke Kios
+            $sql_lunas_out = "SELECT 
+                                s.kd_barang,
+                                {$id_wh_konsinyasi_lunas} AS gudang_id,
+                                COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) AS tanggal,
+                                CONCAT(COALESCE(p.no_faktur_konsinyasi, s.no_faktur, s.no_settlement), ' (Penjualan ke ', COALESCE(s.customer_name, 'Kios'), ' - Ref: ', s.no_settlement, ')') AS referensi,
+                                s.qty_net AS qty,
+                                s.hrg_beli_satuan AS harga,
+                                'OUT' AS type,
+                                'LUNAS-OUT ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                b.kelompok_dagang
+                            FROM tb_konsinyasi_settlement s
+                            JOIN tbpo_barang b ON s.kd_barang = b.kode_barang
+                            LEFT JOIN tbkeu_pembayaran_faktur p ON p.id_pembayaran = s.id_pembayaran
+                            WHERE s.status = 'BILLED'
+                              AND COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) <= " . $this->db->escape($end_date) . "
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_lunas_out)";
         }
 
         // 7. Query Penyesuaian Barang
@@ -630,6 +694,387 @@ class C_Laporan extends CI_Controller
             ->set_output(json_encode([
                 'success' => true,
                 'data' => $all_products_data
+            ]));
+    }
+
+    public function kartu_stock_konsinyasi_data()
+    {
+        $kd_barang  = $this->input->post('kd_barang', true);
+        $kd_suplier = $this->input->post('kd_suplier', true);
+        $id_gudang  = $this->input->post('id_gudang', true);
+        $start_date = $this->input->post('start_date', true);
+        $end_date   = $this->input->post('end_date', true);
+
+        // Ambil ID 3 Gudang Konsinyasi
+        $wh_konsinyasi = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->group_start()
+                ->where('id_gudang', 13)
+                ->or_like('nama_gudang', 'Konsi')
+            ->group_end()
+            ->limit(1)->get()->row_array();
+        $id_wh_konsinyasi = $wh_konsinyasi ? (int)$wh_konsinyasi['id_gudang'] : 13;
+
+        $wh_titipan_kios = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Titipan di Kios')
+            ->limit(1)->get()->row_array();
+        $id_wh_titipan_kios = $wh_titipan_kios ? (int)$wh_titipan_kios['id_gudang'] : 14;
+
+        $wh_konsinyasi_lunas = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Konsinyasi Lunas')
+            ->limit(1)->get()->row_array();
+        $id_wh_konsinyasi_lunas = $wh_konsinyasi_lunas ? (int)$wh_konsinyasi_lunas['id_gudang'] : 15;
+
+        // Ambil master gudang aktif
+        $warehouses_raw = $this->db->get_where('tb_gudang', ['is_active' => 1])->result_array();
+        $warehouses_map = [];
+        foreach ($warehouses_raw as $w) {
+            $warehouses_map[(int)$w['id_gudang']] = $w['nama_gudang'];
+        }
+
+        $wh_target_id = ($id_gudang && $id_gudang !== 'all') ? (int)$id_gudang : null;
+
+        // Filter klausul
+        $prod_filter_ld = ($kd_barang && $kd_barang !== 'all') ? " AND ld.kd_barang = " . $this->db->escape($kd_barang) : "";
+        $prod_filter_fd = ($kd_barang && $kd_barang !== 'all') ? " AND fd.kd_barang = " . $this->db->escape($kd_barang) : "";
+        $prod_filter_s  = ($kd_barang && $kd_barang !== 'all') ? " AND s.kd_barang = " . $this->db->escape($kd_barang) : "";
+        
+        $sup_filter_l = ($kd_suplier && $kd_suplier !== 'all') ? " AND l.kd_suplier = " . $this->db->escape($kd_suplier) : "";
+        $sup_filter_s = ($kd_suplier && $kd_suplier !== 'all') ? " AND s.kd_suplier = " . $this->db->escape($kd_suplier) : "";
+
+        $queries = [];
+
+        // 1. LPB Penerimaan dari Supplier (Gudang 13 - IN)
+        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi) {
+            $sql_lpb = "SELECT 
+                            ld.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_konsinyasi} AS gudang_id,
+                            'Gdg. Konsinyasi' AS nama_gudang,
+                            l.tgl_sj AS tanggal,
+                            l.nomor_lpb AS referensi,
+                            'LPB-IN ' AS ref_prefix,
+                            ld.no_lot AS no_lot,
+                            l.nomor_lpb AS nomor_lpb_asal,
+                            COALESCE(sup.nama_suplier, l.kd_suplier, 'Supplier') AS partner_name,
+                            ld.qty_diterima AS qty,
+                            ld.harga_satuan AS harga_fifo,
+                            'IN' AS type,
+                            'TERIMA_LPB' AS flow_status
+                        FROM tb_lpb l
+                        JOIN tb_lpb_detail ld ON l.id_lpb = ld.id_lpb
+                        JOIN tbpo_barang b ON ld.kd_barang = b.kode_barang
+                        LEFT JOIN tbpo_suplier sup ON l.kd_suplier = sup.kd_suplier
+                        WHERE l.status_lpb = 1 
+                          AND (l.gudang_id = {$id_wh_konsinyasi} OR l.nomor_lpb LIKE 'LPBK%')
+                          AND l.tgl_sj <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_ld} {$sup_filter_l}";
+            $queries[] = "($sql_lpb)";
+        }
+
+        // 2. Faktur Penjualan Titip ke Kios (Gudang 13 - OUT)
+        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi) {
+            $sql_kios_out13 = "SELECT 
+                            fd.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_konsinyasi} AS gudang_id,
+                            'Gdg. Konsinyasi' AS nama_gudang,
+                            f.tanggal_faktur AS tanggal,
+                            f.no_faktur AS referensi,
+                            'TITIP-OUT ' AS ref_prefix,
+                            fd.no_lot AS no_lot,
+                            COALESCE((SELECT s.nomor_lpb_asal FROM tb_konsinyasi_settlement s WHERE s.id_faktur = f.id_faktur AND s.kd_barang = fd.kd_barang LIMIT 1), '-') AS nomor_lpb_asal,
+                            COALESCE(f.customer_name, 'Kios') AS partner_name,
+                            fd.qty AS qty,
+                            COALESCE((SELECT s.hrg_beli_satuan FROM tb_konsinyasi_settlement s WHERE s.id_faktur = f.id_faktur AND s.kd_barang = fd.kd_barang LIMIT 1), fd.hrg_pokok, 0) AS harga_fifo,
+                            'OUT' AS type,
+                            'TITIP_KE_KIOS' AS flow_status
+                        FROM tbso_faktur_penjualan f
+                        JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
+                        JOIN tbpo_barang b ON fd.kd_barang = b.kode_barang
+                        WHERE f.status NOT IN ('draft', 'cancelled')
+                          AND f.gudang_id = {$id_wh_konsinyasi}
+                          AND f.tanggal_faktur <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_fd}";
+            if ($kd_suplier && $kd_suplier !== 'all') {
+                $sql_kios_out13 .= " AND EXISTS (SELECT 1 FROM tb_konsinyasi_settlement st WHERE st.id_faktur = f.id_faktur AND st.kd_barang = fd.kd_barang AND st.kd_suplier = " . $this->db->escape($kd_suplier) . ")";
+            }
+            $queries[] = "($sql_kios_out13)";
+        }
+
+        // 3. Faktur Penjualan Titip ke Kios (Gudang 14 - IN)
+        if (!$wh_target_id || $wh_target_id == $id_wh_titipan_kios) {
+            $sql_kios_in14 = "SELECT 
+                            fd.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_titipan_kios} AS gudang_id,
+                            'Gdg. Titipan di Kios' AS nama_gudang,
+                            f.tanggal_faktur AS tanggal,
+                            f.no_faktur AS referensi,
+                            'TITIP-IN ' AS ref_prefix,
+                            fd.no_lot AS no_lot,
+                            COALESCE((SELECT s.nomor_lpb_asal FROM tb_konsinyasi_settlement s WHERE s.id_faktur = f.id_faktur AND s.kd_barang = fd.kd_barang LIMIT 1), '-') AS nomor_lpb_asal,
+                            COALESCE(f.customer_name, 'Kios') AS partner_name,
+                            fd.qty AS qty,
+                            COALESCE((SELECT s.hrg_beli_satuan FROM tb_konsinyasi_settlement s WHERE s.id_faktur = f.id_faktur AND s.kd_barang = fd.kd_barang LIMIT 1), fd.hrg_pokok, 0) AS harga_fifo,
+                            'IN' AS type,
+                            'TITIP_DI_KIOS' AS flow_status
+                        FROM tbso_faktur_penjualan f
+                        JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
+                        JOIN tbpo_barang b ON fd.kd_barang = b.kode_barang
+                        WHERE f.status NOT IN ('draft', 'cancelled')
+                          AND f.gudang_id = {$id_wh_konsinyasi}
+                          AND f.tanggal_faktur <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_fd}";
+            if ($kd_suplier && $kd_suplier !== 'all') {
+                $sql_kios_in14 .= " AND EXISTS (SELECT 1 FROM tb_konsinyasi_settlement st WHERE st.id_faktur = f.id_faktur AND st.kd_barang = fd.kd_barang AND st.kd_suplier = " . $this->db->escape($kd_suplier) . ")";
+            }
+            $queries[] = "($sql_kios_in14)";
+        }
+
+        // 4. Pembayaran Kios di Keuangan (Gudang 14 - OUT)
+        if ((!$wh_target_id || $wh_target_id == $id_wh_titipan_kios) && $this->db->table_exists('tb_konsinyasi_settlement')) {
+            $sql_kios_out14 = "SELECT 
+                            s.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_titipan_kios} AS gudang_id,
+                            'Gdg. Titipan di Kios' AS nama_gudang,
+                            COALESCE(p.tanggal_pembayaran, s.tanggal_settlement, DATE(s.created_at)) AS tanggal,
+                            CONCAT(COALESCE(p.no_faktur_konsinyasi, s.no_faktur, s.no_settlement)) AS referensi,
+                            'LAKU-OUT ' AS ref_prefix,
+                            s.no_lot AS no_lot,
+                            COALESCE(s.nomor_lpb_asal, '-') AS nomor_lpb_asal,
+                            COALESCE(s.customer_name, 'Kios') AS partner_name,
+                            s.qty_net AS qty,
+                            s.hrg_beli_satuan AS harga_fifo,
+                            'OUT' AS type,
+                            'DIBELI_KIOS' AS flow_status
+                        FROM tb_konsinyasi_settlement s
+                        JOIN tbpo_barang b ON s.kd_barang = b.kode_barang
+                        LEFT JOIN tbkeu_pembayaran_faktur p ON p.id_pembayaran = s.id_pembayaran
+                        WHERE (s.id_pembayaran IS NOT NULL OR s.status IN ('LAKU', 'BILLED'))
+                          AND (p.status IS NULL OR p.status NOT IN ('CANCELLED', 'UNPOST', 'DRAFT'))
+                          AND COALESCE(p.tanggal_pembayaran, s.tanggal_settlement, DATE(s.created_at)) <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_s} {$sup_filter_s}";
+            $queries[] = "($sql_kios_out14)";
+        }
+
+        // 5 & 6. Pelunasan Konsinyasi (Gudang 15 - IN & OUT)
+        if ((!$wh_target_id || $wh_target_id == $id_wh_konsinyasi_lunas) && $this->db->table_exists('tb_konsinyasi_settlement')) {
+            $sql_lunas_in15 = "SELECT 
+                            s.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_konsinyasi_lunas} AS gudang_id,
+                            'Gdg. Konsinyasi Lunas' AS nama_gudang,
+                            COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) AS tanggal,
+                            s.no_settlement AS referensi,
+                            'LUNAS-IN ' AS ref_prefix,
+                            s.no_lot AS no_lot,
+                            COALESCE(s.nomor_lpb_asal, '-') AS nomor_lpb_asal,
+                            CONCAT(s.nama_suplier, ' (INV: ', COALESCE(s.no_invoice_supplier, '-'), ')') AS partner_name,
+                            s.qty_net AS qty,
+                            s.hrg_beli_satuan AS harga_fifo,
+                            'IN' AS type,
+                            'LUNAS_SUPPLIER' AS flow_status
+                        FROM tb_konsinyasi_settlement s
+                        JOIN tbpo_barang b ON s.kd_barang = b.kode_barang
+                        WHERE s.status = 'BILLED'
+                          AND COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_s} {$sup_filter_s}";
+            $queries[] = "($sql_lunas_in15)";
+
+            $sql_lunas_out15 = "SELECT 
+                            s.kd_barang,
+                            b.nama_barang,
+                            b.satuan,
+                            {$id_wh_konsinyasi_lunas} AS gudang_id,
+                            'Gdg. Konsinyasi Lunas' AS nama_gudang,
+                            COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) AS tanggal,
+                            CONCAT(COALESCE(p.no_faktur_konsinyasi, s.no_faktur, s.no_settlement)) AS referensi,
+                            'LUNAS-OUT ' AS ref_prefix,
+                            s.no_lot AS no_lot,
+                            COALESCE(s.nomor_lpb_asal, '-') AS nomor_lpb_asal,
+                            COALESCE(s.customer_name, 'Kios') AS partner_name,
+                            s.qty_net AS qty,
+                            s.hrg_beli_satuan AS harga_fifo,
+                            'OUT' AS type,
+                            'PENJUALAN_SELESAI' AS flow_status
+                        FROM tb_konsinyasi_settlement s
+                        JOIN tbpo_barang b ON s.kd_barang = b.kode_barang
+                        LEFT JOIN tbkeu_pembayaran_faktur p ON p.id_pembayaran = s.id_pembayaran
+                        WHERE s.status = 'BILLED'
+                          AND COALESCE(s.tgl_invoice_supplier, DATE(s.settled_at), s.tanggal_settlement) <= " . $this->db->escape($end_date) . "
+                          {$prod_filter_s} {$sup_filter_s}";
+            $queries[] = "($sql_lunas_out15)";
+        }
+
+        if (empty($queries)) {
+            return $this->output->set_content_type('application/json')->set_output(json_encode(['success' => true, 'data' => []]));
+        }
+
+        $union_sql = implode(" UNION ALL ", $queries) . " ORDER BY tanggal ASC";
+        $all_tx = $this->db->query($union_sql)->result_array();
+
+        // Kelompokkan per [kd_barang][gudang_id]
+        $grouped = [];
+        $product_info = [];
+
+        foreach ($all_tx as $tx) {
+            $kd = $tx['kd_barang'];
+            $wh = (int)$tx['gudang_id'];
+
+            if (!isset($product_info[$kd])) {
+                $product_info[$kd] = [
+                    'nama_barang' => $tx['nama_barang'],
+                    'satuan'      => $tx['satuan']
+                ];
+            }
+
+            $grouped[$kd][$wh][] = $tx;
+        }
+
+        $all_products_data = [];
+        ksort($grouped);
+
+        foreach ($grouped as $kd => $byWarehouse) {
+            ksort($byWarehouse);
+            $prod_meta = $product_info[$kd];
+
+            foreach ($byWarehouse as $wh_id => $txs) {
+                $wh_name = $warehouses_map[$wh_id] ?? ('Gudang ' . $wh_id);
+
+                usort($txs, function($a, $b) {
+                    $t1 = strtotime($a['tanggal']);
+                    $t2 = strtotime($b['tanggal']);
+                    if ($t1 === $t2) {
+                        return ($a['type'] === 'IN') ? -1 : 1;
+                    }
+                    return $t1 < $t2 ? -1 : 1;
+                });
+
+                $qty_saldo = 0.0;
+                $nilai_saldo = 0.0;
+
+                $opening_balance = [
+                    'tanggal'     => '',
+                    'referensi'   => 'O/B Opening Balance',
+                    'unit'        => $prod_meta['satuan'],
+                    'saldo_qty'   => 0.0,
+                    'saldo_harga' => 0.0,
+                    'saldo_nilai' => 0.0
+                ];
+
+                $report_rows = [];
+                $sub_masuk_qty = 0.0;
+                $sub_masuk_nilai = 0.0;
+                $sub_keluar_qty = 0.0;
+                $sub_keluar_nilai = 0.0;
+                $primary_supplier = '';
+
+                foreach ($txs as $tx) {
+                    $qty = (float)$tx['qty'];
+                    $harga = (float)$tx['harga_fifo'];
+                    $tx_date = $tx['tanggal'];
+                    $tx_nilai = $qty * $harga;
+
+                    if (!empty($tx['partner_name']) && empty($primary_supplier)) {
+                        $primary_supplier = $tx['partner_name'];
+                    }
+
+                    if ($tx['type'] === 'IN') {
+                        $qty_saldo += $qty;
+                        $nilai_saldo += $tx_nilai;
+                    } else {
+                        $qty_saldo -= $qty;
+                        $nilai_saldo -= $tx_nilai;
+                    }
+
+                    $current_avg_harga = $qty_saldo != 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
+
+                    if (strtotime($tx_date) < strtotime($start_date)) {
+                        $opening_balance['saldo_qty'] = $qty_saldo;
+                        $opening_balance['saldo_harga'] = $current_avg_harga;
+                        $opening_balance['saldo_nilai'] = $nilai_saldo;
+                    } else if (strtotime($tx_date) <= strtotime($end_date)) {
+                        $refText = trim($tx['ref_prefix'] . $tx['referensi']);
+                        if (!empty($tx['partner_name'])) {
+                            $refText .= ' (' . $tx['partner_name'] . ')';
+                        }
+                        if (!empty($tx['no_lot']) && $tx['no_lot'] !== '-') {
+                            $refText .= ' [Lot: ' . $tx['no_lot'] . ']';
+                        }
+
+                        $row = [
+                            'tanggal'        => $tx['tanggal'],
+                            'referensi'      => $refText,
+                            'unit'           => $tx['satuan'],
+                            'flow_status'    => $tx['flow_status'],
+                            'masuk_qty'      => 0.0,
+                            'masuk_harga'    => 0.0,
+                            'masuk_nilai'    => 0.0,
+                            'keluar_qty'     => 0.0,
+                            'keluar_harga'   => 0.0,
+                            'keluar_nilai'   => 0.0,
+                            'saldo_qty'      => $qty_saldo,
+                            'saldo_harga'    => $current_avg_harga,
+                            'saldo_nilai'    => $nilai_saldo
+                        ];
+
+                        if ($tx['type'] === 'IN') {
+                            $row['masuk_qty'] = $qty;
+                            $row['masuk_harga'] = $harga;
+                            $row['masuk_nilai'] = $tx_nilai;
+                            $sub_masuk_qty += $qty;
+                            $sub_masuk_nilai += $tx_nilai;
+                        } else {
+                            $row['keluar_qty'] = $qty;
+                            $row['keluar_harga'] = $harga;
+                            $row['keluar_nilai'] = $tx_nilai;
+                            $sub_keluar_qty += $qty;
+                            $sub_keluar_nilai += $tx_nilai;
+                        }
+
+                        $report_rows[] = $row;
+                    }
+                }
+
+                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $qty_saldo != 0) {
+                    $final_avg_harga = $qty_saldo != 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
+                    $all_products_data[] = [
+                        'id_gudang'         => $wh_id,
+                        'warehouse_name'    => $wh_name,
+                        'product_code'      => $kd,
+                        'product_name'      => $prod_meta['nama_barang'],
+                        'kelompok_barang'   => $primary_supplier ?: 'Supplier Konsinyasi',
+                        'unit'              => $prod_meta['satuan'],
+                        'opening_balance'   => $opening_balance,
+                        'rows'              => $report_rows,
+                        'sub_masuk_qty'     => $sub_masuk_qty,
+                        'sub_masuk_harga'   => $sub_masuk_qty > 0 ? ($sub_masuk_nilai / $sub_masuk_qty) : 0.0,
+                        'sub_masuk_nilai'   => $sub_masuk_nilai,
+                        'sub_keluar_qty'    => $sub_keluar_qty,
+                        'sub_keluar_harga'  => $sub_keluar_qty > 0 ? ($sub_keluar_nilai / $sub_keluar_qty) : 0.0,
+                        'sub_keluar_nilai'  => $sub_keluar_nilai,
+                        'final_saldo_qty'   => $qty_saldo,
+                        'final_saldo_harga' => $final_avg_harga,
+                        'final_saldo_nilai' => $nilai_saldo
+                    ];
+                }
+            }
+        }
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success' => true,
+                'data'    => $all_products_data
             ]));
     }
 

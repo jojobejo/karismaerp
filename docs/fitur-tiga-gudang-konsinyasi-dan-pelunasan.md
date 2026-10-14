@@ -36,13 +36,14 @@ Tautan Halaman Terkait:
   - Status di sistem konsinyasi tercatat sebagai `DI_KIOS` / `PENDING`.
 
 ### Tahap 3: Kios Membeli Barang (Barang Laku)
-- **Aksi**: Kios melunasi/membayar transaksi penjualannya di bagian Keuangan.
+- **Aksi**: Kios melunasi/membayar transaksi penjualannya di bagian Keuangan (`keuangan/pembayaran/bayar/{id_faktur}`).
 - **Status Konsinyasi**:
   - Status berpindah dari `DI_KIOS` menjadi **`LAKU`**.
   - Nilai Qty muncul pada kolom **Barang Laku (Siap Dilunasi)** di halaman purchasing konsinyasi.
-  - Pada tahap ini, hutang dan pembelian ke supplier belum dicatat karena menunggu invoice dari supplier.
+- **Kartu Stok Gudang**:
+  - **Gudang Titipan di Kios (ID 14)**: Mutasi **OUT** (Keluar), Referensi `TITIP-OUT [No Faktur Konsinyasi] ([Nama Kios])`. Stok fisik titipan di kios berkurang karena telah dibeli oleh kios.
 
-### Tahap 4: Pelunasan ke Supplier (Tombol "Lunasi")
+### Tahap 4: Pelunasan ke Supplier (Tombol "Lunasi" & Posting Jurnal)
 - **Aksi**: User purchasing membuka tab Penyelesaian Konsinyasi, lalu mengklik tombol **"Lunasi"** pada baris barang laku.
 - **Input Data**:
   - Nomor Faktur / Invoice Supplier
@@ -55,9 +56,11 @@ Tautan Halaman Terkait:
      - `[Debit]` PPN Masukan
      - `[Kredit]` Hutang Usaha (Supplier)
   3. **Kartu Stok Gudang**:
-     - **Gudang Titipan di Kios**: Mutasi **OUT** (Keluar), Referensi `TITIP-OUT [No Settlement] / Pelunasan [Nama Kios]`.
-     - **Gudang Konsinyasi Lunas**: Mutasi **IN** (Masuk), Referensi `LUNAS-IN [No Settlement] ([Nama Supplier] - INV: [No Invoice])`.
-  4. Di halaman konsinyasi (`/purchasing/konsinyasi`), stok tersebut kini tampil pada kolom **4. Konsinyasi Lunas** (tidak lagi hilang atau menjadi 0 tanpa jejak).
+     - **Gudang Konsinyasi Lunas (ID 15)**:
+       - Mutasi **IN** (Masuk): Referensi `LUNAS-IN [No Settlement] ([Nama Supplier] - INV: [No Invoice])` (pengakuan pembelian resmi dari supplier).
+       - Mutasi **OUT** (Keluar): Referensi `LUNAS-OUT [No Faktur] (Penjualan ke [Nama Kios] - Ref: [No Settlement])` (pengakuan penyerahan/penjualan ke kios).
+       - **Saldo Akhir Gudang Konsinyasi Lunas = 0**, karena barang fisik telah laku terjual ke pihak kios dan tidak tersisa di gudang perusahaan.
+  4. Di halaman konsinyasi (`/purchasing/konsinyasi`), stok tersebut kini tampil pada kolom **4. Konsinyasi Lunas** (sebagai jejak total riwayat yang telah dilunasi).
 
 ---
 

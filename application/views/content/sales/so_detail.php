@@ -319,6 +319,12 @@ $format_payment = function($value) {
                                     <td class="text-muted pl-3">Kubikasi</td>
                                     <td><?= number_format($so['total_kubikasi'], 4) ?> m³</td>
                                 </tr>
+                                <?php if (!empty($so['is_test_market'])): ?>
+                                <tr>
+                                    <td class="text-muted pl-3">Jenis SO</td>
+                                    <td><span class="badge badge-info"><i class="fas fa-flask mr-1"></i>Barang Test Market (Faktur T)</span></td>
+                                </tr>
+                                <?php endif; ?>
                                 <?php if (!empty($so['catatan'])): ?>
                                 <tr>
                                     <td class="text-muted pl-3">Catatan</td>

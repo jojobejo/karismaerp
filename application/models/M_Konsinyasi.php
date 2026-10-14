@@ -832,104 +832,163 @@ class M_Konsinyasi extends CI_Model
         $isLakuGrouping = ($statusFilter === 'LAKU' || $statusFilter === 'PENDING');
 
         if ($isLakuGrouping) {
-            // Grouping barang laku berdasarkan supplier, barang, lot, dan LPB agar antrean FIFO LPB terlama tampil di atas
-            $this->db->select("
-                MIN(s.id_settlement) AS id_settlement,
-                GROUP_CONCAT(s.id_settlement ORDER BY s.id_settlement ASC SEPARATOR ',') AS all_settlement_ids,
-                COUNT(s.id_settlement) AS total_gabungan_transaksi,
-                MIN(s.no_settlement) AS no_settlement,
-                MAX(s.tanggal_settlement) AS tanggal_settlement,
-                MIN(s.tanggal_settlement) AS min_tanggal_settlement,
-                s.kd_suplier,
-                s.nama_suplier,
-                s.gudang_id,
-                g.nama_gudang,
-                GROUP_CONCAT(DISTINCT s.customer_name ORDER BY s.customer_name ASC SEPARATOR ', ') AS customer_name,
-                GROUP_CONCAT(DISTINCT s.no_so ORDER BY s.no_so ASC SEPARATOR ', ') AS no_so,
-                GROUP_CONCAT(DISTINCT s.no_faktur ORDER BY s.no_faktur ASC SEPARATOR ', ') AS no_faktur,
-                s.id_lpb_asal,
-                s.nomor_lpb_asal,
-                COALESCE(NULLIF(s.nomor_lpb_asal, ''), MAX(lpb.nomor_lpb)) AS lpb_no,
-                COALESCE(MAX(lpb.no_po), MAX(po.no_po)) AS po_no_po,
-                MAX(lpb.tgl_sj) AS tanggal_lpb_masuk,
-                s.kd_barang,
-                s.nama_barang,
-                s.no_lot,
-                MAX(s.expired_date) AS expired_date,
-                COALESCE(MAX(lpbd.qty_diterima), 0) AS qty_lpb_masuk,
-                SUM(s.qty_terjual) AS qty_terjual,
-                SUM(s.qty_retur) AS qty_retur,
-                SUM(s.qty_net) AS qty_net,
-                MAX(s.satuan) AS satuan,
-                MAX(s.hrg_jual) AS hrg_jual,
-                SUM(s.subtotal_jual) AS subtotal_jual,
-                COALESCE(NULLIF(MAX(s.hrg_beli_satuan), 0), NULLIF(MAX(pod.hrg_satuan), 0), NULLIF(MAX(lpbd.harga_satuan), 0), 0) AS po_hrg_satuan,
-                COALESCE(NULLIF(MAX(s.hrg_beli_satuan), 0), NULLIF(MAX(pod.harga_satuan_exclude), 0), NULLIF(MAX(lpbd.harga_satuan), 0), 0) AS po_hrg_satuan_exclude,
-                CASE 
-                    WHEN LOWER(MAX(po.keterangan_harga_ppn)) = 'include' THEN 'INCLUDE'
-                    WHEN LOWER(MAX(po.keterangan_harga_ppn)) = 'non_ppn' THEN 'NON_PPN'
-                    ELSE 'EXCLUDE'
-                END AS po_tipe_pajak,
-                s.status,
-                MAX(s.tipe_pajak) AS tipe_pajak,
-                MAX(s.hrg_satuan_input) AS hrg_satuan_input,
-                MAX(s.hrg_beli_satuan) AS hrg_beli_satuan,
-                SUM(s.subtotal_beli) AS subtotal_beli,
-                MAX(s.ppn_persen) AS ppn_persen,
-                SUM(s.nilai_ppn) AS nilai_ppn,
-                SUM(s.total_tagihan_beli) AS total_tagihan_beli,
-                MAX(s.no_invoice_supplier) AS no_invoice_supplier,
-                MAX(s.tgl_invoice_supplier) AS tgl_invoice_supplier,
-                MAX(j.nomor_jurnal) AS nomor_jurnal,
-                MAX(s.id_jurnal_pembelian) AS id_jurnal_pembelian
-            ", false);
-            $this->db->from('tb_konsinyasi_settlement s');
-            $this->db->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left');
-            $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = s.id_jurnal_pembelian', 'left');
-            $this->db->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left');
-            $this->db->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left');
-            $this->db->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left');
-            $this->db->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left');
-            $this->db->where_in('s.status', ['LAKU', 'PENDING']);
+            // Grouping barang konsinyasi berbasis batch LPB penerimaan dan akumulasi transaksi laku.
+            // Rumus sisa belum lunas: QTY LPB Masuk dikurangi QTY yang telah resmi dilunasi (status BILLED / posting jurnal).
+            // Transaksi yang berstatus LAKU belum dilunasi sehingga sisa belum lunas tetap utuh sampai diproses.
+            $whereParts = ["(lpb.gudang_id = 13 OR lpb.jenis_lpb = 'LPB Konsinyasi' OR lpb.nomor_lpb LIKE '%K')"];
+            $params = [];
 
             if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
-                $this->db->where('s.kd_suplier', trim((string) $filters['kd_suplier']));
-            }
-            if (!empty($filters['date_from'])) {
-                $this->db->where('s.tanggal_settlement >=', $filters['date_from']);
-            }
-            if (!empty($filters['date_to'])) {
-                $this->db->where('s.tanggal_settlement <=', $filters['date_to']);
-            }
-            if (!empty($filters['search'])) {
-                $search = trim((string) $filters['search']);
-                $this->db->group_start();
-                    $this->db->like('s.no_settlement', $search);
-                    $this->db->or_like('s.nama_barang', $search);
-                    $this->db->or_like('s.nama_suplier', $search);
-                    $this->db->or_like('s.customer_name', $search);
-                    $this->db->or_like('s.no_so', $search);
-                    $this->db->or_like('s.no_faktur', $search);
-                    $this->db->or_like('s.no_invoice_supplier', $search);
-                    $this->db->or_like('lpb.nomor_lpb', $search);
-                    $this->db->or_like('po.no_po', $search);
-                $this->db->group_end();
+                $whereParts[] = "COALESCE(st_meta.kd_suplier, sup.kd_suplier, b.kd_suplier, lpb.kd_suplier) = " . $this->db->escape(trim((string) $filters['kd_suplier']));
             }
 
-            $this->db->group_by([
-                's.kd_suplier',
-                's.nama_suplier',
-                's.kd_barang',
-                's.nama_barang',
-                's.id_lpb_asal',
-                's.nomor_lpb_asal',
-                's.no_lot',
-                's.gudang_id',
-                'g.nama_gudang',
-                's.status'
-            ]);
-            $this->db->order_by('COALESCE(s.id_lpb_asal, 999999999) ASC, id_settlement ASC', '', false);
-            return $this->db->get()->result_array();
+            if (!empty($filters['date_from'])) {
+                $whereParts[] = "COALESCE(laku.tanggal_settlement, lpb.tgl_sj) >= " . $this->db->escape($filters['date_from']);
+            }
+            if (!empty($filters['date_to'])) {
+                $whereParts[] = "COALESCE(laku.tanggal_settlement, lpb.tgl_sj) <= " . $this->db->escape($filters['date_to']);
+            }
+
+            if (!empty($filters['search'])) {
+                $searchEsc = $this->db->escape('%' . trim((string) $filters['search']) . '%');
+                $whereParts[] = "(
+                    lpb.nomor_lpb LIKE {$searchEsc}
+                    OR po.no_po LIKE {$searchEsc}
+                    OR b.nama_barang LIKE {$searchEsc}
+                    OR lpbd.kd_barang LIKE {$searchEsc}
+                    OR lpbd.no_lot LIKE {$searchEsc}
+                    OR COALESCE(st_meta.nama_suplier, sup.nama_suplier) LIKE {$searchEsc}
+                    OR laku.customer_name LIKE {$searchEsc}
+                    OR laku.no_so LIKE {$searchEsc}
+                    OR laku.no_faktur LIKE {$searchEsc}
+                )";
+            }
+
+            // Tampilkan batch LPB jika masih memiliki sisa barang yang belum lunas ATAU ada barang laku yang menunggu pelunasan
+            $whereParts[] = "(COALESCE(laku.qty_laku, 0) > 0 OR GREATEST(0, lpbd.qty_diterima - COALESCE(billed.qty_billed, 0)) > 0)";
+            $whereSql = implode(' AND ', $whereParts);
+
+            $sql = "
+                SELECT 
+                    COALESCE(laku.id_settlement, st_meta.id_settlement, 0) AS id_settlement,
+                    laku.all_settlement_ids,
+                    COALESCE(laku.total_gabungan_transaksi, 0) AS total_gabungan_transaksi,
+                    COALESCE(laku.no_settlement, st_meta.no_settlement, CONCAT('LPB-', lpb.nomor_lpb)) AS no_settlement,
+                    COALESCE(laku.tanggal_settlement, lpb.tgl_sj) AS tanggal_settlement,
+                    lpb.tgl_sj AS tanggal_lpb_masuk,
+                    COALESCE(st_meta.kd_suplier, sup.kd_suplier, b.kd_suplier, lpb.kd_suplier) AS kd_suplier,
+                    COALESCE(st_meta.nama_suplier, sup.nama_suplier, lpb.nama_suplier) AS nama_suplier,
+                    COALESCE(laku.gudang_id, lpb.gudang_id, 13) AS gudang_id,
+                    g.nama_gudang,
+                    laku.customer_name,
+                    laku.no_so,
+                    laku.no_faktur,
+                    lpb.id_lpb AS id_lpb_asal,
+                    lpb.nomor_lpb AS nomor_lpb_asal,
+                    lpb.nomor_lpb AS lpb_no,
+                    po.no_po AS po_no_po,
+                    lpbd.kd_barang,
+                    COALESCE(st_meta.nama_barang, b.nama_barang) AS nama_barang,
+                    lpbd.no_lot,
+                    lpbd.expired_date,
+                    lpbd.qty_diterima AS qty_lpb_masuk,
+                    COALESCE(laku.qty_terjual, 0) AS qty_terjual,
+                    0.000 AS qty_retur,
+                    COALESCE(laku.qty_laku, 0) AS qty_net,
+                    COALESCE(billed.qty_billed, 0) AS qty_billed,
+                    GREATEST(0, lpbd.qty_diterima - COALESCE(billed.qty_billed, 0)) AS qty_sisa_belum_lunas,
+                    COALESCE(b.satuan, 'PCS') AS satuan,
+                    COALESCE(laku.hrg_jual, 0) AS hrg_jual,
+                    COALESCE(laku.subtotal_jual, 0) AS subtotal_jual,
+                    COALESCE(pod.hrg_satuan, lpbd.harga_satuan, 0) AS po_hrg_satuan,
+                    COALESCE(pod.harga_satuan_exclude, lpbd.harga_satuan, 0) AS po_hrg_satuan_exclude,
+                    CASE 
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
+                        ELSE 'EXCLUDE'
+                    END AS po_tipe_pajak,
+                    CASE 
+                        WHEN COALESCE(laku.qty_laku, 0) > 0 THEN 'LAKU'
+                        ELSE 'DI_KIOS'
+                    END AS status,
+                    COALESCE(laku.tipe_pajak, 'EXCLUDE') AS tipe_pajak,
+                    COALESCE(laku.hrg_satuan_input, pod.hrg_satuan, lpbd.harga_satuan, 0) AS hrg_satuan_input,
+                    COALESCE(laku.hrg_beli_satuan, pod.hrg_satuan, lpbd.harga_satuan, 0) AS hrg_beli_satuan,
+                    COALESCE(laku.subtotal_beli, 0) AS subtotal_beli,
+                    COALESCE(laku.ppn_persen, 11) AS ppn_persen,
+                    COALESCE(laku.nilai_ppn, 0) AS nilai_ppn,
+                    COALESCE(laku.total_tagihan_beli, 0) AS total_tagihan_beli,
+                    laku.no_invoice_supplier,
+                    laku.tgl_invoice_supplier,
+                    NULL AS nomor_jurnal,
+                    NULL AS id_jurnal_pembelian
+                FROM tb_lpb lpb
+                JOIN tb_lpb_detail lpbd ON lpbd.id_lpb = lpb.id_lpb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = lpbd.kd_barang
+                LEFT JOIN tbpo_suplier sup ON sup.kd_suplier = COALESCE(lpb.kd_suplier, b.kd_suplier)
+                LEFT JOIN tbpo_po po ON po.no_po = lpb.no_po
+                LEFT JOIN tbpo_detail_po pod ON pod.no_po = po.no_po AND pod.kd_barang = lpbd.kd_barang
+                LEFT JOIN tb_gudang g ON g.id_gudang = COALESCE(lpb.gudang_id, 13)
+                LEFT JOIN (
+                    SELECT 
+                        id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot,
+                        MAX(gudang_id) AS gudang_id,
+                        MIN(id_settlement) AS id_settlement,
+                        MIN(no_settlement) AS no_settlement,
+                        MAX(tanggal_settlement) AS tanggal_settlement,
+                        GROUP_CONCAT(id_settlement ORDER BY id_settlement ASC SEPARATOR ',') AS all_settlement_ids,
+                        COUNT(id_settlement) AS total_gabungan_transaksi,
+                        MAX(kd_suplier) AS kd_suplier,
+                        MAX(nama_suplier) AS nama_suplier,
+                        MAX(nama_barang) AS nama_barang,
+                        SUM(qty_terjual) AS qty_terjual,
+                        SUM(qty_net) AS qty_laku,
+                        MAX(hrg_jual) AS hrg_jual,
+                        SUM(subtotal_jual) AS subtotal_jual,
+                        MAX(tipe_pajak) AS tipe_pajak,
+                        MAX(hrg_satuan_input) AS hrg_satuan_input,
+                        MAX(hrg_beli_satuan) AS hrg_beli_satuan,
+                        SUM(subtotal_beli) AS subtotal_beli,
+                        MAX(ppn_persen) AS ppn_persen,
+                        SUM(nilai_ppn) AS nilai_ppn,
+                        SUM(total_tagihan_beli) AS total_tagihan_beli,
+                        MAX(no_invoice_supplier) AS no_invoice_supplier,
+                        MAX(tgl_invoice_supplier) AS tgl_invoice_supplier,
+                        GROUP_CONCAT(DISTINCT customer_name ORDER BY customer_name ASC SEPARATOR ', ') AS customer_name,
+                        GROUP_CONCAT(DISTINCT no_so ORDER BY no_so ASC SEPARATOR ', ') AS no_so,
+                        GROUP_CONCAT(DISTINCT no_faktur ORDER BY no_faktur ASC SEPARATOR ', ') AS no_faktur
+                    FROM tb_konsinyasi_settlement
+                    WHERE status IN ('LAKU', 'PENDING')
+                    GROUP BY id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot
+                ) laku ON (laku.id_lpb_asal = lpb.id_lpb OR (laku.id_lpb_asal IS NULL AND laku.nomor_lpb_asal = lpb.nomor_lpb))
+                       AND laku.kd_barang = lpbd.kd_barang 
+                       AND (laku.no_lot = lpbd.no_lot OR (laku.no_lot IS NULL AND lpbd.no_lot IS NULL))
+                LEFT JOIN (
+                    SELECT id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot, SUM(qty_net) AS qty_billed
+                    FROM tb_konsinyasi_settlement
+                    WHERE status = 'BILLED'
+                    GROUP BY id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot
+                ) billed ON (billed.id_lpb_asal = lpb.id_lpb OR (billed.id_lpb_asal IS NULL AND billed.nomor_lpb_asal = lpb.nomor_lpb))
+                         AND billed.kd_barang = lpbd.kd_barang 
+                         AND (billed.no_lot = lpbd.no_lot OR (billed.no_lot IS NULL AND lpbd.no_lot IS NULL))
+                LEFT JOIN (
+                    SELECT 
+                        id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot,
+                        MIN(id_settlement) AS id_settlement,
+                        MIN(no_settlement) AS no_settlement,
+                        MAX(kd_suplier) AS kd_suplier,
+                        MAX(nama_suplier) AS nama_suplier,
+                        MAX(nama_barang) AS nama_barang
+                    FROM tb_konsinyasi_settlement
+                    GROUP BY id_lpb_asal, nomor_lpb_asal, kd_barang, no_lot
+                ) st_meta ON (st_meta.id_lpb_asal = lpb.id_lpb OR (st_meta.id_lpb_asal IS NULL AND st_meta.nomor_lpb_asal = lpb.nomor_lpb))
+                          AND st_meta.kd_barang = lpbd.kd_barang 
+                          AND (st_meta.no_lot = lpbd.no_lot OR (st_meta.no_lot IS NULL AND lpbd.no_lot IS NULL))
+                WHERE {$whereSql}
+                ORDER BY COALESCE(laku.qty_laku, 0) DESC, lpb.id_lpb ASC
+            ";
+
+            return $this->db->query($sql)->result_array();
         }
 
         // Mode standar untuk status BILLED atau SEMUA (tanpa grouping transaksi)
@@ -941,6 +1000,14 @@ class M_Konsinyasi extends CI_Model
             COALESCE(lpb.no_po, po.no_po) AS po_no_po,
             lpb.tgl_sj AS tanggal_lpb_masuk,
             COALESCE(lpbd.qty_diterima, 0) AS qty_lpb_masuk,
+            GREATEST(0, COALESCE(lpbd.qty_diterima, 0) - COALESCE((
+                SELECT SUM(st_sub.qty_net) 
+                FROM tb_konsinyasi_settlement st_sub 
+                WHERE (st_sub.id_lpb_asal = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND st_sub.nomor_lpb_asal = s.nomor_lpb_asal))
+                  AND st_sub.kd_barang = s.kd_barang
+                  AND (st_sub.no_lot = s.no_lot OR (s.no_lot IS NULL AND st_sub.no_lot IS NULL))
+                  AND st_sub.status = 'BILLED'
+            ), 0)) AS qty_sisa_belum_lunas,
             COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
             COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude,
             CASE 
@@ -1285,7 +1352,7 @@ class M_Konsinyasi extends CI_Model
             ]);
         }
 
-        // Catat stok barang yang telah lunas dibeli ke Gudang Konsinyasi Lunas
+        // Catat jejak batch barang konsinyasi lunas ke Gudang Konsinyasi Lunas (qty_on_hand 0 karena langsung keluar/diserahkan ke Kios)
         $whLunasId = $this->get_warehouse_konsinyasi_lunas_id();
         if ($this->db->table_exists('tberp_stock_batch') && $whLunasId) {
             $existBatch = $this->db
@@ -1297,7 +1364,7 @@ class M_Konsinyasi extends CI_Model
 
             if ($existBatch) {
                 $this->db->where('id', $existBatch['id'])->update('tberp_stock_batch', [
-                    'qty_on_hand' => (float)$existBatch['qty_on_hand'] + $qtyLaku,
+                    'qty_on_hand' => 0.000,
                     'update_at'   => date('Y-m-d H:i:s')
                 ]);
             } else {
@@ -1306,7 +1373,7 @@ class M_Konsinyasi extends CI_Model
                     'gudang_id'    => (string)$whLunasId,
                     'no_lot'       => trim((string)$settlement['no_lot']),
                     'expired_date' => !empty($settlement['expired_date']) ? $settlement['expired_date'] : null,
-                    'qty_on_hand'  => $qtyLaku,
+                    'qty_on_hand'  => 0.000,
                     'qty_reserved' => 0.000,
                     'created_at'   => date('Y-m-d H:i:s'),
                     'update_at'    => date('Y-m-d H:i:s')

@@ -546,11 +546,16 @@
                                     <tr>
                                         <th class="py-3 px-3">No. Settlement</th>
                                         <th class="py-3">Tanggal LPB Masuk</th>
-                                        <th class="py-3">Supplier Konsinyasi</th>
+                                        <?php if (empty($filters['kd_suplier']) || $filters['kd_suplier'] === 'SEMUA'): ?>
+                                            <th class="py-3">Supplier Konsinyasi</th>
+                                        <?php endif; ?>
                                         <th class="py-3">Barang &amp; Batch/Lot</th>
                                         <th class="py-3">Asal LPB &amp; PO</th>
                                         <th class="py-3 text-right" style="background: #fff7ed; color: #9a3412;">Qty LPB Masuk</th>
                                         <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku (Dibeli Kios)</th>
+                                        <th class="py-3 text-right" style="background: #fef2f2; color: #991b1b;" title="Sisa kuantitas barang dari LPB penerimaan yang belum laku / belum dilunasi ke supplier">
+                                            <i class="fas fa-hourglass-half mr-1 text-danger"></i>Sisa Belum Lunas
+                                        </th>
                                         <th class="py-3 text-right" style="background: #eff6ff; color: #1e40af;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>
                                         <th class="py-3 text-center">Status</th>
                                         <th class="py-3">Tagihan Beli Supplier</th>
@@ -560,7 +565,7 @@
                                 <tbody>
                                     <?php if (empty($settlements)): ?>
                                         <tr>
-                                            <td colspan="11" class="text-center py-5 text-muted">
+                                            <td colspan="<?= (empty($filters['kd_suplier']) || $filters['kd_suplier'] === 'SEMUA') ? '12' : '11' ?>" class="text-center py-5 text-muted">
                                                 <i class="fas fa-shopping-bag fa-3x mb-3 text-black-50 d-block"></i>
                                                 Tidak ada data barang konsinyasi laku pada filter ini.
                                             </td>
@@ -587,10 +592,12 @@
                                                     ? date('d/m/Y', strtotime($s['tanggal_lpb_masuk']))
                                                     : '-' ?>
                                             </td>
+                                            <?php if (empty($filters['kd_suplier']) || $filters['kd_suplier'] === 'SEMUA'): ?>
                                                 <td>
                                                     <strong class="text-dark"><?= htmlspecialchars($s['nama_suplier']) ?></strong>
-                                                <br><small class="text-muted">Kode: <?= htmlspecialchars($s['kd_suplier']) ?></small>
-                                            </td>
+                                                    <br><small class="text-muted">Kode: <?= htmlspecialchars($s['kd_suplier']) ?></small>
+                                                </td>
+                                            <?php endif; ?>
                                             <td>
                                                 <strong class="text-dark"><?= htmlspecialchars($s['nama_barang']) ?></strong>
                                                 <br><small class="text-muted">Lot: <?= htmlspecialchars($s['no_lot'] ?: '-') ?> | ED: <?= !empty($s['expired_date']) ? date('d/m/Y', strtotime($s['expired_date'])) : '-' ?></small>
@@ -602,10 +609,25 @@
                                                 <br><small class="text-muted"><i class="fas fa-file-invoice mr-1 text-secondary"></i>PO: <strong class="text-dark"><?= htmlspecialchars($s['po_no_po'] ?: '-') ?></strong></small>
                                             </td>
                                             <td class="text-right font-weight-bold" style="background: #fffaf5; color: #9a3412; font-size: 0.95rem;">
-                                                <?= number_format((float)($s['qty_lpb_masuk'] ?? 0), 2) ?> <?= htmlspecialchars($s['satuan']) ?>
+                                                <?= number_format((float)($s['qty_lpb_masuk'] ?? 0), 2) ?> <?= htmlspecialchars($s['satuan'] ?: 'PCS') ?>
                                             </td>
-                                            <td class="text-right font-weight-bold text-success" style="background: #fdfefe; font-size: 0.95rem;">
-                                                <?= number_format($s['qty_net'], 2) ?> <?= htmlspecialchars($s['satuan']) ?>
+                                            <?php if ((float)$s['qty_net'] > 0): ?>
+                                                <td class="text-right font-weight-bold text-success" style="background: #fdfefe; font-size: 0.95rem;">
+                                                    <?= number_format($s['qty_net'], 2) ?> <?= htmlspecialchars($s['satuan'] ?: 'PCS') ?>
+                                                </td>
+                                            <?php else: ?>
+                                                <td class="text-center font-weight-normal text-muted" style="background: #fafafa; font-size: 0.95rem;" title="Belum ada transaksi laku baru yang menunggu pelunasan">-</td>
+                                            <?php endif; ?>
+                                            <td class="text-right font-weight-bold" style="background: #fffafa; font-size: 0.95rem;">
+                                                <?php if ((float)($s['qty_sisa_belum_lunas'] ?? 0) > 0): ?>
+                                                    <span class="badge badge-light border border-danger text-danger px-2 py-1 font-weight-bold" style="font-size: 0.90rem;" title="Sisa barang dari penerimaan LPB yang belum laku / belum dilunasi ke supplier">
+                                                        <?= number_format((float)($s['qty_sisa_belum_lunas'] ?? 0), 2) ?> <?= htmlspecialchars($s['satuan']) ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-light border text-muted px-2 py-1 font-weight-bold" style="font-size: 0.85rem;" title="Seluruh kuantitas LPB ini telah laku dan siap dilunasi">
+                                                        <i class="fas fa-check text-success mr-1"></i>0.00 <?= htmlspecialchars($s['satuan']) ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-right" style="background: #f8faff;">
                                                 <strong class="text-primary" style="font-size: 0.95rem;">
@@ -621,9 +643,13 @@
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
+                                                <?php if ((float)$s['qty_net'] > 0): ?>
                                                     <span class="badge badge-warning text-dark px-2 py-1 shadow-xs">
                                                         <i class="fas fa-shopping-bag mr-1"></i> Barang Laku
+                                                    </span>
+                                                <?php elseif ((float)($s['qty_sisa_belum_lunas'] ?? 0) > 0): ?>
+                                                    <span class="badge badge-info text-white px-2 py-1 shadow-xs" title="Barang laku sebelumnya sudah dilunasi, sisa barang masih sebagai titipan di kios">
+                                                        <i class="fas fa-store mr-1"></i> Sisa di Kios
                                                     </span>
                                                 <?php elseif ($s['status'] === 'BILLED'): ?>
                                                     <span class="badge badge-success px-2 py-1 shadow-xs">
@@ -660,15 +686,26 @@
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement px-3" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>, '<?= htmlspecialchars($s['all_settlement_ids'] ?? (string)$s['id_settlement']) ?>')" title="Lunasi Barang Konsinyasi ke Supplier (Posting Jurnal Pembelian)">
-                                                            <i class="fas fa-check-circle mr-1"></i> Lunasi
-                                                        </button>
-                                                        <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat lokasi kios, harga jual, dan informasi lengkap">
-                                                            <i class="fas fa-eye mr-1"></i> Detail
-                                                        </button>
-                                                    </div>
+                                                <?php if ($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING' || $s['status'] === 'LAKU'): ?>
+                                                    <?php if ((float)$s['qty_net'] > 0): ?>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement px-3" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>, '<?= htmlspecialchars($s['all_settlement_ids'] ?? (string)$s['id_settlement']) ?>')" title="Lunasi Barang Konsinyasi ke Supplier (Posting Jurnal Pembelian)">
+                                                                <i class="fas fa-check-circle mr-1"></i> Lunasi
+                                                            </button>
+                                                            <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat lokasi kios, harga jual, dan informasi lengkap">
+                                                                <i class="fas fa-eye mr-1"></i> Detail
+                                                            </button>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="d-flex align-items-center justify-content-center" style="gap: 5px;">
+                                                            <span class="badge badge-light border text-muted py-1 px-2 font-weight-normal" title="Semua barang yang laku pada batch ini telah dilunasi, menunggu penjualan baru">
+                                                                <i class="fas fa-check text-success mr-1"></i>Sudah Dilunasi
+                                                            </span>
+                                                            <button type="button" class="btn btn-xs btn-outline-secondary font-weight-bold btnViewSettlement py-1 px-2" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat informasi batch & penerimaan">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>)" title="<?= empty($s['no_invoice_supplier']) ? 'Input Faktur/Invoice Supplier' : 'Update Faktur/Invoice Supplier' ?>">

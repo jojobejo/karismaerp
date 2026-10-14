@@ -230,9 +230,14 @@ class M_Journal extends CI_Model
             return false;
         }
 
-        // Aturan bisnis aktif: jurnal realisasi dan FIFO HPP konsinyasi hanya
-        // berlaku untuk nomor faktur yang secara eksplisit berawalan K.
-        if (strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) !== 'K') {
+        // Aturan bisnis aktif: jurnal realisasi pengakuan penjualan dan HPP saat pembayaran
+        // berlaku untuk nomor faktur yang berawalan K (Konsinyasi) atau T / is_test_market (Barang Test Market).
+        $no_faktur_upper = strtoupper((string)($faktur['no_faktur'] ?? ''));
+        $prefix_faktur   = substr($no_faktur_upper, 0, 1);
+        $is_faktur_t     = ($prefix_faktur === 'T' || !empty($faktur['is_test_market']));
+        $is_faktur_k     = ($prefix_faktur === 'K');
+
+        if (!$is_faktur_k && !$is_faktur_t) {
             return false;
         }
 
@@ -243,15 +248,22 @@ class M_Journal extends CI_Model
             return false;
         }
 
-        // Cek apakah jurnal penjualan konsinyasi untuk pembayaran ini sudah pernah dibuat sebelumnya
+        $tipe_label = $is_faktur_t ? 'Test Market' : 'Konsinyasi';
+        $source_type_val = $is_faktur_t ? 'FAKTUR_PENJUALAN_TEST_MARKET' : 'FAKTUR_PENJUALAN_KONSINYASI';
+        $idempotency_sj = 'SALES_INVOICE-' . ($is_faktur_t ? 'TESTMARKET-' : 'KONSINYASI-') . $faktur['no_faktur'] . '-' . $id_pembayaran;
+        $idempotency_gi = 'GOODS_ISSUE-' . ($is_faktur_t ? 'TESTMARKET-' : 'KONSINYASI-') . $faktur['no_faktur'] . '-' . $id_pembayaran;
+
+        // Cek apakah jurnal penjualan untuk pembayaran ini sudah pernah dibuat sebelumnya
         $existing_sj = $this->db
             ->where('source_module', 'SALES')
             ->group_start()
                 ->where('source_type', 'FAKTUR_PENJUALAN')
                 ->or_where('source_type', 'FAKTUR_PENJUALAN_KONSINYASI')
+                ->or_where('source_type', 'FAKTUR_PENJUALAN_TEST_MARKET')
             ->group_end()
             ->group_start()
-                ->where('idempotency_key', 'SALES_INVOICE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran)
+                ->where('idempotency_key', $idempotency_sj)
+                ->or_where('idempotency_key', 'SALES_INVOICE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran)
                 ->or_where('source_id', $faktur['no_faktur'] . '-' . $id_pembayaran)
                 ->or_where('source_id', (string)$id_pembayaran)
             ->group_end()
@@ -318,14 +330,14 @@ class M_Journal extends CI_Model
             'nomor_jurnal'      => $nomor_jurnal_sj,
             'id_jenis_jurnal'   => $id_jenis_jurnal,
             'tanggal_transaksi' => $tanggal,
-            'keterangan'        => 'Penjualan Konsinyasi: ' . $no_faktur_konsinyasi . ' - ' . $customer_name . ' (Realisasi Pembelian Kios)',
+            'keterangan'        => 'Penjualan ' . $tipe_label . ': ' . $no_faktur_konsinyasi . ' - ' . $customer_name . ' (Realisasi Pembelian Kios)',
             'status'            => 'POSTED',
             'source_module'     => 'SALES',
-            'source_type'       => 'FAKTUR_PENJUALAN_KONSINYASI',
+            'source_type'       => $source_type_val,
             'source_id'         => $faktur['no_faktur'] . '-' . $id_pembayaran,
             'source_no'         => $no_faktur_konsinyasi,
             'posting_event'     => 'SALES_INVOICE',
-            'idempotency_key'   => 'SALES_INVOICE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran,
+            'idempotency_key'   => $idempotency_sj,
             'total_debit'       => $total_nominal,
             'total_kredit'      => $total_nominal,
             'created_by'        => $userId,
@@ -374,7 +386,7 @@ class M_Journal extends CI_Model
             'id_jurnal'   => $id_jurnal_sj,
             'nomor_baris' => $baris++,
             'id_akun'     => $id_akun_piutang,
-            'keterangan'  => 'Piutang Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
+            'keterangan'  => 'Piutang Penjualan ' . $tipe_label . ' ' . $no_faktur_konsinyasi,
             'debit'       => $total_nominal,
             'kredit'      => 0
         ]);
@@ -384,7 +396,7 @@ class M_Journal extends CI_Model
             'id_jurnal'   => $id_jurnal_sj,
             'nomor_baris' => $baris++,
             'id_akun'     => $id_akun_penjualan,
-            'keterangan'  => 'Pendapatan Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
+            'keterangan'  => 'Pendapatan Penjualan ' . $tipe_label . ' ' . $no_faktur_konsinyasi,
             'debit'       => 0,
             'kredit'      => $nilai_penjualan
         ]);
@@ -395,7 +407,7 @@ class M_Journal extends CI_Model
                 'id_jurnal'   => $id_jurnal_sj,
                 'nomor_baris' => $baris++,
                 'id_akun'     => $id_akun_ppn,
-                'keterangan'  => 'PPN Keluaran Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
+                'keterangan'  => 'PPN Keluaran Penjualan ' . $tipe_label . ' ' . $no_faktur_konsinyasi,
                 'debit'       => 0,
                 'kredit'      => $nilai_ppn
             ]);
@@ -424,7 +436,6 @@ class M_Journal extends CI_Model
             $qty_laku = ($hrg_satuan > 0) ? round($total_nominal / $hrg_satuan, 3) : 0;
         }
 
-        // Hitung HPP Konsinyasi menggunakan metode FIFO berdasarkan urutan penerimaan LPB
         $kd_barang_konsinyasi = !empty($data_pembayaran['kd_barang']) 
             ? $data_pembayaran['kd_barang'] 
             : (!empty($items[0]['kd_barang']) ? $items[0]['kd_barang'] : '');
@@ -433,20 +444,29 @@ class M_Journal extends CI_Model
             ? (int)$data_pembayaran['id_settlement']
             : null;
 
-        $this->load->model('M_Konsinyasi');
-        $fifoResult = $this->M_Konsinyasi->allocate_fifo_consignment_cogs(
-            $kd_barang_konsinyasi,
-            $qty_laku,
-            (int)$id_pembayaran,
-            $id_faktur,
-            $no_faktur_konsinyasi
-        );
-
-        $total_cogs = (float)($fifoResult['total_cogs'] ?? 0);
-        if ($total_cogs <= 0) {
-            // Fallback jika tidak ditemukan data batch LPB konsinyasi
+        $total_cogs = 0.0;
+        if ($is_faktur_t) {
+            // Untuk Barang Test Market: barang bersumber dari Gudang Induk (milik sendiri).
+            // HPP dihitung dari harga pokok item faktur / master barang.
             $hrg_pokok = (float)($items[0]['hrg_pokok'] ?? 0);
             $total_cogs = round($qty_laku * $hrg_pokok, 2);
+        } else {
+            // Untuk Barang Konsinyasi (Faktur K): HPP dihitung menggunakan FIFO berdasarkan penerimaan LPB konsinyasi
+            $this->load->model('M_Konsinyasi');
+            $fifoResult = $this->M_Konsinyasi->allocate_fifo_consignment_cogs(
+                $kd_barang_konsinyasi,
+                $qty_laku,
+                (int)$id_pembayaran,
+                $id_faktur,
+                $no_faktur_konsinyasi
+            );
+
+            $total_cogs = (float)($fifoResult['total_cogs'] ?? 0);
+            if ($total_cogs <= 0) {
+                // Fallback jika tidak ditemukan data batch LPB konsinyasi
+                $hrg_pokok = (float)($items[0]['hrg_pokok'] ?? 0);
+                $total_cogs = round($qty_laku * $hrg_pokok, 2);
+            }
         }
 
         // Jika ada HPP > 0, terbitkan jurnal GOODS_ISSUE (HPP & Persediaan)
@@ -473,14 +493,14 @@ class M_Journal extends CI_Model
                     'nomor_jurnal'      => $nomor_jurnal_gi,
                     'id_jenis_jurnal'   => $id_jenis_jurnal,
                     'tanggal_transaksi' => $tanggal,
-                    'keterangan'        => 'Penyesuaian persediaan, untuk ' . $nomor_jurnal_gi,
+                    'keterangan'        => 'Penyesuaian persediaan ' . strtolower($tipe_label) . ', untuk ' . $nomor_jurnal_gi,
                     'status'            => 'POSTED',
                     'source_module'     => 'SALES',
-                    'source_type'       => 'FAKTUR_PENJUALAN_KONSINYASI',
+                    'source_type'       => $source_type_val,
                     'source_id'         => $faktur['no_faktur'] . '-' . $id_pembayaran,
                     'source_no'         => $no_faktur_konsinyasi,
                     'posting_event'     => 'GOODS_ISSUE',
-                    'idempotency_key'   => 'GOODS_ISSUE-KONSINYASI-' . $faktur['no_faktur'] . '-' . $id_pembayaran,
+                    'idempotency_key'   => $idempotency_gi,
                     'total_debit'       => $total_cogs,
                     'total_kredit'      => $total_cogs,
                     'created_by'        => $userId,
@@ -496,29 +516,38 @@ class M_Journal extends CI_Model
                     'id_jurnal'   => $id_jurnal_gi,
                     'nomor_baris' => 1,
                     'id_akun'     => $id_akun_cogs,
-                    'keterangan'  => 'Harga Pokok Penjualan Konsinyasi ' . $no_faktur_konsinyasi,
+                    'keterangan'  => 'Harga Pokok Penjualan ' . $tipe_label . ' ' . $no_faktur_konsinyasi,
                     'debit'       => $total_cogs,
                     'kredit'      => 0
                 ]);
 
                 // Baris Kredit: Persediaan
+                $persediaan_ket = $is_faktur_t
+                    ? ('Persediaan Barang Dagang (Test Market) ' . $no_faktur_konsinyasi)
+                    : ('Persediaan Konsinyasi ' . $no_faktur_konsinyasi);
+
                 $this->db->insert('tbkeu_jurnal_detail', [
                     'id_jurnal'   => $id_jurnal_gi,
                     'nomor_baris' => 2,
                     'id_akun'     => $id_akun_inv,
-                    'keterangan'  => 'Persediaan Konsinyasi ' . $no_faktur_konsinyasi,
+                    'keterangan'  => $persediaan_ket,
                     'debit'       => 0,
                     'kredit'      => $total_cogs
                 ]);
 
-                // Tautkan ID Jurnal GOODS_ISSUE ke jejak audit alokasi FIFO
-                $this->M_Konsinyasi->update_cogs_journal_id((int)$id_pembayaran, $id_jurnal_gi);
+                // Tautkan ID Jurnal GOODS_ISSUE ke jejak audit alokasi FIFO (hanya untuk konsinyasi Faktur K)
+                if (!$is_faktur_t && isset($this->M_Konsinyasi)) {
+                    $this->M_Konsinyasi->update_cogs_journal_id((int)$id_pembayaran, $id_jurnal_gi);
+                }
             }
         }
 
-        // Sinkronisasi posisi stok konsinyasi: memindahkan stok di kios (PENDING) ke barang laku (BILLED)
-        $selected_kd_barang = !empty($data_pembayaran['kd_barang']) ? $data_pembayaran['kd_barang'] : null;
-        $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran, $selected_kd_barang, $selected_id_settlement);
+        // Sinkronisasi posisi stok konsinyasi hanya untuk Faktur K (konsinyasi murni)
+        // Faktur T (Test Market) TIDAK masuk ke tb_konsinyasi_settlement karena barang milik sendiri
+        if (!$is_faktur_t) {
+            $selected_kd_barang = !empty($data_pembayaran['kd_barang']) ? $data_pembayaran['kd_barang'] : null;
+            $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran, $selected_kd_barang, $selected_id_settlement);
+        }
 
         return $id_jurnal_sj;
     }

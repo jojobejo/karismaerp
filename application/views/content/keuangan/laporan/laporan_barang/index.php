@@ -4,7 +4,13 @@ $menus = [
         'title' => 'Kartu Stock Per Gudang',
         'icon'  => 'fas fa-warehouse',
         'url'   => base_url('laporan/barang/kartu-stock-gudang'),
-        'desc'  => 'Laporan mutasi kartu stock barang masuk dan keluar per gudang.',
+        'desc'  => 'Laporan mutasi kartu stock barang masuk dan keluar per gudang (Moving Average).',
+    ],
+    [
+        'title' => 'Kartu Stok Barang Konsinyasi',
+        'icon'  => 'fas fa-handshake',
+        'url'   => base_url('laporan/barang/kartu-stock-konsinyasi'),
+        'desc'  => 'Laporan mutasi kartu stok barang konsinyasi dengan metode FIFO per batch/lot LPB.',
     ]
 ];
 $back_url   = base_url('laporan');

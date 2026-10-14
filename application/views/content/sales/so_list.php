@@ -306,6 +306,9 @@
                                            class="font-weight-bold">
                                             <?= htmlspecialchars($row['no_so']) ?>
                                         </a>
+                                        <?php if (!empty($row['is_test_market'])): ?>
+                                            <span class="badge badge-info ml-1" title="Barang Test Market (Faktur T)"><i class="fas fa-flask"></i> Test Market</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tanggal_transaksi'])) ?></td>
                                     <td><?= htmlspecialchars($row['customer_name']) ?></td>

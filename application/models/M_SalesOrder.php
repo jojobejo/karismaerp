@@ -1268,6 +1268,9 @@ class M_SalesOrder extends CI_Model
         if ($this->db->field_exists('is_faktur_z', 'tbso_sales_order')) {
             $so_data['is_faktur_z'] = !empty($header['is_faktur_z']) ? 1 : 0;
         }
+        if ($this->db->field_exists('is_test_market', 'tbso_sales_order')) {
+            $so_data['is_test_market'] = !empty($header['is_test_market']) ? 1 : 0;
+        }
 
         $this->db->insert('tbso_sales_order', $so_data);
         $id_so    = $this->db->insert_id();
@@ -1396,6 +1399,9 @@ class M_SalesOrder extends CI_Model
         ];
         if ($this->db->field_exists('is_faktur_z', 'tbso_sales_order')) {
             $so_update['is_faktur_z'] = !empty($header['is_faktur_z']) ? 1 : 0;
+        }
+        if ($this->db->field_exists('is_test_market', 'tbso_sales_order')) {
+            $so_update['is_test_market'] = !empty($header['is_test_market']) ? 1 : 0;
         }
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $so_update);
@@ -1750,11 +1756,15 @@ class M_SalesOrder extends CI_Model
             'cara_pembayaran',
             'jtempo',
             'tempo',
+            'is_test_market',
         ];
         foreach ($optional_header_fields as $field) {
             if ($this->db->field_exists($field, 'tbso_faktur_penjualan')) {
                 $fh[$field] = $faktur_header[$field] ?? null;
             }
+        }
+        if ($this->db->field_exists('is_test_market', 'tbso_faktur_penjualan') && empty($fh['is_test_market'])) {
+            $fh['is_test_market'] = (!empty($so['is_test_market']) || strtoupper(substr($no_faktur, 0, 1)) === 'T') ? 1 : 0;
         }
 
         // Hitung total tonase & kubikasi faktur ini
@@ -1868,10 +1878,11 @@ class M_SalesOrder extends CI_Model
         }
 
         // ── Perhitungan Jurnal & Simpan ke Database ────────────────
+        $is_test_market = !empty($fh['is_test_market']) || strtoupper(substr($no_faktur, 0, 1)) === 'T';
         $is_konsinyasi = $this->is_gudang_konsinyasi($gudang_id) || strtoupper(substr($no_faktur, 0, 1)) === 'K';
         $journal = null;
 
-        if (!$is_konsinyasi) {
+        if (!$is_konsinyasi && !$is_test_market) {
             $total_nilai_pesanan = 0;
             foreach ($faktur_items as $item) {
                 $total_nilai_pesanan += (float)($item['subtotal_after_disc'] ?? 0);

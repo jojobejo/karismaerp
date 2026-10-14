@@ -193,8 +193,29 @@
                                                        name="is_faktur_z"
                                                        value="1"
                                                        <?= !empty($so['is_faktur_z']) ? 'checked' : '' ?>>
-                                                <label class="custom-control-label" for="is_faktur_z"></label>
+                                                <label class="custom-control-label" for="is_faktur_z">Faktur Z (Pecah Faktur H)</label>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group so-form-row mb-0 mt-2">
+                                        <label class="so-form-label">&nbsp;</label>
+                                        <div class="so-form-control">
+                                            <input type="hidden" name="is_test_market" value="0">
+                                            <div class="custom-control custom-checkbox">
+                                                <input type="checkbox"
+                                                       class="custom-control-input"
+                                                       id="is_test_market"
+                                                       name="is_test_market"
+                                                       value="1"
+                                                       <?= !empty($so['is_test_market']) ? 'checked' : '' ?>>
+                                                <label class="custom-control-label font-weight-bold text-primary" for="is_test_market">
+                                                    <i class="fas fa-flask mr-1"></i>Barang Test Market (Faktur T)
+                                                </label>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">
+                                                Stok fisik bersumber dari Gudang Induk. Penjualan &amp; HPP diakui saat dibeli/dibayar kios via Faktur T (tanpa pelunasan konsinyasi).
+                                            </small>
                                         </div>
                                     </div>
 
