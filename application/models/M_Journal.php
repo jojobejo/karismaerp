@@ -435,8 +435,26 @@ class M_Journal extends CI_Model
             $qty_laku = ($hrg_satuan > 0) ? round($total_nominal / $hrg_satuan, 3) : 0;
         }
 
-        $hrg_pokok = (float)($items[0]['hrg_pokok'] ?? 0);
-        $total_cogs = round($qty_laku * $hrg_pokok, 2);
+        // Hitung HPP Konsinyasi menggunakan metode FIFO berdasarkan urutan penerimaan LPB
+        $kd_barang_konsinyasi = !empty($data_pembayaran['kd_barang']) 
+            ? $data_pembayaran['kd_barang'] 
+            : (!empty($items[0]['kd_barang']) ? $items[0]['kd_barang'] : '');
+
+        $this->load->model('M_Konsinyasi');
+        $fifoResult = $this->M_Konsinyasi->allocate_fifo_consignment_cogs(
+            $kd_barang_konsinyasi,
+            $qty_laku,
+            (int)$id_pembayaran,
+            $id_faktur,
+            $no_faktur_konsinyasi
+        );
+
+        $total_cogs = (float)($fifoResult['total_cogs'] ?? 0);
+        if ($total_cogs <= 0) {
+            // Fallback jika tidak ditemukan data batch LPB konsinyasi
+            $hrg_pokok = (float)($items[0]['hrg_pokok'] ?? 0);
+            $total_cogs = round($qty_laku * $hrg_pokok, 2);
+        }
 
         // Jika ada HPP > 0, terbitkan jurnal GOODS_ISSUE (HPP & Persediaan)
         if ($total_cogs > 0) {
@@ -499,6 +517,9 @@ class M_Journal extends CI_Model
                     'debit'       => 0,
                     'kredit'      => $total_cogs
                 ]);
+
+                // Tautkan ID Jurnal GOODS_ISSUE ke jejak audit alokasi FIFO
+                $this->M_Konsinyasi->update_cogs_journal_id((int)$id_pembayaran, $id_jurnal_gi);
             }
         }
 
@@ -597,21 +618,10 @@ class M_Journal extends CI_Model
         }
         $noFakturKonsinyasi = $faktur['no_faktur'] . '-' . $paymentIndex;
 
-        if ($qty_dibeli >= $qty_net_existing) {
-            // Lunas seluruhnya oleh kios: ubah status menjadi LAKU (Barang laku dibeli kios, siap diinput tagihan supplier)
-            $this->db->where('id_settlement', $settlement['id_settlement'])->update('tb_konsinyasi_settlement', [
-                'no_faktur'     => $noFakturKonsinyasi,
-                'id_pembayaran' => !empty($id_pembayaran) ? (int)$id_pembayaran : null,
-                'status'        => 'LAKU',
-                'settled_at'    => date('Y-m-d H:i:s'),
-                'settled_by'    => $userName,
-                'catatan'       => 'Barang laku dibeli kios via pelunasan faktur ' . $noFakturKonsinyasi . ' di Keuangan (Menunggu tagihan supplier)'
-            ]);
-        } else {
-            // Lunas sebagian (misal 50 pcs dari 120 pcs)
+        if ($qty_dibeli < $qty_net_existing) {
+            // Lunas sebagian (misal 50 pcs dari 120 pcs):
+            // Buat record baru untuk sisa barang yang masih berada di kios (status DI_KIOS)
             $qty_sisa = $qty_net_existing - $qty_dibeli;
-
-            // 1. Buat record baru untuk sisa barang yang masih di kios (status DI_KIOS)
             $sisa_data = $settlement;
             unset($sisa_data['id_settlement']);
             $sisa_data['no_settlement']  = 'KONS-SET-' . date('ymd') . '-' . sprintf('%04d', rand(100, 9999));
@@ -624,8 +634,66 @@ class M_Journal extends CI_Model
             $sisa_data['catatan']        = 'Sisa titipan di kios setelah pelunasan ' . $qty_dibeli . ' ' . $settlement['satuan'];
             $sisa_data['created_at']     = date('Y-m-d H:i:s');
             $this->db->insert('tb_konsinyasi_settlement', $sisa_data);
+        }
 
-            // 2. Baris settlement ini diupdate dengan qty yang dibeli kios & status menjadi LAKU (Menunggu tagihan supplier)
+        // Ambil jejak alokasi FIFO LPB yang baru saja dipotong untuk pembayaran ini
+        $fifoAllocs = [];
+        if (!empty($id_pembayaran) && $this->db->table_exists('tb_konsinyasi_cogs_allocation')) {
+            $fifoAllocs = $this->db
+                ->where('id_pembayaran', (int)$id_pembayaran)
+                ->order_by('id_cogs_alloc', 'ASC')
+                ->get('tb_konsinyasi_cogs_allocation')
+                ->result_array();
+        }
+
+        if (!empty($fifoAllocs)) {
+            // Update baris settlement pertama dengan porsi LPB terlama (FIFO alokasi 1)
+            $firstAlloc = $fifoAllocs[0];
+            $firstQty = (float)$firstAlloc['qty_allocated'];
+            $updatePrimary = [
+                'no_faktur'       => $noFakturKonsinyasi,
+                'id_pembayaran'   => (int)$id_pembayaran,
+                'id_lpb_asal'     => (int)$firstAlloc['id_lpb'],
+                'nomor_lpb_asal'  => $firstAlloc['nomor_lpb'],
+                'no_lot'          => $firstAlloc['no_lot'],
+                'expired_date'    => $firstAlloc['expired_date'],
+                'qty_terjual'     => $firstQty,
+                'qty_net'         => $firstQty,
+                'subtotal_jual'   => round($firstQty * $hrg_jual, 2),
+                'hrg_beli_satuan' => (float)$firstAlloc['harga_pokok_satuan'],
+                'status'          => 'LAKU',
+                'settled_at'      => date('Y-m-d H:i:s'),
+                'settled_by'      => $userName,
+                'catatan'         => 'Barang laku dibeli kios ' . $firstQty . ' ' . $settlement['satuan'] . ' via LPB FIFO ' . $firstAlloc['nomor_lpb'] . ' (Menunggu tagihan supplier)'
+            ];
+            $this->db->where('id_settlement', (int)$settlement['id_settlement'])->update('tb_konsinyasi_settlement', $updatePrimary);
+
+            // Jika ada alokasi lintas batch LPB berikutnya (misal LPB 1 sisa 10 dan LPB 2 sisa 2):
+            for ($i = 1; $i < count($fifoAllocs); $i++) {
+                $extraAlloc = $fifoAllocs[$i];
+                $extraQty = (float)$extraAlloc['qty_allocated'];
+                $extraSettlement = $settlement;
+                unset($extraSettlement['id_settlement']);
+                $extraSettlement['no_settlement']     = 'KONS-SET-' . date('ymd') . '-' . sprintf('%04d', rand(100, 9999));
+                $extraSettlement['no_faktur']         = $noFakturKonsinyasi;
+                $extraSettlement['id_pembayaran']     = (int)$id_pembayaran;
+                $extraSettlement['id_lpb_asal']       = (int)$extraAlloc['id_lpb'];
+                $extraSettlement['nomor_lpb_asal']    = $extraAlloc['nomor_lpb'];
+                $extraSettlement['no_lot']            = $extraAlloc['no_lot'];
+                $extraSettlement['expired_date']      = $extraAlloc['expired_date'];
+                $extraSettlement['qty_terjual']       = $extraQty;
+                $extraSettlement['qty_net']           = $extraQty;
+                $extraSettlement['subtotal_jual']     = round($extraQty * $hrg_jual, 2);
+                $extraSettlement['hrg_beli_satuan']   = (float)$extraAlloc['harga_pokok_satuan'];
+                $extraSettlement['status']            = 'LAKU';
+                $extraSettlement['settled_at']        = date('Y-m-d H:i:s');
+                $extraSettlement['settled_by']        = $userName;
+                $extraSettlement['catatan']           = 'Barang laku dibeli kios ' . $extraQty . ' ' . $settlement['satuan'] . ' via LPB FIFO ' . $extraAlloc['nomor_lpb'] . ' (Menunggu tagihan supplier)';
+                $extraSettlement['created_at']        = date('Y-m-d H:i:s');
+                $this->db->insert('tb_konsinyasi_settlement', $extraSettlement);
+            }
+        } else {
+            // Fallback standar jika data alokasi FIFO belum tersedia
             $this->db->where('id_settlement', $settlement['id_settlement'])->update('tb_konsinyasi_settlement', [
                 'no_faktur'     => $noFakturKonsinyasi,
                 'id_pembayaran' => !empty($id_pembayaran) ? (int)$id_pembayaran : null,

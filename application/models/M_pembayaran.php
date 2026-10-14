@@ -946,6 +946,12 @@ class M_pembayaran extends CI_Model
             ]);
         }
 
+        // Kembalikan alokasi kuantitas batch LPB konsinyasi (FIFO)
+        if ($this->db->table_exists('tb_konsinyasi_cogs_allocation')) {
+            $this->load->model('M_Konsinyasi');
+            $this->M_Konsinyasi->revert_fifo_consignment_cogs($id_pembayaran);
+        }
+
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === false) {

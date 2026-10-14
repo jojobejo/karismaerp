@@ -55,6 +55,17 @@ class C_Konsinyasi extends CI_Controller
         $data['tracking_barang']  = $this->M_Konsinyasi->get_tracking_barang_list($filters);
         $data['suppliers']        = $this->M_Konsinyasi->get_suppliers_list();
         $data['settlements']      = $this->M_Konsinyasi->get_settlement_list($filters);
+        $data['laku_suppliers']   = $this->M_Konsinyasi->get_laku_suppliers_summary($filters);
+
+        $data['selected_supplier_name'] = '';
+        if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
+            foreach ($data['suppliers'] as $sup) {
+                if ($sup['kd_suplier'] === $filters['kd_suplier']) {
+                    $data['selected_supplier_name'] = $sup['nama_suplier'];
+                    break;
+                }
+            }
+        }
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/purchasing/konsinyasi/settlement_list.php', $data);
@@ -67,7 +78,14 @@ class C_Konsinyasi extends CI_Controller
     public function ajax_detail()
     {
         $idSettlement = (int) $this->input->get('id_settlement');
-        $item = $this->M_Konsinyasi->get_settlement_by_id($idSettlement);
+        $allIdsStr = trim((string) $this->input->get('all_ids'));
+
+        if (!empty($allIdsStr) && strpos($allIdsStr, ',') !== false) {
+            $ids = array_unique(array_filter(array_map('intval', explode(',', $allIdsStr))));
+            $item = $this->M_Konsinyasi->get_grouped_settlement_by_ids($ids);
+        } else {
+            $item = $this->M_Konsinyasi->get_settlement_by_id($idSettlement);
+        }
 
         if (!$item) {
             $this->output
@@ -87,6 +105,8 @@ class C_Konsinyasi extends CI_Controller
     public function ajax_post_settlement()
     {
         $idSettlement = (int) $this->input->post('id_settlement');
+        $allIdsStr = trim((string) $this->input->post('all_settlement_ids'));
+
         $payload = [
             'qty_laku'             => (float) $this->input->post('qty_laku'),
             'tipe_pajak'           => trim((string) $this->input->post('tipe_pajak', TRUE)),
@@ -101,7 +121,16 @@ class C_Konsinyasi extends CI_Controller
         $userId = (int) ($this->session->userdata('id') ?: $this->session->userdata('user_id') ?: 1);
         $userName = (string) ($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'PURCHASING');
 
-        $result = $this->M_Konsinyasi->process_settlement($idSettlement, $payload, $userId, $userName);
+        $ids = [];
+        if (!empty($allIdsStr)) {
+            $ids = array_unique(array_filter(array_map('intval', explode(',', $allIdsStr))));
+        }
+
+        if (count($ids) > 1) {
+            $result = $this->M_Konsinyasi->process_settlement_batch($ids, $payload, $userId, $userName);
+        } else {
+            $result = $this->M_Konsinyasi->process_settlement($idSettlement, $payload, $userId, $userName);
+        }
 
         $this->output
             ->set_content_type('application/json')

@@ -169,6 +169,64 @@ class M_Konsinyasi extends CI_Model
             $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur ADD COLUMN no_faktur_konsinyasi VARCHAR(50) NULL DEFAULT NULL AFTER no_faktur, ADD INDEX idx_no_faktur_konsinyasi (no_faktur_konsinyasi)");
         }
 
+        if (!$this->db->table_exists('tb_konsinyasi_lpb_batch_stock')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_konsinyasi_lpb_batch_stock` (
+                  `id_batch_stock` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                  `id_lpb` INT NOT NULL,
+                  `id_detail_lpb` INT NOT NULL,
+                  `nomor_lpb` VARCHAR(50) NOT NULL,
+                  `tgl_lpb` DATE NOT NULL,
+                  `kd_suplier` VARCHAR(50) DEFAULT NULL,
+                  `nama_suplier` VARCHAR(150) DEFAULT NULL,
+                  `gudang_id` INT NOT NULL DEFAULT 13,
+                  `kd_barang` VARCHAR(50) NOT NULL,
+                  `nama_barang` VARCHAR(200) NOT NULL,
+                  `no_lot` VARCHAR(100) DEFAULT NULL,
+                  `expired_date` DATE DEFAULT NULL,
+                  `qty_masuk` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                  `qty_terjual` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                  `qty_sisa` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                  `satuan` VARCHAR(30) DEFAULT 'PCS',
+                  `harga_beli_satuan` DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+                  `status` ENUM('AVAILABLE','PARTIAL','EXHAUSTED') NOT NULL DEFAULT 'AVAILABLE',
+                  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_batch_stock`),
+                  UNIQUE KEY `uk_lpb_detail` (`id_lpb`, `id_detail_lpb`),
+                  KEY `idx_kd_barang_sisa` (`kd_barang`, `qty_sisa`, `tgl_lpb`, `id_lpb`),
+                  KEY `idx_lpb_batch` (`id_lpb`, `nomor_lpb`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            ");
+        }
+
+        if (!$this->db->table_exists('tb_konsinyasi_cogs_allocation')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_konsinyasi_cogs_allocation` (
+                  `id_cogs_alloc` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                  `id_pembayaran` INT NOT NULL,
+                  `id_faktur` INT NOT NULL,
+                  `no_faktur_konsinyasi` VARCHAR(50) NOT NULL,
+                  `id_batch_stock` INT UNSIGNED NOT NULL,
+                  `id_lpb` INT NOT NULL,
+                  `nomor_lpb` VARCHAR(50) NOT NULL,
+                  `kd_barang` VARCHAR(50) NOT NULL,
+                  `no_lot` VARCHAR(100) DEFAULT NULL,
+                  `expired_date` DATE DEFAULT NULL,
+                  `qty_allocated` DECIMAL(15,3) NOT NULL,
+                  `harga_pokok_satuan` DECIMAL(18,4) NOT NULL,
+                  `subtotal_cogs` DECIMAL(18,4) NOT NULL,
+                  `id_jurnal_gi` BIGINT UNSIGNED DEFAULT NULL,
+                  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_cogs_alloc`),
+                  KEY `idx_alloc_pembayaran` (`id_pembayaran`),
+                  KEY `idx_alloc_faktur` (`id_faktur`),
+                  KEY `idx_alloc_batch_stock` (`id_batch_stock`),
+                  KEY `idx_alloc_jurnal_gi` (`id_jurnal_gi`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+            ");
+        }
+
         // Pastikan Master Gudang Konsinyasi, Gudang Titipan di Kios, dan Gudang Konsinyasi Lunas tersedia di tb_gudang
         $this->ensure_consignment_warehouses();
     }
@@ -474,7 +532,157 @@ class M_Konsinyasi extends CI_Model
             $insertedCount++;
         }
 
+        // Selaraskan data settlement dengan alokasi FIFO LPB aktual
+        $this->sync_settlements_with_fifo_allocation();
+
         return $insertedCount;
+    }
+
+    /**
+     * Menyinkronkan data tb_konsinyasi_settlement dengan alokasi FIFO LPB aktual di tb_konsinyasi_cogs_allocation
+     * - Memastikan id_lpb_asal, nomor_lpb_asal, no_lot, expired_date, dan hrg_beli_satuan mengikuti alokasi FIFO LPB.
+     * - Jika satu pembayaran teralokasi lintas batch LPB (misal 10 pcs di LPB A dan 2 pcs di LPB B),
+     *   settlement akan dipecah per porsi LPB agar proses pelunasan di Purchasing mengikuti antrean LPB terlama (FIFO).
+     */
+    public function sync_settlements_with_fifo_allocation()
+    {
+        if (!$this->db->table_exists('tb_konsinyasi_cogs_allocation') || !$this->db->table_exists('tb_konsinyasi_settlement')) {
+            return 0;
+        }
+
+        // Ambil semua pembayaran yang ada di tb_konsinyasi_cogs_allocation
+        $payments = $this->db
+            ->select('DISTINCT id_pembayaran', false)
+            ->where('id_pembayaran IS NOT NULL', null, false)
+            ->where('id_pembayaran >', 0)
+            ->get('tb_konsinyasi_cogs_allocation')
+            ->result_array();
+
+        if (empty($payments)) {
+            return 0;
+        }
+
+        $syncCount = 0;
+        foreach ($payments as $p) {
+            $idPembayaran = (int) $p['id_pembayaran'];
+
+            // Ambil rincian alokasi FIFO untuk pembayaran ini, urutkan berdasarkan LPB terlama (id_cogs_alloc ASC / id_lpb ASC)
+            $allocs = $this->db
+                ->where('id_pembayaran', $idPembayaran)
+                ->order_by('id_cogs_alloc', 'ASC')
+                ->get('tb_konsinyasi_cogs_allocation')
+                ->result_array();
+
+            if (empty($allocs)) {
+                continue;
+            }
+
+            // Ambil data settlement yang terikat ke id_pembayaran ini
+            $settlements = $this->db
+                ->where('id_pembayaran', $idPembayaran)
+                ->order_by('id_settlement', 'ASC')
+                ->get('tb_konsinyasi_settlement')
+                ->result_array();
+
+            if (empty($settlements)) {
+                continue;
+            }
+
+            // Jika jumlah settlement sama dengan jumlah alokasi FIFO (atau hanya 1 alokasi):
+            if (count($settlements) === count($allocs)) {
+                for ($i = 0; $i < count($allocs); $i++) {
+                    $alloc = $allocs[$i];
+                    $st = $settlements[$i];
+                    $update = [];
+
+                    if ((int)$st['id_lpb_asal'] !== (int)$alloc['id_lpb']) {
+                        $update['id_lpb_asal'] = (int)$alloc['id_lpb'];
+                    }
+                    if ($st['nomor_lpb_asal'] !== $alloc['nomor_lpb']) {
+                        $update['nomor_lpb_asal'] = $alloc['nomor_lpb'];
+                    }
+                    if (!empty($alloc['no_lot']) && $st['no_lot'] !== $alloc['no_lot']) {
+                        $update['no_lot'] = $alloc['no_lot'];
+                    }
+                    if (!empty($alloc['expired_date']) && $st['expired_date'] !== $alloc['expired_date']) {
+                        $update['expired_date'] = $alloc['expired_date'];
+                    }
+                    if (abs((float)$st['qty_net'] - (float)$alloc['qty_allocated']) > 0.001) {
+                        $update['qty_terjual'] = (float)$alloc['qty_allocated'];
+                        $update['qty_net']     = (float)$alloc['qty_allocated'];
+                        $update['subtotal_jual'] = round((float)$alloc['qty_allocated'] * (float)$st['hrg_jual'], 2);
+                    }
+                    $cogsPrice = (float)$alloc['harga_pokok_satuan'];
+                    if ($cogsPrice > 0 && abs((float)$st['hrg_beli_satuan'] - $cogsPrice) > 0.01) {
+                        $update['hrg_beli_satuan'] = $cogsPrice;
+                        if ($st['status'] !== 'BILLED') {
+                            $update['hrg_satuan_input'] = $cogsPrice;
+                        }
+                    }
+                    if (!empty($alloc['no_faktur_konsinyasi']) && empty($st['no_faktur'])) {
+                        $update['no_faktur'] = $alloc['no_faktur_konsinyasi'];
+                    }
+
+                    if (!empty($update)) {
+                        $this->db->where('id_settlement', (int)$st['id_settlement'])->update('tb_konsinyasi_settlement', $update);
+                        $syncCount++;
+                    }
+                }
+            } elseif (count($settlements) === 1 && count($allocs) > 1) {
+                // Kasus pecahan: 1 settlement tapi ada multi batch LPB (>1 alokasi FIFO)
+                // Update baris pertama dengan alokasi pertama
+                $primarySt = $settlements[0];
+                $firstAlloc = $allocs[0];
+                $firstQty = (float)$firstAlloc['qty_allocated'];
+                $cogsPrice1 = (float)$firstAlloc['harga_pokok_satuan'];
+
+                $updatePrimary = [
+                    'id_lpb_asal'     => (int)$firstAlloc['id_lpb'],
+                    'nomor_lpb_asal'  => $firstAlloc['nomor_lpb'],
+                    'no_lot'          => $firstAlloc['no_lot'],
+                    'expired_date'    => $firstAlloc['expired_date'],
+                    'qty_terjual'     => $firstQty,
+                    'qty_net'         => $firstQty,
+                    'subtotal_jual'   => round($firstQty * (float)$primarySt['hrg_jual'], 2),
+                    'hrg_beli_satuan' => $cogsPrice1,
+                    'catatan'         => 'Porsi alokasi FIFO LPB ' . $firstAlloc['nomor_lpb'] . ' (' . $firstQty . ' ' . $primarySt['satuan'] . ')'
+                ];
+                if ($primarySt['status'] !== 'BILLED') {
+                    $updatePrimary['hrg_satuan_input'] = $cogsPrice1;
+                }
+                $this->db->where('id_settlement', (int)$primarySt['id_settlement'])->update('tb_konsinyasi_settlement', $updatePrimary);
+                $syncCount++;
+
+                // Pecah dan insert record settlement tambahan untuk alokasi LPB ke-2 dst
+                for ($j = 1; $j < count($allocs); $j++) {
+                    $extraAlloc = $allocs[$j];
+                    $extraQty = (float)$extraAlloc['qty_allocated'];
+                    $cogsPriceExtra = (float)$extraAlloc['harga_pokok_satuan'];
+
+                    $extraPayload = $primarySt;
+                    unset($extraPayload['id_settlement']);
+                    $extraPayload['no_settlement']     = $this->generate_settlement_no();
+                    $extraPayload['id_lpb_asal']       = (int)$extraAlloc['id_lpb'];
+                    $extraPayload['nomor_lpb_asal']    = $extraAlloc['nomor_lpb'];
+                    $extraPayload['no_lot']            = $extraAlloc['no_lot'];
+                    $extraPayload['expired_date']      = $extraAlloc['expired_date'];
+                    $extraPayload['qty_terjual']       = $extraQty;
+                    $extraPayload['qty_net']           = $extraQty;
+                    $extraPayload['subtotal_jual']     = round($extraQty * (float)$primarySt['hrg_jual'], 2);
+                    $extraPayload['hrg_beli_satuan']   = $cogsPriceExtra;
+                    $extraPayload['hrg_satuan_input']  = ($primarySt['status'] !== 'BILLED') ? $cogsPriceExtra : (float)$primarySt['hrg_satuan_input'];
+                    $extraPayload['subtotal_beli']     = round($extraQty * $cogsPriceExtra, 2);
+                    $extraPayload['total_tagihan_beli']= round($extraQty * $cogsPriceExtra, 2);
+                    $extraPayload['catatan']           = 'Porsi alokasi FIFO LPB ' . $extraAlloc['nomor_lpb'] . ' (' . $extraQty . ' ' . $primarySt['satuan'] . ')';
+                    $extraPayload['created_at']        = date('Y-m-d H:i:s');
+
+                    $this->db->insert('tb_konsinyasi_settlement', $extraPayload);
+                    $syncCount++;
+                }
+            }
+        }
+
+        return $syncCount;
     }
 
     /**
@@ -563,18 +771,174 @@ class M_Konsinyasi extends CI_Model
     }
 
     /**
+     * Mengambil ringkasan daftar supplier yang memiliki barang laku (LAKU/PENDING)
+     * Mengelompokkan transaksi settlement berdasarkan supplier beserta rincian jumlah barang, qty, dan estimasi tagihan.
+     *
+     * @param array $filters
+     * @return array
+     */
+    public function get_laku_suppliers_summary(array $filters = [])
+    {
+        $this->db->select("
+            s.kd_suplier,
+            s.nama_suplier,
+            COUNT(*) AS total_transaksi,
+            COUNT(DISTINCT s.kd_barang) AS total_jenis_barang,
+            SUM(s.qty_net) AS total_qty,
+            GROUP_CONCAT(DISTINCT s.nama_barang ORDER BY s.nama_barang ASC SEPARATOR ', ') AS daftar_barang,
+            MAX(s.tanggal_settlement) AS tgl_terakhir,
+            MIN(s.tanggal_settlement) AS tgl_awal,
+            SUM(s.qty_net * COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0)) AS total_estimasi_tagihan,
+            MAX(s.satuan) AS satuan
+        ", false);
+        $this->db->from('tb_konsinyasi_settlement s');
+        $this->db->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left');
+        $this->db->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left');
+        $this->db->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left');
+        $this->db->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left');
+
+        $this->db->where_in('s.status', ['LAKU', 'PENDING']);
+
+        if (!empty($filters['date_from'])) {
+            $this->db->where('s.tanggal_settlement >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('s.tanggal_settlement <=', $filters['date_to']);
+        }
+        if (!empty($filters['search'])) {
+            $search = trim((string)$filters['search']);
+            $this->db->group_start();
+                $this->db->like('s.kd_suplier', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('s.nama_barang', $search);
+                $this->db->or_like('s.no_settlement', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->group_by(['s.kd_suplier', 's.nama_suplier']);
+        $this->db->order_by('s.nama_suplier', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    /**
      * Mengambil daftar settlement dengan filter
+     * Catatan: Khusus tab Barang Laku (status LAKU / PENDING), transaksi barang dan lot yang sama
+     * diakumulasikan menjadi 1 baris per batch LPB penerimaan sesuai prinsip FIFO pelunasan supplier.
      */
     public function get_settlement_list(array $filters = [])
     {
+        $statusFilter = !empty($filters['status']) ? strtoupper(trim((string) $filters['status'])) : 'LAKU';
+        $isLakuGrouping = ($statusFilter === 'LAKU' || $statusFilter === 'PENDING');
+
+        if ($isLakuGrouping) {
+            // Grouping barang laku berdasarkan supplier, barang, lot, dan LPB agar antrean FIFO LPB terlama tampil di atas
+            $this->db->select("
+                MIN(s.id_settlement) AS id_settlement,
+                GROUP_CONCAT(s.id_settlement ORDER BY s.id_settlement ASC SEPARATOR ',') AS all_settlement_ids,
+                COUNT(s.id_settlement) AS total_gabungan_transaksi,
+                MIN(s.no_settlement) AS no_settlement,
+                MAX(s.tanggal_settlement) AS tanggal_settlement,
+                MIN(s.tanggal_settlement) AS min_tanggal_settlement,
+                s.kd_suplier,
+                s.nama_suplier,
+                s.gudang_id,
+                g.nama_gudang,
+                GROUP_CONCAT(DISTINCT s.customer_name ORDER BY s.customer_name ASC SEPARATOR ', ') AS customer_name,
+                GROUP_CONCAT(DISTINCT s.no_so ORDER BY s.no_so ASC SEPARATOR ', ') AS no_so,
+                GROUP_CONCAT(DISTINCT s.no_faktur ORDER BY s.no_faktur ASC SEPARATOR ', ') AS no_faktur,
+                s.id_lpb_asal,
+                s.nomor_lpb_asal,
+                COALESCE(NULLIF(s.nomor_lpb_asal, ''), MAX(lpb.nomor_lpb)) AS lpb_no,
+                COALESCE(MAX(lpb.no_po), MAX(po.no_po)) AS po_no_po,
+                s.kd_barang,
+                s.nama_barang,
+                s.no_lot,
+                MAX(s.expired_date) AS expired_date,
+                SUM(s.qty_terjual) AS qty_terjual,
+                SUM(s.qty_retur) AS qty_retur,
+                SUM(s.qty_net) AS qty_net,
+                MAX(s.satuan) AS satuan,
+                MAX(s.hrg_jual) AS hrg_jual,
+                SUM(s.subtotal_jual) AS subtotal_jual,
+                COALESCE(NULLIF(MAX(s.hrg_beli_satuan), 0), NULLIF(MAX(pod.hrg_satuan), 0), NULLIF(MAX(lpbd.harga_satuan), 0), 0) AS po_hrg_satuan,
+                COALESCE(NULLIF(MAX(s.hrg_beli_satuan), 0), NULLIF(MAX(pod.harga_satuan_exclude), 0), NULLIF(MAX(lpbd.harga_satuan), 0), 0) AS po_hrg_satuan_exclude,
+                CASE 
+                    WHEN LOWER(MAX(po.keterangan_harga_ppn)) = 'include' THEN 'INCLUDE'
+                    WHEN LOWER(MAX(po.keterangan_harga_ppn)) = 'non_ppn' THEN 'NON_PPN'
+                    ELSE 'EXCLUDE'
+                END AS po_tipe_pajak,
+                s.status,
+                MAX(s.tipe_pajak) AS tipe_pajak,
+                MAX(s.hrg_satuan_input) AS hrg_satuan_input,
+                MAX(s.hrg_beli_satuan) AS hrg_beli_satuan,
+                SUM(s.subtotal_beli) AS subtotal_beli,
+                MAX(s.ppn_persen) AS ppn_persen,
+                SUM(s.nilai_ppn) AS nilai_ppn,
+                SUM(s.total_tagihan_beli) AS total_tagihan_beli,
+                MAX(s.no_invoice_supplier) AS no_invoice_supplier,
+                MAX(s.tgl_invoice_supplier) AS tgl_invoice_supplier,
+                MAX(j.nomor_jurnal) AS nomor_jurnal,
+                MAX(s.id_jurnal_pembelian) AS id_jurnal_pembelian
+            ", false);
+            $this->db->from('tb_konsinyasi_settlement s');
+            $this->db->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left');
+            $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = s.id_jurnal_pembelian', 'left');
+            $this->db->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left');
+            $this->db->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left');
+            $this->db->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left');
+            $this->db->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = s.kd_barang AND (lpbd.no_lot = s.no_lot OR s.no_lot IS NULL OR s.no_lot = \'\')', 'left');
+            $this->db->where_in('s.status', ['LAKU', 'PENDING']);
+
+            if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
+                $this->db->where('s.kd_suplier', trim((string) $filters['kd_suplier']));
+            }
+            if (!empty($filters['date_from'])) {
+                $this->db->where('s.tanggal_settlement >=', $filters['date_from']);
+            }
+            if (!empty($filters['date_to'])) {
+                $this->db->where('s.tanggal_settlement <=', $filters['date_to']);
+            }
+            if (!empty($filters['search'])) {
+                $search = trim((string) $filters['search']);
+                $this->db->group_start();
+                    $this->db->like('s.no_settlement', $search);
+                    $this->db->or_like('s.nama_barang', $search);
+                    $this->db->or_like('s.nama_suplier', $search);
+                    $this->db->or_like('s.customer_name', $search);
+                    $this->db->or_like('s.no_so', $search);
+                    $this->db->or_like('s.no_faktur', $search);
+                    $this->db->or_like('s.no_invoice_supplier', $search);
+                    $this->db->or_like('lpb.nomor_lpb', $search);
+                    $this->db->or_like('po.no_po', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by([
+                's.kd_suplier',
+                's.nama_suplier',
+                's.kd_barang',
+                's.nama_barang',
+                's.id_lpb_asal',
+                's.nomor_lpb_asal',
+                's.no_lot',
+                's.gudang_id',
+                'g.nama_gudang',
+                's.status'
+            ]);
+            $this->db->order_by('COALESCE(s.id_lpb_asal, 999999999) ASC, id_settlement ASC', '', false);
+            return $this->db->get()->result_array();
+        }
+
+        // Mode standar untuk status BILLED atau SEMUA (tanpa grouping transaksi)
         $this->db->select("
             s.*, 
             g.nama_gudang, 
             j.nomor_jurnal,
             COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS lpb_no,
             COALESCE(lpb.no_po, po.no_po) AS po_no_po,
-            COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan,
-            COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude,
+            COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
+            COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude,
             CASE 
                 WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                 WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
@@ -591,16 +955,9 @@ class M_Konsinyasi extends CI_Model
 
         if (!empty($filters['status']) && $filters['status'] !== 'SEMUA') {
             $st = strtoupper(trim((string) $filters['status']));
-            if ($st === 'LAKU' || $st === 'PENDING') {
-                $this->db->where_in('s.status', ['LAKU', 'PENDING']);
-            } else {
-                $this->db->where('s.status', $st);
-            }
+            $this->db->where('s.status', $st);
         } elseif (!empty($filters['status']) && $filters['status'] === 'SEMUA') {
             $this->db->where_in('s.status', ['LAKU', 'BILLED', 'PENDING']);
-        } else {
-            // Default di tab penyelesaian: tampilkan barang laku yang menunggu tagihan supplier
-            $this->db->where_in('s.status', ['LAKU', 'PENDING']);
         }
 
         if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
@@ -675,8 +1032,8 @@ class M_Konsinyasi extends CI_Model
                     WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
                     ELSE 'EXCLUDE'
                 END AS po_tipe_pajak,
-                COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan,
-                COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude
+                COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
+                COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude
             ", false)
             ->from('tb_konsinyasi_settlement s')
             ->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left')
@@ -688,6 +1045,66 @@ class M_Konsinyasi extends CI_Model
             ->where('s.id_settlement', (int) $idSettlement)
             ->get()
             ->row_array();
+    }
+
+    /**
+     * Mengambil data detail akumulasi untuk form modal pelunasan jika baris settlement terdiri dari beberapa transaksi
+     *
+     * @param array $ids
+     * @return array|null
+     */
+    public function get_grouped_settlement_by_ids(array $ids)
+    {
+        $ids = array_unique(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return null;
+        }
+
+        $firstId = reset($ids);
+        $base = $this->get_settlement_by_id($firstId);
+        if (!$base) {
+            return null;
+        }
+
+        if (count($ids) === 1) {
+            $base['all_settlement_ids'] = (string)$firstId;
+            return $base;
+        }
+
+        $rows = $this->db
+            ->where_in('id_settlement', $ids)
+            ->get('tb_konsinyasi_settlement')
+            ->result_array();
+
+        $totalQtyNet = 0.0;
+        $totalQtyTerjual = 0.0;
+        $allSo = [];
+        $allFaktur = [];
+        $allCustomer = [];
+
+        foreach ($rows as $r) {
+            $totalQtyNet += (float)$r['qty_net'];
+            $totalQtyTerjual += (float)$r['qty_terjual'];
+            if (!empty($r['no_so'])) $allSo[] = $r['no_so'];
+            if (!empty($r['no_faktur'])) $allFaktur[] = $r['no_faktur'];
+            if (!empty($r['customer_name'])) $allCustomer[] = $r['customer_name'];
+        }
+
+        $base['all_settlement_ids'] = implode(',', $ids);
+        $base['qty_net'] = $totalQtyNet;
+        $base['qty_terjual'] = $totalQtyTerjual;
+        $base['total_gabungan_transaksi'] = count($rows);
+        if (!empty($allCustomer)) {
+            $base['customer_name'] = implode(', ', array_unique($allCustomer));
+        }
+        if (!empty($allSo)) {
+            $base['no_so'] = implode(', ', array_unique($allSo));
+        }
+        if (!empty($allFaktur)) {
+            $base['no_faktur'] = implode(', ', array_unique($allFaktur));
+        }
+
+        return $base;
     }
 
     /**
@@ -906,6 +1323,79 @@ class M_Konsinyasi extends CI_Model
             'total_tagihan' => $totalTagihanBeli,
             'qty_laku'      => $qtyLaku,
             'qty_sisa_kios' => $qtySisaDiKios
+        ];
+    }
+
+    /**
+     * Memproses pelunasan barang konsinyasi secara batch untuk transaksi gabungan barang yang sama
+     *
+     * @param array $ids
+     * @param array $payload
+     * @param int|null $userId
+     * @param string $userName
+     * @return array
+     */
+    public function process_settlement_batch(array $ids, array $payload, $userId = null, $userName = 'SYSTEM')
+    {
+        $ids = array_unique(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return ['status' => false, 'message' => 'Daftar ID settlement tidak valid.'];
+        }
+
+        $settlements = $this->db
+            ->where_in('id_settlement', $ids)
+            ->get('tb_konsinyasi_settlement')
+            ->result_array();
+
+        if (empty($settlements)) {
+            return ['status' => false, 'message' => 'Data settlement tidak ditemukan.'];
+        }
+
+        $this->db->trans_begin();
+
+        $processedCount = 0;
+        $totalTagihanAll = 0.0;
+        $totalQtyAll = 0.0;
+        $firstJurnalId = null;
+        $firstJurnalNo = null;
+
+        foreach ($settlements as $st) {
+            if ($st['status'] === 'BILLED') {
+                continue;
+            }
+
+            $singlePayload = $payload;
+            $singlePayload['qty_laku'] = (float)$st['qty_net'];
+
+            $res = $this->process_settlement((int)$st['id_settlement'], $singlePayload, $userId, $userName);
+            if (!$res['status']) {
+                $this->db->trans_rollback();
+                return $res;
+            }
+
+            $processedCount++;
+            $totalTagihanAll += (float)($res['total_tagihan'] ?? 0);
+            $totalQtyAll += (float)($res['qty_laku'] ?? 0);
+            if (!$firstJurnalId && !empty($res['id_jurnal'])) {
+                $firstJurnalId = $res['id_jurnal'];
+                $firstJurnalNo = $res['nomor_jurnal'] ?? null;
+            }
+        }
+
+        if ($processedCount === 0) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Semua transaksi settlement dalam grup ini sudah berstatus lunas sebelumnya.'];
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'status'        => true,
+            'message'       => "Berhasil memproses pelunasan barang konsinyasi ({$processedCount} transaksi, total {$totalQtyAll} {$settlements[0]['satuan']}) ke supplier.",
+            'id_jurnal'     => $firstJurnalId,
+            'nomor_jurnal'  => $firstJurnalNo,
+            'total_tagihan' => $totalTagihanAll,
+            'qty_laku'      => $totalQtyAll
         ];
     }
 
@@ -1464,6 +1954,329 @@ class M_Konsinyasi extends CI_Model
     {
         $this->ensure_schema();
         return $this->db->get_where('tb_konsinyasi_faktur', ['no_faktur_konsinyasi' => trim((string)$noFakturKonsinyasi)])->row_array();
+    }
+
+    /**
+     * Sinkronisasi data LPB Konsinyasi ke tabel tracking batch stok FIFO tb_konsinyasi_lpb_batch_stock.
+     * Merekam setiap penerimaan LPB konsinyasi beserta harga beli DPP aktual.
+     *
+     * @return int Jumlah batch baru yang disinkronkan
+     */
+    public function sync_lpb_consignment_batches()
+    {
+        $this->ensure_schema();
+
+        if (!$this->db->table_exists('tb_lpb') || !$this->db->table_exists('tb_lpb_detail')) {
+            return 0;
+        }
+
+        $query = "
+            SELECT
+                h.id_lpb,
+                h.nomor_lpb,
+                CASE 
+                    WHEN h.tgl_sj IS NOT NULL AND h.tgl_sj > '1970-01-01' THEN h.tgl_sj
+                    WHEN h.input_at IS NOT NULL THEN DATE(h.input_at)
+                    ELSE CURDATE()
+                END AS tgl_lpb,
+                h.kd_suplier,
+                h.nama_suplier,
+                COALESCE(h.gudang_id, 13) AS gudang_id,
+                d.id_detail_lpb,
+                d.kd_barang,
+                COALESCE(b.nama_barang, d.kd_barang) AS nama_barang,
+                d.no_lot,
+                d.expired_date,
+                d.qty_diterima,
+                d.harga_satuan,
+                COALESCE(b.satuan, 'PCS') AS satuan,
+                0 AS master_hrg_pokok
+            FROM tb_lpb h
+            JOIN tb_lpb_detail d ON h.id_lpb = d.id_lpb
+            LEFT JOIN tbpo_barang b ON d.kd_barang = b.kode_barang
+            WHERE (h.gudang_id = 13 OR h.jenis_lpb = 'LPB Konsinyasi' OR h.nomor_lpb LIKE '%K')
+              AND h.status_lpb = 1
+              AND d.qty_diterima > 0
+            ORDER BY 
+                CASE 
+                    WHEN h.tgl_sj IS NOT NULL AND h.tgl_sj > '1970-01-01' THEN h.tgl_sj
+                    WHEN h.input_at IS NOT NULL THEN DATE(h.input_at)
+                    ELSE CURDATE()
+                END ASC, 
+                h.id_lpb ASC, 
+                d.id_detail_lpb ASC
+        ";
+
+        $rows = $this->db->query($query)->result_array();
+        $inserted = 0;
+
+        foreach ($rows as $r) {
+            $idLpb = (int)$r['id_lpb'];
+            $idDetailLpb = (int)$r['id_detail_lpb'];
+
+            // Cek apakah batch LPB ini sudah ada di tabel batch stock
+            $exists = $this->db
+                ->where('id_lpb', $idLpb)
+                ->where('id_detail_lpb', $idDetailLpb)
+                ->get('tb_konsinyasi_lpb_batch_stock')
+                ->row_array();
+
+            if ($exists) {
+                // Perbarui harga beli satuan jika sebelumnya 0 dan sekarang sudah ada harga di LPB
+                if ((float)$exists['harga_beli_satuan'] <= 0 && (float)$r['harga_satuan'] > 0) {
+                    $this->db->where('id_batch_stock', (int)$exists['id_batch_stock'])->update('tb_konsinyasi_lpb_batch_stock', [
+                        'harga_beli_satuan' => (float)$r['harga_satuan']
+                    ]);
+                }
+                continue;
+            }
+
+            // Hitung harga beli satuan (DPP per pcs tanpa PPN)
+            $hrgBeli = (float)$r['harga_satuan'];
+            if ($hrgBeli <= 0) {
+                $hrgBeli = (float)$r['master_hrg_pokok'];
+            }
+
+            $qtyMasuk = (float)$r['qty_diterima'];
+
+            // Cek apakah sudah pernah ada alokasi untuk detail LPB ini sebelumnya
+            $allocatedQty = 0.0;
+            $allocRow = $this->db
+                ->select('COALESCE(SUM(qty_allocated), 0) AS total_alloc')
+                ->where('id_lpb', $idLpb)
+                ->where('kd_barang', $r['kd_barang'])
+                ->get('tb_konsinyasi_cogs_allocation')
+                ->row();
+            if ($allocRow && (float)$allocRow->total_alloc > 0) {
+                $allocatedQty = (float)$allocRow->total_alloc;
+            }
+
+            $qtySisa = max(0.0, round($qtyMasuk - $allocatedQty, 3));
+            $status = ($qtySisa <= 0) ? 'EXHAUSTED' : (($qtySisa < $qtyMasuk) ? 'PARTIAL' : 'AVAILABLE');
+
+            $insertPayload = [
+                'id_lpb'            => $idLpb,
+                'id_detail_lpb'     => $idDetailLpb,
+                'nomor_lpb'         => trim((string)$r['nomor_lpb']),
+                'tgl_lpb'           => $r['tgl_lpb'],
+                'kd_suplier'        => $r['kd_suplier'],
+                'nama_suplier'      => $r['nama_suplier'],
+                'gudang_id'         => (int)$r['gudang_id'],
+                'kd_barang'         => $r['kd_barang'],
+                'nama_barang'       => $r['nama_barang'],
+                'no_lot'            => trim((string)$r['no_lot']),
+                'expired_date'      => !empty($r['expired_date']) ? $r['expired_date'] : null,
+                'qty_masuk'         => $qtyMasuk,
+                'qty_terjual'       => $allocatedQty,
+                'qty_sisa'          => $qtySisa,
+                'satuan'            => $r['satuan'] ?: 'PCS',
+                'harga_beli_satuan' => $hrgBeli,
+                'status'            => $status,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'updated_at'        => date('Y-m-d H:i:s')
+            ];
+
+            $this->db->insert('tb_konsinyasi_lpb_batch_stock', $insertPayload);
+            $inserted++;
+        }
+
+        return $inserted;
+    }
+
+    /**
+     * Alokasi HPP Penjualan Barang Konsinyasi Menggunakan Metode FIFO (First In, First Out).
+     * Mengambil stok dari penerimaan LPB paling awal dan mendukung penjualan lintas batch LPB.
+     *
+     * @param string $kdBarang Kode barang konsinyasi
+     * @param float $qtyToAllocate Kuantitas barang yang dibeli/laku
+     * @param int $idPembayaran ID Pembayaran faktur di tabel tbkeu_pembayaran_faktur
+     * @param int $idFaktur ID Faktur penjualan di tabel tbso_faktur_penjualan
+     * @param string $noFakturKonsinyasi Nomor faktur konsinyasi realisasi kios
+     * @return array [total_cogs, allocated_qty, allocations, is_existing]
+     */
+    public function allocate_fifo_consignment_cogs($kdBarang, $qtyToAllocate, $idPembayaran, $idFaktur, $noFakturKonsinyasi)
+    {
+        $this->ensure_schema();
+        $this->sync_lpb_consignment_batches();
+
+        $idPembayaran = (int)$idPembayaran;
+        $idFaktur = (int)$idFaktur;
+        $qtyToAllocate = (float)$qtyToAllocate;
+        $kdBarang = trim((string)$kdBarang);
+        $noFakturKonsinyasi = trim((string)$noFakturKonsinyasi);
+
+        // 1. Cek idempotency: jika alokasi untuk id_pembayaran ini sudah pernah dibuat sebelumnya
+        $existing = $this->db
+            ->where('id_pembayaran', $idPembayaran)
+            ->get('tb_konsinyasi_cogs_allocation')
+            ->result_array();
+
+        if (!empty($existing)) {
+            $totalCogs = 0.0;
+            $totalQty = 0.0;
+            foreach ($existing as $ex) {
+                $totalCogs += (float)$ex['subtotal_cogs'];
+                $totalQty += (float)$ex['qty_allocated'];
+            }
+            return [
+                'total_cogs'    => round($totalCogs, 2),
+                'allocated_qty' => $totalQty,
+                'allocations'   => $existing,
+                'is_existing'   => true
+            ];
+        }
+
+        if ($qtyToAllocate <= 0) {
+            return [
+                'total_cogs'    => 0.0,
+                'allocated_qty' => 0.0,
+                'allocations'   => [],
+                'is_existing'   => false
+            ];
+        }
+
+        // 2. Ambil batch LPB konsinyasi aktif yang masih memiliki sisa stok, diurutkan FIFO (paling awal masuk duluan)
+        $availableBatches = $this->db
+            ->where('kd_barang', $kdBarang)
+            ->where('qty_sisa >', 0)
+            ->order_by('tgl_lpb', 'ASC')
+            ->order_by('id_lpb', 'ASC')
+            ->order_by('id_batch_stock', 'ASC')
+            ->get('tb_konsinyasi_lpb_batch_stock')
+            ->result_array();
+
+        $needed = $qtyToAllocate;
+        $totalCogs = 0.0;
+        $allocations = [];
+
+        foreach ($availableBatches as $batch) {
+            if ($needed <= 0) {
+                break;
+            }
+
+            $avail = (float)$batch['qty_sisa'];
+            $take = min($avail, $needed);
+            $hrgBeli = (float)$batch['harga_beli_satuan'];
+            $subtotal = round($take * $hrgBeli, 2);
+
+            $newSisa = round($avail - $take, 3);
+            $newTerjual = round((float)$batch['qty_terjual'] + $take, 3);
+            $newStatus = ($newSisa <= 0) ? 'EXHAUSTED' : 'PARTIAL';
+
+            // Update saldo sisa stok pada batch LPB terkait
+            $this->db->where('id_batch_stock', (int)$batch['id_batch_stock'])->update('tb_konsinyasi_lpb_batch_stock', [
+                'qty_terjual' => $newTerjual,
+                'qty_sisa'    => $newSisa,
+                'status'      => $newStatus,
+                'updated_at'  => date('Y-m-d H:i:s')
+            ]);
+
+            // Catat jejak audit alokasi FIFO
+            $allocPayload = [
+                'id_pembayaran'        => $idPembayaran,
+                'id_faktur'            => $idFaktur,
+                'no_faktur_konsinyasi' => $noFakturKonsinyasi,
+                'id_batch_stock'       => (int)$batch['id_batch_stock'],
+                'id_lpb'               => (int)$batch['id_lpb'],
+                'nomor_lpb'            => $batch['nomor_lpb'],
+                'kd_barang'            => $kdBarang,
+                'no_lot'               => $batch['no_lot'],
+                'expired_date'         => $batch['expired_date'],
+                'qty_allocated'        => $take,
+                'harga_pokok_satuan'   => $hrgBeli,
+                'subtotal_cogs'        => $subtotal,
+                'created_at'           => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tb_konsinyasi_cogs_allocation', $allocPayload);
+            $allocPayload['id_cogs_alloc'] = $this->db->insert_id();
+
+            $allocations[] = $allocPayload;
+            $totalCogs += $subtotal;
+            $needed = round($needed - $take, 3);
+        }
+
+        // 3. Fallback jika kuantitas penjualan melebihi seluruh sisa stok batch LPB yang tersedia
+        if ($needed > 0) {
+            $lastBatch = !empty($availableBatches) ? end($availableBatches) : null;
+            $fallbackPrice = $lastBatch ? (float)$lastBatch['harga_beli_satuan'] : 0.0;
+            if ($fallbackPrice <= 0) {
+                $masterItem = $this->db->select('hrg_pokok')->where('kode_barang', $kdBarang)->get('tbpo_barang')->row_array();
+                $fallbackPrice = (float)($masterItem['hrg_pokok'] ?? 0);
+            }
+            $subtotalFallback = round($needed * $fallbackPrice, 2);
+            $totalCogs += $subtotalFallback;
+        }
+
+        return [
+            'total_cogs'    => round($totalCogs, 2),
+            'allocated_qty' => $qtyToAllocate,
+            'allocations'   => $allocations,
+            'is_existing'   => false
+        ];
+    }
+
+    /**
+     * Mengembalikan kuantitas batch LPB saat pembayaran konsinyasi di-unpost atau dibatalkan.
+     * Menjaga saldo stok batch LPB konsinyasi tetap sinkron dan presisi.
+     *
+     * @param int $idPembayaran ID Pembayaran faktur
+     */
+    public function revert_fifo_consignment_cogs($idPembayaran)
+    {
+        $idPembayaran = (int)$idPembayaran;
+        if ($idPembayaran <= 0 || !$this->db->table_exists('tb_konsinyasi_cogs_allocation')) {
+            return;
+        }
+
+        $allocations = $this->db
+            ->where('id_pembayaran', $idPembayaran)
+            ->get('tb_konsinyasi_cogs_allocation')
+            ->result_array();
+
+        if (empty($allocations)) {
+            return;
+        }
+
+        foreach ($allocations as $alloc) {
+            $batchId = (int)$alloc['id_batch_stock'];
+            $qtyAlloc = (float)$alloc['qty_allocated'];
+
+            $batch = $this->db->where('id_batch_stock', $batchId)->get('tb_konsinyasi_lpb_batch_stock')->row_array();
+            if ($batch) {
+                $restoredSisa = round((float)$batch['qty_sisa'] + $qtyAlloc, 3);
+                $restoredTerjual = max(0.0, round((float)$batch['qty_terjual'] - $qtyAlloc, 3));
+                $restoredStatus = ($restoredTerjual <= 0) ? 'AVAILABLE' : 'PARTIAL';
+
+                $this->db->where('id_batch_stock', $batchId)->update('tb_konsinyasi_lpb_batch_stock', [
+                    'qty_terjual' => $restoredTerjual,
+                    'qty_sisa'    => $restoredSisa,
+                    'status'      => $restoredStatus,
+                    'updated_at'  => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
+
+        // Hapus jejak alokasi untuk pembayaran yang dibatalkan
+        $this->db->where('id_pembayaran', $idPembayaran)->delete('tb_konsinyasi_cogs_allocation');
+    }
+
+    /**
+     * Mengaitkan ID Jurnal GOODS_ISSUE (HPP & Persediaan) ke jejak alokasi FIFO
+     *
+     * @param int $idPembayaran
+     * @param int $idJurnalGi
+     */
+    public function update_cogs_journal_id($idPembayaran, $idJurnalGi)
+    {
+        $idPembayaran = (int)$idPembayaran;
+        $idJurnalGi = (int)$idJurnalGi;
+        if ($idPembayaran <= 0 || $idJurnalGi <= 0 || !$this->db->table_exists('tb_konsinyasi_cogs_allocation')) {
+            return;
+        }
+
+        $this->db->where('id_pembayaran', $idPembayaran)->update('tb_konsinyasi_cogs_allocation', [
+            'id_jurnal_gi' => $idJurnalGi
+        ]);
     }
 }
 
