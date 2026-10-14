@@ -78,7 +78,7 @@ Tautan Halaman Terkait:
 
 3. **`application/views/content/purchasing/konsinyasi/settlement_list.php`**:
    - Mengubah 3 Summary Cards menjadi 4 Summary Cards di bagian atas halaman (1. Gdg. Konsinyasi, 2. Titipan di Kios, 3. Barang Laku, 4. Konsinyasi Lunas).
-   - Menambahkan kolom **4. Konsinyasi Lunas** pada tabel inventaris tracking posisi barang.
+   - Tabel inventaris tracking posisi barang berfokus pada stok aktif: **1. Gdg. Konsinyasi**, **2. Titipan di Kios**, dan **3. Barang Laku**, dengan total stok aktif.
    - Mengubah seluruh label dan tombol aksi **"Input Tagihan"** / **"Tagihan"** menjadi **"Lunasi"** (`<i class="fas fa-check-circle"></i> Lunasi`).
    - Memperbarui judul modal pelunasan menjadi **"Pelunasan Barang Konsinyasi ke Supplier"** dan tombol submit menjadi **"Lunasi & Posting Jurnal Pembelian"**.
    - Memperbarui teks opsi klik kanan baris tabel menjadi **"Lunasi Tagihan Supplier"**.

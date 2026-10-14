@@ -94,6 +94,10 @@ class C_Konsinyasi extends CI_Controller
             return;
         }
 
+        // Harga penjualan merupakan informasi Sales dan tidak boleh dikirim
+        // ke pengguna Purchasing, termasuk melalui respons AJAX detail.
+        unset($item['hrg_jual'], $item['subtotal_jual']);
+
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode(['status' => true, 'data' => $item]));
@@ -188,6 +192,11 @@ class C_Konsinyasi extends CI_Controller
         }
 
         $list = $this->M_Konsinyasi->get_tracking_kios_by_barang($kdBarang);
+
+        foreach ($list as &$row) {
+            unset($row['hrg_jual'], $row['subtotal_jual']);
+        }
+        unset($row);
 
         $this->output
             ->set_content_type('application/json')

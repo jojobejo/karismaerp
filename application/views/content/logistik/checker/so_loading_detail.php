@@ -197,7 +197,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                             <th>No Lot</th>
                                             <th>Expired Date</th>
                                             <th style="width: 140px;" class="text-right">Qty Siap</th>
-                                            <th style="width: 145px;" class="text-center">Qty Dimuat</th>
+                                            <th style="width: 230px;" class="text-center">Qty Dimuat</th>
                                             <th style="width: 80px;">Satuan</th>
                                             <th style="width: 120px;" class="text-center">Muat / Tidak</th>
                                         </tr>
@@ -213,9 +213,9 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                             $qty_aktual = $status_muat === 1 && $item['qty_checker_loaded'] !== null
                                                 ? (float)$item['qty_checker_loaded']
                                                 : $qty_maks_muat;
-                                            $qty_input = $isi_item > 1 ? $qty_aktual / $isi_item : $qty_aktual;
-                                            $qty_input_max = $isi_item > 1 ? $qty_maks_muat / $isi_item : $qty_maks_muat;
-                                            $unit_input = $isi_item > 1 ? 'box' : $item['satuan'];
+                                            $qty_box_input = $isi_item > 1 ? floor($qty_aktual / $isi_item) : 0;
+                                            $qty_pcs_input = $isi_item > 1 ? fmod($qty_aktual, $isi_item) : $qty_aktual;
+                                            $qty_box_max = $isi_item > 1 ? floor($qty_maks_muat / $isi_item) : 0;
                                         ?>
                                             <tr class="<?= $row_class ?>" id="row-<?= $item['id'] ?>">
                                                 <td class="text-center"><?= $no++ ?></td>
@@ -260,22 +260,52 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                     ?>
                                                 </td>
                                                 <td class="text-center">
-                                                    <div class="input-group input-group-sm">
-                                                        <input type="number"
-                                                               class="form-control text-right qty-loaded-input"
-                                                               id="qty-loaded-<?= (int)$item['id'] ?>"
-                                                               value="<?= rtrim(rtrim(number_format($qty_input, 3, '.', ''), '0'), '.') ?>"
-                                                               min="0"
-                                                               max="<?= number_format($qty_input_max, 3, '.', '') ?>"
-                                                               step="0.001"
-                                                               data-isi="<?= $isi_item ?>"
-                                                               <?= !$can_operate_loading ? 'disabled' : '' ?>>
-                                                        <div class="input-group-append">
-                                                            <span class="input-group-text"><?= htmlspecialchars($unit_input) ?></span>
-                                                        </div>
+                                                    <div class="qty-loaded-control"
+                                                         data-id="<?= (int)$item['id'] ?>"
+                                                         data-isi="<?= $isi_item ?>"
+                                                         data-max-pcs="<?= number_format($qty_maks_muat, 3, '.', '') ?>">
+                                                        <?php if ($isi_item > 1): ?>
+                                                            <div class="d-flex flex-nowrap justify-content-center">
+                                                                <div class="input-group input-group-sm mr-1" style="width: 105px;">
+                                                                    <input type="number"
+                                                                           class="form-control text-right qty-loaded-box"
+                                                                           value="<?= (int)$qty_box_input ?>"
+                                                                           min="0"
+                                                                           max="<?= (int)$qty_box_max ?>"
+                                                                           step="1"
+                                                                           <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                                    <div class="input-group-append"><span class="input-group-text">box</span></div>
+                                                                </div>
+                                                                <div class="input-group input-group-sm" style="width: 105px;">
+                                                                    <input type="number"
+                                                                           class="form-control text-right qty-loaded-pcs"
+                                                                           value="<?= rtrim(rtrim(number_format($qty_pcs_input, 3, '.', ''), '0'), '.') ?>"
+                                                                           min="0"
+                                                                           max="<?= $isi_item - 1 ?>"
+                                                                           step="1"
+                                                                           <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                                    <div class="input-group-append"><span class="input-group-text">pcs</span></div>
+                                                                </div>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <div class="input-group input-group-sm">
+                                                                <input type="number"
+                                                                       class="form-control text-right qty-loaded-pcs"
+                                                                       value="<?= rtrim(rtrim(number_format($qty_pcs_input, 3, '.', ''), '0'), '.') ?>"
+                                                                       min="0"
+                                                                       max="<?= number_format($qty_maks_muat, 3, '.', '') ?>"
+                                                                       step="0.001"
+                                                                       <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                                <div class="input-group-append"><span class="input-group-text"><?= htmlspecialchars($item['satuan']) ?></span></div>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     </div>
                                                     <small class="text-muted qty-loading-info" id="qty-info-<?= (int)$item['id'] ?>">
-                                                        Maks. <?= number_format($qty_input_max, 3, ',', '.') ?> <?= htmlspecialchars($unit_input) ?>
+                                                        <?php if ($isi_item > 1): ?>
+                                                            Maks. <?= (int)$qty_box_max ?> box<?= fmod($qty_maks_muat, $isi_item) > 0 ? ' + ' . rtrim(rtrim(number_format(fmod($qty_maks_muat, $isi_item), 3, ',', ''), '0'), ',') . ' pcs' : '' ?>
+                                                        <?php else: ?>
+                                                            Maks. <?= rtrim(rtrim(number_format($qty_maks_muat, 3, ',', ''), '0'), ',') ?> <?= htmlspecialchars($item['satuan']) ?>
+                                                        <?php endif; ?>
                                                     </small>
                                                 </td>
                                                 <td class="text-center"><?= htmlspecialchars($item['satuan']) ?></td>
@@ -442,14 +472,21 @@ $(document).ready(function() {
         var idDetail = btn.data('id');
         var action = btn.data('action'); // 1=dimuat, 2=tidak dimuat
         var row = $('#row-' + idDetail);
-        var qtyInput = $('#qty-loaded-' + idDetail);
-        var qtyDisplayed = parseFloat(qtyInput.val()) || 0;
-        var isiPerBox = parseFloat(qtyInput.data('isi')) || 1;
-        var qtyLoaded = action === 1 ? qtyDisplayed * isiPerBox : 0;
+        var qtyControl = row.find('.qty-loaded-control');
+        var isiPerBox = parseFloat(qtyControl.data('isi')) || 1;
+        var qtyMaxPcs = parseFloat(qtyControl.data('max-pcs')) || 0;
+        var qtyBox = parseFloat(qtyControl.find('.qty-loaded-box').val()) || 0;
+        var qtyPcs = parseFloat(qtyControl.find('.qty-loaded-pcs').val()) || 0;
+        var qtyLoaded = action === 1 ? (qtyBox * isiPerBox) + qtyPcs : 0;
 
         if (action === 1 && qtyLoaded <= 0) {
             alert('Qty dimuat harus lebih dari 0.');
-            qtyInput.focus();
+            qtyControl.find('input').first().focus();
+            return;
+        }
+        if (action === 1 && qtyLoaded > qtyMaxPcs + 0.001) {
+            alert('Qty dimuat tidak boleh melebihi qty siap.');
+            qtyControl.find('input').first().focus();
             return;
         }
 
@@ -477,10 +514,16 @@ $(document).ready(function() {
                     else if (action === 2) row.addClass('rejected-row');
 
                     if (action === 1) {
-                        var remainingDisplayed = (parseFloat(response.qty_remaining) || 0) / isiPerBox;
+                        var remainingPcs = parseFloat(response.qty_remaining) || 0;
+                        var remainingBox = isiPerBox > 1 ? Math.floor(remainingPcs / isiPerBox) : 0;
+                        var remainingUnit = isiPerBox > 1 ? remainingPcs - (remainingBox * isiPerBox) : remainingPcs;
+                        var remainingLabel = isiPerBox > 1
+                            ? (remainingBox > 0 ? remainingBox + ' box' : '') +
+                              (remainingUnit > 0 ? (remainingBox > 0 ? ' + ' : '') + remainingUnit.toLocaleString('id-ID') + ' pcs' : '')
+                            : remainingUnit.toLocaleString('id-ID');
                         $('#qty-info-' + idDetail).text(
-                            remainingDisplayed > 0
-                                ? 'Sisa tidak termuat: ' + remainingDisplayed.toLocaleString('id-ID') + ' ' + (isiPerBox > 1 ? 'box' : '')
+                            remainingPcs > 0
+                                ? 'Sisa tidak termuat: ' + remainingLabel
                                 : 'Seluruh qty siap dimuat'
                         );
                     }

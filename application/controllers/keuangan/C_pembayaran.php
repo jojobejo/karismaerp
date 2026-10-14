@@ -269,17 +269,7 @@ class C_pembayaran extends CI_Controller
         $data['akun_harta'] = $this->M_pembayaran->get_harta_accounts();
 
         // ── Data Barang Konsinyasi untuk Input Qty Pelunasan ────────
-        $is_konsinyasi = in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
-        if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
-            if ((int)$faktur['gudang_id'] === 13) {
-                $is_konsinyasi = true;
-            } else {
-                $gdg = $this->db->select('nama_gudang, tipe')->where('id_gudang', (int)$faktur['gudang_id'])->get('tb_gudang')->row();
-                if ($gdg && (stripos($gdg->nama_gudang, 'konsi') !== false || strtoupper((string)$gdg->tipe) === 'KONSINYASI')) {
-                    $is_konsinyasi = true;
-                }
-            }
-        }
+        $is_konsinyasi = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'K';
         $data['is_konsinyasi'] = $is_konsinyasi;
         $data['konsinyasi_items'] = [];
         $data['first_item'] = null;
@@ -511,17 +501,7 @@ class C_pembayaran extends CI_Controller
         $id_settlement_konsinyasi = (int)$this->input->post('id_settlement_konsinyasi', true);
 
         // Validasi khusus faktur konsinyasi: Qty yang dibeli harus valid
-        $is_konsinyasi = in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
-        if (!$is_konsinyasi && !empty($faktur['gudang_id'])) {
-            if ((int)$faktur['gudang_id'] === 13) {
-                $is_konsinyasi = true;
-            } else {
-                $gdg = $this->db->select('nama_gudang, tipe')->where('id_gudang', (int)$faktur['gudang_id'])->get('tb_gudang')->row();
-                if ($gdg && (stripos($gdg->nama_gudang, 'konsi') !== false || strtoupper((string)$gdg->tipe) === 'KONSINYASI')) {
-                    $is_konsinyasi = true;
-                }
-            }
-        }
+        $is_konsinyasi = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'K';
 
         if ($is_konsinyasi && $qty_konsinyasi <= 0 && $this->input->post('qty_konsinyasi') !== null) {
             $this->session->set_flashdata('error', 'Untuk faktur konsinyasi, Qty barang yang dibeli kios harus lebih dari 0.');

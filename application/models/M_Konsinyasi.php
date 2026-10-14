@@ -851,10 +851,12 @@ class M_Konsinyasi extends CI_Model
                 s.nomor_lpb_asal,
                 COALESCE(NULLIF(s.nomor_lpb_asal, ''), MAX(lpb.nomor_lpb)) AS lpb_no,
                 COALESCE(MAX(lpb.no_po), MAX(po.no_po)) AS po_no_po,
+                MAX(lpb.tgl_sj) AS tanggal_lpb_masuk,
                 s.kd_barang,
                 s.nama_barang,
                 s.no_lot,
                 MAX(s.expired_date) AS expired_date,
+                COALESCE(MAX(lpbd.qty_diterima), 0) AS qty_lpb_masuk,
                 SUM(s.qty_terjual) AS qty_terjual,
                 SUM(s.qty_retur) AS qty_retur,
                 SUM(s.qty_net) AS qty_net,
@@ -937,6 +939,8 @@ class M_Konsinyasi extends CI_Model
             j.nomor_jurnal,
             COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS lpb_no,
             COALESCE(lpb.no_po, po.no_po) AS po_no_po,
+            lpb.tgl_sj AS tanggal_lpb_masuk,
+            COALESCE(lpbd.qty_diterima, 0) AS qty_lpb_masuk,
             COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
             COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude,
             CASE 
@@ -1027,6 +1031,8 @@ class M_Konsinyasi extends CI_Model
                 COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS lpb_no,
                 COALESCE(NULLIF(s.nomor_lpb_asal, ''), lpb.nomor_lpb) AS nomor_lpb_asal,
                 COALESCE(lpb.no_po, po.no_po) AS po_no_po,
+                lpb.tgl_sj AS tanggal_lpb_masuk,
+                COALESCE(lpbd.qty_diterima, 0) AS qty_lpb_masuk,
                 CASE 
                     WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                     WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
@@ -1527,7 +1533,7 @@ class M_Konsinyasi extends CI_Model
             COALESCE(kios.jml_kios, 0) AS jml_kios,
             COALESCE(laku.stok_laku, 0) AS stok_laku,
             COALESCE(lunas.stok_lunas, 0) AS stok_lunas,
-            (COALESCE(gudang.stok_gudang, 0) + COALESCE(kios.stok_kios, 0) + COALESCE(laku.stok_laku, 0) + COALESCE(lunas.stok_lunas, 0)) AS total_stok
+            (COALESCE(gudang.stok_gudang, 0) + COALESCE(kios.stok_kios, 0) + COALESCE(laku.stok_laku, 0)) AS total_stok
         ", false);
 
         $this->db->from('tbpo_barang b');
@@ -1592,8 +1598,8 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->join('tbpo_suplier sup', 'sup.kd_suplier = b.kd_suplier', 'left');
 
-        // Filter hanya barang yang memiliki stok di salah satu posisi
-        $this->db->where("(COALESCE(gudang.stok_gudang, 0) > 0 OR COALESCE(kios.stok_kios, 0) > 0 OR COALESCE(laku.stok_laku, 0) > 0 OR COALESCE(lunas.stok_lunas, 0) > 0)", null, false);
+        // Filter hanya barang yang memiliki stok aktif di gudang, di kios, atau laku
+        $this->db->where("(COALESCE(gudang.stok_gudang, 0) > 0 OR COALESCE(kios.stok_kios, 0) > 0 OR COALESCE(laku.stok_laku, 0) > 0)", null, false);
 
         if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
             $kdSup = $this->db->escape(trim((string)$filters['kd_suplier']));
@@ -1645,8 +1651,6 @@ class M_Konsinyasi extends CI_Model
                 s.qty_terjual,
                 s.qty_net,
                 s.satuan,
-                s.hrg_jual,
-                s.subtotal_jual,
                 s.status,
                 s.no_invoice_supplier,
                 s.total_tagihan_beli
@@ -1686,7 +1690,6 @@ class M_Konsinyasi extends CI_Model
                     'no_lot'               => $r['no_lot'],
                     'expired_date'         => $r['expired_date'],
                     'satuan'               => $r['satuan'],
-                    'hrg_jual'             => (float)$r['hrg_jual'],
                     'qty_kios'             => 0.0,
                     'qty_laku'             => 0.0,
                     'qty_lunas'            => 0.0,

@@ -251,9 +251,6 @@
                                     <th class="py-3 text-right" style="background: #fff7ed; color: #c2410c;">
                                         <i class="fas fa-shopping-bag mr-1"></i> 3. Barang Laku
                                     </th>
-                                    <th class="py-3 text-right" style="background: #f0fdf4; color: #15803d;">
-                                        <i class="fas fa-check-double mr-1"></i> 4. Konsinyasi Lunas
-                                    </th>
                                     <th class="py-3 text-right" style="background: #f8fafc; font-weight: bold;">
                                         Total Stok
                                     </th>
@@ -263,7 +260,7 @@
                             <tbody>
                                 <?php if (empty($tracking_barang)): ?>
                                     <tr>
-                                        <td colspan="10" class="text-center py-5 text-muted">
+                                        <td colspan="9" class="text-center py-5 text-muted">
                                             <i class="fas fa-box-open fa-3x mb-3 text-black-50 d-block"></i>
                                             Tidak ada data barang konsinyasi yang ditemukan pada filter ini.
                                         </td>
@@ -306,11 +303,6 @@
                                             <td class="text-right" style="background: #fffaf5;">
                                                 <span class="badge px-2 py-1 font-weight-bold" style="background: #ffedd5; color: #c2410c; font-size: 0.90rem;">
                                                     <?= number_format($tb['stok_laku'], 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
-                                                </span>
-                                            </td>
-                                            <td class="text-right" style="background: #f6fef9;">
-                                                <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 0.90rem;">
-                                                    <?= number_format($tb['stok_lunas'] ?? 0, 2) ?> <?= htmlspecialchars($tb['satuan']) ?>
                                                 </span>
                                             </td>
                                             <td class="text-right font-weight-bold text-dark" style="background: #f8fafc; font-size: 0.95rem;">
@@ -553,23 +545,22 @@
                                 <thead style="background: #f1f5f9; color: #334155;">
                                     <tr>
                                         <th class="py-3 px-3">No. Settlement</th>
-                                        <th class="py-3">Tgl Penjualan/Laku</th>
+                                        <th class="py-3">Tanggal LPB Masuk</th>
                                         <th class="py-3">Supplier Konsinyasi</th>
-                                        <th class="py-3">Lokasi Kios / Pembeli</th>
                                         <th class="py-3">Barang &amp; Batch/Lot</th>
                                         <th class="py-3">Asal LPB &amp; PO</th>
+                                        <th class="py-3 text-right" style="background: #fff7ed; color: #9a3412;">Qty LPB Masuk</th>
                                         <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku (Dibeli Kios)</th>
                                         <th class="py-3 text-right" style="background: #eff6ff; color: #1e40af;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>
-                                        <th class="py-3 text-right">Harga Jual Kios</th>
                                         <th class="py-3 text-center">Status</th>
                                         <th class="py-3">Tagihan Beli Supplier</th>
-                                        <th class="py-3 text-center" style="width: 170px;">Aksi</th>
+                                        <th class="py-3 text-center" style="width: 210px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($settlements)): ?>
                                         <tr>
-                                            <td colspan="12" class="text-center py-5 text-muted">
+                                            <td colspan="11" class="text-center py-5 text-muted">
                                                 <i class="fas fa-shopping-bag fa-3x mb-3 text-black-50 d-block"></i>
                                                 Tidak ada data barang konsinyasi laku pada filter ini.
                                             </td>
@@ -590,17 +581,15 @@
                                                             <i class="fas fa-layer-group mr-1"></i><?= (int)$s['total_gabungan_transaksi'] ?>x Penjualan Laku
                                                         </span>
                                                     <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?= date('d/m/Y', strtotime($s['tanggal_settlement'])) ?>
-                                                </td>
+                                            </td>
+                                            <td>
+                                                <?= !empty($s['tanggal_lpb_masuk']) && $s['tanggal_lpb_masuk'] !== '0000-00-00'
+                                                    ? date('d/m/Y', strtotime($s['tanggal_lpb_masuk']))
+                                                    : '-' ?>
+                                            </td>
                                                 <td>
                                                     <strong class="text-dark"><?= htmlspecialchars($s['nama_suplier']) ?></strong>
                                                 <br><small class="text-muted">Kode: <?= htmlspecialchars($s['kd_suplier']) ?></small>
-                                            </td>
-                                            <td>
-                                                <span class="font-weight-bold text-dark"><i class="fas fa-store text-warning mr-1"></i><?= htmlspecialchars($s['customer_name']) ?></span>
-                                                <br><small class="text-muted">SO: <?= htmlspecialchars($s['no_so'] ?: '-') ?></small>
                                             </td>
                                             <td>
                                                 <strong class="text-dark"><?= htmlspecialchars($s['nama_barang']) ?></strong>
@@ -611,6 +600,9 @@
                                                     <i class="fas fa-barcode mr-1"></i><?= htmlspecialchars($s['lpb_no'] ?: ($s['nomor_lpb_asal'] ?: '-')) ?>
                                                 </span>
                                                 <br><small class="text-muted"><i class="fas fa-file-invoice mr-1 text-secondary"></i>PO: <strong class="text-dark"><?= htmlspecialchars($s['po_no_po'] ?: '-') ?></strong></small>
+                                            </td>
+                                            <td class="text-right font-weight-bold" style="background: #fffaf5; color: #9a3412; font-size: 0.95rem;">
+                                                <?= number_format((float)($s['qty_lpb_masuk'] ?? 0), 2) ?> <?= htmlspecialchars($s['satuan']) ?>
                                             </td>
                                             <td class="text-right font-weight-bold text-success" style="background: #fdfefe; font-size: 0.95rem;">
                                                 <?= number_format($s['qty_net'], 2) ?> <?= htmlspecialchars($s['satuan']) ?>
@@ -627,9 +619,6 @@
                                                 <?php else: ?>
                                                     <span class="badge badge-primary-light text-primary font-weight-bold" style="background:#dbeafe; font-size:0.75rem;">Exc. PPN</span>
                                                 <?php endif; ?>
-                                            </td>
-                                            <td class="text-right text-muted">
-                                                Rp <?= number_format($s['hrg_jual'], 2) ?>
                                             </td>
                                             <td class="text-center">
                                                 <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
@@ -672,9 +661,14 @@
                                             </td>
                                             <td class="text-center">
                                                 <?php if ($s['status'] === 'LAKU' || $s['status'] === 'PENDING'): ?>
-                                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm btnProcessSettlement px-3" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>, '<?= htmlspecialchars($s['all_settlement_ids'] ?? (string)$s['id_settlement']) ?>')" title="Lunasi Barang Konsinyasi ke Supplier (Posting Jurnal Pembelian)">
-                                                        <i class="fas fa-check-circle mr-1"></i> Lunasi
-                                                    </button>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-primary font-weight-bold shadow-sm btnProcessSettlement px-3" id="btn-settle-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalInputTagihan(<?= (int) $s['id_settlement'] ?>, '<?= htmlspecialchars($s['all_settlement_ids'] ?? (string)$s['id_settlement']) ?>')" title="Lunasi Barang Konsinyasi ke Supplier (Posting Jurnal Pembelian)">
+                                                            <i class="fas fa-check-circle mr-1"></i> Lunasi
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat lokasi kios, harga jual, dan informasi lengkap">
+                                                            <i class="fas fa-eye mr-1"></i> Detail
+                                                        </button>
+                                                    </div>
                                                 <?php else: ?>
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>)" title="<?= empty($s['no_invoice_supplier']) ? 'Input Faktur/Invoice Supplier' : 'Update Faktur/Invoice Supplier' ?>">
@@ -1276,7 +1270,6 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 html += '<th class="py-2 text-right" style="background:#854d0e; color:#fff;"><i class="fas fa-store mr-1"></i>Qty di Kios</th>';
                 html += '<th class="py-2 text-right" style="background:#166534; color:#fff;"><i class="fas fa-shopping-bag mr-1"></i>Qty Laku</th>';
                 html += '<th class="py-2 text-right" style="background:#1e3a8a; color:#fff;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>';
-                html += '<th class="py-2 text-right">Harga Jual Kios</th>';
                 html += '<th class="py-2 text-center" style="width:130px;">Status</th>';
                 html += '</tr></thead><tbody>';
 
@@ -1317,7 +1310,6 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                     html += '<td class="text-right font-weight-bold ' + (qtyKios > 0 ? 'text-warning' : 'text-muted') + '" style="font-size:0.95rem;">' + qtyKios.toFixed(2) + ' <small class="text-dark">' + (r.satuan || '') + '</small></td>';
                     html += '<td class="text-right font-weight-bold ' + (qtyLaku > 0 ? 'text-success' : 'text-muted') + '" style="font-size:0.95rem;">' + qtyLaku.toFixed(2) + ' <small class="text-dark">' + (r.satuan || '') + '</small></td>';
                     html += '<td class="text-right" style="background:#f8faff;"><strong class="text-primary" style="font-size:0.95rem;">' + fmt(r.po_hrg_satuan) + '</strong><br><span class="badge badge-light border text-muted" style="font-size:0.75rem;">' + (r.po_tipe_pajak || 'EXCLUDE') + '</span></td>';
-                    html += '<td class="text-right text-muted">' + fmt(r.hrg_jual) + '</td>';
                     html += '<td class="text-center">' + badge + '</td>';
                     html += '</tr>';
                 });
@@ -1327,7 +1319,7 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 html += '<td colspan="5" class="text-right py-2 font-weight-bold">TOTAL TITIPAN &amp; LAKU DI KIOS:</td>';
                 html += '<td class="text-right text-warning py-2" style="font-size:0.95rem;">' + grandQtyKios.toFixed(2) + ' ' + grandSatuan + '</td>';
                 html += '<td class="text-right text-success py-2" style="font-size:0.95rem;">' + grandQtyLaku.toFixed(2) + ' ' + grandSatuan + '</td>';
-                html += '<td colspan="3" class="text-muted small py-2 font-italic text-center">Total Kirim ke Kios: ' + grandQtyTotal.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<td colspan="2" class="text-muted small py-2 font-italic text-center">Total Kirim ke Kios: ' + grandQtyTotal.toFixed(2) + ' ' + grandSatuan + '</td>';
                 html += '</tr></tfoot>';
                 html += '</table></div>';
                 $('#modalTrackingKiosBody').html(html);
@@ -1371,13 +1363,14 @@ window.openModalDetailSettlement = function(id) {
                 html += '<tr><td class="text-muted">Barang:</td><td class="font-weight-bold">' + (d.nama_barang || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. Lot / Batch:</td><td>' + (d.no_lot || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">LPB Asal:</td><td><span class="badge badge-primary font-weight-bold px-2 py-1"><i class="fas fa-barcode mr-1"></i>' + (d.nomor_lpb_asal || d.lpb_no || '-') + '</span></td></tr>';
+                html += '<tr><td class="text-muted">Tanggal LPB Masuk:</td><td>' + (d.tanggal_lpb_masuk ? new Date(d.tanggal_lpb_masuk).toLocaleDateString("id-ID", {day:"2-digit",month:"long",year:"numeric"}) : '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">Referensi PO:</td><td><strong class="text-dark">' + (d.po_no_po || '-') + '</strong></td></tr>';
+                html += '<tr><td class="text-muted">Qty LPB Masuk:</td><td class="font-weight-bold text-warning">' + parseFloat(d.qty_lpb_masuk || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
                 html += '<tr><td class="text-muted">Harga ketika PO:</td><td class="font-weight-bold text-primary">' + fmt(d.po_hrg_satuan) + ' (' + (d.po_tipe_pajak || 'EXCLUDE') + ')</td></tr>';
                 html += '<tr><td class="text-muted">Customer / Kios:</td><td>' + (d.customer_name || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. SO:</td><td>' + (d.no_so || '-') + '</td></tr>';
                 html += '<tr><td class="text-muted">No. Faktur K:</td><td><strong class="text-primary">' + (d.no_faktur || '-') + '</strong></td></tr>';
                 html += '<tr><td class="text-muted">Qty Terjual:</td><td class="font-weight-bold text-success">' + parseFloat(d.qty_net || 0).toFixed(2) + ' ' + (d.satuan || '') + '</td></tr>';
-                html += '<tr><td class="text-muted">Harga Jual Kios:</td><td>' + fmt(d.hrg_jual) + ' / ' + (d.satuan || 'pcs') + '</td></tr>';
                 html += '</table>';
                 html += '</div></div>';
                 html += '</div>';

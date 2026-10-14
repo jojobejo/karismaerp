@@ -1868,7 +1868,7 @@ class M_SalesOrder extends CI_Model
         }
 
         // ── Perhitungan Jurnal & Simpan ke Database ────────────────
-        $is_konsinyasi = $this->is_gudang_konsinyasi($gudang_id) || in_array(strtoupper(substr($no_faktur, 0, 1)), ['K', 'T'], true);
+        $is_konsinyasi = $this->is_gudang_konsinyasi($gudang_id) || strtoupper(substr($no_faktur, 0, 1)) === 'K';
         $journal = null;
 
         if (!$is_konsinyasi) {
@@ -2495,7 +2495,7 @@ class M_SalesOrder extends CI_Model
             }
             $div_factor = 1 + ($tax_rate / 100);
 
-            $is_konsinyasi = $this->is_gudang_konsinyasi($faktur['gudang_id'] ?? null) || in_array(strtoupper(substr($faktur['no_faktur'], 0, 1)), ['K', 'T'], true);
+            $is_konsinyasi = $this->is_gudang_konsinyasi($faktur['gudang_id'] ?? null) || strtoupper(substr($faktur['no_faktur'], 0, 1)) === 'K';
             if (!$is_konsinyasi) {
                 $jurnal_piutang = round($total_nilai_pesanan);
                 $jurnal_penjualan = round($jurnal_piutang / $div_factor);

@@ -24,7 +24,7 @@ class Accounting_source_service
         }
 
         // Faktur barang konsinyasi (kode berawalan 'K' atau 'T') tidak dijurnal saat penerbitan faktur
-        if (in_array(strtoupper(substr($noFaktur, 0, 1)), ['K', 'T'], true)) {
+        if (strtoupper(substr($noFaktur, 0, 1)) === 'K') {
             return [
                 'success' => true,
                 'message' => 'Faktur konsinyasi tidak dijurnal otomatis saat penerbitan faktur.',
