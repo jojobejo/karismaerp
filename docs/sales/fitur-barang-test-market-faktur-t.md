@@ -26,6 +26,30 @@ Telah ditambahkan kolom flag `is_test_market` pada dua tabel utama:
    - Kolom: `is_test_market TINYINT(1) NOT NULL DEFAULT 0` (setelah `cara_pembayaran`).
    - Berisi status penanda faktur test market sehingga saat pembayaran di Keuangan dikenali secara tepat.
 
+Migrasi database tersedia pada `db/migrations/20261015_add_test_market_sales.sql`. Controller juga memeriksa keberadaan kedua kolom sebelum form SO atau faktur digunakan agar instalasi yang belum menjalankan migrasi tidak menghilangkan pilihan Test Market secara diam-diam.
+
+### Tracking Titipan di Kios
+
+Tracking operasional menggunakan gudang virtual terpisah bernama **Gdg. Test Market di Kios**. Gudang ini tidak digabung dengan **Gdg. Titipan di Kios** milik alur Faktur K karena Test Market merupakan persediaan milik Karisma dan tidak menimbulkan settlement atau hutang kepada supplier konsinyasi.
+
+Migrasi `db/migrations/20261015_test_market_tracking.sql` menyediakan:
+
+1. Master gudang virtual Test Market.
+2. Tabel `tb_test_market_position` untuk saldo per faktur, kios, barang, lot, dan expired date.
+3. Tabel `tb_test_market_realisasi` untuk barang dan qty yang dibeli kios pada setiap pembayaran.
+4. Kolom referensi item dan qty realisasi pada `tbkeu_pembayaran_faktur`.
+
+Alur stoknya adalah:
+
+1. Saat Faktur T diterbitkan, stok keluar dari Gudang Induk dan masuk ke Gdg. Test Market di Kios.
+2. Posisi awal dicatat sebagai `qty_titip` dan `qty_sisa`.
+3. Saat pembayaran, petugas memilih barang dan mengisi qty yang dibeli kios.
+4. Sistem mengurangi `qty_sisa`, menambah `qty_terjual`, dan mengeluarkan stok dari gudang virtual.
+5. Jika pembayaran di-unpost, qty dan stok virtual dikembalikan ke posisi titipan.
+6. Faktur T tidak pernah dimasukkan ke `tb_konsinyasi_settlement` atau alokasi FIFO konsinyasi supplier.
+
+Halaman monitoring tersedia melalui menu **Test Market** di dashboard atau URL `/test-market`. Ringkasan utama hanya menampilkan jumlah di kios, jumlah dibeli kios, dan sisa di kios. Informasi operasional dipisahkan menjadi dua tab: **Barang Test Market di Kios** untuk rekap posisi per barang dan **Barang yang Sudah Dibeli Kios** untuk riwayat realisasi pembelian. Kedua tab menggunakan pagination server-side sebanyak 20 data per halaman dengan parameter halaman terpisah. Daftar posisi dikelompokkan berdasarkan barang serta menampilkan jumlah kios dan faktur. Nama barang dapat diklik untuk menuju halaman detail tersendiri. Halaman detail menampilkan ringkasan jumlah dititipkan, laku/dibeli, sisa dan nilai laku; posisi barang per kios; rincian faktur, lot, expired; serta riwayat transaksi barang yang sudah dibeli kios. Filter kios serta status dari halaman rekap ikut diterapkan pada halaman detail.
+
 ---
 
 ## 3. Alur Operasional (Step-by-Step)

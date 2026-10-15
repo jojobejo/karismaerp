@@ -1059,7 +1059,86 @@ class M_Konsinyasi extends CI_Model
         }
 
         $this->db->order_by('s.id_settlement', 'DESC');
-        return $this->db->get()->result_array();
+        $rows = $this->db->get()->result_array();
+        if ($statusFilter === 'BILLED') {
+            return $this->group_billed_settlement_rows($rows);
+        }
+        return $rows;
+    }
+
+    /**
+     * Menggabungkan riwayat lunas berdasarkan LPB, barang, dan lot yang sama.
+     */
+    private function group_billed_settlement_rows(array $rows)
+    {
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $originKey = !empty($row['id_lpb_asal'])
+                ? 'ID-' . (int)$row['id_lpb_asal']
+                : (!empty($row['nomor_lpb_asal']) ? 'NO-' . $row['nomor_lpb_asal'] : 'SET-' . (int)$row['id_settlement']);
+            $groupKey = implode('|', [
+                $originKey,
+                (string)$row['kd_suplier'],
+                (string)$row['kd_barang'],
+                (string)($row['no_lot'] ?? ''),
+            ]);
+
+            if (!isset($grouped[$groupKey])) {
+                $grouped[$groupKey] = $row;
+                $grouped[$groupKey]['qty_net'] = 0;
+                $grouped[$groupKey]['qty_terjual'] = 0;
+                $grouped[$groupKey]['subtotal_jual'] = 0;
+                $grouped[$groupKey]['subtotal_beli'] = 0;
+                $grouped[$groupKey]['nilai_ppn'] = 0;
+                $grouped[$groupKey]['total_tagihan_beli'] = 0;
+                $grouped[$groupKey]['_ids'] = [];
+                $grouped[$groupKey]['_settlements'] = [];
+                $grouped[$groupKey]['_customers'] = [];
+                $grouped[$groupKey]['_sales_orders'] = [];
+                $grouped[$groupKey]['_invoices'] = [];
+                $grouped[$groupKey]['_supplier_invoices'] = [];
+                $grouped[$groupKey]['_journals'] = [];
+            }
+
+            $grouped[$groupKey]['qty_net'] += (float)($row['qty_net'] ?? 0);
+            $grouped[$groupKey]['qty_terjual'] += (float)($row['qty_terjual'] ?? 0);
+            $grouped[$groupKey]['subtotal_jual'] += (float)($row['subtotal_jual'] ?? 0);
+            $grouped[$groupKey]['subtotal_beli'] += (float)($row['subtotal_beli'] ?? 0);
+            $grouped[$groupKey]['nilai_ppn'] += (float)($row['nilai_ppn'] ?? 0);
+            $grouped[$groupKey]['total_tagihan_beli'] += (float)($row['total_tagihan_beli'] ?? 0);
+            $grouped[$groupKey]['_ids'][] = (int)$row['id_settlement'];
+            $grouped[$groupKey]['_settlements'][] = $row['no_settlement'];
+            if (!empty($row['customer_name'])) $grouped[$groupKey]['_customers'][] = $row['customer_name'];
+            if (!empty($row['no_so'])) $grouped[$groupKey]['_sales_orders'][] = $row['no_so'];
+            if (!empty($row['no_faktur'])) $grouped[$groupKey]['_invoices'][] = $row['no_faktur'];
+            if (!empty($row['no_invoice_supplier'])) $grouped[$groupKey]['_supplier_invoices'][] = $row['no_invoice_supplier'];
+            if (!empty($row['nomor_jurnal'])) $grouped[$groupKey]['_journals'][] = $row['nomor_jurnal'];
+        }
+
+        foreach ($grouped as &$row) {
+            $row['all_settlement_ids'] = implode(',', array_unique($row['_ids']));
+            $row['all_settlement_numbers'] = implode(', ', array_unique($row['_settlements']));
+            $row['total_gabungan_transaksi'] = count(array_unique($row['_ids']));
+            $row['customer_name'] = implode(', ', array_unique($row['_customers']));
+            $row['no_so'] = implode(', ', array_unique($row['_sales_orders']));
+            $row['no_faktur'] = implode(', ', array_unique($row['_invoices']));
+            $row['no_invoice_supplier'] = implode(', ', array_unique($row['_supplier_invoices']));
+            $row['nomor_jurnal'] = implode(', ', array_unique($row['_journals']));
+            $row['status'] = 'BILLED';
+            unset(
+                $row['_ids'],
+                $row['_settlements'],
+                $row['_customers'],
+                $row['_sales_orders'],
+                $row['_invoices'],
+                $row['_supplier_invoices'],
+                $row['_journals']
+            );
+        }
+        unset($row);
+
+        return array_values($grouped);
     }
 
     /**
@@ -1151,6 +1230,9 @@ class M_Konsinyasi extends CI_Model
 
         $totalQtyNet = 0.0;
         $totalQtyTerjual = 0.0;
+        $totalSubtotalBeli = 0.0;
+        $totalNilaiPpn = 0.0;
+        $totalTagihan = 0.0;
         $allSo = [];
         $allFaktur = [];
         $allCustomer = [];
@@ -1158,6 +1240,9 @@ class M_Konsinyasi extends CI_Model
         foreach ($rows as $r) {
             $totalQtyNet += (float)$r['qty_net'];
             $totalQtyTerjual += (float)$r['qty_terjual'];
+            $totalSubtotalBeli += (float)$r['subtotal_beli'];
+            $totalNilaiPpn += (float)$r['nilai_ppn'];
+            $totalTagihan += (float)$r['total_tagihan_beli'];
             if (!empty($r['no_so'])) $allSo[] = $r['no_so'];
             if (!empty($r['no_faktur'])) $allFaktur[] = $r['no_faktur'];
             if (!empty($r['customer_name'])) $allCustomer[] = $r['customer_name'];
@@ -1166,6 +1251,9 @@ class M_Konsinyasi extends CI_Model
         $base['all_settlement_ids'] = implode(',', $ids);
         $base['qty_net'] = $totalQtyNet;
         $base['qty_terjual'] = $totalQtyTerjual;
+        $base['subtotal_beli'] = $totalSubtotalBeli;
+        $base['nilai_ppn'] = $totalNilaiPpn;
+        $base['total_tagihan_beli'] = $totalTagihan;
         $base['total_gabungan_transaksi'] = count($rows);
         if (!empty($allCustomer)) {
             $base['customer_name'] = implode(', ', array_unique($allCustomer));
@@ -1513,6 +1601,65 @@ class M_Konsinyasi extends CI_Model
     }
 
     /**
+     * Memperbarui satu invoice supplier untuk seluruh settlement lunas dalam kelompok LPB/barang/lot.
+     */
+    public function update_invoice_supplier_batch($idSettlement, array $ids, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING')
+    {
+        $primary = $this->db->get_where('tb_konsinyasi_settlement', ['id_settlement' => (int)$idSettlement])->row_array();
+        if (!$primary || $primary['status'] !== 'BILLED') {
+            return ['status' => false, 'message' => 'Data settlement lunas tidak ditemukan.'];
+        }
+
+        $this->db->where('status', 'BILLED')
+            ->where('kd_suplier', $primary['kd_suplier'])
+            ->where('kd_barang', $primary['kd_barang']);
+        if (!empty($primary['id_lpb_asal'])) {
+            $this->db->where('id_lpb_asal', (int)$primary['id_lpb_asal']);
+        } elseif (!empty($primary['nomor_lpb_asal'])) {
+            $this->db->where('nomor_lpb_asal', $primary['nomor_lpb_asal']);
+        } else {
+            $this->db->where('id_settlement', (int)$idSettlement);
+        }
+        if (trim((string)($primary['no_lot'] ?? '')) === '') {
+            $this->db->group_start()->where('no_lot IS NULL', null, false)->or_where('no_lot', '')->group_end();
+        } else {
+            $this->db->where('no_lot', $primary['no_lot']);
+        }
+        $rows = $this->db->get('tb_konsinyasi_settlement')->result_array();
+        $validIds = array_map(static function ($row) {
+            return (int)$row['id_settlement'];
+        }, $rows);
+        if (empty($validIds)) {
+            return ['status' => false, 'message' => 'Kelompok settlement lunas tidak valid.'];
+        }
+
+        $this->db->trans_begin();
+        $this->db->where_in('id_settlement', $validIds)->update('tb_konsinyasi_settlement', [
+            'no_invoice_supplier'  => $noInvoice,
+            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d'),
+        ]);
+
+        foreach ($rows as $row) {
+            if (!in_array((int)$row['id_settlement'], $validIds, true) || empty($row['id_jurnal_pembelian'])) {
+                continue;
+            }
+            $keterangan = 'Pembelian Konsinyasi: ' . $row['nama_barang'] . ' (' . (float)$row['qty_net'] . ' ' . $row['satuan'] . '), Supplier: ' . $row['nama_suplier'] . ' [Inv: ' . $noInvoice . ']';
+            $this->db->where('id_jurnal', (int)$row['id_jurnal_pembelian'])->update('tbkeu_jurnal', ['keterangan' => $keterangan]);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Gagal memperbarui invoice supplier pada kelompok settlement.'];
+        }
+        $this->db->trans_commit();
+
+        return [
+            'status' => true,
+            'message' => 'Invoice supplier ' . $noInvoice . ' berhasil diterapkan ke ' . count($validIds) . ' transaksi dalam satu kelompok LPB.',
+        ];
+    }
+
+    /**
      * Ringkasan global tracking posisi barang konsinyasi:
      * 1. Total di Gudang Konsinyasi (Stok fisik konsinyasi sebelum dikirim ke kios)
      * 2. Total di Kios (Barang yang sudah difakturkan ke kios tapi belum laku/dibeli)
@@ -1819,7 +1966,7 @@ class M_Konsinyasi extends CI_Model
         }
         $pending = $this->db->get('tb_konsinyasi_settlement')->row_array();
 
-        $this->db->select('COUNT(*) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(total_tagihan_beli), 0) as total_hutang');
+        $this->db->select("COUNT(DISTINCT CONCAT(COALESCE(NULLIF(CAST(id_lpb_asal AS CHAR), ''), NULLIF(nomor_lpb_asal, ''), CONCAT('SET-', id_settlement)), '|', kd_suplier, '|', kd_barang, '|', COALESCE(no_lot, ''))) as total_item, COALESCE(SUM(qty_net), 0) as total_qty, COALESCE(SUM(total_tagihan_beli), 0) as total_hutang", false);
         $this->db->where('status', 'BILLED');
         if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
             $this->db->where('kd_suplier', trim((string) $filters['kd_suplier']));

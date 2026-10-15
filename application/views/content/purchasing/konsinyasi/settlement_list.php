@@ -329,6 +329,28 @@
             <!-- TABEL PENYELESAIAN TAGIHAN KONSINYASI (BARANG LAKU) -->
             <!-- ========================================================================= -->
             <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; overflow: hidden;">
+                <?php
+                    $exportParams = http_build_query([
+                        'kd_suplier' => $filters['kd_suplier'],
+                        'date_from'   => $filters['date_from'],
+                        'date_to'     => $filters['date_to'],
+                        'search'      => $filters['search'],
+                    ]);
+                ?>
+                <div class="d-flex justify-content-between align-items-center flex-wrap px-3 py-3 bg-white border-bottom">
+                    <div>
+                        <h6 class="mb-0 font-weight-bold text-dark"><i class="fas fa-file-excel text-success mr-2"></i>Export Data Konsinyasi</h6>
+                        <small class="text-muted">File Excel mengikuti filter supplier, periode, dan pencarian yang aktif.</small>
+                    </div>
+                    <div class="btn-group mt-2 mt-md-0">
+                        <a href="<?= site_url('purchasing/konsinyasi/export-barang-laku') . '?' . $exportParams ?>" class="btn btn-warning font-weight-bold" title="Export barang laku yang menunggu pelunasan">
+                            <i class="fas fa-file-export mr-1"></i> Export Barang Laku
+                        </a>
+                        <a href="<?= site_url('purchasing/konsinyasi/export-riwayat-lunas') . '?' . $exportParams ?>" class="btn btn-success font-weight-bold" title="Export riwayat barang konsinyasi yang sudah lunas">
+                            <i class="fas fa-file-export mr-1"></i> Export Riwayat Barang Lunas
+                        </a>
+                    </div>
+                </div>
                 <!-- Sub-tab filter status settlement -->
                 <div class="d-flex border-bottom bg-white" style="border-radius: 12px 12px 0 0;">
                     <?php 
@@ -387,7 +409,7 @@
                                 <small class="text-muted">Pilih supplier untuk membuka rincian barang laku dan memproses pelunasan / pembuatan tagihan pembelian.</small>
                             </div>
                             <span class="badge badge-warning text-dark font-weight-bold px-3 py-2" style="font-size: 0.85rem; border-radius: 8px;">
-                                <i class="fas fa-boxes mr-1"></i> Total: <?= count($laku_suppliers ?? []) ?> Supplier
+                                <i class="fas fa-boxes mr-1"></i> Total: <?= (int)($settlement_pagination['total_rows'] ?? count($laku_suppliers ?? [])) ?> Supplier
                             </span>
                         </div>
                     </div>
@@ -535,7 +557,7 @@
                                 <?php endif; ?>
                             </h6>
                             <span class="badge badge-light border text-muted px-2 py-1">
-                                Total: <?= count($settlements) ?> Transaksi
+                                Total: <?= (int)($settlement_pagination['total_rows'] ?? count($settlements)) ?> Transaksi
                             </span>
                         </div>
                     </div>
@@ -552,7 +574,7 @@
                                         <th class="py-3">Barang &amp; Batch/Lot</th>
                                         <th class="py-3">Asal LPB &amp; PO</th>
                                         <th class="py-3 text-right" style="background: #fff7ed; color: #9a3412;">Qty LPB Masuk</th>
-                                        <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku (Dibeli Kios)</th>
+                                        <th class="py-3 text-right" style="background: #f0fdf4; color: #166534;">Qty Laku</th>
                                         <th class="py-3 text-right" style="background: #fef2f2; color: #991b1b;" title="Sisa kuantitas barang dari LPB penerimaan yang belum laku / belum dilunasi ke supplier">
                                             <i class="fas fa-hourglass-half mr-1 text-danger"></i>Sisa Belum Lunas
                                         </th>
@@ -571,9 +593,13 @@
                                             </td>
                                         </tr>
                                     <?php else: ?>
-                                        <?php foreach ($settlements as $s): ?>
+                                        <?php foreach ($settlements as $s):
+                                            $groupSettlementIds = $s['all_settlement_ids'] ?? (string)$s['id_settlement'];
+                                            $groupSettlementIdsEscaped = htmlspecialchars($groupSettlementIds, ENT_QUOTES, 'UTF-8');
+                                        ?>
                                             <tr class="context-settlement-row" 
                                                 data-id="<?= (int) $s['id_settlement'] ?>" 
+                                                data-all-ids="<?= $groupSettlementIdsEscaped ?>"
                                                 data-status="<?= htmlspecialchars($s['status']) ?>"
                                                 data-no-settle="<?= htmlspecialchars($s['no_settlement']) ?>"
                                                 data-has-journal="<?= (!empty($s['id_jurnal_pembelian']) || !empty($s['nomor_jurnal'])) ? '1' : '0' ?>"
@@ -582,8 +608,8 @@
                                                 <td class="px-3 font-weight-bold text-primary">
                                                     <?= htmlspecialchars($s['no_settlement']) ?>
                                                     <?php if (!empty($s['total_gabungan_transaksi']) && (int)$s['total_gabungan_transaksi'] > 1): ?>
-                                                        <br><span class="badge badge-light border text-primary mt-1" style="font-size: 0.75rem;" title="<?= (int)$s['total_gabungan_transaksi'] ?>x transaksi penjualan laku diakumulasikan">
-                                                            <i class="fas fa-layer-group mr-1"></i><?= (int)$s['total_gabungan_transaksi'] ?>x Penjualan Laku
+                                                        <br><span class="badge badge-light border text-primary mt-1" style="font-size: 0.75rem;" title="<?= (int)$s['total_gabungan_transaksi'] ?> transaksi dalam LPB, barang, dan lot yang sama">
+                                                            <i class="fas fa-layer-group mr-1"></i><?= (int)$s['total_gabungan_transaksi'] ?>x <?= $s['status'] === 'BILLED' ? 'Pelunasan Digabung' : 'Penjualan Laku' ?>
                                                         </span>
                                                     <?php endif; ?>
                                             </td>
@@ -643,17 +669,17 @@
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ((float)$s['qty_net'] > 0): ?>
+                                                <?php if ($s['status'] === 'BILLED'): ?>
+                                                    <span class="badge badge-success px-2 py-1 shadow-xs">
+                                                        <i class="fas fa-check-double mr-1"></i> Lunas
+                                                    </span>
+                                                <?php elseif ((float)$s['qty_net'] > 0): ?>
                                                     <span class="badge badge-warning text-dark px-2 py-1 shadow-xs">
                                                         <i class="fas fa-shopping-bag mr-1"></i> Barang Laku
                                                     </span>
                                                 <?php elseif ((float)($s['qty_sisa_belum_lunas'] ?? 0) > 0): ?>
                                                     <span class="badge badge-info text-white px-2 py-1 shadow-xs" title="Barang laku sebelumnya sudah dilunasi, sisa barang masih sebagai titipan di kios">
                                                         <i class="fas fa-store mr-1"></i> Sisa di Kios
-                                                    </span>
-                                                <?php elseif ($s['status'] === 'BILLED'): ?>
-                                                    <span class="badge badge-success px-2 py-1 shadow-xs">
-                                                        <i class="fas fa-check-double mr-1"></i> Lunas
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="badge badge-secondary px-2 py-1">
@@ -672,14 +698,17 @@
                                                         <?php else: ?>
                                                             <span class="badge badge-secondary ml-1">Non-PPN</span>
                                                         <?php endif; ?>
-                                                        <br><span class="text-dark">Inv: <?= !empty($s['no_invoice_supplier']) ? htmlspecialchars($s['no_invoice_supplier']) : '<span class="badge badge-warning text-dark font-weight-bold" style="cursor:pointer;" onclick="openModalUpdateInvoice(' . (int)$s['id_settlement'] . ')" title="Klik untuk input nomor faktur supplier"><i class="fas fa-exclamation-circle mr-1"></i>Belum Ada Inv (Klik Input)</span>' ?></span>
+                                                        <br><span class="text-dark">Inv:
+                                                            <?php if (!empty($s['no_invoice_supplier'])): ?>
+                                                                <?= htmlspecialchars($s['no_invoice_supplier']) ?>
+                                                            <?php else: ?>
+                                                                <span class="badge badge-warning text-dark font-weight-bold" style="cursor:pointer;" onclick="openModalUpdateInvoice(<?= (int)$s['id_settlement'] ?>, '<?= $groupSettlementIdsEscaped ?>')" title="Input satu invoice untuk seluruh transaksi dalam kelompok LPB ini"><i class="fas fa-exclamation-circle mr-1"></i>Belum Ada Inv (Klik Input)</span>
+                                                            <?php endif; ?>
+                                                        </span>
                                                         <?php if (!empty($s['tgl_invoice_supplier'])): ?>
                                                             <br><small class="text-muted"><i class="far fa-calendar-alt mr-1"></i>Tgl Inv: <?= date('d/m/Y', strtotime($s['tgl_invoice_supplier'])) ?></small>
                                                         <?php endif; ?>
                                                         <br><span class="text-muted">DPP: Rp <?= number_format($s['subtotal_beli'], 2) ?> | PPN: Rp <?= number_format($s['nilai_ppn'], 2) ?></span>
-                                                        <?php if (!empty($s['nomor_jurnal'])): ?>
-                                                            <br><a href="javascript:void(0)" class="badge badge-info mt-1 py-1 px-2 text-white shadow-xs" onclick="openModalViewJournal(<?= (int) $s['id_settlement'] ?>)" title="Klik untuk lihat voucher jurnal (Bisa juga Klik Kanan baris ini)"><i class="fas fa-book mr-1"></i><?= htmlspecialchars($s['nomor_jurnal']) ?></a>
-                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <span class="text-muted small font-italic">Menunggu nota/faktur dari supplier</span>
@@ -708,12 +737,9 @@
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     <div class="btn-group btn-group-sm">
-                                                        <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>)" title="<?= empty($s['no_invoice_supplier']) ? 'Input Faktur/Invoice Supplier' : 'Update Faktur/Invoice Supplier' ?>">
+                                                        <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>, '<?= $groupSettlementIdsEscaped ?>')" title="<?= empty($s['no_invoice_supplier']) ? 'Input satu invoice untuk kelompok LPB' : 'Update invoice seluruh kelompok LPB' ?>">
                                                             <i class="fas fa-file-invoice mr-1"></i> <?= empty($s['no_invoice_supplier']) ? 'Input Inv' : 'Edit Inv' ?>
                                                         </button>
-                                                        <a href="<?= site_url('purchasing/konsinyasi/print_faktur/' . (int) $s['id_settlement']) ?>" target="_blank" class="btn btn-outline-secondary font-weight-bold shadow-xs" title="Cetak Faktur Realisasi Penjualan Konsinyasi untuk Supplier">
-                                                            <i class="fas fa-print"></i>
-                                                        </a>
                                                         <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat Detail Settlement">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
@@ -731,6 +757,17 @@
                     </div>
                 </div>
                 <?php endif; // Akhir dari percabangan isTabLakuAllSuppliers ?>
+                <?php $this->load->view('content/purchasing/konsinyasi/pagination', [
+                    'pagination' => $settlement_pagination ?? [],
+                    'query_params' => [
+                        'tab'         => 'penyelesaian',
+                        'status'      => $filters['status'],
+                        'kd_suplier' => $filters['kd_suplier'],
+                        'date_from'   => $filters['date_from'],
+                        'date_to'     => $filters['date_to'],
+                        'search'      => $filters['search'],
+                    ],
+                ]); ?>
             </div>
             <?php endif; // Akhir dari tab tracking / penyelesaian ?>
 
@@ -956,6 +993,7 @@
             </div>
             <form id="formUpdateInvoice">
                 <input type="hidden" name="id_settlement" id="upd_id_settlement">
+                <input type="hidden" name="all_settlement_ids" id="upd_all_settlement_ids">
                 <div class="modal-body p-4">
                     <!-- Ringkasan Info Transaksi -->
                     <div class="p-3 mb-3 bg-light rounded border">
@@ -1007,7 +1045,7 @@
                     </div>
 
                     <div class="alert alert-info py-2 px-3 small mb-0">
-                        <i class="fas fa-info-circle mr-1"></i> Menyimpan nomor faktur ini akan otomatis memperbarui data settlement dan menyinkronkan keterangan voucher jurnal pembelian.
+                        <i class="fas fa-info-circle mr-1"></i> Nomor faktur akan diterapkan sekaligus ke seluruh transaksi lunas dengan LPB, barang, dan lot yang sama, serta menyinkronkan voucher jurnal pembelian.
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
@@ -1121,6 +1159,7 @@ var currentQtyNet = 0;
 var currentSatuan = '';
 var selectedContextId = null;
 var selectedContextStatus = null;
+var selectedContextAllIds = null;
 
 // Fungsi kalkulasi rincian live
 window.calculateSettlementLive = function() {
@@ -1676,12 +1715,14 @@ $(document).ready(function() {
         var $tr = $(this);
         var id = $tr.data('id');
         var status = $tr.data('status');
+        var allIds = $tr.data('all-ids');
         var noSettle = $tr.data('no-settle');
         var hasJournal = $tr.data('has-journal');
         var noJurnal = $tr.data('no-jurnal');
 
         selectedContextId = id;
         selectedContextStatus = status;
+        selectedContextAllIds = allIds || id;
 
         // Atur header context menu
         $('#ctxMenuHeader').html('<i class="fas fa-receipt mr-1 text-primary"></i> ' + (noSettle || 'Opsi'));
@@ -1860,18 +1901,24 @@ $(document).ready(function() {
 /**
  * Global function membuka Modal Update Invoice Supplier
  */
-window.openModalUpdateInvoice = function(id) {
+window.openModalUpdateInvoice = function(id, allIds) {
     if (!id) return;
+    var allSettlementIds = allIds || id;
     $.ajax({
         url: '<?= site_url("purchasing/konsinyasi/ajax_detail") ?>',
         type: 'GET',
-        data: { id_settlement: id },
+        data: { id_settlement: id, all_ids: allSettlementIds },
         dataType: 'json',
         success: function(res) {
             if (res && res.status && res.data) {
                 var d = res.data;
                 $('#upd_id_settlement').val(d.id_settlement);
-                $('#upd_txt_no_settle').text(d.no_settlement || '-');
+                $('#upd_all_settlement_ids').val(d.all_settlement_ids || allSettlementIds);
+                var settlementLabel = d.no_settlement || '-';
+                if (parseInt(d.total_gabungan_transaksi || 0, 10) > 1) {
+                    settlementLabel += ' (' + d.total_gabungan_transaksi + ' transaksi digabung)';
+                }
+                $('#upd_txt_no_settle').text(settlementLabel);
                 $('#upd_txt_nama_barang').text(d.nama_barang || '-');
                 $('#upd_txt_nama_suplier').text(d.nama_suplier || '-');
                 $('#upd_txt_qty').text((parseFloat(d.qty_net || 0).toFixed(2)) + ' ' + (d.satuan || ''));
@@ -1902,7 +1949,7 @@ window.openModalUpdateInvoice = function(id) {
 window.ctxTriggerUpdateInvoice = function() {
     $('#settlementContextMenu').hide();
     if (selectedContextId) {
-        window.openModalUpdateInvoice(selectedContextId);
+        window.openModalUpdateInvoice(selectedContextId, selectedContextAllIds);
     }
 };
 

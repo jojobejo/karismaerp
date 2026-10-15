@@ -207,7 +207,11 @@ $route['keuangan/pembayaran/ajax_delete_pembayaran'] = 'keuangan/C_pembayaran/aj
 $route['keuangan/pembayaran/print_bukti/(:any)']     = 'keuangan/C_pembayaran/print_bukti/$1';
 $route['keuangan/pembayaran/print_bukti']            = 'keuangan/C_pembayaran/print_bukti';
 $route['keuangan/pembayaran/print_faktur_konsinyasi/(:num)'] = 'keuangan/C_pembayaran/print_faktur_konsinyasi/$1';
+$route['test-market']                                = 'sales/C_TestMarket/index';
+$route['test-market/barang/(:any)']                  = 'sales/C_TestMarket/detail_barang/$1';
 $route['purchasing/konsinyasi/print_faktur/(:num)']  = 'purchasing/C_Konsinyasi/print_faktur/$1';
+$route['purchasing/konsinyasi/export-barang-laku']   = 'purchasing/C_Konsinyasi/export_barang_laku';
+$route['purchasing/konsinyasi/export-riwayat-lunas'] = 'purchasing/C_Konsinyasi/export_riwayat_lunas';
 $route['purchasing/konsinyasi']                      = 'purchasing/C_Konsinyasi/index';
 $route['purchasing/konsinyasi/(:any)']               = 'purchasing/C_Konsinyasi/$1';
 $route['laporan']                                   = 'keuangan/C_Laporan/index';
@@ -1155,6 +1159,8 @@ $route['purchasing/konsinyasi/ajax_detail']                  = 'purchasing/C_Kon
 $route['purchasing/konsinyasi/ajax_post_settlement']         = 'purchasing/C_Konsinyasi/ajax_post_settlement';
 $route['purchasing/konsinyasi/ajax_sync']                    = 'purchasing/C_Konsinyasi/ajax_sync';
 $route['purchasing/konsinyasi/ajax_view_journal']            = 'purchasing/C_Konsinyasi/ajax_view_journal';
+$route['purchasing/konsinyasi/export-barang-laku']            = 'purchasing/C_Konsinyasi/export_barang_laku';
+$route['purchasing/konsinyasi/export-riwayat-lunas']          = 'purchasing/C_Konsinyasi/export_riwayat_lunas';
 $route['purchasing/konsinyasi/(:any)']                       = 'purchasing/C_Konsinyasi/$1';
 
 // Backward-compat: URL lama tetap berfungsi

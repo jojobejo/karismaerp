@@ -241,12 +241,13 @@ $default_metode = '';
                                             <th>Metode</th>
                                             <th>Status</th>
                                             <th>BG Cair</th>
+                                            <?php if (!empty($is_realisasi_barang)): ?><th>Barang Dibeli</th><?php endif; ?>
                                             <th class="text-right">Jumlah</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($history)): ?>
-                                            <tr><td colspan="5" class="text-center text-muted py-3">Belum ada pembayaran.</td></tr>
+                                            <tr><td colspan="<?= !empty($is_realisasi_barang) ? 6 : 5 ?>" class="text-center text-muted py-3">Belum ada pembayaran.</td></tr>
                                         <?php else: ?>
                                             <?php foreach ($history as $row): ?>
                                                 <?php
@@ -287,6 +288,14 @@ $default_metode = '';
                                                             <br><small class="text-muted">Dikonfirmasi <?= date('d/m/Y H:i', strtotime($row['bg_cair_at'])) ?></small>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <?php if (!empty($is_realisasi_barang)): ?>
+                                                        <td>
+                                                            <?= html_escape($row['kd_barang'] ?: '-') ?>
+                                                            <?php if ((float)($row['qty_realisasi'] ?? $row['qty_konsinyasi'] ?? 0) > 0): ?>
+                                                                <br><strong><?= number_format((float)($row['qty_realisasi'] ?? $row['qty_konsinyasi']), 3, ',', '.') ?></strong>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    <?php endif; ?>
                                                     <td class="text-right">
                                                         Rp <?= number_format((float)$row['jumlah_pembayaran'], 0, ',', '.') ?>
                                                         <?php if ((float)($row['jumlah_diskon'] ?? 0) > 0): ?>
@@ -397,15 +406,16 @@ $default_metode = '';
                                         <input type="date" name="tanggal_pembayaran" class="form-control" required
                                                value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_pembayaran']) : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d'))) ?>">
                                     </div>
-                                     <?php if (!empty($is_konsinyasi) && !empty($konsinyasi_items)): ?>
-                                        <!-- Hidden Inputs untuk Kode Barang & Settlement ID Konsinyasi -->
+                                     <?php if (!empty($is_realisasi_barang) && !empty($konsinyasi_items)): ?>
+                                        <!-- Identitas barang yang direalisasikan pada pembayaran kios -->
                                         <input type="hidden" name="kd_barang_konsinyasi" id="kd_barang_konsinyasi" value="<?= htmlspecialchars($first_item['kd_barang'] ?? '') ?>">
                                         <input type="hidden" name="id_settlement_konsinyasi" id="id_settlement_konsinyasi" value="<?= (int)($first_item['id_settlement'] ?? 0) ?>">
+                                        <input type="hidden" name="id_faktur_detail_realisasi" id="id_faktur_detail_realisasi" value="<?= (int)($first_item['id'] ?? 0) ?>">
 
                                          <div class="form-group">
                                             <label>Pilih Barang yang Dibeli Kios <span class="text-danger">*</span></label>
                                             <select name="select_barang_konsinyasi" id="select_barang_konsinyasi" class="form-control font-weight-bold" required>
-                                                <option value="" data-kd="" data-nama="" data-lot="" data-harga="0" data-qty-kios="0" data-satuan="" data-settlement="">-- Pilih Barang Konsinyasi yang Dibeli --</option>
+                                                <option value="" data-kd="" data-detail="" data-nama="" data-lot="" data-harga="0" data-qty-kios="0" data-satuan="" data-settlement="">-- Pilih Barang yang Dibeli --</option>
                                                 <?php foreach ($konsinyasi_items as $kIdx => $kItem): ?>
                                                     <?php
                                                     $it_kd = htmlspecialchars($kItem['kd_barang']);
@@ -419,6 +429,7 @@ $default_metode = '';
                                                     ?>
                                                     <option value="<?= $it_kd ?>"
                                                             data-kd="<?= $it_kd ?>"
+                                                            data-detail="<?= (int)($kItem['id'] ?? 0) ?>"
                                                             data-nama="<?= $it_nama ?>"
                                                             data-lot="<?= $it_lot ?>"
                                                             data-harga="<?= $it_harga ?>"
@@ -471,7 +482,7 @@ $default_metode = '';
                                             $sisa_non_bg = max(0, (float)$faktur['sisa_tagihan'] - $bg_pending_total);
                                             $raw_bayar = ($sisa_non_bg > 0) ? $sisa_non_bg : (float)$faktur['sisa_tagihan'];
                                         }
-                                        if (!empty($is_konsinyasi)) {
+                                        if (!empty($is_realisasi_barang)) {
                                             $raw_bayar = 0;
                                         }
                                         $display_bayar = number_format($raw_bayar, 0, ',', '.');
@@ -836,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ── Logika Sinkronisasi Qty Konsinyasi <-> Jumlah Pembayaran ──
-    <?php if (!empty($is_konsinyasi) && !empty($konsinyasi_items)): ?>
+    <?php if (!empty($is_realisasi_barang) && !empty($konsinyasi_items)): ?>
     var selectBarangKonsinyasi = document.getElementById('select_barang_konsinyasi');
     var qtyInput = document.getElementById('qty_konsinyasi');
     var hrgSatuanKonsinyasi = 0;
@@ -870,6 +881,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var kdInput = document.getElementById('kd_barang_konsinyasi');
         if (kdInput) kdInput.value = kd;
+        var detailInput = document.getElementById('id_faktur_detail_realisasi');
+        if (detailInput) detailInput.value = opt.getAttribute('data-detail') || '';
         var stlInput = document.getElementById('id_settlement_konsinyasi');
         if (stlInput) stlInput.value = idSettlement;
 
@@ -960,7 +973,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var form = document.getElementById('formPembayaran');
     if (form) {
         form.addEventListener('submit', function(e) {
-            <?php if (!empty($is_konsinyasi)): ?>
+            <?php if (!empty($is_realisasi_barang)): ?>
             if (selectBarangKonsinyasi && (!selectBarangKonsinyasi.value || selectBarangKonsinyasi.selectedIndex <= 0)) {
                 e.preventDefault();
                 alert('❌ Silakan pilih barang konsinyasi yang dibeli oleh kios terlebih dahulu!');

@@ -10,6 +10,9 @@ class M_pembayaran extends CI_Model
         parent::__construct();
         $this->_rename_legacy_payment_table();
         $this->_ensure_payment_table();
+        // Dimuat sebelum transaksi pembayaran agar inisialisasi skema tracking
+        // Test Market tidak menjalankan DDL di tengah transaksi.
+        $this->load->model('M_TestMarket');
         $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur MODIFY COLUMN metode_pembayaran VARCHAR(100) NULL");
     }
 
@@ -49,6 +52,18 @@ class M_pembayaran extends CI_Model
                     'constraint' => 11,
                     'null'       => true,
                     'after'      => 'kd_barang',
+                ],
+                'id_faktur_detail' => [
+                    'type'       => 'INT',
+                    'constraint' => 11,
+                    'null'       => true,
+                    'after'      => 'id_settlement',
+                ],
+                'qty_realisasi' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '15,3',
+                    'null'       => true,
+                    'after'      => 'id_faktur_detail',
                 ],
                 'tanggal_bg_cair' => [
                     'type'  => 'DATE',
@@ -329,6 +344,9 @@ class M_pembayaran extends CI_Model
         $cara_pembayaran_select = $this->db->field_exists('cara_pembayaran', 'tbso_faktur_penjualan')
             ? "COALESCE(f.cara_pembayaran, '') AS cara_pembayaran"
             : "'' AS cara_pembayaran";
+        $is_test_market_select = $this->db->field_exists('is_test_market', 'tbso_faktur_penjualan')
+            ? 'f.is_test_market'
+            : '0 AS is_test_market';
 
         $this->db->select("
             f.id_faktur,
@@ -336,6 +354,7 @@ class M_pembayaran extends CI_Model
             f.id_so,
             f.no_so,
             f.gudang_id,
+            {$is_test_market_select},
             f.kd_customer,
             COALESCE(NULLIF(f.customer_name, ''), c.nama_customer, '-') AS nama_customer,
             c.nama_kios,
@@ -588,6 +607,10 @@ class M_pembayaran extends CI_Model
         $is_pending_kasir = (($data['status_kasir'] ?? 'valid') === 'pending_kasir');
 
         if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            if (!$this->_realize_test_market_payment($id_pembayaran, $data)) {
+                $this->db->trans_rollback();
+                return false;
+            }
             $this->load->model('M_Journal');
             $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $data);
             $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
@@ -607,6 +630,7 @@ class M_pembayaran extends CI_Model
 
     public function mark_bg_cair($id_pembayaran, $user, $update_data = [])
     {
+        $this->db->trans_start();
         $this->db->where('id_pembayaran', (int)$id_pembayaran);
         $payload = array_merge($update_data, [
             'status_bg'  => 'cair',
@@ -618,13 +642,17 @@ class M_pembayaran extends CI_Model
         if ($success) {
             $payment = $this->get_payment($id_pembayaran);
             if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                if (!$this->_realize_test_market_payment($id_pembayaran, $payment)) {
+                    $this->db->trans_rollback();
+                    return false;
+                }
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
         }
-
-        return $success;
+        $this->db->trans_complete();
+        return $success && $this->db->trans_status();
     }
 
     /**
@@ -731,6 +759,7 @@ class M_pembayaran extends CI_Model
 
     public function approve_kasir_payment($id_pembayaran, $user)
     {
+        $this->db->trans_start();
         $this->db->where('id_pembayaran', (int)$id_pembayaran);
         $success = $this->db->update($this->payment_table, [
             'status_kasir' => 'valid',
@@ -741,12 +770,17 @@ class M_pembayaran extends CI_Model
         if ($success) {
             $payment = $this->get_payment($id_pembayaran);
             if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                if (!$this->_realize_test_market_payment($id_pembayaran, $payment)) {
+                    $this->db->trans_rollback();
+                    return false;
+                }
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
         }
-        return $success;
+        $this->db->trans_complete();
+        return $success && $this->db->trans_status();
     }
 
     /**
@@ -849,10 +883,11 @@ class M_pembayaran extends CI_Model
             // Pembayaran konsinyasi dapat sekaligus menerbitkan jurnal realisasi
             // penjualan. Jurnal tersebut ikut dibatalkan bersama pembayarannya.
             $this->db->where('source_module', 'SALES')
-                ->where('source_type', 'FAKTUR_PENJUALAN_KONSINYASI')
+                ->where_in('source_type', ['FAKTUR_PENJUALAN_KONSINYASI', 'FAKTUR_PENJUALAN_TEST_MARKET'])
                 ->group_start()
                     ->where('source_id', ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
                     ->or_where('idempotency_key', 'SALES_INVOICE-KONSINYASI-' . ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
+                    ->or_where('idempotency_key', 'SALES_INVOICE-TESTMARKET-' . ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
                 ->group_end()
                 ->update('tbkeu_jurnal', [
                     'status'      => 'DRAFT',
@@ -952,6 +987,12 @@ class M_pembayaran extends CI_Model
             $this->M_Konsinyasi->revert_fifo_consignment_cogs($id_pembayaran);
         }
 
+        // Kembalikan barang Test Market ke posisi titipan kios.
+        if (!$this->_reverse_test_market_payment($id_pembayaran)) {
+            $this->db->trans_rollback();
+            return ['success' => false, 'message' => 'Gagal mengembalikan posisi barang Test Market.'];
+        }
+
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === false) {
@@ -1000,6 +1041,10 @@ class M_pembayaran extends CI_Model
         $is_pending_kasir = (($payment['status_kasir'] ?? '') === 'pending_kasir');
 
         if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal')) {
+            if (!$this->_realize_test_market_payment($id_pembayaran, $payment)) {
+                $this->db->trans_rollback();
+                return ['success' => false, 'message' => 'Qty Test Market tidak valid atau melebihi sisa barang di kios.'];
+            }
             $user_id = (int)($this->session->userdata('id_karyawan') 
                 ?: $this->session->userdata('id') 
                 ?: $this->session->userdata('id_user') 
@@ -1025,6 +1070,16 @@ class M_pembayaran extends CI_Model
                 $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
                 $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
             }
+
+            $this->db->where('source_module', 'SALES')
+                ->where_in('source_type', ['FAKTUR_PENJUALAN_KONSINYASI', 'FAKTUR_PENJUALAN_TEST_MARKET'])
+                ->where('source_id', ($payment['no_faktur'] ?? '') . '-' . $id_pembayaran)
+                ->update('tbkeu_jurnal', [
+                    'status'     => 'POSTED',
+                    'posted_by'  => $user_id > 0 ? $user_id : null,
+                    'posted_at'  => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
         }
 
         // 3. Restore Plafon Customer
@@ -1172,6 +1227,10 @@ class M_pembayaran extends CI_Model
         $is_pending_kasir = (($data['status_kasir'] ?? 'valid') === 'pending_kasir');
 
         if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            if (!$this->_realize_test_market_payment($id_pembayaran, $data)) {
+                $this->db->trans_rollback();
+                return false;
+            }
             $this->load->model('M_Journal');
             // Hapus jurnal lama jika pernah ada agar tidak duplikat
             $old_journal = $this->db->where('source_module', 'KEUANGAN')
@@ -1192,6 +1251,16 @@ class M_pembayaran extends CI_Model
 
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    private function _realize_test_market_payment($id_pembayaran, array $payment)
+    {
+        return $this->M_TestMarket->realize_payment((int)$id_pembayaran, $payment);
+    }
+
+    private function _reverse_test_market_payment($id_pembayaran)
+    {
+        return $this->M_TestMarket->reverse_payment((int)$id_pembayaran);
     }
 
     /**
@@ -1230,7 +1299,7 @@ class M_pembayaran extends CI_Model
                     ->group_end()
                     ->or_group_start()
                         ->where('source_module', 'SALES')
-                        ->where('source_type', 'FAKTUR_PENJUALAN_KONSINYASI')
+                        ->where_in('source_type', ['FAKTUR_PENJUALAN_KONSINYASI', 'FAKTUR_PENJUALAN_TEST_MARKET'])
                         ->where('source_id', $salesSourceId)
                     ->group_end()
                 ->group_end()

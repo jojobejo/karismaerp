@@ -7,6 +7,7 @@ class C_pembayaran extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_pembayaran');
+        $this->load->model('M_TestMarket');
         $this->load->library(['session', 'form_validation']);
         $this->load->helper(['url', 'form']);
         $this->load->database();
@@ -270,7 +271,10 @@ class C_pembayaran extends CI_Controller
 
         // ── Data Barang Konsinyasi untuk Input Qty Pelunasan ────────
         $is_konsinyasi = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'K';
+        $is_test_market = !empty($faktur['is_test_market']) || strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'T';
         $data['is_konsinyasi'] = $is_konsinyasi;
+        $data['is_test_market'] = $is_test_market;
+        $data['is_realisasi_barang'] = $is_konsinyasi || $is_test_market;
         $data['konsinyasi_items'] = [];
         $data['first_item'] = null;
 
@@ -407,6 +411,31 @@ class C_pembayaran extends CI_Controller
             $data['first_item'] = $first_available ?: (!empty($k_items) ? $k_items[0] : null);
         }
 
+        if ($is_test_market) {
+            $tmItems = $this->M_TestMarket->get_payment_items((int)$faktur['id_faktur']);
+            foreach ($tmItems as &$item) {
+                $item['id'] = (int)$item['id_faktur_detail'];
+                $item['qty_di_kios'] = (float)$item['qty_sisa'];
+                $item['qty_laku'] = (float)$item['qty_terjual'];
+                $item['hrg_satuan'] = (float)$item['harga_jual'];
+                $item['id_settlement'] = 0;
+                $item['b_nama_barang'] = $item['nama_barang'];
+                $item['b_satuan'] = $item['satuan'];
+            }
+            unset($item);
+            $data['konsinyasi_items'] = $tmItems;
+            $data['first_item'] = null;
+            foreach ($tmItems as $item) {
+                if ((float)$item['qty_sisa'] > 0) {
+                    $data['first_item'] = $item;
+                    break;
+                }
+            }
+            if (!$data['first_item'] && !empty($tmItems)) {
+                $data['first_item'] = $tmItems[0];
+            }
+        }
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -499,13 +528,33 @@ class C_pembayaran extends CI_Controller
         $qty_konsinyasi = (float)$this->input->post('qty_konsinyasi', true);
         $kd_barang_konsinyasi = trim((string)$this->input->post('kd_barang_konsinyasi', true));
         $id_settlement_konsinyasi = (int)$this->input->post('id_settlement_konsinyasi', true);
+        $id_faktur_detail_realisasi = (int)$this->input->post('id_faktur_detail_realisasi', true);
 
         // Validasi khusus faktur konsinyasi: Qty yang dibeli harus valid
         $is_konsinyasi = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'K';
+        $is_test_market = !empty($faktur['is_test_market']) || strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'T';
+        $is_realisasi_barang = $is_konsinyasi || $is_test_market;
 
-        if ($is_konsinyasi && $qty_konsinyasi <= 0 && $this->input->post('qty_konsinyasi') !== null) {
-            $this->session->set_flashdata('error', 'Untuk faktur konsinyasi, Qty barang yang dibeli kios harus lebih dari 0.');
+        if ($is_realisasi_barang && $qty_konsinyasi <= 0) {
+            $this->session->set_flashdata('error', 'Qty barang yang dibeli kios harus lebih dari 0.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+            return;
+        }
+
+        if ($is_test_market) {
+            $position = $this->M_TestMarket->get_position($id_faktur_detail_realisasi, (int)$faktur['id_faktur']);
+            if (!$position || $qty_konsinyasi > (float)$position['qty_sisa'] + 0.0001) {
+                $this->session->set_flashdata('error', 'Barang Test Market tidak valid atau qty melebihi sisa titipan di kios.');
+                redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+                return;
+            }
+            $kd_barang_konsinyasi = $position['kd_barang'];
+            $nilaiRealisasi = round($qty_konsinyasi * (float)$position['harga_jual'], 2);
+            if (abs(($jumlah_pembayaran + $jumlah_diskon) - $nilaiRealisasi) > 1) {
+                $this->session->set_flashdata('error', 'Jumlah pembayaran dan diskon harus sesuai dengan qty barang Test Market yang dibeli kios.');
+                redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+                return;
+            }
         }
 
         $no_faktur_konsinyasi = null;
@@ -525,9 +574,11 @@ class C_pembayaran extends CI_Controller
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
-            'qty_konsinyasi'      => ($is_konsinyasi && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
-            'kd_barang'           => ($is_konsinyasi && !empty($kd_barang_konsinyasi)) ? $kd_barang_konsinyasi : null,
+            'qty_konsinyasi'      => ($is_realisasi_barang && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
+            'kd_barang'           => ($is_realisasi_barang && !empty($kd_barang_konsinyasi)) ? $kd_barang_konsinyasi : null,
             'id_settlement'       => ($is_konsinyasi && $id_settlement_konsinyasi > 0) ? $id_settlement_konsinyasi : null,
+            'id_faktur_detail'    => ($is_realisasi_barang && $id_faktur_detail_realisasi > 0) ? $id_faktur_detail_realisasi : null,
+            'qty_realisasi'       => ($is_realisasi_barang && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
             'no_bg'               => $no_bg !== '' ? $no_bg : null,
             'nama_bank'           => $nama_bank !== '' ? $nama_bank : null,
@@ -762,6 +813,11 @@ class C_pembayaran extends CI_Controller
     public function kasir_bayar($id_faktur = null)
     {
         $faktur = $this->_get_valid_faktur_kasir($id_faktur, true);
+        if (!empty($faktur['is_test_market']) || strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'T') {
+            $this->session->set_flashdata('warning', 'Pembayaran Test Market harus memilih barang dan qty yang dibeli kios.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+            return;
+        }
 
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN CASH KASIR';
         $data['faktur'] = $faktur;
@@ -776,6 +832,11 @@ class C_pembayaran extends CI_Controller
     public function kasir_simpan($id_faktur = null)
     {
         $faktur = $this->_get_valid_faktur_kasir($id_faktur);
+        if (!empty($faktur['is_test_market']) || strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'T') {
+            $this->session->set_flashdata('warning', 'Pembayaran Test Market harus memilih barang dan qty yang dibeli kios.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+            return;
+        }
 
         $this->form_validation->set_rules('tanggal_pembayaran', 'Tanggal Pembayaran', 'required');
         $this->form_validation->set_rules('jumlah_pembayaran', 'Jumlah Pembayaran', 'required');

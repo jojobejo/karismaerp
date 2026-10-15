@@ -227,6 +227,12 @@ class C_Laporan extends CI_Controller
             ->limit(1)->get()->row_array();
         $id_wh_konsinyasi_lunas = $wh_konsinyasi_lunas ? (int)$wh_konsinyasi_lunas['id_gudang'] : 15;
 
+        $wh_test_market = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->where('nama_gudang', 'Gdg. Test Market di Kios')
+            ->limit(1)->get()->row_array();
+        $id_wh_test_market = $wh_test_market ? (int)$wh_test_market['id_gudang'] : null;
+
         // Ambil master gudang aktif
         $warehouses_raw = $this->db->get_where('tb_gudang', ['is_active' => 1])->result_array();
         $warehouses_map = [];
@@ -335,7 +341,57 @@ class C_Laporan extends CI_Controller
             "($sql_faktur)"
         ];
 
-        // 4. Query Retur Pembelian (Keluar) jika tabel ada
+        // 4. Arus khusus Test Market pada gudang virtual di kios.
+        // Faktur T memindahkan posisi stok ke kios, sedangkan realisasi
+        // pembayaran mengeluarkan qty yang benar-benar dibeli oleh kios.
+        if ($id_wh_test_market
+            && (!$wh_target_id || $wh_target_id === $id_wh_test_market)
+            && $this->db->table_exists('tb_test_market_position')) {
+            $sql_test_market_in = "SELECT
+                                p.kd_barang,
+                                {$id_wh_test_market} AS gudang_id,
+                                f.tanggal_faktur AS tanggal,
+                                CONCAT(p.no_faktur, ' (Titip ke ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
+                                p.qty_titip AS qty,
+                                p.harga_pokok AS harga,
+                                'IN' AS type,
+                                'TM-TITIP ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                b.kelompok_dagang
+                            FROM tb_test_market_position p
+                            JOIN tbso_faktur_penjualan f ON f.id_faktur = p.id_faktur
+                            JOIN tbpo_barang b ON b.kode_barang = p.kd_barang
+                            WHERE p.status != 'DIBATALKAN'
+                              AND f.status NOT IN ('draft', 'cancelled')
+                              AND f.tanggal_faktur <= " . $this->db->escape($end_date) . "
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_test_market_in)";
+
+            if ($this->db->table_exists('tb_test_market_realisasi')) {
+                $sql_test_market_out = "SELECT
+                                r.kd_barang,
+                                {$id_wh_test_market} AS gudang_id,
+                                r.tanggal_realisasi AS tanggal,
+                                CONCAT(r.no_faktur, ' (Dibeli ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
+                                r.qty,
+                                p.harga_pokok AS harga,
+                                'OUT' AS type,
+                                'TM-TERJUAL ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                b.kelompok_dagang
+                            FROM tb_test_market_realisasi r
+                            JOIN tb_test_market_position p ON p.id_position = r.id_position
+                            JOIN tbpo_barang b ON b.kode_barang = r.kd_barang
+                            WHERE r.status = 'POSTED'
+                              AND r.tanggal_realisasi <= " . $this->db->escape($end_date) . "
+                              {$prod_filter_clause}";
+                $queries[] = "($sql_test_market_out)";
+            }
+        }
+
+        // 5. Query Retur Pembelian (Keluar) jika tabel ada
         if ($this->db->table_exists('tb_retur_pembelian') && $this->db->table_exists('tb_retur_pembelian_detail')) {
             $sql_retur_beli = "SELECT 
                                 rbd.kd_barang,
@@ -360,7 +416,7 @@ class C_Laporan extends CI_Controller
             $queries[] = "($sql_retur_beli)";
         }
 
-        // 5. Khusus Konsinyasi Titipan di Kios
+        // 6. Khusus Konsinyasi Titipan di Kios
         if (!$wh_target_id || $wh_target_id == $id_wh_titipan_kios) {
             // IN: Faktur Penjualan yang dititipkan ke Kios bersumber dari Gudang Konsinyasi
             $sql_kios_in = "SELECT 
@@ -441,7 +497,7 @@ class C_Laporan extends CI_Controller
             }
         }
 
-        // 6. Khusus Konsinyasi Lunas
+        // 7. Khusus Konsinyasi Lunas
         if ((!$wh_target_id || $wh_target_id == $id_wh_konsinyasi_lunas) && $this->db->table_exists('tb_konsinyasi_settlement')) {
             // IN: Penerimaan pembelian resmi dari Supplier (status BILLED)
             $sql_lunas_in = "SELECT 
@@ -485,7 +541,7 @@ class C_Laporan extends CI_Controller
             $queries[] = "($sql_lunas_out)";
         }
 
-        // 7. Query Penyesuaian Barang
+        // 8. Query Penyesuaian Barang
         if ($this->db->table_exists('tbkeu_penyesuaian_barang') && $this->db->table_exists('tbkeu_penyesuaian_barang_detail')) {
             // A. Penyesuaian satu gudang / gudang tujuan
             $sql_adj_in = "SELECT 

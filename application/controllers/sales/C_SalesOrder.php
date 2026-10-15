@@ -588,6 +588,35 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    private function _ensureTestMarketColumns()
+    {
+        $this->load->dbforge();
+
+        if (!$this->db->field_exists('is_test_market', 'tbso_sales_order')) {
+            $this->dbforge->add_column('tbso_sales_order', [
+                'is_test_market' => [
+                    'type'       => 'TINYINT',
+                    'constraint' => 1,
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'is_faktur_z',
+                ],
+            ]);
+        }
+
+        if (!$this->db->field_exists('is_test_market', 'tbso_faktur_penjualan')) {
+            $this->dbforge->add_column('tbso_faktur_penjualan', [
+                'is_test_market' => [
+                    'type'       => 'TINYINT',
+                    'constraint' => 1,
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'cara_pembayaran',
+                ],
+            ]);
+        }
+    }
+
     private function _ensureSoRouteColumn()
     {
         if ($this->db->field_exists('kd_rute', 'tbso_sales_order')) {
@@ -1250,6 +1279,7 @@ class C_SalesOrder extends CI_Controller
     public function create()
     {
         $this->_ensureSoCaraPembayaranColumn();
+        $this->_ensureTestMarketColumns();
 
         $data['page_title']     = 'KARISMA - Buat Sales Order';
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
@@ -1275,6 +1305,7 @@ class C_SalesOrder extends CI_Controller
         if ($this->input->method() !== 'post') show_404();
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoCaraPembayaranColumn();
+        $this->_ensureTestMarketColumns();
 
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
@@ -1483,6 +1514,7 @@ class C_SalesOrder extends CI_Controller
     public function edit($id_so)
     {
         $this->_ensureSoCaraPembayaranColumn();
+        $this->_ensureTestMarketColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
@@ -1563,6 +1595,7 @@ class C_SalesOrder extends CI_Controller
     {
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoCaraPembayaranColumn();
+        $this->_ensureTestMarketColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
@@ -1827,6 +1860,7 @@ class C_SalesOrder extends CI_Controller
     public function form_faktur($id_so)
     {
         $this->_ensureSoFakturZColumn();
+        $this->_ensureTestMarketColumns();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureFakturPaymentInfoColumns();
@@ -1928,6 +1962,7 @@ class C_SalesOrder extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
         $this->_ensureSoFakturZColumn();
+        $this->_ensureTestMarketColumns();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureFakturPaymentInfoColumns();

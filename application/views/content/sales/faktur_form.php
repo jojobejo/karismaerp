@@ -117,11 +117,6 @@ $faktur_back_url = $is_admin_sc_context
                                             <i class="fas fa-info-circle mr-1"></i>Faktur Barang Konsinyasi (Kode Awalan <b>K</b> &bull; Tidak Terjurnal Otomatis).
                                         </small>
                                     <?php endif; ?>
-                                    <?php if (!empty($is_test_market)): ?>
-                                        <small class="text-primary font-weight-bold d-block mt-1">
-                                            <i class="fas fa-flask mr-1"></i>Faktur Barang Test Market (Kode Awalan <b>T</b> &bull; Jurnal Penjualan diakui saat dibayar oleh kios).
-                                        </small>
-                                    <?php endif; ?>
                                 </div>
                                 <div class="form-group">
                                     <label>Tanggal Faktur <span class="text-danger">*</span></label>

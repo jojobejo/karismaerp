@@ -1730,6 +1730,14 @@ class M_SalesOrder extends CI_Model
         $errors = $this->_validasi_qty_faktur($id_so, $faktur_items);
         if (!empty($errors)) return ['errors' => $errors];
 
+        // Muat pengelola skema sebelum transaksi dimulai agar operasi DDL
+        // inisialisasi tidak memutus transaksi pembuatan faktur.
+        $is_test_market_request = !empty($faktur_header['is_test_market'])
+            || strtoupper(substr((string)($faktur_header['no_faktur'] ?? ''), 0, 1)) === 'T';
+        if ($is_test_market_request) {
+            $this->load->model('M_TestMarket');
+        }
+
         $this->db->trans_start();
 
         $no_faktur = $faktur_header['no_faktur'];
@@ -1877,8 +1885,17 @@ class M_SalesOrder extends CI_Model
             $this->db->update('tbso_sales_order_detail');
         }
 
-        // ── Perhitungan Jurnal & Simpan ke Database ────────────────
         $is_test_market = !empty($fh['is_test_market']) || strtoupper(substr($no_faktur, 0, 1)) === 'T';
+        if ($is_test_market) {
+            // Pindahkan posisi persediaan ke gudang virtual Test Market di kios.
+            // Penjualan dan HPP baru diakui ketika kios membeli barang tersebut.
+            if (!$this->M_TestMarket->register_invoice($id_faktur)) {
+                $this->db->trans_rollback();
+                return false;
+            }
+        }
+
+        // ── Perhitungan Jurnal & Simpan ke Database ────────────────
         $is_konsinyasi = $this->is_gudang_konsinyasi($gudang_id) || strtoupper(substr($no_faktur, 0, 1)) === 'K';
         $journal = null;
 

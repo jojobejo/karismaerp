@@ -54,8 +54,25 @@ class C_Konsinyasi extends CI_Controller
         $data['tracking_summary'] = $this->M_Konsinyasi->get_tracking_summary();
         $data['tracking_barang']  = $this->M_Konsinyasi->get_tracking_barang_list($filters);
         $data['suppliers']        = $this->M_Konsinyasi->get_suppliers_list();
-        $data['settlements']      = $this->M_Konsinyasi->get_settlement_list($filters);
-        $data['laku_suppliers']   = $this->M_Konsinyasi->get_laku_suppliers_summary($filters);
+
+        $isLakuAllSuppliers = (($filters['status'] === 'LAKU' || $filters['status'] === 'PENDING') && $filters['kd_suplier'] === 'SEMUA');
+        $perPage = 20;
+        $allSettlements = [];
+        $allLakuSuppliers = [];
+        if ($filters['tab'] === 'penyelesaian') {
+            if ($isLakuAllSuppliers) {
+                $allLakuSuppliers = $this->M_Konsinyasi->get_laku_suppliers_summary($filters);
+            } else {
+                $allSettlements = $this->M_Konsinyasi->get_settlement_list($filters);
+            }
+        }
+        $totalRows = $isLakuAllSuppliers ? count($allLakuSuppliers) : count($allSettlements);
+        $currentPage = $this->normalize_page($this->input->get('page_penyelesaian'), $totalRows, $perPage);
+        $offset = ($currentPage - 1) * $perPage;
+
+        $data['settlements'] = $isLakuAllSuppliers ? $allSettlements : array_slice($allSettlements, $offset, $perPage);
+        $data['laku_suppliers'] = $isLakuAllSuppliers ? array_slice($allLakuSuppliers, $offset, $perPage) : $allLakuSuppliers;
+        $data['settlement_pagination'] = $this->pagination_data($totalRows, $currentPage, $perPage);
 
         $data['selected_supplier_name'] = '';
         if (!empty($filters['kd_suplier']) && $filters['kd_suplier'] !== 'SEMUA') {
@@ -70,6 +87,25 @@ class C_Konsinyasi extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/purchasing/konsinyasi/settlement_list.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    private function normalize_page($requestedPage, $totalRows, $perPage)
+    {
+        $totalPages = max(1, (int)ceil((int)$totalRows / (int)$perPage));
+        return min(max(1, (int)$requestedPage), $totalPages);
+    }
+
+    private function pagination_data($totalRows, $currentPage, $perPage)
+    {
+        $totalRows = (int)$totalRows;
+        return [
+            'total_rows'   => $totalRows,
+            'current_page' => (int)$currentPage,
+            'per_page'     => (int)$perPage,
+            'total_pages'  => max(1, (int)ceil($totalRows / (int)$perPage)),
+            'from'         => $totalRows > 0 ? (((int)$currentPage - 1) * (int)$perPage) + 1 : 0,
+            'to'           => min((int)$currentPage * (int)$perPage, $totalRows),
+        ];
     }
 
     /**
@@ -147,6 +183,7 @@ class C_Konsinyasi extends CI_Controller
     public function ajax_update_invoice()
     {
         $idSettlement = (int) $this->input->post('id_settlement');
+        $allIdsStr = trim((string)$this->input->post('all_settlement_ids'));
         $noInvoice = trim((string) $this->input->post('no_invoice_supplier', TRUE));
         $tglInvoice = trim((string) $this->input->post('tgl_invoice_supplier', TRUE));
 
@@ -171,7 +208,12 @@ class C_Konsinyasi extends CI_Controller
         $userId = (int) ($this->session->userdata('id') ?: $this->session->userdata('user_id') ?: 1);
         $userName = (string) ($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'PURCHASING');
 
-        $result = $this->M_Konsinyasi->update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId, $userName);
+        $ids = array_unique(array_filter(array_map('intval', explode(',', $allIdsStr))));
+        if (count($ids) > 1) {
+            $result = $this->M_Konsinyasi->update_invoice_supplier_batch($idSettlement, $ids, $noInvoice, $tglInvoice, $userId, $userName);
+        } else {
+            $result = $this->M_Konsinyasi->update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId, $userName);
+        }
 
         $this->output
             ->set_content_type('application/json')
@@ -287,6 +329,154 @@ class C_Konsinyasi extends CI_Controller
                 'header'     => $jurnal,
                 'details'    => $details
             ]));
+    }
+
+    public function export_barang_laku()
+    {
+        $this->export_settlement_excel('LAKU');
+    }
+
+    public function export_riwayat_lunas()
+    {
+        $this->export_settlement_excel('BILLED');
+    }
+
+    private function export_settlement_excel($status)
+    {
+        $status = strtoupper((string)$status) === 'BILLED' ? 'BILLED' : 'LAKU';
+        $filters = [
+            'status'      => $status,
+            'kd_suplier' => trim((string)($this->input->get('kd_suplier', true) ?: 'SEMUA')),
+            'date_from'   => trim((string)$this->input->get('date_from', true)),
+            'date_to'     => trim((string)$this->input->get('date_to', true)),
+            'search'      => trim((string)$this->input->get('search', true)),
+        ];
+        $rows = $this->M_Konsinyasi->get_settlement_list($filters);
+
+        if ($status === 'LAKU') {
+            $rows = array_values(array_filter($rows, static function ($row) {
+                return (float)($row['qty_net'] ?? 0) > 0;
+            }));
+        }
+
+        require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+        $spreadsheetLib = new PhpSpreadsheetLib();
+        $spreadsheet = $spreadsheetLib->spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $isBilled = $status === 'BILLED';
+        $title = $isBilled ? 'Riwayat Barang Konsinyasi Lunas' : 'Barang Konsinyasi Laku';
+        $sheet->setTitle($isBilled ? 'Riwayat Lunas' : 'Barang Laku');
+        $sheet->mergeCells('A1:X1');
+        $sheet->setCellValue('A1', $title);
+        $sheet->mergeCells('A2:X2');
+        $sheet->setCellValue('A2', $this->export_filter_description($filters));
+
+        $headers = [
+            'No.', 'Tanggal Laku', 'No. Settlement', 'Kode Supplier', 'Nama Supplier',
+            'Kode Barang', 'Nama Barang', 'Lot', 'Expired', 'No. LPB', 'No. PO',
+            'Kios / Customer', 'No. SO', 'No. Faktur', 'Qty LPB Masuk', 'Qty Laku',
+            'Satuan', 'Sisa Belum Lunas', 'Harga PO', 'Nilai Tagihan',
+            'Invoice Supplier', 'Tanggal Invoice', 'No. Jurnal', 'Status'
+        ];
+        foreach ($headers as $columnIndex => $header) {
+            $sheet->setCellValueByColumnAndRow($columnIndex + 1, 4, $header);
+        }
+
+        $excelRow = 5;
+        foreach ($rows as $index => $row) {
+            $values = [
+                $index + 1,
+                $this->export_date($row['tanggal_settlement'] ?? ''),
+                $row['no_settlement'] ?? '',
+                $row['kd_suplier'] ?? '',
+                $row['nama_suplier'] ?? '',
+                $row['kd_barang'] ?? '',
+                $row['nama_barang'] ?? '',
+                $row['no_lot'] ?? '',
+                $this->export_date($row['expired_date'] ?? ''),
+                $row['lpb_no'] ?? ($row['nomor_lpb_asal'] ?? ''),
+                $row['po_no_po'] ?? '',
+                $row['customer_name'] ?? '',
+                $row['no_so'] ?? '',
+                $row['no_faktur'] ?? '',
+                (float)($row['qty_lpb_masuk'] ?? 0),
+                (float)($row['qty_net'] ?? 0),
+                $row['satuan'] ?? '',
+                (float)($row['qty_sisa_belum_lunas'] ?? 0),
+                (float)($row['po_hrg_satuan'] ?? 0),
+                (float)($row['total_tagihan_beli'] ?? 0),
+                $row['no_invoice_supplier'] ?? '',
+                $this->export_date($row['tgl_invoice_supplier'] ?? ''),
+                $row['nomor_jurnal'] ?? '',
+                $row['status'] ?? $status,
+            ];
+            foreach ($values as $columnIndex => $value) {
+                $sheet->setCellValueByColumnAndRow($columnIndex + 1, $excelRow, $value);
+            }
+            $excelRow++;
+        }
+
+        $lastRow = max(4, $excelRow - 1);
+        $sheet->getStyle('A1:X1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => $isBilled ? '15803D' : 'D97706']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+        $sheet->getStyle('A4:X4')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '334155']],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ]);
+        $sheet->getStyle('A4:X' . $lastRow)->applyFromArray([
+            'borders' => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => 'CBD5E1']]],
+        ]);
+        if ($lastRow >= 5) {
+            $sheet->getStyle('O5:P' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('R5:T' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00');
+        }
+        $sheet->freezePane('A5');
+        $sheet->setAutoFilter('A4:X' . $lastRow);
+
+        foreach (range('A', 'X') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $filename = ($isBilled ? 'riwayat_barang_konsinyasi_lunas_' : 'barang_konsinyasi_laku_') . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = $spreadsheetLib->writer($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    private function export_filter_description(array $filters)
+    {
+        $parts = [];
+        $parts[] = $filters['kd_suplier'] === 'SEMUA' ? 'Supplier: Semua' : 'Supplier: ' . $filters['kd_suplier'];
+        if ($filters['date_from'] !== '' || $filters['date_to'] !== '') {
+            $parts[] = 'Periode: ' . ($filters['date_from'] ?: 'Awal') . ' s/d ' . ($filters['date_to'] ?: 'Sekarang');
+        }
+        if ($filters['search'] !== '') {
+            $parts[] = 'Pencarian: ' . $filters['search'];
+        }
+        $parts[] = 'Diekspor: ' . date('d/m/Y H:i');
+        return implode(' | ', $parts);
+    }
+
+    private function export_date($date)
+    {
+        $date = trim((string)$date);
+        if ($date === '' || $date === '0000-00-00') {
+            return '';
+        }
+        $timestamp = strtotime($date);
+        return $timestamp ? date('d/m/Y', $timestamp) : $date;
     }
 
     /**

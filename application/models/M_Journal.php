@@ -286,6 +286,21 @@ class M_Journal extends CI_Model
             return false;
         }
 
+        // Pembayaran Faktur T/K dapat menunjuk satu barang tertentu. Tempatkan
+        // barang yang dipilih sebagai item utama untuk perhitungan harga dan HPP.
+        $selectedDetailId = (int)($data_pembayaran['id_faktur_detail'] ?? 0);
+        $selectedKdBarang = trim((string)($data_pembayaran['kd_barang'] ?? ''));
+        foreach ($items as $index => $item) {
+            $isSelected = ($selectedDetailId > 0 && (int)$item['id'] === $selectedDetailId)
+                || ($selectedDetailId <= 0 && $selectedKdBarang !== '' && $item['kd_barang'] === $selectedKdBarang);
+            if ($isSelected && $index > 0) {
+                unset($items[$index]);
+                array_unshift($items, $item);
+                $items = array_values($items);
+                break;
+            }
+        }
+
         // Menghitung pajak/PPN jika barang dikenakan pajak
         $tax_rate = 0.0;
         foreach ($items as $it) {
@@ -426,9 +441,11 @@ class M_Journal extends CI_Model
         }
 
         // Hitung Qty dan HPP (Harga Pokok Penjualan)
-        $qty_konsinyasi_input = isset($data_pembayaran['qty_konsinyasi']) && (float)$data_pembayaran['qty_konsinyasi'] > 0
-            ? (float)$data_pembayaran['qty_konsinyasi']
-            : null;
+        $qty_konsinyasi_input = isset($data_pembayaran['qty_realisasi']) && (float)$data_pembayaran['qty_realisasi'] > 0
+            ? (float)$data_pembayaran['qty_realisasi']
+            : (isset($data_pembayaran['qty_konsinyasi']) && (float)$data_pembayaran['qty_konsinyasi'] > 0
+                ? (float)$data_pembayaran['qty_konsinyasi']
+                : null);
 
         $qty_laku = $qty_konsinyasi_input;
         if ($qty_laku === null || $qty_laku <= 0) {
