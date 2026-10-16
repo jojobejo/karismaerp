@@ -548,38 +548,67 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '    </thead>';
                         html += '    <tbody>';
 
-                        // Render Opening Balance
+                        // Tampilkan saldo awal per lapisan harga FIFO.
                         var ob = p.opening_balance;
-                        html += '      <tr class="text-semibold text-muted-custom">';
-                        html += '        <td>' + formatDate(start) + '</td>';
-                        html += '        <td>' + ob.referensi + '</td>';
-                        html += '        <td>' + ob.unit + '</td>';
-                        html += '        <td colspan="3"></td>';
-                        html += '        <td colspan="3"></td>';
-                        html += '        <td class="text-right">' + formatNumber(ob.saldo_qty) + '</td>';
-                        html += '        <td class="text-right">' + formatNumber(ob.saldo_harga) + '</td>';
-                        html += '        <td class="text-right">' + formatNumber(ob.saldo_nilai) + '</td>';
-                        html += '      </tr>';
-
-                        // Render Transaction rows
-                        p.rows.forEach(function(r) {
-                            html += '      <tr>';
-                            html += '        <td>' + formatDate(r.tanggal) + '</td>';
-                            html += '        <td>' + r.referensi + '</td>';
-                            html += '        <td>' + r.unit + '</td>';
-                            
-                            html += '        <td class="text-right">' + (r.masuk_qty > 0 ? formatNumber(r.masuk_qty) : '') + '</td>';
-                            html += '        <td class="text-right">' + (r.masuk_qty > 0 ? formatNumber(r.masuk_harga) : '') + '</td>';
-                            html += '        <td class="text-right">' + (r.masuk_qty > 0 ? formatNumber(r.masuk_nilai) : '') + '</td>';
-                            
-                            html += '        <td class="text-right">' + (r.keluar_qty > 0 ? formatNumber(r.keluar_qty) : '') + '</td>';
-                            html += '        <td class="text-right">' + (r.keluar_qty > 0 ? formatNumber(r.keluar_harga) : '') + '</td>';
-                            html += '        <td class="text-right">' + (r.keluar_qty > 0 ? formatNumber(r.keluar_nilai) : '') + '</td>';
-                            
-                            html += '        <td class="text-right text-semibold">' + formatNumber(r.saldo_qty) + '</td>';
-                            html += '        <td class="text-right text-semibold">' + formatNumber(r.saldo_harga) + '</td>';
-                            html += '        <td class="text-right text-semibold">' + formatNumber(r.saldo_nilai) + '</td>';
+                        var openingLayers = (ob.saldo_layers && ob.saldo_layers.length) ? ob.saldo_layers : [{
+                            qty: ob.saldo_qty,
+                            harga: ob.saldo_harga,
+                            nilai: ob.saldo_nilai
+                        }];
+                        openingLayers.forEach(function(layer, layerIndex) {
+                            html += '      <tr class="text-semibold text-muted-custom">';
+                            html += '        <td>' + (layerIndex === 0 ? formatDate(start) : '') + '</td>';
+                            html += '        <td>' + (layerIndex === 0 ? ob.referensi : '') + '</td>';
+                            html += '        <td>' + (layerIndex === 0 ? ob.unit : '') + '</td>';
+                            html += '        <td colspan="3"></td>';
+                            html += '        <td colspan="3"></td>';
+                            html += '        <td class="text-right">' + formatNumber(layer.qty) + '</td>';
+                            html += '        <td class="text-right">' + formatNumber(layer.harga) + '</td>';
+                            html += '        <td class="text-right">' + formatNumber(layer.nilai) + '</td>';
                             html += '      </tr>';
+                        });
+
+                        // Setiap transaksi dapat memakai dan menyisakan beberapa lapisan FIFO.
+                        p.rows.forEach(function(r) {
+                            var movements = (r.movement_layers && r.movement_layers.length) ? r.movement_layers : [];
+                            var balances = (r.saldo_layers && r.saldo_layers.length) ? r.saldo_layers : [{
+                                qty: r.saldo_qty,
+                                harga: r.saldo_harga,
+                                nilai: r.saldo_nilai
+                            }];
+
+                            // Pada transaksi masuk, sejajarkan lapisan yang baru masuk dengan baris referensinya.
+                            // Lapisan FIFO lama tetap ditampilkan pada baris lanjutan tanpa mengubah urutan konsumsi.
+                            if (r.masuk_qty > 0 && balances.length > 1) {
+                                balances = balances.slice();
+                                balances.unshift(balances.pop());
+                            }
+
+                            var lineCount = Math.max(movements.length, balances.length, 1);
+
+                            for (var lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+                                var movement = movements[lineIndex] || null;
+                                var balance = balances[lineIndex] || null;
+                                var isFirstLine = lineIndex === 0;
+
+                                html += '      <tr>';
+                                html += '        <td>' + (isFirstLine ? formatDate(r.tanggal) : '') + '</td>';
+                                html += '        <td>' + (isFirstLine ? r.referensi : '') + '</td>';
+                                html += '        <td>' + (isFirstLine ? r.unit : '') + '</td>';
+
+                                html += '        <td class="text-right">' + (r.masuk_qty > 0 && movement ? formatNumber(movement.qty) : '') + '</td>';
+                                html += '        <td class="text-right">' + (r.masuk_qty > 0 && movement ? formatNumber(movement.harga) : '') + '</td>';
+                                html += '        <td class="text-right">' + (r.masuk_qty > 0 && movement ? formatNumber(movement.nilai) : '') + '</td>';
+
+                                html += '        <td class="text-right">' + (r.keluar_qty > 0 && movement ? formatNumber(movement.qty) : '') + '</td>';
+                                html += '        <td class="text-right">' + (r.keluar_qty > 0 && movement ? formatNumber(movement.harga) : '') + '</td>';
+                                html += '        <td class="text-right">' + (r.keluar_qty > 0 && movement ? formatNumber(movement.nilai) : '') + '</td>';
+
+                                html += '        <td class="text-right text-semibold">' + (balance ? formatNumber(balance.qty) : '') + '</td>';
+                                html += '        <td class="text-right text-semibold">' + (balance ? formatNumber(balance.harga) : '') + '</td>';
+                                html += '        <td class="text-right text-semibold">' + (balance ? formatNumber(balance.nilai) : '') + '</td>';
+                                html += '      </tr>';
+                            }
                         });
 
                         // Render Subtotal row
@@ -596,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '        <td class="text-right">' + formatNumber(p.sub_keluar_nilai) + '</td>';
                         
                         html += '        <td class="text-right">' + formatNumber(p.final_saldo_qty) + '</td>';
-                        html += '        <td class="text-right">' + formatNumber(p.final_saldo_harga) + '</td>';
+                        html += '        <td class="text-right">' + (p.final_saldo_layers && p.final_saldo_layers.length > 1 ? '-' : formatNumber(p.final_saldo_harga)) + '</td>';
                         html += '        <td class="text-right">' + formatNumber(p.final_saldo_nilai) + '</td>';
                         html += '      </tr>';
                         

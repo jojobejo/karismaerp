@@ -1,4 +1,4 @@
--- phpMyAdmin SQL Dump
+  -- phpMyAdmin SQL Dump
 -- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
@@ -24,7 +24,7 @@ START TRANSACTION;
 
 --
 -- Struktur dari tabel cctv_tracking
---
+--50,00	58.558,56	2.927.927,93
 
 CREATE TABLE cctv_tracking (
   id int UNSIGNED NOT NULL,

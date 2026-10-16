@@ -753,6 +753,130 @@ class C_Laporan extends CI_Controller
             ]));
     }
 
+    /**
+     * Menambahkan penerimaan ke antrean persediaan FIFO.
+     *
+     * Saldo negatif lama diselesaikan terlebih dahulu agar antrean tetap
+     * menggambarkan stok fisik yang benar ketika ada transaksi terlambat.
+     */
+    private function addKonsinyasiFifoLayer(&$layers, $qty, $price)
+    {
+        $remainingQty = (float)$qty;
+        $epsilon = 0.000001;
+
+        while ($remainingQty > $epsilon && !empty($layers) && $layers[0]['qty'] < -$epsilon) {
+            $coveredQty = min($remainingQty, abs($layers[0]['qty']));
+            $layers[0]['qty'] += $coveredQty;
+            $remainingQty -= $coveredQty;
+
+            if (abs($layers[0]['qty']) <= $epsilon) {
+                array_shift($layers);
+            }
+        }
+
+        if ($remainingQty > $epsilon) {
+            $layers[] = [
+                'qty'   => $remainingQty,
+                'harga' => (float)$price
+            ];
+        }
+    }
+
+    /**
+     * Mengeluarkan stok dari lapisan yang masuk paling awal.
+     */
+    private function consumeKonsinyasiFifoLayers(&$layers, $qty, $fallbackPrice)
+    {
+        $remainingQty = (float)$qty;
+        $epsilon = 0.000001;
+        $segments = [];
+
+        if (!empty($layers) && $layers[0]['qty'] < -$epsilon) {
+            $price = (float)$fallbackPrice;
+            $layers[0]['qty'] -= $remainingQty;
+
+            return [[
+                'qty'   => $remainingQty,
+                'harga' => $price,
+                'nilai' => $remainingQty * $price
+            ]];
+        }
+
+        while ($remainingQty > $epsilon && !empty($layers)) {
+            if ($layers[0]['qty'] <= $epsilon) {
+                array_shift($layers);
+                continue;
+            }
+
+            $takenQty = min($remainingQty, $layers[0]['qty']);
+            $segments[] = [
+                'qty'   => $takenQty,
+                'harga' => (float)$layers[0]['harga'],
+                'nilai' => $takenQty * (float)$layers[0]['harga']
+            ];
+
+            $layers[0]['qty'] -= $takenQty;
+            $remainingQty -= $takenQty;
+
+            if ($layers[0]['qty'] <= $epsilon) {
+                array_shift($layers);
+            }
+        }
+
+        // Tetap tampilkan kekurangan stok agar selisih data sumber mudah diaudit.
+        if ($remainingQty > $epsilon) {
+            $price = (float)$fallbackPrice;
+            $segments[] = [
+                'qty'   => $remainingQty,
+                'harga' => $price,
+                'nilai' => $remainingQty * $price
+            ];
+            $layers[] = [
+                'qty'   => -$remainingQty,
+                'harga' => $price
+            ];
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Membentuk ringkasan dan detail lapisan saldo untuk kebutuhan tampilan.
+     */
+    private function summarizeKonsinyasiFifoLayers($layers)
+    {
+        $summary = [
+            'qty'    => 0.0,
+            'nilai'  => 0.0,
+            'harga'  => 0.0,
+            'layers' => []
+        ];
+
+        foreach ($layers as $layer) {
+            $qty = (float)$layer['qty'];
+            $price = (float)$layer['harga'];
+            $value = $qty * $price;
+
+            if (abs($qty) <= 0.000001) {
+                continue;
+            }
+
+            $summary['qty'] += $qty;
+            $summary['nilai'] += $value;
+            $summary['layers'][] = [
+                'qty'   => $qty,
+                'harga' => $price,
+                'nilai' => $value
+            ];
+        }
+
+        if (abs($summary['qty']) > 0.000001) {
+            $summary['harga'] = $summary['nilai'] / $summary['qty'];
+        }
+
+        return $summary;
+    }
+
     public function kartu_stock_konsinyasi_data()
     {
         $kd_barang  = $this->input->post('kd_barang', true);
@@ -982,9 +1106,10 @@ class C_Laporan extends CI_Controller
         $grouped = [];
         $product_info = [];
 
-        foreach ($all_tx as $tx) {
+        foreach ($all_tx as $tx_index => $tx) {
             $kd = $tx['kd_barang'];
             $wh = (int)$tx['gudang_id'];
+            $tx['_sequence'] = $tx_index;
 
             if (!isset($product_info[$kd])) {
                 $product_info[$kd] = [
@@ -1009,14 +1134,24 @@ class C_Laporan extends CI_Controller
                 usort($txs, function($a, $b) {
                     $t1 = strtotime($a['tanggal']);
                     $t2 = strtotime($b['tanggal']);
-                    if ($t1 === $t2) {
-                        return ($a['type'] === 'IN') ? -1 : 1;
+                    if ($t1 !== $t2) {
+                        return $t1 < $t2 ? -1 : 1;
                     }
-                    return $t1 < $t2 ? -1 : 1;
+
+                    // Penerimaan pada tanggal yang sama harus membentuk lapisan sebelum pengeluaran.
+                    if ($a['type'] !== $b['type']) {
+                        return $a['type'] === 'IN' ? -1 : 1;
+                    }
+
+                    $referenceCompare = strnatcasecmp((string)$a['referensi'], (string)$b['referensi']);
+                    if ($referenceCompare !== 0) {
+                        return $referenceCompare;
+                    }
+
+                    return $a['_sequence'] <=> $b['_sequence'];
                 });
 
-                $qty_saldo = 0.0;
-                $nilai_saldo = 0.0;
+                $fifo_layers = [];
 
                 $opening_balance = [
                     'tanggal'     => '',
@@ -1024,7 +1159,8 @@ class C_Laporan extends CI_Controller
                     'unit'        => $prod_meta['satuan'],
                     'saldo_qty'   => 0.0,
                     'saldo_harga' => 0.0,
-                    'saldo_nilai' => 0.0
+                    'saldo_nilai' => 0.0,
+                    'saldo_layers'=> []
                 ];
 
                 $report_rows = [];
@@ -1038,26 +1174,30 @@ class C_Laporan extends CI_Controller
                     $qty = (float)$tx['qty'];
                     $harga = (float)$tx['harga_fifo'];
                     $tx_date = $tx['tanggal'];
-                    $tx_nilai = $qty * $harga;
+                    $movement_layers = [];
 
                     if (!empty($tx['partner_name']) && empty($primary_supplier)) {
                         $primary_supplier = $tx['partner_name'];
                     }
 
                     if ($tx['type'] === 'IN') {
-                        $qty_saldo += $qty;
-                        $nilai_saldo += $tx_nilai;
+                        $this->addKonsinyasiFifoLayer($fifo_layers, $qty, $harga);
+                        $movement_layers[] = [
+                            'qty'   => $qty,
+                            'harga' => $harga,
+                            'nilai' => $qty * $harga
+                        ];
                     } else {
-                        $qty_saldo -= $qty;
-                        $nilai_saldo -= $tx_nilai;
+                        $movement_layers = $this->consumeKonsinyasiFifoLayers($fifo_layers, $qty, $harga);
                     }
 
-                    $current_avg_harga = $qty_saldo != 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
+                    $saldo_summary = $this->summarizeKonsinyasiFifoLayers($fifo_layers);
 
                     if (strtotime($tx_date) < strtotime($start_date)) {
-                        $opening_balance['saldo_qty'] = $qty_saldo;
-                        $opening_balance['saldo_harga'] = $current_avg_harga;
-                        $opening_balance['saldo_nilai'] = $nilai_saldo;
+                        $opening_balance['saldo_qty'] = $saldo_summary['qty'];
+                        $opening_balance['saldo_harga'] = $saldo_summary['harga'];
+                        $opening_balance['saldo_nilai'] = $saldo_summary['nilai'];
+                        $opening_balance['saldo_layers'] = $saldo_summary['layers'];
                     } else if (strtotime($tx_date) <= strtotime($end_date)) {
                         $refText = trim($tx['ref_prefix'] . $tx['referensi']);
                         if (!empty($tx['partner_name'])) {
@@ -1078,31 +1218,35 @@ class C_Laporan extends CI_Controller
                             'keluar_qty'     => 0.0,
                             'keluar_harga'   => 0.0,
                             'keluar_nilai'   => 0.0,
-                            'saldo_qty'      => $qty_saldo,
-                            'saldo_harga'    => $current_avg_harga,
-                            'saldo_nilai'    => $nilai_saldo
+                            'saldo_qty'      => $saldo_summary['qty'],
+                            'saldo_harga'    => $saldo_summary['harga'],
+                            'saldo_nilai'    => $saldo_summary['nilai'],
+                            'movement_layers'=> $movement_layers,
+                            'saldo_layers'   => $saldo_summary['layers']
                         ];
 
                         if ($tx['type'] === 'IN') {
                             $row['masuk_qty'] = $qty;
                             $row['masuk_harga'] = $harga;
-                            $row['masuk_nilai'] = $tx_nilai;
+                            $row['masuk_nilai'] = $qty * $harga;
                             $sub_masuk_qty += $qty;
-                            $sub_masuk_nilai += $tx_nilai;
+                            $sub_masuk_nilai += $qty * $harga;
                         } else {
+                            $fifo_out_value = array_sum(array_column($movement_layers, 'nilai'));
                             $row['keluar_qty'] = $qty;
-                            $row['keluar_harga'] = $harga;
-                            $row['keluar_nilai'] = $tx_nilai;
+                            $row['keluar_harga'] = $qty > 0 ? ($fifo_out_value / $qty) : 0.0;
+                            $row['keluar_nilai'] = $fifo_out_value;
                             $sub_keluar_qty += $qty;
-                            $sub_keluar_nilai += $tx_nilai;
+                            $sub_keluar_nilai += $fifo_out_value;
                         }
 
                         $report_rows[] = $row;
                     }
                 }
 
-                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $qty_saldo != 0) {
-                    $final_avg_harga = $qty_saldo != 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
+                $final_summary = $this->summarizeKonsinyasiFifoLayers($fifo_layers);
+
+                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $final_summary['qty'] != 0) {
                     $all_products_data[] = [
                         'id_gudang'         => $wh_id,
                         'warehouse_name'    => $wh_name,
@@ -1118,9 +1262,10 @@ class C_Laporan extends CI_Controller
                         'sub_keluar_qty'    => $sub_keluar_qty,
                         'sub_keluar_harga'  => $sub_keluar_qty > 0 ? ($sub_keluar_nilai / $sub_keluar_qty) : 0.0,
                         'sub_keluar_nilai'  => $sub_keluar_nilai,
-                        'final_saldo_qty'   => $qty_saldo,
-                        'final_saldo_harga' => $final_avg_harga,
-                        'final_saldo_nilai' => $nilai_saldo
+                        'final_saldo_qty'   => $final_summary['qty'],
+                        'final_saldo_harga' => $final_summary['harga'],
+                        'final_saldo_nilai' => $final_summary['nilai'],
+                        'final_saldo_layers'=> $final_summary['layers']
                     ];
                 }
             }

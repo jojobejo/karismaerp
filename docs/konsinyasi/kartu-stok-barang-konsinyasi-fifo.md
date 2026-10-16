@@ -60,6 +60,31 @@ Tautan Halaman:
    - Badge Status Alur (`LPB`, `Titip`, `Laku`, `Lunas`)
 6. **Ekspor & Cetak**: Dilengkapi tombol Print yang terformat rapi (*print stylesheet*).
 
+### Cara Membaca Kolom Saldo FIFO
+
+Kolom **Saldo** tidak lagi menggabungkan seluruh stok menjadi satu baris harga rata-rata. Setiap penerimaan membentuk lapisan FIFO tersendiri dan seluruh lapisan yang masih tersedia ditampilkan pada baris terpisah di kolom saldo.
+
+Contoh:
+
+1. Saldo awal `50 unit × Rp10.000`.
+2. Barang masuk `50 unit × Rp12.000`.
+3. Kolom saldo menampilkan dua lapisan, yaitu `50 unit × Rp10.000` dan `50 unit × Rp12.000`. Sistem tidak menampilkan satu baris `100 unit` dengan harga rata-rata.
+4. Ketika keluar `60 unit`, sistem mengambil `50 unit × Rp10.000` terlebih dahulu, kemudian `10 unit × Rp12.000`.
+5. Saldo yang tersisa ditampilkan sebagai `40 unit × Rp12.000`.
+
+Pada transaksi masuk, lapisan yang baru diterima ditempatkan sejajar dengan tanggal dan nomor referensinya. Lapisan saldo lama tetap ditampilkan pada baris lanjutan tanpa tanggal dan referensi. Urutan visual ini hanya mempermudah pembacaan; urutan pengeluaran tetap menggunakan lapisan FIFO paling lama.
+
+Jika satu transaksi keluar mengambil lebih dari satu lapisan, kolom **Keluar** juga dipecah menjadi beberapa baris agar kuantitas, harga pokok, dan nilai dari setiap lapisan FIFO dapat diaudit. Total kuantitas dan nilai pada baris subtotal tetap merupakan akumulasi periode laporan.
+
+### Ketentuan Perhitungan
+
+- Transaksi sebelum tanggal awal filter diproses lebih dahulu untuk membentuk saldo awal per lapisan FIFO.
+- Barang masuk ditambahkan ke lapisan paling belakang.
+- Barang keluar selalu mengambil lapisan paling depan sampai kuantitas transaksi terpenuhi.
+- Nilai barang keluar berasal dari harga lapisan FIFO yang benar, bukan dari harga rata-rata saldo.
+- Total nilai saldo adalah penjumlahan nilai seluruh lapisan yang masih tersedia.
+- Jika saldo akhir terdiri dari lebih dari satu harga, kolom harga pada subtotal menampilkan tanda `-`; rincian harga tetap terlihat pada baris-baris saldo di atasnya.
+
 ---
 
 ## 4. Rincian Pembaruan Kode Program
