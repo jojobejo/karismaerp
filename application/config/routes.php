@@ -56,8 +56,10 @@ $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
 //Auth Login
+$route['login']                                     = 'Auth';
 $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
+$route['timeout']                                   = 'Auth/timeout';
 $route['dashboard']                                 = 'Dashboard';
 
 // Profile Setting

@@ -60,4 +60,5 @@
       });
     });
   </script>
+  <?php $this->load->view('partial/main/session_timeout_js.php'); ?>
 </head>

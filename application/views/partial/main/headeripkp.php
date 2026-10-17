@@ -45,4 +45,5 @@
   <script src="<?= base_url('assets/plugins/jquery/jquery.js') ?>"></script>
   <!-- CSS Custom Karisma -->
   <link rel="stylesheet" href="<?php echo base_url("assets/ipkp.css") ?>">
+  <?php $this->load->view('partial/main/session_timeout_js.php'); ?>
 </head>

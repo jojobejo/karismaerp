@@ -39,7 +39,8 @@
                             'jobdesk'       => $key->jobdesk,
                             'nama'          => $key->nm_karyawan,
                             'tim'           => $key->tim,
-                            'wilayah'       => $key->wilayah
+                            'wilayah'       => $key->wilayah,
+                            'last_activity' => time()
                         );
                         $this->session->set_userdata('logged_in', true);
                         $this->session->set_userdata($data_session);
@@ -93,8 +94,17 @@
 
         function logout()
         {
+            $userdata = array('id', 'id_user', 'username', 'nik', 'departemen', 'lv', 'jobdesk', 'nama', 'tim', 'wilayah', 'logged_in', 'last_activity');
+            $this->session->unset_userdata($userdata);
             $this->session->set_flashdata("logout", "Berhasil Log Out");
-            $this->session->sess_destroy();
+            redirect('Auth');
+        }
+
+        function timeout()
+        {
+            $userdata = array('id', 'id_user', 'username', 'nik', 'departemen', 'lv', 'jobdesk', 'nama', 'tim', 'wilayah', 'logged_in', 'last_activity');
+            $this->session->unset_userdata($userdata);
+            $this->session->set_flashdata("gagal", "Sesi Anda telah berakhir karena tidak ada aktivitas selama 15 menit. Silakan login kembali.");
             redirect('Auth');
         }
     }
