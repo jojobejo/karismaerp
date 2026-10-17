@@ -24,6 +24,43 @@ class Dca extends CI_Controller {
         return $this->is_abm()
             ? (int)$this->session->userdata('wilayah') : null;
     }
+
+    private function get_dca_product_key($uraian) {
+        $text = strtolower((string)$uraian);
+        if (strpos($text, 'cpboration') !== false || preg_match('/\bcp\b/i', $text)) return 'cp';
+        if (strpos($text, 'q235') !== false || strpos($text, 'q-235') !== false || strpos($text, 'qiuboration') !== false) return 'q235';
+        if (strpos($text, 'bisi') !== false || strpos($text, 'bisiboration') !== false) return 'bisi';
+        return 'dca';
+    }
+
+    private function get_dca_activity_code($nama_kegiatan) {
+        $text = strtoupper(trim((string)$nama_kegiatan));
+        foreach (['MBFM', 'BFM', 'FM', 'ODP', 'FFD'] as $code) {
+            if (preg_match('/\b'.preg_quote($code, '/').'\b/', $text)) return $code;
+        }
+        return null;
+    }
+
+    private function get_dca_um_label($abm_nama, $data_abm) {
+        $product_counts = $data_abm['product_counts'] ?? [];
+        arsort($product_counts);
+        $product_key = $product_counts ? key($product_counts) : 'dca';
+        $product_labels = [
+            'bisi' => 'Bisiboration Jag.Bisi 959',
+            'q235' => 'Qiuboration Jag.Q235',
+            'cp'   => 'CPBoration',
+            'dca'  => 'DCA',
+        ];
+        $activity_order = ['MBFM', 'BFM', 'FM', 'ODP', 'FFD'];
+        $activities = [];
+        foreach ($activity_order as $code) {
+            if (!empty($data_abm['activity_codes'][$code])) $activities[] = $code;
+        }
+        $activity_label = $activities ? ' ('.implode(',', $activities).')' : '';
+        $mdo_count = count($data_abm['mdo_names'] ?? []);
+        return 'UM '.$product_labels[$product_key].$activity_label
+            .' ('.$mdo_count.' MDO) u/Bp.'.$abm_nama;
+    }
  
     // ── Index ─────────────────────────────────────────────────────
     public function index() {
@@ -622,7 +659,12 @@ class Dca extends CI_Controller {
  
     public function rekap() {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
-        $bulan      = $this->input->get('bulan')      ?? '';
+        $bulan_param = $this->input->get('bulan');
+        // Saat halaman pertama kali dibuka (atau link lama mengirim bulan kosong),
+        // tampilkan bulan berjalan. Nilai 0 berarti pengguna sengaja memilih Semua.
+        $bulan      = ($bulan_param === null || $bulan_param === '')
+                        ? (int)date('n')
+                        : ((string)$bulan_param === '0' ? '' : (int)$bulan_param);
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
         $abm        = $this->input->get('abm')        ?? '';
  
@@ -632,37 +674,73 @@ class Dca extends CI_Controller {
         if ($abm)        $filter['abm']        = $abm;
  
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
+        $available_month_filter = ['tahun' => $tahun];
+        if ($id_wilayah) $available_month_filter['id_wilayah'] = $id_wilayah;
+        if ($abm)        $available_month_filter['abm'] = $abm;
+        $available_months = $this->M_Kmt->get_dca_available_months($available_month_filter);
  
         $grouped = [];
         foreach ($rekap_data as $dca) {
-            $abm_key = $dca['abm'];
-            $mdo_key = $dca['nama_mdo'];
-            if (!isset($grouped[$abm_key])) $grouped[$abm_key] = ['um' => 0, 'mdo' => []];
-            $grouped[$abm_key]['um'] += $dca['um'];
-            if (!isset($grouped[$abm_key]['mdo'][$mdo_key])) $grouped[$abm_key]['mdo'][$mdo_key] = ['kegiatan' => []];
+            $abm_key = trim((string)$dca['abm']) ?: '-';
+            $mdo_key = trim((string)$dca['nama_mdo']) ?: '-';
+            if (!isset($grouped[$abm_key])) {
+                $grouped[$abm_key] = [
+                    'um' => 0,
+                    'wilayah' => $dca['nama_wilayah'] ?? '-',
+                    'uraian' => [],
+                    'tanggal_dca' => [],
+                    'tanggal_kasbon' => [],
+                    'mdo_names' => [],
+                    'product_counts' => [],
+                    'activity_codes' => [],
+                    'kegiatan' => [],
+                ];
+            }
+            $grouped[$abm_key]['um'] += (float)$dca['um'];
+            if ($mdo_key !== '-') $grouped[$abm_key]['mdo_names'][strtoupper($mdo_key)] = $mdo_key;
+            $product_key = $this->get_dca_product_key($dca['uraian'] ?? '');
+            if (!isset($grouped[$abm_key]['product_counts'][$product_key])) {
+                $grouped[$abm_key]['product_counts'][$product_key] = 0;
+            }
+            $grouped[$abm_key]['product_counts'][$product_key]++;
+            if (!empty($dca['uraian']) && $dca['uraian'] !== 'Multi Kegiatan') {
+                $grouped[$abm_key]['uraian'][$dca['uraian']] = $dca['uraian'];
+            }
+            if (!empty($dca['tanggal_dca']) && $dca['tanggal_dca'] !== '0000-00-00') {
+                $grouped[$abm_key]['tanggal_dca'][] = $dca['tanggal_dca'];
+            }
             foreach ($dca['detail'] as $det) {
-                $kg_key = $det['nama_kegiatan'];
-                if (!isset($grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key])) {
-                    $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key] = [
+                $kg_key = trim((string)$det['nama_kegiatan']) ?: '-';
+                $activity_code = $this->get_dca_activity_code($kg_key);
+                if ($activity_code) $grouped[$abm_key]['activity_codes'][$activity_code] = true;
+                if (!isset($grouped[$abm_key]['kegiatan'][$kg_key])) {
+                    $grouped[$abm_key]['kegiatan'][$kg_key] = [
                         'rows' => [], 'total_bisi' => 0, 'total_q235' => 0,
                         'total_peserta' => 0, 'total_biaya' => 0,
                     ];
                 }
-                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['rows'][] = [
+                if (!empty($det['tgl_kasbon']) && $det['tgl_kasbon'] !== '0000-00-00') {
+                    $grouped[$abm_key]['tanggal_kasbon'][] = $det['tgl_kasbon'];
+                }
+                $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][] = [
                     'nama_mdo'    => $mdo_key,
                     'tgl_kegiatan'=> $det['tgl_kegiatan'],
                     'tgl_kasbon'  => $det['tgl_kasbon'],
-                    'qty_bisi'    => $det['qty_bisi'],
-                    'qty_q235'    => $det['qty_q235'],
-                    'jml_peserta' => $det['jml_peserta'],
-                    'real_biaya'  => $det['real_biaya'],
+                    'qty_bisi'    => (float)$det['qty_bisi'],
+                    'qty_q235'    => (float)$det['qty_q235'],
+                    'jml_peserta' => (int)$det['jml_peserta'],
+                    'real_biaya'  => (float)$det['real_biaya'],
                 ];
-                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_bisi']    += $det['qty_bisi'];
-                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_q235']   += $det['qty_q235'];
-                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_peserta'] += $det['jml_peserta'];
-                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_biaya']   += $det['real_biaya'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_bisi']     += (float)$det['qty_bisi'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_q235']    += (float)$det['qty_q235'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_peserta'] += (int)$det['jml_peserta'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_biaya']   += (float)$det['real_biaya'];
             }
         }
+        foreach ($grouped as $abm_nama => &$abm_data) {
+            $abm_data['um_label'] = $this->get_dca_um_label($abm_nama, $abm_data);
+        }
+        unset($abm_data);
  
         $data = [
             'page_title'   => 'Rekapitulasi DCA',
@@ -674,6 +752,7 @@ class Dca extends CI_Controller {
             'bulan'        => $bulan,
             'id_wilayah'   => $id_wilayah,
             'abm'          => $abm,
+            'available_months' => $available_months,
             'lv'           => $this->get_lv(),
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
@@ -685,6 +764,272 @@ class Dca extends CI_Controller {
     }
     
     public function export_rekap() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+        $abm        = $this->input->get('abm')        ?? '';
+
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+        if ($abm)        $filter['abm']        = $abm;
+
+        $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
+        $grouped = [];
+
+        // Format contoh mengelompokkan data: ABM -> kegiatan -> petugas/MDO.
+        foreach ($rekap_data as $dca) {
+            $abm_key = trim((string)$dca['abm']) ?: '-';
+            $mdo_key = trim((string)$dca['nama_mdo']) ?: '-';
+            if (!isset($grouped[$abm_key])) {
+                $grouped[$abm_key] = [
+                    'um' => 0, 'wilayah' => $dca['nama_wilayah'] ?? '-',
+                    'uraian' => [], 'tanggal_dca' => [], 'tanggal_kasbon' => [],
+                    'mdo_names' => [], 'product_counts' => [], 'activity_codes' => [],
+                    'kegiatan' => [],
+                ];
+            }
+
+            $grouped[$abm_key]['um'] += (float)$dca['um'];
+            if ($mdo_key !== '-') $grouped[$abm_key]['mdo_names'][strtoupper($mdo_key)] = $mdo_key;
+            $product_key = $this->get_dca_product_key($dca['uraian'] ?? '');
+            if (!isset($grouped[$abm_key]['product_counts'][$product_key])) {
+                $grouped[$abm_key]['product_counts'][$product_key] = 0;
+            }
+            $grouped[$abm_key]['product_counts'][$product_key]++;
+            if (!empty($dca['uraian']) && $dca['uraian'] !== 'Multi Kegiatan') {
+                $grouped[$abm_key]['uraian'][$dca['uraian']] = $dca['uraian'];
+            }
+            if (!empty($dca['tanggal_dca']) && $dca['tanggal_dca'] !== '0000-00-00') {
+                $grouped[$abm_key]['tanggal_dca'][] = $dca['tanggal_dca'];
+            }
+
+            foreach ($dca['detail'] as $det) {
+                $kg_key = trim((string)$det['nama_kegiatan']) ?: '-';
+                $activity_code = $this->get_dca_activity_code($kg_key);
+                if ($activity_code) $grouped[$abm_key]['activity_codes'][$activity_code] = true;
+                if (!isset($grouped[$abm_key]['kegiatan'][$kg_key])) {
+                    $grouped[$abm_key]['kegiatan'][$kg_key] = [
+                        'rows' => [], 'total_bisi' => 0, 'total_q235' => 0,
+                        'total_peserta' => 0, 'total_biaya' => 0,
+                    ];
+                }
+                if (!empty($det['tgl_kasbon']) && $det['tgl_kasbon'] !== '0000-00-00') {
+                    $grouped[$abm_key]['tanggal_kasbon'][] = $det['tgl_kasbon'];
+                }
+                $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][] = [
+                    'nama_mdo' => $mdo_key,
+                    'qty_bisi' => (float)$det['qty_bisi'],
+                    'qty_q235' => (float)$det['qty_q235'],
+                    'jml_peserta' => (int)$det['jml_peserta'],
+                    'real_biaya' => (float)$det['real_biaya'],
+                ];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_bisi']     += (float)$det['qty_bisi'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_q235']    += (float)$det['qty_q235'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_peserta'] += (int)$det['jml_peserta'];
+                $grouped[$abm_key]['kegiatan'][$kg_key]['total_biaya']   += (float)$det['real_biaya'];
+            }
+        }
+
+        $nama_bulan = ['','Januari','Februari','Maret','April','Mei','Juni',
+                       'Juli','Agustus','September','Oktober','November','Desember'];
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet_index = 0;
+
+        foreach ($grouped as $abm_nama => $data_abm) {
+            $sheet = $sheet_index++ === 0
+                ? $spreadsheet->getActiveSheet()
+                : $spreadsheet->createSheet();
+            $safe_name = mb_substr(preg_replace('/[\\[\\]\\:\\*\\?\\/\\\\]/', '', $abm_nama), 0, 28);
+            $base_name = $safe_name ?: 'Sheet'.$sheet_index;
+            $suffix = 1;
+            while ($spreadsheet->getSheetByName($safe_name ?: $base_name)) {
+                $safe_name = mb_substr($base_name, 0, 27).'-'.$suffix++;
+            }
+            $sheet->setTitle($safe_name ?: 'Sheet'.$sheet_index);
+            $sheet->setShowGridLines(false);
+            $sheet->getSheetView()->setZoomScale(85);
+
+            $border = ['allBorders' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                'color' => ['rgb' => '7F7F7F'],
+            ]];
+            $base_style = [
+                'font' => ['name' => 'Arial', 'size' => 8, 'color' => ['rgb' => '000000']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                           'startColor' => ['rgb' => 'FFFFFF']],
+                'borders' => $border,
+                'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            ];
+            $bold_style = $base_style;
+            $bold_style['font']['bold'] = true;
+            $number_format = '#,##0;[Red]-#,##0;-';
+
+            foreach ([['A',37.43],['B',14.57],['C',11.71],['D',11.71],
+                      ['E',9.14],['F',9.43],['G',12.29]] as $column) {
+                $sheet->getColumnDimension($column[0])->setWidth($column[1]);
+            }
+
+            $sheet->mergeCells('A1:G1')->setCellValue('A1', 'REKAPITULASI OPERASIONAL');
+            $sheet->getStyle('A1:G1')->applyFromArray($bold_style);
+            $sheet->getStyle('A1')->getFont()->setSize(12);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal('center');
+            $sheet->getRowDimension(1)->setRowHeight(23.25);
+
+            $sheet->mergeCells('A2:G2')->setCellValue('A2', 'DCA JAGUNG BISI 959, Q 235 (CLING)');
+            $sheet->getStyle('A2:G2')->applyFromArray($bold_style);
+            $sheet->getStyle('A2')->getFont()->setItalic(true);
+            $sheet->getStyle('A2')->getAlignment()->setHorizontal('center');
+            $sheet->getRowDimension(2)->setRowHeight(19.5);
+
+            $total_biaya = 0;
+            foreach ($data_abm['kegiatan'] as $kg) $total_biaya += $kg['total_biaya'];
+            $sisa_dana = $data_abm['um'] - $total_biaya;
+            $periode = $bulan ? $nama_bulan[(int)$bulan].' '.$tahun : 'Tahun '.$tahun;
+            $uraian = array_values($data_abm['uraian']);
+            $no_bukti = '';
+            $uraian_um = $this->get_dca_um_label($abm_nama, $data_abm);
+
+            $tanggal_list = $data_abm['tanggal_kasbon'] ?: $data_abm['tanggal_dca'];
+            $tanggal_um = '';
+            if ($tanggal_list) {
+                sort($tanggal_list);
+                $time_um = strtotime($tanggal_list[0]);
+                $tanggal_um = date('d', $time_um).' '.$nama_bulan[(int)date('n', $time_um)].' '.date('Y', $time_um);
+            }
+
+            foreach ([3 => $abm_nama, 4 => 'AREA BUSINESS MANAGER (ABM)',
+                      5 => $data_abm['wilayah'], 6 => 'Periode '.$periode] as $row => $value) {
+                $sheet->setCellValue("A{$row}", $value);
+                $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal('center');
+            }
+            $sheet->setCellValue('B3', 'No Bukti')->mergeCells('C3:G3')->setCellValue('C3', $no_bukti);
+            $sheet->setCellValue('B4', 'Total Biaya')->mergeCells('C4:D4')->mergeCells('E4:G4')->setCellValue('E4', $total_biaya);
+            $sheet->setCellValue('B5', 'UM DCA')->mergeCells('C5:D5')->setCellValue('C5', $tanggal_um)
+                  ->mergeCells('E5:G5')->setCellValue('E5', $data_abm['um']);
+            $sheet->setCellValue('B6', 'Sisa Dana')->mergeCells('C6:D6')->mergeCells('E6:G6')->setCellValue('E6', $sisa_dana);
+            $sheet->setCellValue('B7', 'Sisa Bulan Lalu')->mergeCells('C7:D7')->mergeCells('E7:G7');
+            $sheet->getStyle('A3:G7')->applyFromArray($base_style);
+            $sheet->getStyle('A3:B7')->getFont()->setBold(true);
+            $sheet->getStyle('E4:G6')->getFont()->setBold(true);
+            $sheet->getStyle('E4:G6')->getAlignment()->setHorizontal('right');
+            $sheet->getStyle('E4:G6')->getNumberFormat()->setFormatCode($number_format);
+            $sheet->getStyle('E6:G6')->getFont()->getColor()->setRGB('FF0000');
+            foreach ([3 => 18.75, 4 => 15.75, 5 => 15.75, 6 => 19.5, 7 => 15.75, 8 => 6.75, 9 => 47.25] as $row => $height) {
+                $sheet->getRowDimension($row)->setRowHeight($height);
+            }
+
+            $headers = [
+                'A' => 'Nama Petugas & Jenis Kegiatan', 'B' => ' DCA Kas Bon',
+                'C' => 'DS Bisi 959 (20 x 1Kg)', 'D' => 'DS Q-235 CLING (10 x 1Kg)',
+                'E' => 'DS CP Produk', 'F' => ' Jml Peserta', 'G' => 'Tot Biaya',
+            ];
+            foreach ($headers as $column => $header) $sheet->setCellValue($column.'9', $header);
+            $sheet->getStyle('A9:G9')->applyFromArray($bold_style);
+            $sheet->getStyle('A9:G9')->getAlignment()->setHorizontal('center')->setWrapText(true);
+
+            $row = 10;
+            $intro_rows = [
+                [$abm_nama, null, null], ['AREA BUSINESS MANAGER (ABM)', null, null],
+                [$uraian_um, null, null], [$abm_nama, $data_abm['um'], 0],
+                [$uraian_um.' Total', $data_abm['um'], 0],
+                ['AREA BUSINESS MANAGER (ABM) Total', $data_abm['um'], 0],
+                ['MARKET DEVELOPMENT OFFICER (MDO)', null, null],
+            ];
+            foreach ($intro_rows as $intro) {
+                $sheet->setCellValue("A{$row}", $intro[0]);
+                if ($intro[1] !== null) $sheet->setCellValue("B{$row}", $intro[1]);
+                if ($intro[2] !== null) $sheet->setCellValue("G{$row}", $intro[2]);
+                $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($bold_style);
+                $sheet->getStyle("B{$row}:G{$row}")->getNumberFormat()->setFormatCode($number_format);
+                $sheet->getStyle("B{$row}:G{$row}")->getAlignment()->setHorizontal('right');
+                $sheet->getRowDimension($row++)->setRowHeight(19.5);
+            }
+
+            foreach ($data_abm['kegiatan'] as $nama_kegiatan => $kegiatan) {
+                $sheet->setCellValue("A{$row}", $nama_kegiatan);
+                $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($bold_style);
+                $sheet->getRowDimension($row++)->setRowHeight(19.5);
+
+                foreach ($kegiatan['rows'] as $detail) {
+                    $sheet->setCellValue("A{$row}", $detail['nama_mdo']);
+                    if ($detail['qty_bisi'])     $sheet->setCellValue("C{$row}", $detail['qty_bisi']);
+                    if ($detail['qty_q235'])     $sheet->setCellValue("D{$row}", $detail['qty_q235']);
+                    // E (DS CP Produk) kosong karena modul DCA belum mempunyai field sumber CP Produk.
+                    if ($detail['jml_peserta'])  $sheet->setCellValue("F{$row}", $detail['jml_peserta']);
+                    if ($detail['real_biaya'])   $sheet->setCellValue("G{$row}", $detail['real_biaya']);
+                    $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($base_style);
+                    $sheet->getStyle("B{$row}:G{$row}")->getAlignment()->setHorizontal('right');
+                    $sheet->getStyle("B{$row}:G{$row}")->getNumberFormat()->setFormatCode($number_format);
+                    $sheet->getRowDimension($row++)->setRowHeight(19.5);
+                }
+
+                $sheet->setCellValue("A{$row}", $nama_kegiatan.' Total');
+                if ($kegiatan['total_bisi'])     $sheet->setCellValue("C{$row}", $kegiatan['total_bisi']);
+                if ($kegiatan['total_q235'])     $sheet->setCellValue("D{$row}", $kegiatan['total_q235']);
+                if ($kegiatan['total_peserta'])  $sheet->setCellValue("F{$row}", $kegiatan['total_peserta']);
+                if ($kegiatan['total_biaya'])    $sheet->setCellValue("G{$row}", $kegiatan['total_biaya']);
+                $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($bold_style);
+                $sheet->getStyle("B{$row}:G{$row}")->getAlignment()->setHorizontal('right');
+                $sheet->getStyle("B{$row}:G{$row}")->getNumberFormat()->setFormatCode($number_format);
+                $sheet->getRowDimension($row++)->setRowHeight(19.5);
+            }
+
+            $total_bisi = $total_q235 = $total_peserta = 0;
+            foreach ($data_abm['kegiatan'] as $kegiatan) {
+                $total_bisi     += $kegiatan['total_bisi'];
+                $total_q235     += $kegiatan['total_q235'];
+                $total_peserta  += $kegiatan['total_peserta'];
+            }
+            $total_rows = [
+                ['MARKET DEVELOPMENT OFFICER (MDO) Total', null],
+                [$abm_nama.' Total', $data_abm['um']], ['Grand Total', $data_abm['um']],
+            ];
+            foreach ($total_rows as $total_row) {
+                $sheet->setCellValue("A{$row}", $total_row[0]);
+                if ($total_row[1] !== null) $sheet->setCellValue("B{$row}", $total_row[1]);
+                if ($total_bisi)    $sheet->setCellValue("C{$row}", $total_bisi);
+                if ($total_q235)    $sheet->setCellValue("D{$row}", $total_q235);
+                if ($total_peserta) $sheet->setCellValue("F{$row}", $total_peserta);
+                if ($total_biaya)   $sheet->setCellValue("G{$row}", $total_biaya);
+                $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($bold_style);
+                $sheet->getStyle("B{$row}:G{$row}")->getAlignment()->setHorizontal('right');
+                $sheet->getStyle("B{$row}:G{$row}")->getNumberFormat()->setFormatCode($number_format);
+                $sheet->getRowDimension($row++)->setRowHeight(19.5);
+            }
+
+            $last_row = $row - 1;
+            $sheet->getStyle("A9:A{$last_row}")->getAlignment()->setWrapText(true);
+            $sheet->freezePane('A10');
+            $sheet->setAutoFilter("A9:G{$last_row}");
+            $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT);
+            $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_LEGAL);
+            $sheet->getPageSetup()->setFitToPage(true)->setFitToWidth(1)->setFitToHeight(0);
+            $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 9);
+            $sheet->getPageSetup()->setPrintArea("A1:G{$last_row}");
+            $sheet->getPageMargins()->setTop(0.25)->setRight(0.25)->setLeft(0.25)->setBottom(0.25);
+        }
+
+        if (empty($grouped)) {
+            $spreadsheet->getActiveSheet()->setTitle('Rekap DCA')
+                ->setCellValue('A1', 'Tidak ada data DCA untuk filter yang dipilih.');
+        }
+
+        $periode_str = ($bulan ? 'Bln'.$bulan.'_' : '') . $tahun;
+        $filename = 'Rekap_DCA_KMT_' . $periode_str . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Format export rekap sebelum penyesuaian workbook operasional.
+     * Dipertahankan sementara sebagai referensi internal.
+     */
+    private function export_rekap_lama() {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();

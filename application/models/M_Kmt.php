@@ -594,6 +594,17 @@ class M_Kmt extends CI_Model {
         $this->db->order_by('abm');
         return $this->db->get()->result_array();
     }
+
+    public function get_dca_available_months($filter = []) {
+        $this->db->distinct();
+        $this->db->select('bulan');
+        $this->db->from('tbkmt_dca');
+        if (!empty($filter['tahun']))      $this->db->where('tahun', $filter['tahun']);
+        if (!empty($filter['id_wilayah'])) $this->db->where('id_wilayah', $filter['id_wilayah']);
+        if (!empty($filter['abm']))        $this->db->where('abm', $filter['abm']);
+        $this->db->order_by('bulan', 'ASC');
+        return array_map('intval', array_column($this->db->get()->result_array(), 'bulan'));
+    }
     
     // ================================================================
     // PROMO / PERALATAN
