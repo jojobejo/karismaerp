@@ -45,5 +45,42 @@
   <script src="<?= base_url('assets/plugins/jquery/jquery.js') ?>"></script>
   <!-- CSS Custom Karisma -->
   <link rel="stylesheet" href="<?php echo base_url("assets/ipkp.css") ?>">
-  <?php $this->load->view('partial/main/session_timeout_js.php'); ?>
+  <script>
+    (function() {
+      var idleSeconds = 0;
+      var maxIdleSeconds = 900; // 15 menit (15 * 60 detik)
+      var timeoutUrl = "<?= base_url('Auth/timeout') ?>";
+      var timerInterval = null;
+
+      function resetIdleTimer() {
+        idleSeconds = 0;
+      }
+
+      var activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+      for (var i = 0; i < activityEvents.length; i++) {
+        window.addEventListener(activityEvents[i], resetIdleTimer, true);
+      }
+
+      timerInterval = setInterval(function() {
+        idleSeconds++;
+        if (idleSeconds >= maxIdleSeconds) {
+          clearInterval(timerInterval);
+          window.location.href = timeoutUrl;
+        }
+      }, 1000);
+
+      if (window.jQuery) {
+        $(document).ajaxError(function(event, jqXHR) {
+          if (jqXHR.status === 401) {
+            var res = jqXHR.responseJSON;
+            if (res && res.redirect) {
+              window.location.href = res.redirect;
+            } else {
+              window.location.href = timeoutUrl;
+            }
+          }
+        });
+      }
+    })();
+  </script>
 </head>
