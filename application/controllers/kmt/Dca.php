@@ -25,6 +25,16 @@ class Dca extends CI_Controller {
             ? (int)$this->session->userdata('wilayah') : null;
     }
 
+    private function get_tgl_kasbon_filter($default = null) {
+        $value = $this->input->post_get('tgl_kasbon');
+        if (!$value) return $default ?: date('Y-m-d');
+
+        $date = \DateTime::createFromFormat('!Y-m-d', $value);
+        return ($date && $date->format('Y-m-d') === $value)
+            ? $value
+            : ($default ?: date('Y-m-d'));
+    }
+
     private function get_dca_product_key($uraian) {
         $text = strtolower((string)$uraian);
         if (strpos($text, 'cpboration') !== false || preg_match('/\bcp\b/i', $text)) return 'cp';
@@ -120,6 +130,7 @@ class Dca extends CI_Controller {
     public function simpan() {
         $this->form_validation->set_rules('tanggal_dca', 'Tanggal', 'required');
         $this->form_validation->set_rules('id_wilayah',  'Wilayah', 'required|integer');
+        $this->form_validation->set_rules('abm', 'ABM', 'trim|required|max_length[100]');
  
         if ($this->form_validation->run() === FALSE) {
             $this->tambah(); return;
@@ -150,7 +161,7 @@ class Dca extends CI_Controller {
             'tahun'            => (int)date('Y', strtotime($tgl)),
             'id_wilayah'       => (int)$this->input->post('id_wilayah'),
             'nama_mdo'         => $this->input->post('nama_mdo'),
-            'abm'              => $this->input->post('abm'),
+            'abm'              => trim((string)$this->input->post('abm')),
             'uraian'           => $this->input->post('uraian') ?: 'Multi Kegiatan',
             'um'               => $um_header,
             'refund'           => $refund_total,
@@ -265,7 +276,7 @@ class Dca extends CI_Controller {
             'tahun'       => (int)date('Y', strtotime($tgl)),
             'id_wilayah'  => (int)$this->input->post('id_wilayah'),
             'nama_mdo'    => $this->input->post('nama_mdo'),
-            'abm'         => $this->input->post('abm'),
+            'abm'         => trim((string)$this->input->post('abm')),
             'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
             'um'          => $um_header,
             'refund'      => $refund_total,
@@ -658,26 +669,16 @@ class Dca extends CI_Controller {
     }
  
     public function rekap() {
-        $tahun      = $this->input->get('tahun')      ?? date('Y');
-        $bulan_param = $this->input->get('bulan');
-        // Saat halaman pertama kali dibuka (atau link lama mengirim bulan kosong),
-        // tampilkan bulan berjalan. Nilai 0 berarti pengguna sengaja memilih Semua.
-        $bulan      = ($bulan_param === null || $bulan_param === '')
-                        ? (int)date('n')
-                        : ((string)$bulan_param === '0' ? '' : (int)$bulan_param);
-        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
-        $abm        = $this->input->get('abm')        ?? '';
- 
-        $filter = ['tahun' => $tahun];
-        if ($bulan)      $filter['bulan']      = $bulan;
-        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
-        if ($abm)        $filter['abm']        = $abm;
+        $tgl_kasbon_list = $this->M_Kmt->get_dca_tgl_kasbon_list();
+        $tgl_kasbon_values = array_column($tgl_kasbon_list, 'tgl_kasbon');
+        $tgl_kasbon_default = $tgl_kasbon_values[0] ?? date('Y-m-d');
+        $tgl_kasbon = $this->get_tgl_kasbon_filter($tgl_kasbon_default);
+        if ($tgl_kasbon_values && !in_array($tgl_kasbon, $tgl_kasbon_values, true)) {
+            $tgl_kasbon = $tgl_kasbon_default;
+        }
+        $filter = ['tgl_kasbon' => $tgl_kasbon];
  
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
-        $available_month_filter = ['tahun' => $tahun];
-        if ($id_wilayah) $available_month_filter['id_wilayah'] = $id_wilayah;
-        if ($abm)        $available_month_filter['abm'] = $abm;
-        $available_months = $this->M_Kmt->get_dca_available_months($available_month_filter);
  
         $grouped = [];
         foreach ($rekap_data as $dca) {
@@ -722,15 +723,19 @@ class Dca extends CI_Controller {
                 if (!empty($det['tgl_kasbon']) && $det['tgl_kasbon'] !== '0000-00-00') {
                     $grouped[$abm_key]['tanggal_kasbon'][] = $det['tgl_kasbon'];
                 }
-                $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][] = [
-                    'nama_mdo'    => $mdo_key,
-                    'tgl_kegiatan'=> $det['tgl_kegiatan'],
-                    'tgl_kasbon'  => $det['tgl_kasbon'],
-                    'qty_bisi'    => (float)$det['qty_bisi'],
-                    'qty_q235'    => (float)$det['qty_q235'],
-                    'jml_peserta' => (int)$det['jml_peserta'],
-                    'real_biaya'  => (float)$det['real_biaya'],
-                ];
+                $mdo_row_key = mb_strtoupper(preg_replace('/\s+/', ' ', trim($mdo_key)));
+                if (!isset($grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key])) {
+                    $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key] = [
+                        'nama_mdo' => $mdo_key, 'qty_bisi' => 0, 'qty_q235' => 0,
+                        'jml_peserta' => 0, 'real_biaya' => 0,
+                    ];
+                }
+                $mdo_row = &$grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key];
+                $mdo_row['qty_bisi']    += (float)$det['qty_bisi'];
+                $mdo_row['qty_q235']    += (float)$det['qty_q235'];
+                $mdo_row['jml_peserta'] += (int)$det['jml_peserta'];
+                $mdo_row['real_biaya']  += (float)$det['real_biaya'];
+                unset($mdo_row);
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_bisi']     += (float)$det['qty_bisi'];
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_q235']    += (float)$det['qty_q235'];
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_peserta'] += (int)$det['jml_peserta'];
@@ -746,13 +751,8 @@ class Dca extends CI_Controller {
             'page_title'   => 'Rekapitulasi DCA',
             'grouped'      => $grouped,
             'rekap_data'   => $rekap_data,
-            'abm_list'     => $this->M_Kmt->get_dca_abm_list(['tahun' => $tahun, 'id_wilayah' => $id_wilayah]),
-            'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'tahun'        => $tahun,
-            'bulan'        => $bulan,
-            'id_wilayah'   => $id_wilayah,
-            'abm'          => $abm,
-            'available_months' => $available_months,
+            'tgl_kasbon'   => $tgl_kasbon,
+            'tgl_kasbon_list' => $tgl_kasbon_list,
             'lv'           => $this->get_lv(),
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
@@ -764,15 +764,10 @@ class Dca extends CI_Controller {
     }
     
     public function export_rekap() {
-        $tahun      = $this->input->get('tahun')      ?? date('Y');
-        $bulan      = $this->input->get('bulan')      ?? '';
-        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
-        $abm        = $this->input->get('abm')        ?? '';
-
-        $filter = ['tahun' => $tahun];
-        if ($bulan)      $filter['bulan']      = $bulan;
-        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
-        if ($abm)        $filter['abm']        = $abm;
+        $tgl_kasbon = $this->get_tgl_kasbon_filter();
+        $filter = ['tgl_kasbon' => $tgl_kasbon];
+        $no_bukti_values = $this->input->post('no_bukti');
+        if (!is_array($no_bukti_values)) $no_bukti_values = [];
 
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
         $grouped = [];
@@ -817,13 +812,19 @@ class Dca extends CI_Controller {
                 if (!empty($det['tgl_kasbon']) && $det['tgl_kasbon'] !== '0000-00-00') {
                     $grouped[$abm_key]['tanggal_kasbon'][] = $det['tgl_kasbon'];
                 }
-                $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][] = [
-                    'nama_mdo' => $mdo_key,
-                    'qty_bisi' => (float)$det['qty_bisi'],
-                    'qty_q235' => (float)$det['qty_q235'],
-                    'jml_peserta' => (int)$det['jml_peserta'],
-                    'real_biaya' => (float)$det['real_biaya'],
-                ];
+                $mdo_row_key = mb_strtoupper(preg_replace('/\s+/', ' ', trim($mdo_key)));
+                if (!isset($grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key])) {
+                    $grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key] = [
+                        'nama_mdo' => $mdo_key, 'qty_bisi' => 0, 'qty_q235' => 0,
+                        'jml_peserta' => 0, 'real_biaya' => 0,
+                    ];
+                }
+                $mdo_row = &$grouped[$abm_key]['kegiatan'][$kg_key]['rows'][$mdo_row_key];
+                $mdo_row['qty_bisi']    += (float)$det['qty_bisi'];
+                $mdo_row['qty_q235']    += (float)$det['qty_q235'];
+                $mdo_row['jml_peserta'] += (int)$det['jml_peserta'];
+                $mdo_row['real_biaya']  += (float)$det['real_biaya'];
+                unset($mdo_row);
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_bisi']     += (float)$det['qty_bisi'];
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_q235']    += (float)$det['qty_q235'];
                 $grouped[$abm_key]['kegiatan'][$kg_key]['total_peserta'] += (int)$det['jml_peserta'];
@@ -885,9 +886,10 @@ class Dca extends CI_Controller {
             $total_biaya = 0;
             foreach ($data_abm['kegiatan'] as $kg) $total_biaya += $kg['total_biaya'];
             $sisa_dana = $data_abm['um'] - $total_biaya;
-            $periode = $bulan ? $nama_bulan[(int)$bulan].' '.$tahun : 'Tahun '.$tahun;
+            $time_kasbon = strtotime($tgl_kasbon);
+            $periode = $nama_bulan[(int)date('n', $time_kasbon)].' '.date('Y', $time_kasbon);
             $uraian = array_values($data_abm['uraian']);
-            $no_bukti = '';
+            $no_bukti = mb_substr(trim((string)($no_bukti_values[$sheet_index - 1] ?? '')), 0, 100);
             $uraian_um = $this->get_dca_um_label($abm_nama, $data_abm);
 
             $tanggal_list = $data_abm['tanggal_kasbon'] ?: $data_abm['tanggal_dca'];
@@ -903,7 +905,8 @@ class Dca extends CI_Controller {
                 $sheet->setCellValue("A{$row}", $value);
                 $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal('center');
             }
-            $sheet->setCellValue('B3', 'No Bukti')->mergeCells('C3:G3')->setCellValue('C3', $no_bukti);
+            $sheet->setCellValue('B3', 'No Bukti')->mergeCells('C3:G3');
+            $sheet->setCellValueExplicit('C3', $no_bukti, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('B4', 'Total Biaya')->mergeCells('C4:D4')->mergeCells('E4:G4')->setCellValue('E4', $total_biaya);
             $sheet->setCellValue('B5', 'UM DCA')->mergeCells('C5:D5')->setCellValue('C5', $tanggal_um)
                   ->mergeCells('E5:G5')->setCellValue('E5', $data_abm['um']);
@@ -981,9 +984,11 @@ class Dca extends CI_Controller {
                 $total_q235     += $kegiatan['total_q235'];
                 $total_peserta  += $kegiatan['total_peserta'];
             }
+            $grand_total_biaya = min($total_biaya, $data_abm['um']);
             $total_rows = [
-                ['MARKET DEVELOPMENT OFFICER (MDO) Total', null],
-                [$abm_nama.' Total', $data_abm['um']], ['Grand Total', $data_abm['um']],
+                ['MARKET DEVELOPMENT OFFICER (MDO) Total', null, $total_biaya],
+                [$abm_nama.' Total', $data_abm['um'], $total_biaya],
+                ['Grand Total', $data_abm['um'], $grand_total_biaya],
             ];
             foreach ($total_rows as $total_row) {
                 $sheet->setCellValue("A{$row}", $total_row[0]);
@@ -991,7 +996,7 @@ class Dca extends CI_Controller {
                 if ($total_bisi)    $sheet->setCellValue("C{$row}", $total_bisi);
                 if ($total_q235)    $sheet->setCellValue("D{$row}", $total_q235);
                 if ($total_peserta) $sheet->setCellValue("F{$row}", $total_peserta);
-                if ($total_biaya)   $sheet->setCellValue("G{$row}", $total_biaya);
+                if ($total_row[2])  $sheet->setCellValue("G{$row}", $total_row[2]);
                 $sheet->getStyle("A{$row}:G{$row}")->applyFromArray($bold_style);
                 $sheet->getStyle("B{$row}:G{$row}")->getAlignment()->setHorizontal('right');
                 $sheet->getStyle("B{$row}:G{$row}")->getNumberFormat()->setFormatCode($number_format);
@@ -1015,8 +1020,7 @@ class Dca extends CI_Controller {
                 ->setCellValue('A1', 'Tidak ada data DCA untuk filter yang dipilih.');
         }
 
-        $periode_str = ($bulan ? 'Bln'.$bulan.'_' : '') . $tahun;
-        $filename = 'Rekap_DCA_KMT_' . $periode_str . '.xlsx';
+        $filename = 'Rekap_DCA_KMT_' . date('d-m-Y', strtotime($tgl_kasbon)) . '.xlsx';
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');

@@ -25,6 +25,8 @@
         .rekap-sheet .grand-row td{font-weight:700;border-top:2px solid #000!important}
         .rekap-sheet .num{text-align:right;white-space:nowrap}
         .rekap-sheet .muted-dash{color:#777}
+        .rekap-sheet .no-bukti-input{width:100%;height:25px;border:0;background:#fff;padding:2px 5px;font:inherit;color:#000}
+        .rekap-sheet .no-bukti-input:focus{outline:2px solid #17a2b8;outline-offset:-2px}
         @media(max-width:767.98px){.rekap-sheet-wrap{padding:6px}}
     </style>
 
@@ -53,72 +55,35 @@
                     <div class="card-body py-2">
                         <form method="GET" action="<?= base_url('kmt/dca/rekap') ?>" class="form-inline flex-wrap" id="formFilter">
                             <div class="form-group mr-2 mb-2">
-                                <label class="mr-1 small">Tahun</label>
-                                <select name="tahun" class="form-control form-control-sm">
-                                    <?php for($y=date('Y');$y>=2022;$y--): ?>
-                                    <option value="<?= $y ?>" <?= $tahun==$y?'selected':'' ?>><?= $y ?></option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-                            <div class="form-group mr-2 mb-2">
-                                <label class="mr-1 small">Bulan</label>
-                                <select name="bulan" class="form-control form-control-sm">
-                                    <option value="0" <?= $bulan===''?'selected':'' ?>>Semua</option>
-                                    <?php foreach($nama_bulan as $nb=>$nm):if(!$nb)continue; ?>
-                                    <option value="<?= $nb ?>" <?= $bulan==$nb?'selected':'' ?>><?= $nm ?></option>
+                                <label for="tglKasbon" class="mr-2 small">Tanggal Kasbon</label>
+                                <select id="tglKasbon" name="tgl_kasbon" class="form-control form-control-sm" required <?= empty($tgl_kasbon_list)?'disabled':'' ?>>
+                                    <?php if(empty($tgl_kasbon_list)): ?>
+                                    <option value="">Belum ada tanggal kasbon</option>
+                                    <?php else: ?>
+                                    <?php foreach($tgl_kasbon_list as $tanggal):
+                                        $tanggal_value=$tanggal['tgl_kasbon'];
+                                        $tanggal_time=strtotime($tanggal_value);
+                                        $tanggal_label=date('d',$tanggal_time).' '.$nama_bulan[(int)date('n',$tanggal_time)].' '.date('Y',$tanggal_time);
+                                    ?>
+                                    <option value="<?= htmlspecialchars($tanggal_value) ?>" <?= $tgl_kasbon===$tanggal_value?'selected':'' ?>><?= htmlspecialchars($tanggal_label) ?></option>
                                     <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </select>
                             </div>
-                            <?php if($lv!=3): ?>
-                            <div class="form-group mr-2 mb-2">
-                                <label class="mr-1 small">Wilayah</label>
-                                <select name="id_wilayah" class="form-control form-control-sm">
-                                    <option value="">Semua</option>
-                                    <?php foreach($wilayah_list as $w): ?>
-                                    <option value="<?= $w['id'] ?>" <?= $id_wilayah==$w['id']?'selected':'' ?>><?= htmlspecialchars($w['nama_wilayah']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <?php else: ?>
-                            <input type="hidden" name="id_wilayah" value="<?= $id_wilayah ?>">
-                            <?php endif; ?>
-                            <div class="form-group mr-2 mb-2">
-                                <label class="mr-1 small">ABM</label>
-                                <select name="abm" class="form-control form-control-sm">
-                                    <option value="">Semua</option>
-                                    <?php foreach($abm_list as $ab): ?>
-                                    <option value="<?= htmlspecialchars($ab['abm']) ?>" <?= $abm==$ab['abm']?'selected':'' ?>><?= htmlspecialchars($ab['abm']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-info btn-sm mb-2 mr-2"><i class="fas fa-filter mr-1"></i> Filter</button>
+                            <button type="submit" class="btn btn-info btn-sm mb-2 mr-2" <?= empty($tgl_kasbon_list)?'disabled':'' ?>><i class="fas fa-filter mr-1"></i> Tampilkan</button>
                             <a href="<?= base_url('kmt/dca/rekap') ?>" class="btn btn-outline-secondary btn-sm mb-2 mr-2"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
-                            <a href="<?= base_url('kmt/dca/export_rekap').'?tahun='.$tahun.'&bulan='.$bulan.'&id_wilayah='.$id_wilayah.'&abm='.urlencode($abm) ?>" class="btn btn-success btn-sm mb-2"><i class="fas fa-file-excel mr-1"></i> Export Excel</a>
+                            <button type="submit" form="formExport" class="btn btn-success btn-sm mb-2" <?= empty($grouped)?'disabled':'' ?>><i class="fas fa-file-excel mr-1"></i> Export Excel</button>
+                        </form>
+                        <div class="small text-muted">Isi No. Bukti pada lembar rekap di bawah sebelum melakukan export.</div>
+                        <form method="POST" action="<?= base_url('kmt/dca/export_rekap') ?>" id="formExport">
+                            <input type="hidden" name="tgl_kasbon" value="<?= htmlspecialchars($tgl_kasbon) ?>">
                         </form>
                     </div>
                 </div>
 
                 <?php if(empty($grouped)): ?>
-                <?php
-                    $selected_wilayah='semua wilayah';
-                    foreach($wilayah_list as $wilayah){
-                        if((string)$wilayah['id']===(string)$id_wilayah){$selected_wilayah=$wilayah['nama_wilayah'];break;}
-                    }
-                    $bulan_label=$bulan?$nama_bulan[(int)$bulan]:'semua bulan';
-                    $available_labels=[];
-                    foreach($available_months as $available_month){
-                        if(isset($nama_bulan[$available_month]))$available_labels[]=$nama_bulan[$available_month];
-                    }
-                    $all_months_url=base_url('kmt/dca/rekap').'?tahun='.$tahun.'&bulan=0&id_wilayah='.$id_wilayah.'&abm='.urlencode($abm);
-                ?>
                 <div class="alert alert-info">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between">
-                        <div class="mr-3 mb-2">
-                            <strong>Tidak ada data <?= htmlspecialchars($bulan_label.' '.$tahun) ?></strong> untuk wilayah <?= htmlspecialchars($selected_wilayah) ?>.
-                            <?php if($available_labels): ?><div class="small mt-1">Data tersedia pada bulan: <?= htmlspecialchars(implode(', ',$available_labels)) ?>.</div><?php endif; ?>
-                        </div>
-                        <?php if($bulan&&$available_labels): ?><a href="<?= $all_months_url ?>" class="btn btn-sm btn-info mb-2"><i class="fas fa-calendar-alt mr-1"></i> Tampilkan Semua Bulan</a><?php endif; ?>
-                    </div>
+                    <strong>Tidak ada data</strong> dengan tanggal kasbon <?= htmlspecialchars(date('d-m-Y', strtotime($tgl_kasbon))) ?>.
                 </div>
                 <?php endif; ?>
 
@@ -132,7 +97,8 @@
                         $total_q235+=$kg['total_q235'];$total_peserta+=$kg['total_peserta'];
                     }
                     $grand_um+=$abm_data['um'];$grand_biaya+=$abm_total_biaya;$sisa=$abm_data['um']-$abm_total_biaya;
-                    $periode=$bulan?$nama_bulan[(int)$bulan].' '.$tahun:'Tahun '.$tahun;
+                    $time_periode=strtotime($tgl_kasbon);
+                    $periode=$nama_bulan[(int)date('n',$time_periode)].' '.date('Y',$time_periode);
                     $uraian_um=$abm_data['um_label'];
                     $tanggal_list=$abm_data['tanggal_kasbon']?:$abm_data['tanggal_dca'];$tanggal_um='-';
                     if($tanggal_list){sort($tanggal_list);$time_um=strtotime($tanggal_list[0]);$tanggal_um=date('d',$time_um).' '.$nama_bulan[(int)date('n',$time_um)].' '.date('Y',$time_um);}
@@ -144,7 +110,7 @@
                             <tbody>
                                 <tr><td colspan="7" class="report-title">REKAPITULASI OPERASIONAL</td></tr>
                                 <tr><td colspan="7" class="report-subtitle">DCA JAGUNG BISI 959, Q 235 (CLING)</td></tr>
-                                <tr><td class="identity"><?= htmlspecialchars($abm_nama) ?></td><td class="summary-label">No Bukti</td><td colspan="5"></td></tr>
+                                <tr><td class="identity"><?= htmlspecialchars($abm_nama) ?></td><td class="summary-label">No Bukti</td><td colspan="5"><input type="text" name="no_bukti[]" form="formExport" class="no-bukti-input" placeholder="Wajib isi nomor bukti" aria-label="No Bukti <?= htmlspecialchars($abm_nama) ?>" maxlength="100" required></td></tr>
                                 <tr><td class="identity">AREA BUSINESS MANAGER (ABM)</td><td class="summary-label">Total Biaya</td><td colspan="2"></td><td colspan="3" class="summary-value"><?= number_format($abm_total_biaya,0,',','.') ?></td></tr>
                                 <tr><td class="identity"><?= htmlspecialchars($abm_data['wilayah']) ?></td><td class="summary-label">UM DCA</td><td colspan="2"><?= htmlspecialchars($tanggal_um) ?></td><td colspan="3" class="summary-value"><?= number_format($abm_data['um'],0,',','.') ?></td></tr>
                                 <tr><td class="identity">Periode <?= htmlspecialchars($periode) ?></td><td class="summary-label">Sisa Dana</td><td colspan="2"></td><td colspan="3" class="summary-value negative-accent"><?= number_format($sisa,0,',','.') ?></td></tr>
@@ -165,8 +131,9 @@
                                 <?php endforeach; ?>
                                 <tr class="subtotal-row"><td><?= htmlspecialchars($kg_nama) ?> Total</td><td></td><td class="num"><?= $format_number($kg_data['total_bisi']) ?></td><td class="num"><?= $format_number($kg_data['total_q235']) ?></td><td class="num muted-dash">-</td><td class="num"><?= $format_number($kg_data['total_peserta']) ?></td><td class="num"><?= $format_number($kg_data['total_biaya']) ?></td></tr>
                                 <?php endforeach; ?>
-                                <?php foreach([['MARKET DEVELOPMENT OFFICER (MDO) Total',null],[$abm_nama.' Total',$abm_data['um']],['Grand Total',$abm_data['um']]] as $i=>$total_row): ?>
-                                <tr class="<?= $i===2?'grand-row':'total-row' ?>"><td><?= htmlspecialchars($total_row[0]) ?></td><td class="num"><?= $total_row[1]===null?'':number_format($total_row[1],0,',','.') ?></td><td class="num"><?= $format_number($total_bisi) ?></td><td class="num"><?= $format_number($total_q235) ?></td><td class="num muted-dash">-</td><td class="num"><?= $format_number($total_peserta) ?></td><td class="num"><?= $format_number($abm_total_biaya) ?></td></tr>
+                                <?php $grand_total_biaya=min($abm_total_biaya,$abm_data['um']); ?>
+                                <?php foreach([['MARKET DEVELOPMENT OFFICER (MDO) Total',null,$abm_total_biaya],[$abm_nama.' Total',$abm_data['um'],$abm_total_biaya],['Grand Total',$abm_data['um'],$grand_total_biaya]] as $i=>$total_row): ?>
+                                <tr class="<?= $i===2?'grand-row':'total-row' ?>"><td><?= htmlspecialchars($total_row[0]) ?></td><td class="num"><?= $total_row[1]===null?'':number_format($total_row[1],0,',','.') ?></td><td class="num"><?= $format_number($total_bisi) ?></td><td class="num"><?= $format_number($total_q235) ?></td><td class="num muted-dash">-</td><td class="num"><?= $format_number($total_peserta) ?></td><td class="num"><?= $format_number($total_row[2]) ?></td></tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>

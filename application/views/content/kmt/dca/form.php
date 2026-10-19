@@ -271,13 +271,14 @@
                                 <!-- ABM -->
                                 <div class="col-md-3">
                                     <div class="form-group">
-                                        <label>ABM</label>
+                                        <label>ABM <span class="text-danger">*</span></label>
                                         <input type="text" name="abm"
                                                class="form-control form-control-sm"
                                                value="<?= $is_edit
-                                                   ? htmlspecialchars($row['abm'] ?? '')
-                                                   : $this->session->userdata('nama') ?>"
-                                               <?= $form_readonly ? 'readonly' : '' ?>>
+                                                    ? htmlspecialchars($row['abm'] ?? '')
+                                                    : htmlspecialchars(set_value('abm', '')) ?>"
+                                               placeholder="Nama ABM..."
+                                               <?= $form_readonly ? 'readonly' : 'required' ?>>
                                     </div>
                                 </div>
                             </div>

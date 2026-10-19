@@ -502,6 +502,14 @@ class M_Kmt extends CI_Model {
         if (!empty($filter['bulan']))      $this->db->where('d.bulan', $filter['bulan']);
         if (!empty($filter['id_wilayah'])) $this->db->where('d.id_wilayah', $filter['id_wilayah']);
         if (!empty($filter['abm']))        $this->db->where('d.abm', $filter['abm']);
+        if (!empty($filter['tgl_kasbon'])) {
+            $tgl_kasbon = $this->db->escape($filter['tgl_kasbon']);
+            $this->db->where(
+                "EXISTS (SELECT 1 FROM tbkmt_dca_detail ddf WHERE ddf.id_dca = d.id AND ddf.tgl_kasbon = {$tgl_kasbon})",
+                null,
+                false
+            );
+        }
     
         $this->db->order_by('d.abm, d.nama_mdo, d.tanggal_dca');
         $headers = $this->db->get()->result_array();
@@ -517,6 +525,9 @@ class M_Kmt extends CI_Model {
         ');
         $this->db->from('tbkmt_dca_detail dd');
         $this->db->where_in('dd.id_dca', $ids);
+        if (!empty($filter['tgl_kasbon'])) {
+            $this->db->where('dd.tgl_kasbon', $filter['tgl_kasbon']);
+        }
         $this->db->order_by('dd.id_dca, dd.nama_kegiatan');
         $details = $this->db->get()->result_array();
     
@@ -532,6 +543,18 @@ class M_Kmt extends CI_Model {
         }
     
         return $headers;
+    }
+
+    public function get_dca_tgl_kasbon_list() {
+        return $this->db
+            ->distinct()
+            ->select('tgl_kasbon')
+            ->from('tbkmt_dca_detail')
+            ->where('tgl_kasbon IS NOT NULL', null, false)
+            ->where('tgl_kasbon !=', '0000-00-00')
+            ->order_by('tgl_kasbon', 'DESC')
+            ->get()
+            ->result_array();
     }
     
     public function get_dca_with_details($filter = []) {
