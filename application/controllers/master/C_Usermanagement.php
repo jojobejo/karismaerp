@@ -16,6 +16,7 @@ class C_Usermanagement extends CI_Controller
     private function guard()
     {
         if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('gagal', 'Sesi Anda berakhir. Silakan login ulang.');
             redirect('Auth');
         }
         $this->permission->guard('master/user-management');

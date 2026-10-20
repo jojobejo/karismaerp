@@ -102,6 +102,45 @@
             text-transform: uppercase;
         }
 
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .admin-navigation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .admin-navigation a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 13px;
+            color: #16447c;
+            border: 1px solid rgba(32, 86, 158, .15);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .86);
+            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
+            font-size: .72rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: color .2s ease, background .2s ease, transform .2s ease;
+        }
+
+        .admin-navigation a:hover,
+        .admin-navigation a:focus-visible {
+            color: #fff;
+            background: #1769ff;
+            outline: none;
+            transform: translateY(-1px);
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -489,6 +528,9 @@
             .brand { max-width: 230px; font-size: .86rem; }
             .brand-logo { width: 40px; height: 40px; }
             .system-status { padding: 8px 10px; font-size: .62rem; }
+            .topbar-actions { gap: 7px; }
+            .admin-navigation { justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+            .admin-navigation a { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
             .portal-hero { min-height: 0; border-radius: 24px; }
             .hero-copy { padding: 38px 24px 40px; }
             .portal-title { font-size: 2.55rem; }
@@ -520,7 +562,15 @@
             <img class="brand-logo" src="<?= $portal_asset_base ?>assets/images/Karisma.png" alt="Logo Karisma">
             <span>PT. Karisma Indoagro Universal</span>
         </div>
-        <div class="system-status"><span class="status-dot"></span> System Online</div>
+        <div class="topbar-actions">
+            <div class="system-status"><span class="status-dot"></span> System Online</div>
+            <?php if (!empty($is_admin)): ?>
+                <nav class="admin-navigation" aria-label="Navigasi administrasi">
+                    <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>
+                    <a href="<?= base_url('master/menu') ?>"><i class="fas fa-cubes" aria-hidden="true"></i><span>Module Management</span></a>
+                </nav>
+            <?php endif; ?>
+        </div>
     </header>
 
     <section class="portal-hero" aria-labelledby="portal-title">

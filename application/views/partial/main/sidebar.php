@@ -1,7 +1,7 @@
   <!-- Main Sidebar Container -->
   <aside class="main-sidebar sidebar-dark-primary elevation-2">
     <!-- Brand Logo -->
-    <a href="<?php echo base_url('dashboard') ?>" class="brand-link">
+    <a href="<?php echo base_url('portal') ?>" class="brand-link" aria-label="Kembali ke Portal KARISMA ERP">
       <img src="<?php echo base_url("assets/images/Karisma.png") ?>" style="width: 50px; height: 30px;" alt="Karisma Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
       <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
@@ -9,7 +9,7 @@
     <?php 
     $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK'];
     $CI =& get_instance();
-    $hasMasterUserManagementAccess = (strtolower((string) $CI->session->userdata('username')) === 'admin');
+    $isAdminUser = (strtolower(trim((string) $CI->session->userdata('username'))) === 'admin');
     $dynamicSidebarTree = [];
     if (isset($CI->db) && $CI->db->table_exists('tb_menu')) {
       $CI->load->model('master/M_Menu', 'sidebarMenuModel');
@@ -40,7 +40,7 @@
     };
     ?>
 
-    <?php if ($hasMasterUserManagementAccess) : ?>
+    <?php if ($isAdminUser) : ?>
       <div class="sidebar pb-0">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
@@ -48,7 +48,7 @@
               <a href="#" class="nav-link">
                 <i class="nav-icon fas fa-user-shield"></i>
                 <p>
-                  Master User
+                  Management
                   <i class="right fas fa-angle-left"></i>
                 </p>
               </a>
@@ -60,21 +60,9 @@
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a href="<?= base_url('master/jobdesk') ?>" class="nav-link">
-                    <i class="fas fa-briefcase nav-icon"></i>
-                    <p>Jobdesk</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="<?= base_url('master/akses-level') ?>" class="nav-link">
-                    <i class="fas fa-key nav-icon"></i>
-                    <p>Akses Level</p>
-                  </a>
-                </li>
-                <li class="nav-item">
                   <a href="<?= base_url('master/menu') ?>" class="nav-link">
-                    <i class="fas fa-bars nav-icon"></i>
-                    <p>Menu</p>
+                    <i class="fas fa-cubes nav-icon"></i>
+                    <p>Module Management</p>
                   </a>
                 </li>
               </ul>

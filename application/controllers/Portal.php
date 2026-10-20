@@ -5,6 +5,12 @@ class Portal extends CI_Controller
 {
     public function index()
     {
+        if (!$this->session->userdata('logged_in')) {
+            $this->session->set_flashdata('gagal', 'Sesi Anda berakhir. Silakan login ulang.');
+            redirect('Auth');
+            return;
+        }
+
         $apps = [
             
             [
@@ -109,6 +115,7 @@ class Portal extends CI_Controller
         $data = [
             'apps' => $apps,
             'app_count' => count($apps),
+            'is_admin' => strtolower(trim((string) $this->session->userdata('username'))) === 'admin',
         ];
 
         $this->load->view('portal/index', $data);

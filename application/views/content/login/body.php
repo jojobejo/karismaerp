@@ -1,48 +1,30 @@
-<div class="login-box">
-  <!-- /.login-logo -->
-  <div class="card card-outline card-primary">
-    <div class="card-header text-center">
-      <img src="<?= base_url('assets/images/karisma.png') ?>" style="width: 330px; height: 110px;" alt="">
-    </div>
-    <div class="card-body">
-      <form action="<?= base_url('process') ?>" method="post">
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" placeholder="Inputkan Username" id="user_isi" name="user_isi">
-          <div class="input-group-append">
-            <div class="input-group-text">
-              <span class="fas fa-user"></span>
-            </div>
-          </div>
+<?php
+$loginError = $this->session->flashdata('gagal');
+$loginNotice = $this->session->flashdata('logout') ?: $this->session->flashdata('edited');
+?>
+<main class="login-shell">
+    <section class="login-visual" aria-label="KARISMA ERP">
+        <div class="visual-grid"></div>
+        <div class="visual-top"><img src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo Karisma"><span>ENTERPRISE PLATFORM</span></div>
+        <div class="visual-copy"><div class="eyebrow"><i class="fas fa-circle"></i> EKOSISTEM DIGITAL TERINTEGRASI</div><h1>Satu gerbang.<br><span>Seluruh operasional.</span></h1><p>Akses perangkat kerja KARISMA ERP dalam satu platform yang aman, cepat, dan terhubung.</p></div>
+        <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
+        <div class="visual-footer"><span>SECURE ACCESS</span><span>•</span><span>BUILT FOR KARISMA</span></div>
+    </section>
+    <section class="login-panel">
+        <div class="mobile-brand"><img src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo Karisma"></div>
+        <div class="form-wrap">
+            <div class="form-kicker">SELAMAT DATANG KEMBALI</div><h2>Masuk ke akun Anda</h2><p class="form-intro">Gunakan akun perusahaan untuk melanjutkan ke portal.</p>
+            <?php if ($loginError): ?><div class="login-alert error" role="alert"><i class="fas fa-exclamation-circle"></i><?= html_escape($loginError) ?></div><?php endif ?>
+            <?php if ($loginNotice): ?><div class="login-alert success" role="status"><i class="fas fa-check-circle"></i><?= html_escape($loginNotice) ?></div><?php endif ?>
+            <form id="loginForm" action="<?= base_url('process') ?>" method="post" autocomplete="on">
+                <?php if (config_item('csrf_protection')): ?><input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>"><?php endif ?>
+                <label for="user_isi">Username</label><div class="field"><i class="far fa-user"></i><input type="text" id="user_isi" name="user_isi" placeholder="Masukkan username" autocomplete="username" required autofocus></div>
+                <label for="pass_isi">Password</label><div class="field"><i class="fas fa-lock"></i><input type="password" id="pass_isi" name="pass_isi" placeholder="Masukkan password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Tampilkan password"><i class="far fa-eye"></i></button></div>
+                <button class="submit-button" type="submit"><span>Masuk ke Portal</span><i class="fas fa-arrow-right"></i><span class="spinner" aria-hidden="true"></span></button>
+                <div class="ajax-message" id="ajaxMessage" role="alert"></div>
+            </form>
+            <div class="secure-note"><i class="fas fa-shield-alt"></i><span>Koneksi aman untuk akun perusahaan Anda.</span></div>
         </div>
-        <div class="input-group mb-3">
-          <input type="password" class="form-control" placeholder="Inputkan Password" id="pass_isi" name="pass_isi">
-          <div class="input-group-append">
-            <div class="input-group-text">
-              <span class="fas fa-lock"></span>
-            </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-sm">
-            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-          </div>
-        </div>
-      </form>
-      <?php if ($this->session->flashdata("gagal")) : ?>
-        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("gagal") . "</center>" ?>
-        </div>
-      <?php elseif ($this->session->flashdata("logout")) : ?>
-        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("logout") . "</center>" ?>
-        </div>
-      <?php elseif ($this->session->flashdata("edited")) : ?>
-        <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("edited") . "</center>" ?>
-        </div>
-      <?php endif ?>
-    </div>
-    <!-- /.card-body -->
-  </div>
-  <!-- /.card -->
-</div>
+        <footer>© <?= date('Y') ?> PT Karisma Indoagro Universal</footer>
+    </section>
+</main>

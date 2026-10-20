@@ -86,6 +86,7 @@ class M_Auth extends CI_Model
     public function get_tb_karyawan_user($username)
     {
         $this->db->where('username', $username);
+        $this->db->order_by('id', 'ASC');
         $row = $this->db->get('tb_karyawan')->row();
         if (!$row) {
             return null;
