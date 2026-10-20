@@ -436,6 +436,32 @@ class C_pembayaran extends CI_Controller
             }
         }
 
+        // Prioritaskan item barang dari pembayaran aktif jika mode cair_bg, draft, atau validasi kasir
+        $active_payment_row = null;
+        if (!empty($data['is_bg_cair_mode']) && !empty($data['pending_bg'])) {
+            $active_payment_row = $data['pending_bg'];
+        } elseif (!empty($data['is_draft_mode']) && !empty($data['draft_payment'])) {
+            $active_payment_row = $data['draft_payment'];
+        } elseif (!empty($data['is_validasi_kasir_mode']) && !empty($data['validasi_kasir'])) {
+            $active_payment_row = $data['validasi_kasir'];
+        }
+
+        if ($active_payment_row && !empty($data['konsinyasi_items'])) {
+            $target_detail_id = (int)($active_payment_row['id_faktur_detail'] ?? 0);
+            $target_kd_barang = trim((string)($active_payment_row['kd_barang'] ?? ''));
+            foreach ($data['konsinyasi_items'] as $itemCandidate) {
+                $candidateId = (int)($itemCandidate['id'] ?? ($itemCandidate['id_faktur_detail'] ?? 0));
+                if ($target_detail_id > 0 && $candidateId === $target_detail_id) {
+                    $data['first_item'] = $itemCandidate;
+                    break;
+                }
+                if ($target_kd_barang !== '' && ($itemCandidate['kd_barang'] ?? '') === $target_kd_barang) {
+                    $data['first_item'] = $itemCandidate;
+                    break;
+                }
+            }
+        }
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -558,7 +584,7 @@ class C_pembayaran extends CI_Controller
         }
 
         $no_faktur_konsinyasi = null;
-        if ($is_konsinyasi) {
+        if ($is_konsinyasi || $is_test_market) {
             $countExisting = $this->db
                 ->where('id_faktur', (int)$faktur['id_faktur'])
                 ->where('status !=', 'CANCELLED')
@@ -675,8 +701,23 @@ class C_pembayaran extends CI_Controller
             if (!empty($tanggal_bg_cair)) {
                 $update_data['tanggal_bg_cair'] = $tanggal_bg_cair;
             }
-            if (!empty($keterangan)) {
-                $update_data['keterangan'] = $keterangan;
+            $qty_konsinyasi = (float)$this->input->post('qty_konsinyasi', true);
+            $kd_barang_konsinyasi = trim((string)$this->input->post('kd_barang_konsinyasi', true));
+            $id_settlement_konsinyasi = (int)$this->input->post('id_settlement_konsinyasi', true);
+            $id_faktur_detail_realisasi = (int)$this->input->post('id_faktur_detail_realisasi', true);
+
+            if ($qty_konsinyasi > 0) {
+                $update_data['qty_konsinyasi'] = $qty_konsinyasi;
+                $update_data['qty_realisasi'] = $qty_konsinyasi;
+            }
+            if (!empty($kd_barang_konsinyasi)) {
+                $update_data['kd_barang'] = $kd_barang_konsinyasi;
+            }
+            if ($id_settlement_konsinyasi > 0) {
+                $update_data['id_settlement'] = $id_settlement_konsinyasi;
+            }
+            if ($id_faktur_detail_realisasi > 0) {
+                $update_data['id_faktur_detail'] = $id_faktur_detail_realisasi;
             }
 
             if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
@@ -1059,9 +1100,27 @@ class C_pembayaran extends CI_Controller
         }
 
         if (!$settlement) {
-            $this->session->set_flashdata('error', 'Data penyelesaian konsinyasi tidak ditemukan.');
-            redirect('keuangan/pembayaran');
-            return;
+            if (!empty($fakturKonsinyasi)) {
+                $settlement = [
+                    'id_settlement'       => null,
+                    'id_faktur'           => (int)$payment['id_faktur'],
+                    'no_faktur'           => $fakturKonsinyasi['no_faktur_konsinyasi'],
+                    'kd_barang'           => $fakturKonsinyasi['kd_barang'],
+                    'nama_barang'         => $fakturKonsinyasi['nama_barang'],
+                    'satuan'              => $fakturKonsinyasi['satuan'] ?: 'PCS',
+                    'hrg_jual'            => (float)$fakturKonsinyasi['hrg_satuan'],
+                    'qty_terjual'         => (float)$fakturKonsinyasi['qty'],
+                    'qty_net'             => (float)$fakturKonsinyasi['qty'],
+                    'subtotal_jual'       => (float)$fakturKonsinyasi['subtotal'],
+                    'customer_name'       => $fakturKonsinyasi['nama_customer'],
+                    'tanggal_settlement'  => $fakturKonsinyasi['tanggal_faktur'],
+                    'status'              => 'LAKU',
+                ];
+            } else {
+                $this->session->set_flashdata('error', 'Data penyelesaian faktur tidak ditemukan.');
+                redirect('keuangan/pembayaran');
+                return;
+            }
         }
 
         // Pastikan kuantitas laku yang dicetak sesuai kuantitas yang dibayar pada pembayaran ini

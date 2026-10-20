@@ -127,6 +127,11 @@
                                     <i class="fas fa-handshake mr-1"></i> Faktur Konsinyasi
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link font-weight-bold" href="javascript:void(0)" data-category="faktur_test_market">
+                                    <i class="fas fa-vial mr-1"></i> Faktur Test Market
+                                </a>
+                            </li>
                             <?php if (empty($is_admpnj_only)): ?>
                             <li class="nav-item">
                                 <a class="nav-link" href="javascript:void(0)" data-category="pembelian">
@@ -309,7 +314,8 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer py-2 bg-white">
+            <div class="modal-footer py-2 bg-white d-flex justify-content-between align-items-center">
+                <div id="detail-modal-extra-actions"></div>
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
             </div>
         </div>
@@ -709,6 +715,7 @@ $(document).ready(function() {
         switch (cat) {
             case 'penjualan': bg = 'primary'; break;
             case 'faktur_konsinyasi': bg = 'teal text-white'; break;
+            case 'faktur_test_market': bg = 'info text-white'; break;
             case 'pembelian': bg = 'success'; break;
             case 'pembayaran_customer': bg = 'info'; break;
             case 'pembayaran_supplier': bg = 'indigo'; break;
@@ -800,6 +807,23 @@ $(document).ready(function() {
             </div>
         `;
         $('#detail-header-info').html(headerHtml);
+
+        if ((cat === 'faktur_konsinyasi' || cat === 'faktur_test_market') && h.id_pembayaran) {
+            $('#detail-modal-extra-actions').html(`
+                <a href="<?= base_url('keuangan/pembayaran/print_faktur_konsinyasi/') ?>${h.id_pembayaran}" target="_blank" class="btn btn-primary btn-sm font-weight-bold shadow-sm">
+                    <i class="fas fa-print mr-1"></i> Cetak Faktur Realisasi
+                </a>
+            `);
+        } else if ((cat === 'penjualan' || cat === 'faktur_penjualan') && (h.id_transaksi || h.id_faktur)) {
+            const idFak = h.id_transaksi || h.id_faktur;
+            $('#detail-modal-extra-actions').html(`
+                <a href="<?= base_url('sales_order_loby/print_faktur/') ?>${idFak}" target="_blank" class="btn btn-primary btn-sm font-weight-bold shadow-sm">
+                    <i class="fas fa-print mr-1"></i> Cetak Faktur
+                </a>
+            `);
+        } else {
+            $('#detail-modal-extra-actions').html('');
+        }
 
         // Check if Payment vs Goods
         const isPayment = (cat === 'pembayaran_customer' || cat === 'pembayaran_supplier');

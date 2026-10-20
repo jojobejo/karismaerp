@@ -407,10 +407,35 @@ $default_metode = '';
                                                value="<?= $is_draft_mode ? htmlspecialchars($draft_payment['tanggal_pembayaran']) : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['tanggal_pembayaran']) : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d'))) ?>">
                                     </div>
                                      <?php if (!empty($is_realisasi_barang) && !empty($konsinyasi_items)): ?>
+                                        <?php
+                                        $active_item_data = $is_bg_cair_mode ? $pending_bg : ($is_draft_mode ? $draft_payment : ($is_validasi_kasir_mode ? $validasi_kasir : null));
+                                        $selected_item_kd = $first_item['kd_barang'] ?? '';
+                                        $selected_item_detail = (int)($first_item['id'] ?? 0);
+                                        $selected_item_settlement = (int)($first_item['id_settlement'] ?? 0);
+                                        $selected_qty_val = '';
+
+                                        if ($active_item_data) {
+                                            if (!empty($active_item_data['kd_barang'])) {
+                                                $selected_item_kd = $active_item_data['kd_barang'];
+                                            }
+                                            if (!empty($active_item_data['id_faktur_detail'])) {
+                                                $selected_item_detail = (int)$active_item_data['id_faktur_detail'];
+                                            }
+                                            if (!empty($active_item_data['id_settlement'])) {
+                                                $selected_item_settlement = (int)$active_item_data['id_settlement'];
+                                            }
+                                            $raw_qty = isset($active_item_data['qty_realisasi']) && (float)$active_item_data['qty_realisasi'] > 0
+                                                ? (float)$active_item_data['qty_realisasi']
+                                                : (float)($active_item_data['qty_konsinyasi'] ?? 0);
+                                            if ($raw_qty > 0) {
+                                                $selected_qty_val = $raw_qty;
+                                            }
+                                        }
+                                        ?>
                                         <!-- Identitas barang yang direalisasikan pada pembayaran kios -->
-                                        <input type="hidden" name="kd_barang_konsinyasi" id="kd_barang_konsinyasi" value="<?= htmlspecialchars($first_item['kd_barang'] ?? '') ?>">
-                                        <input type="hidden" name="id_settlement_konsinyasi" id="id_settlement_konsinyasi" value="<?= (int)($first_item['id_settlement'] ?? 0) ?>">
-                                        <input type="hidden" name="id_faktur_detail_realisasi" id="id_faktur_detail_realisasi" value="<?= (int)($first_item['id'] ?? 0) ?>">
+                                        <input type="hidden" name="kd_barang_konsinyasi" id="kd_barang_konsinyasi" value="<?= htmlspecialchars($selected_item_kd) ?>">
+                                        <input type="hidden" name="id_settlement_konsinyasi" id="id_settlement_konsinyasi" value="<?= $selected_item_settlement ?>">
+                                        <input type="hidden" name="id_faktur_detail_realisasi" id="id_faktur_detail_realisasi" value="<?= $selected_item_detail ?>">
 
                                          <div class="form-group">
                                             <label>Pilih Barang yang Dibeli Kios <span class="text-danger">*</span></label>
@@ -425,7 +450,16 @@ $default_metode = '';
                                                     $it_qty_kios = (float)($kItem['qty_di_kios'] ?? 0);
                                                     $it_satuan = htmlspecialchars(!empty($kItem['satuan']) ? $kItem['satuan'] : (!empty($kItem['b_satuan']) ? $kItem['b_satuan'] : 'PCS'));
                                                     $it_settlement = (int)($kItem['id_settlement'] ?? 0);
-                                                    $is_selected_opt = (!empty($first_item) && $first_item['kd_barang'] === $kItem['kd_barang'] && ($first_item['no_lot'] ?? '') === ($kItem['no_lot'] ?? '')) ? 'selected' : '';
+                                                    $is_selected_opt = false;
+                                                    if ($active_item_data) {
+                                                        if ($selected_item_detail > 0 && (int)($kItem['id'] ?? 0) === $selected_item_detail) {
+                                                            $is_selected_opt = true;
+                                                        } elseif ($kItem['kd_barang'] === $selected_item_kd) {
+                                                            $is_selected_opt = true;
+                                                        }
+                                                    } else {
+                                                        $is_selected_opt = (!empty($first_item) && $first_item['kd_barang'] === $kItem['kd_barang'] && ($first_item['no_lot'] ?? '') === ($kItem['no_lot'] ?? ''));
+                                                    }
                                                     ?>
                                                     <option value="<?= $it_kd ?>"
                                                             data-kd="<?= $it_kd ?>"
@@ -436,7 +470,7 @@ $default_metode = '';
                                                             data-qty-kios="<?= $it_qty_kios ?>"
                                                             data-satuan="<?= $it_satuan ?>"
                                                             data-settlement="<?= $it_settlement ?>"
-                                                            <?= $is_selected_opt ?>>
+                                                            <?= $is_selected_opt ? 'selected' : '' ?>>
                                                         [<?= $it_kd ?>] <?= $it_nama ?> <?= !empty($it_lot) ? '(Lot: ' . $it_lot . ')' : '' ?> — Sisa di Kios: <?= number_format($it_qty_kios, 0, ',', '.') ?> <?= $it_satuan ?> @ Rp <?= number_format($it_harga, 0, ',', '.') ?>
                                                     </option>
                                                 <?php endforeach; ?>
@@ -449,7 +483,8 @@ $default_metode = '';
                                                 <input type="number" step="any" min="0.001" 
                                                        id="qty_konsinyasi" name="qty_konsinyasi" 
                                                        class="form-control font-weight-bold" 
-                                                       placeholder="0" required>
+                                                       placeholder="0"
+                                                       value="<?= $selected_qty_val !== '' ? htmlspecialchars($selected_qty_val) : '' ?>" required>
                                                 <div class="input-group-append">
                                                     <span class="input-group-text font-weight-bold" id="label_satuan_konsinyasi">PCS</span>
                                                 </div>
@@ -482,7 +517,7 @@ $default_metode = '';
                                             $sisa_non_bg = max(0, (float)$faktur['sisa_tagihan'] - $bg_pending_total);
                                             $raw_bayar = ($sisa_non_bg > 0) ? $sisa_non_bg : (float)$faktur['sisa_tagihan'];
                                         }
-                                        if (!empty($is_realisasi_barang)) {
+                                        if (!empty($is_realisasi_barang) && !$is_bg_cair_mode && !$is_draft_mode && !$is_validasi_kasir_mode) {
                                             $raw_bayar = 0;
                                         }
                                         $display_bayar = number_format($raw_bayar, 0, ',', '.');
@@ -854,8 +889,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var sisaQtyKonsinyasi = 0;
     var satuanKonsinyasi = 'PCS';
     var qtyKonsinyasiDiubahManual = false;
+    var isBgCairMode = <?= $is_bg_cair_mode ? 'true' : 'false' ?>;
 
-    function applyBarangKonsinyasiSelected() {
+    function applyBarangKonsinyasiSelected(isInitialLoad) {
         if (!selectBarangKonsinyasi) return;
         var opt = selectBarangKonsinyasi.options[selectBarangKonsinyasi.selectedIndex];
         var infoLpbEl = document.getElementById('info_lpb_po_konsinyasi');
@@ -887,25 +923,31 @@ document.addEventListener('DOMContentLoaded', function() {
         if (stlInput) stlInput.value = idSettlement;
 
         if (qtyInput) {
-            qtyInput.disabled = (sisaQtyKonsinyasi <= 0);
-            qtyInput.max = sisaQtyKonsinyasi;
+            var currentQty = parseFloat(qtyInput.value) || 0;
+            qtyInput.disabled = (sisaQtyKonsinyasi <= 0 && currentQty <= 0 && !isBgCairMode);
+            var maxLimit = Math.max(sisaQtyKonsinyasi, currentQty);
+            qtyInput.max = maxLimit > 0 ? maxLimit : '';
             var lblSatuan = document.getElementById('label_satuan_konsinyasi');
             if (lblSatuan) lblSatuan.textContent = satuanKonsinyasi;
             var ketEl = document.getElementById('keterangan_qty_konsinyasi');
             if (ketEl) {
-                ketEl.innerHTML = 'Maksimal <b>' + sisaQtyKonsinyasi.toLocaleString('id-ID') + ' ' + satuanKonsinyasi + '</b> di kios (&times; Rp ' + hrgSatuanKonsinyasi.toLocaleString('id-ID') + ')';
+                var maxDisplay = sisaQtyKonsinyasi > 0 ? sisaQtyKonsinyasi : (currentQty > 0 ? currentQty : 0);
+                ketEl.innerHTML = 'Maksimal <b>' + maxDisplay.toLocaleString('id-ID') + ' ' + satuanKonsinyasi + '</b> di kios (&times; Rp ' + hrgSatuanKonsinyasi.toLocaleString('id-ID') + ')';
             }
             
             // Hitung ulang jika sudah ada nilai qty
             var q = parseFloat(qtyInput.value) || 0;
             if (q > 0) {
-                if (q > sisaQtyKonsinyasi) {
+                if (sisaQtyKonsinyasi > 0 && q > sisaQtyKonsinyasi && !isBgCairMode) {
                     qtyInput.value = sisaQtyKonsinyasi;
                     q = sisaQtyKonsinyasi;
                 }
                 var calculatedBayar = Math.round(q * hrgSatuanKonsinyasi);
                 if (jumlahInput) {
-                    jumlahInput.value = formatRupiahInput(calculatedBayar);
+                    var existingVal = parseRupiahNumber(jumlahInput.value);
+                    if (!isInitialLoad || existingVal <= 0) {
+                        jumlahInput.value = formatRupiahInput(calculatedBayar);
+                    }
                     hitungJurnal();
                 }
             }
@@ -915,7 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (selectBarangKonsinyasi) {
         selectBarangKonsinyasi.addEventListener('change', function() {
             qtyKonsinyasiDiubahManual = false;
-            applyBarangKonsinyasiSelected();
+            applyBarangKonsinyasiSelected(false);
         });
 
         // Auto pilih item pertama yang masih punya sisa stok jika belum terpilih
@@ -930,7 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             selectBarangKonsinyasi.selectedIndex = selectedIdx;
         }
-        applyBarangKonsinyasiSelected();
+        applyBarangKonsinyasiSelected(true);
     }
 
     if (qtyInput) {

@@ -2087,11 +2087,36 @@ class M_Konsinyasi extends CI_Model
             $subtotal = (float) $pembayaran['jumlah_pembayaran'];
         }
 
-        $kdSuplier   = $settlement['kd_suplier'] ?? null;
-        $namaSuplier = $settlement['nama_suplier'] ?? 'Supplier Konsinyasi';
-        $noLot       = $settlement['no_lot'] ?? ($fakturDetail['no_lot'] ?? null);
-        $expDate     = $settlement['expired_date'] ?? null;
-        $idSettlement = !empty($settlement['id_settlement']) ? (int) $settlement['id_settlement'] : null;
+        $isTestMarket = !empty($fakturInduk['is_test_market'])
+            || strtoupper(substr((string)$fakturInduk['no_faktur'], 0, 1)) === 'T'
+            || !empty($extra['is_test_market']);
+
+        if ($isTestMarket) {
+            $tmPos = null;
+            if (!empty($pembayaran['id_faktur_detail'])) {
+                $tmPos = $this->db->get_where('tb_test_market_position', ['id_faktur_detail' => (int)$pembayaran['id_faktur_detail']])->row_array();
+            }
+            if (!$tmPos) {
+                $tmPos = $this->db->where('id_faktur', $id_faktur)->order_by('id_position', 'ASC')->get('tb_test_market_position')->row_array();
+            }
+            if ($tmPos) {
+                $kdBarang   = $tmPos['kd_barang'];
+                $namaBarang = $tmPos['nama_barang'];
+                $satuan     = !empty($tmPos['satuan']) ? $tmPos['satuan'] : (!empty($fakturDetail['satuan']) ? $fakturDetail['satuan'] : 'PCS');
+                $noLot      = $tmPos['no_lot'];
+                $expDate    = $tmPos['expired_date'];
+                $hrgSatuan  = (float)$tmPos['harga_jual'];
+            }
+            $kdSuplier   = null;
+            $namaSuplier = 'Gudang Induk (Milik Sendiri)';
+        }
+
+        if (empty($satuan) || $satuan === 'PCS') {
+            $mb = $this->db->select('satuan')->get_where('tbpo_barang', ['kode_barang' => $kdBarang])->row_array();
+            if ($mb && !empty($mb['satuan'])) {
+                $satuan = $mb['satuan'];
+            }
+        }
 
         $existing = $this->db->get_where('tb_konsinyasi_faktur', ['no_faktur_konsinyasi' => $noFakturKonsinyasi])->row_array();
         $payloadFaktur = [

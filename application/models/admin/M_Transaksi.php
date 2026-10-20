@@ -114,11 +114,60 @@ class M_Transaksi extends CI_Model
                         WHERE j2.source_module = 'SALES'
                           AND j2.source_type = 'FAKTUR_PENJUALAN_KONSINYASI'
                           AND j2.posting_event = 'SALES_INVOICE'
-                          AND j2.source_id = CONCAT(kf.no_faktur_induk, '-', kf.id_pembayaran)
+                          AND (
+                              j2.source_id = CONCAT(kf.no_faktur_induk, '-', kf.id_pembayaran)
+                              OR j2.source_no = kf.no_faktur_konsinyasi
+                              OR j2.source_no = kf.no_faktur_induk
+                          )
                         ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
                         LIMIT 1
                     )
                     WHERE kf.tanggal_faktur >= ? AND kf.tanggal_faktur <= ?
+                      AND (kf.no_faktur_konsinyasi NOT LIKE 'T%' AND COALESCE(kf.nama_suplier, '') != 'Gudang Induk (Milik Sendiri)')
+                ";
+                $queryParams[] = $date_from;
+                $queryParams[] = $date_to;
+            }
+        }
+
+        // 1c. PENJUALAN TEST MARKET (FAKTUR REALISASI PEMBAYARAN KIOS)
+        if ($category === 'all' || $category === 'faktur_test_market') {
+            if ($this->db->table_exists('tb_konsinyasi_faktur')) {
+                $subqueries[] = "
+                    SELECT
+                        'faktur_test_market' AS trans_category,
+                        'Penjualan (Test Market)' AS trans_category_label,
+                        kf.id_faktur_konsinyasi AS id_transaksi,
+                        kf.no_faktur_konsinyasi AS no_dokumen,
+                        CONCAT(kf.no_faktur_induk, ' / ', COALESCE(kf.no_so, '-')) AS no_referensi,
+                        kf.tanggal_faktur AS tanggal_transaksi,
+                        COALESCE(NULLIF(kf.nama_customer, ''), kf.kd_customer, 'Customer') AS nama_entitas,
+                        COALESCE(kf.status, 'LAKU') AS status_transaksi,
+                        COALESCE(kf.subtotal, kf.jumlah_bayar, 0) AS total_nominal,
+                        CONCAT('Realisasi penjualan test market ', kf.no_faktur_konsinyasi, ' - ', COALESCE(kf.nama_barang, kf.kd_barang)) AS keterangan,
+                        j.id_jurnal,
+                        j.nomor_jurnal,
+                        j.status AS status_jurnal,
+                        j.total_debit AS journal_debit,
+                        j.total_kredit AS journal_kredit,
+                        kf.created_at AS created_at
+                    FROM tb_konsinyasi_faktur kf
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
+                        SELECT j2.id_jurnal
+                        FROM tbkeu_jurnal j2
+                        WHERE j2.source_module = 'SALES'
+                          AND (j2.source_type = 'FAKTUR_PENJUALAN_TEST_MARKET' OR j2.source_type = 'FAKTUR_PENJUALAN_KONSINYASI')
+                          AND j2.posting_event = 'SALES_INVOICE'
+                          AND (
+                              j2.source_id = CONCAT(kf.no_faktur_induk, '-', kf.id_pembayaran)
+                              OR j2.source_no = kf.no_faktur_konsinyasi
+                              OR j2.source_no = kf.no_faktur_induk
+                          )
+                        ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                        LIMIT 1
+                    )
+                    WHERE kf.tanggal_faktur >= ? AND kf.tanggal_faktur <= ?
+                      AND (kf.no_faktur_konsinyasi LIKE 'T%' OR kf.nama_suplier = 'Gudang Induk (Milik Sendiri)')
                 ";
                 $queryParams[] = $date_from;
                 $queryParams[] = $date_to;
@@ -500,6 +549,7 @@ class M_Transaksi extends CI_Model
                 break;
 
             case 'faktur_konsinyasi':
+            case 'faktur_test_market':
                 if (!$this->db->table_exists('tb_konsinyasi_faktur')) {
                     break;
                 }
@@ -511,13 +561,14 @@ class M_Transaksi extends CI_Model
                     ->row_array();
 
                 if ($header) {
+                    $isTm = (strtoupper(substr((string)$header['no_faktur_konsinyasi'], 0, 1)) === 'T' || ($header['nama_suplier'] ?? '') === 'Gudang Induk (Milik Sendiri)');
                     $header['no_dokumen'] = $header['no_faktur_konsinyasi'];
                     $header['no_referensi'] = $header['no_faktur_induk'] . (!empty($header['no_so']) ? ' / ' . $header['no_so'] : '');
                     $header['tanggal_transaksi'] = $header['tanggal_faktur'];
                     $header['nama_entitas'] = $header['nama_customer'] ?: ($header['kd_customer'] ?: 'Customer');
                     $header['status_transaksi'] = $header['status'] ?: 'LAKU';
                     $header['total_nominal'] = (float)($header['subtotal'] ?? $header['jumlah_bayar'] ?? 0);
-                    $header['keterangan'] = 'Realisasi penjualan konsinyasi ' . $header['no_faktur_konsinyasi'];
+                    $header['keterangan'] = ($isTm ? 'Realisasi penjualan test market ' : 'Realisasi penjualan konsinyasi ') . $header['no_faktur_konsinyasi'];
                     $header['read_only'] = 1;
 
                     $result['header'] = $header;
@@ -533,12 +584,16 @@ class M_Transaksi extends CI_Model
                     ]];
 
                     $journalSourceId = $header['no_faktur_induk'] . '-' . $header['id_pembayaran'];
+                    $noFakturKons = $header['no_faktur_konsinyasi'];
+                    $noFakturInduk = $header['no_faktur_induk'];
+                    $labelPrefix = $isTm ? 'Test Market' : 'Konsinyasi';
+
                     $journals = $this->db->query("
                         SELECT j.*,
                             CASE
-                                WHEN j.source_module = 'SALES' AND j.posting_event = 'SALES_INVOICE' THEN 'Jurnal Penjualan Konsinyasi & Piutang'
-                                WHEN j.source_module = 'SALES' AND j.posting_event = 'GOODS_ISSUE' THEN 'Jurnal HPP & Persediaan Konsinyasi'
-                                ELSE 'Jurnal Akuntansi Konsinyasi'
+                                WHEN j.source_module = 'SALES' AND j.posting_event = 'SALES_INVOICE' THEN 'Jurnal Penjualan {$labelPrefix} & Piutang'
+                                WHEN j.source_module = 'SALES' AND j.posting_event = 'GOODS_ISSUE' THEN 'Jurnal HPP & Persediaan {$labelPrefix}'
+                                ELSE 'Jurnal Akuntansi {$labelPrefix}'
                             END AS label_jurnal,
                             CASE
                                 WHEN j.source_module = 'SALES' AND j.posting_event = 'SALES_INVOICE' THEN 'primary'
@@ -547,8 +602,8 @@ class M_Transaksi extends CI_Model
                             END AS badge_color
                         FROM tbkeu_jurnal j
                         WHERE j.source_module = 'SALES'
-                          AND j.source_type = 'FAKTUR_PENJUALAN_KONSINYASI'
-                          AND j.source_id = ?
+                          AND (j.source_type = 'FAKTUR_PENJUALAN_TEST_MARKET' OR j.source_type = 'FAKTUR_PENJUALAN_KONSINYASI')
+                          AND (j.source_id = ? OR j.source_no = ? OR j.source_no = ?)
                         ORDER BY
                             CASE
                                 WHEN j.posting_event = 'SALES_INVOICE' THEN 1
@@ -556,7 +611,7 @@ class M_Transaksi extends CI_Model
                                 ELSE 4
                             END,
                             j.id_jurnal
-                    ", [$journalSourceId])->result_array();
+                    ", [$journalSourceId, $noFakturKons, $noFakturInduk])->result_array();
                 }
                 break;
 
@@ -864,6 +919,7 @@ class M_Transaksi extends CI_Model
                     break;
 
                 case 'faktur_konsinyasi':
+                case 'faktur_test_market':
                     $res = $this->_update_faktur_konsinyasi((int)$idTransaksi, $postData, $userId);
                     break;
 
@@ -1061,6 +1117,7 @@ class M_Transaksi extends CI_Model
         try {
             switch ($category) {
                 case 'faktur_konsinyasi':
+                case 'faktur_test_market':
                     $fakturKonsinyasi = $this->db->where('id_faktur_konsinyasi', (int)$idTransaksi)->get('tb_konsinyasi_faktur')->row_array();
                     if (!$fakturKonsinyasi) throw new Exception('Faktur konsinyasi tidak ditemukan.');
 
@@ -1200,6 +1257,7 @@ class M_Transaksi extends CI_Model
 
             switch ($category) {
                 case 'faktur_konsinyasi':
+                case 'faktur_test_market':
                     $fakturKonsinyasi = $this->db->where('id_faktur_konsinyasi', (int)$idTransaksi)->get('tb_konsinyasi_faktur')->row_array();
                     if (!$fakturKonsinyasi) throw new Exception('Faktur konsinyasi tidak ditemukan.');
 
@@ -1370,22 +1428,28 @@ class M_Transaksi extends CI_Model
         try {
             switch ($category) {
                 case 'faktur_konsinyasi':
+                case 'faktur_test_market':
                     $fakturKonsinyasi = $this->db->where('id_faktur_konsinyasi', (int)$idTransaksi)->get('tb_konsinyasi_faktur')->row_array();
-                    if (!$fakturKonsinyasi) throw new Exception('Faktur konsinyasi tidak ditemukan.');
+                    if (!$fakturKonsinyasi) throw new Exception('Faktur konsinyasi/test market tidak ditemukan.');
 
                     $payment = $this->db->where('id_pembayaran', (int)$fakturKonsinyasi['id_pembayaran'])->get('tbkeu_pembayaran_faktur')->row_array();
                     if ($payment && !in_array(strtoupper((string)($payment['status'] ?? 'POSTED')), ['DRAFT', 'UNPOST'], true)) {
-                        throw new Exception('Faktur konsinyasi harus di-unpost terlebih dahulu sebelum dihapus.');
+                        throw new Exception('Faktur harus di-unpost terlebih dahulu sebelum dihapus.');
                     }
                     if ($payment) {
                         $deletePayment = $this->M_pembayaran->delete_draft_payment((int)$payment['id_pembayaran']);
                         if (empty($deletePayment['success'])) {
-                            throw new Exception($deletePayment['message'] ?? 'Pembayaran konsinyasi gagal dihapus.');
+                            throw new Exception($deletePayment['message'] ?? 'Pembayaran gagal dihapus.');
                         }
                     }
                     $this->_delete_old_journals(
                         'SALES',
                         'FAKTUR_PENJUALAN_KONSINYASI',
+                        $fakturKonsinyasi['no_faktur_induk'] . '-' . $fakturKonsinyasi['id_pembayaran']
+                    );
+                    $this->_delete_old_journals(
+                        'SALES',
+                        'FAKTUR_PENJUALAN_TEST_MARKET',
                         $fakturKonsinyasi['no_faktur_induk'] . '-' . $fakturKonsinyasi['id_pembayaran']
                     );
                     $this->db->where('id_faktur_konsinyasi', (int)$fakturKonsinyasi['id_faktur_konsinyasi'])->delete('tb_konsinyasi_faktur');

@@ -98,16 +98,35 @@ graph TD
   3. **Jurnal Pembayaran Kas/Bank (`RECEIPT`)**:
      - *Debit*: Kas / Bank
      - *Kredit*: Piutang Usaha
+- **Penerbitan Faktur Realisasi Mandiri (`TINV...-1`, `TINV...-2`)**:
+  - Saat pembayaran di Keuangan dicatat, sistem menerbitkan nomor faktur realisasi mandiri bertanda strip (contoh `TINV2010260001-1`).
+  - Dokumen ini tersimpan secara mandiri dan dapat dilihat di halaman **Admin Transaksi** (`admin/transaksi`) pada tab **Faktur Test Market**.
+  - Dilengkapi tombol cetak faktur penjualan resmi serta audit jurnal akuntansi (Jurnal Penjualan SJ dan Jurnal HPP GI).
 - **Modul Purchasing Konsinyasi**:
   Faktur T sama sekali **tidak disinkronkan** ke tabel `tb_konsinyasi_settlement`, sehingga halaman pelunasan hutang supplier konsinyasi tetap bersih dari transaksi test market.
 
 ---
 
-## 4. File-File Yang Dimodifikasi
+## 4. Integrasi Admin Transaksi Hub (`admin/transaksi`)
+Tersedia tab khusus **Faktur Test Market** berdampingan dengan **Faktur Konsinyasi**:
+- Menampilkan nomor faktur anak (`TINV...-1`), nomor faktur induk / SO, tanggal transaksi, kios/customer, status realisasi (`LAKU`), nominal bayar, status jurnal (`POSTED`), serta jurnal debit/kredit.
+- Tombol **Detail** menampilkan rincian barang yang laku, lot, kuantitas, harga, dan multi-jurnal akuntansi terkait.
+- Tombol **Cetak Faktur Realisasi** pada modal detail untuk mencetak nota penjualan test market resmi.
+- Mendukung repost, unpost (rollback), dan delete transaksi secara sinkron dengan saldo stok virtual kios.
+
+---
+
+## 5. File-File Yang Dimodifikasi
 1. `application/views/content/sales/so_form.php` (penambahan checkbox Test Market).
 2. `application/views/content/sales/so_list.php` (badge visual Test Market pada tabel SO).
 3. `application/views/content/sales/so_detail.php` (rincian jenis SO Test Market).
 4. `application/views/content/sales/faktur_form.php` (notifikasi faktur Test Market prefix T).
 5. `application/controllers/sales/C_SalesOrder.php` (handling parameter `is_test_market` pada create/update SO dan generate nomor faktur prefix T).
 6. `application/models/M_SalesOrder.php` (persistensi header SO & faktur, serta penundaan jurnal otomatis untuk faktur T).
-7. `application/models/M_Journal.php` (realisasi jurnal penjualan, pengakuan HPP dari harga pokok barang dagang induk, dan pemisahan settlement konsinyasi).
+7. `application/models/M_Journal.php` (realisasi jurnal penjualan, pengakuan HPP dari harga pokok barang dagang induk, dan penerbitan faktur turunan T).
+8. `application/controllers/keuangan/C_pembayaran.php` (penomoran otomatis termin `T...-1`, `T...-2` saat pembayaran dan dukungan cetak faktur test market).
+9. `application/models/M_Konsinyasi.php` (penerbitan record faktur realisasi mandiri untuk Test Market dengan entitas Gudang Induk).
+10. `application/models/M_TestMarket.php` (penambahan kolom `no_faktur_realisasi` pada `tb_test_market_realisasi`).
+11. `application/models/admin/M_Transaksi.php` (subquery filter tab `faktur_test_market`, detail breakdown jurnal, unpost/repost/delete).
+12. `application/views/content/admin/transaksi/index.php` (navigasi tab Faktur Test Market, styling badge, dan tombol Cetak Faktur Realisasi).
+

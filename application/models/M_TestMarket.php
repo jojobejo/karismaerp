@@ -17,6 +17,10 @@ class M_TestMarket extends CI_Model
 
         $this->db->query("\n            CREATE TABLE IF NOT EXISTS `tb_test_market_realisasi` (\n                `id_realisasi` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,\n                `id_position` BIGINT UNSIGNED NOT NULL,\n                `id_pembayaran` INT UNSIGNED NOT NULL,\n                `id_faktur` INT NOT NULL,\n                `id_faktur_detail` INT NOT NULL,\n                `no_faktur` VARCHAR(30) NOT NULL,\n                `kd_customer` VARCHAR(50) NOT NULL,\n                `kd_barang` VARCHAR(50) NOT NULL,\n                `qty` DECIMAL(15,3) NOT NULL,\n                `harga_satuan` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `subtotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `tanggal_realisasi` DATE NOT NULL,\n                `status` ENUM('POSTED','DIBATALKAN') NOT NULL DEFAULT 'POSTED',\n                `created_by` VARCHAR(100) DEFAULT NULL,\n                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n                PRIMARY KEY (`id_realisasi`),\n                UNIQUE KEY `uk_test_market_pembayaran` (`id_pembayaran`),\n                KEY `idx_test_market_realisasi_position` (`id_position`, `status`),\n                KEY `idx_test_market_realisasi_tanggal` (`tanggal_realisasi`)\n            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci\n        ");
 
+        if ($this->db->table_exists('tb_test_market_realisasi') && !$this->db->field_exists('no_faktur_realisasi', 'tb_test_market_realisasi')) {
+            $this->db->query("ALTER TABLE `tb_test_market_realisasi` ADD COLUMN `no_faktur_realisasi` VARCHAR(50) NULL DEFAULT NULL AFTER `no_faktur`, ADD INDEX `idx_no_faktur_realisasi` (`no_faktur_realisasi`)");
+        }
+
         $this->_align_table_collation('tb_test_market_position', 'tbso_faktur_detail');
         $this->_align_table_collation('tb_test_market_realisasi', 'tbkeu_pembayaran_faktur');
         return $this->get_warehouse_id();
@@ -182,20 +186,21 @@ class M_TestMarket extends CI_Model
 
         $subtotal = (float)($payment['jumlah_pembayaran'] ?? 0) + (float)($payment['jumlah_diskon'] ?? 0);
         $payload = [
-            'id_position'       => (int)$position['id_position'],
-            'id_pembayaran'     => (int)$idPembayaran,
-            'id_faktur'         => (int)$faktur['id_faktur'],
-            'id_faktur_detail'  => $idDetail,
-            'no_faktur'         => $faktur['no_faktur'],
-            'kd_customer'       => $faktur['kd_customer'],
-            'kd_barang'         => $position['kd_barang'],
-            'qty'               => $qty,
-            'harga_satuan'      => $qty > 0 ? round($subtotal / $qty, 2) : 0,
-            'subtotal'          => $subtotal,
-            'tanggal_realisasi' => $payment['tanggal_pembayaran'] ?? date('Y-m-d'),
-            'status'            => 'POSTED',
-            'created_by'        => $payment['create_by'] ?? 'system',
-            'updated_at'        => date('Y-m-d H:i:s'),
+            'id_position'         => (int)$position['id_position'],
+            'id_pembayaran'       => (int)$idPembayaran,
+            'id_faktur'           => (int)$faktur['id_faktur'],
+            'id_faktur_detail'    => $idDetail,
+            'no_faktur'           => $faktur['no_faktur'],
+            'no_faktur_realisasi' => !empty($payment['no_faktur_konsinyasi']) ? $payment['no_faktur_konsinyasi'] : null,
+            'kd_customer'         => $faktur['kd_customer'],
+            'kd_barang'           => $position['kd_barang'],
+            'qty'                 => $qty,
+            'harga_satuan'        => $qty > 0 ? round($subtotal / $qty, 2) : 0,
+            'subtotal'            => $subtotal,
+            'tanggal_realisasi'   => $payment['tanggal_pembayaran'] ?? date('Y-m-d'),
+            'status'              => 'POSTED',
+            'created_by'          => $payment['create_by'] ?? 'system',
+            'updated_at'          => date('Y-m-d H:i:s'),
         ];
         if ($existing) {
             $this->db->where('id_realisasi', (int)$existing['id_realisasi'])->update('tb_test_market_realisasi', $payload);

@@ -564,6 +564,14 @@ class M_Journal extends CI_Model
         if (!$is_faktur_t) {
             $selected_kd_barang = !empty($data_pembayaran['kd_barang']) ? $data_pembayaran['kd_barang'] : null;
             $this->_sync_settlement_on_payment($id_faktur, $faktur, $items[0], $total_nominal, $userId, $qty_konsinyasi_input, $id_pembayaran, $selected_kd_barang, $selected_id_settlement);
+        } else {
+            // Untuk Faktur T: terbitkan faktur realisasi mandiri ke tb_konsinyasi_faktur
+            if (!empty($id_pembayaran)) {
+                $this->load->model('M_Konsinyasi');
+                $this->M_Konsinyasi->terbitkan_faktur_konsinyasi($id_faktur, $id_pembayaran, [
+                    'is_test_market' => true
+                ]);
+            }
         }
 
         return $id_jurnal_sj;
