@@ -539,6 +539,53 @@ class M_Konsinyasi extends CI_Model
     }
 
     /**
+     * Mengambil informasi harga dan tipe pajak dari PO asal berdasarkan id_lpb dan kd_barang
+     *
+     * @param int $idLpb
+     * @param string $kdBarang
+     * @param float $fallbackDppPrice
+     * @return array
+     */
+    public function resolve_po_pricing_for_lpb($idLpb, $kdBarang, $fallbackDppPrice = 0.0)
+    {
+        $po = $this->db
+            ->select('po.no_po, po.keterangan_harga_ppn, pod.hrg_satuan, pod.harga_satuan_exclude, lpbd.harga_satuan AS lpb_harga_satuan')
+            ->from('tb_lpb lpb')
+            ->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left')
+            ->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = ' . $this->db->escape($kdBarang), 'left')
+            ->join('tb_lpb_detail lpbd', 'lpbd.id_lpb = lpb.id_lpb AND lpbd.kd_barang = ' . $this->db->escape($kdBarang), 'left')
+            ->where('lpb.id_lpb', (int) $idLpb)
+            ->get()
+            ->row_array();
+
+        $ketPpn = !empty($po['keterangan_harga_ppn']) ? strtolower(trim((string)$po['keterangan_harga_ppn'])) : 'exclude';
+        $podHrgSatuan = !empty($po['hrg_satuan']) ? (float)$po['hrg_satuan'] : 0.0;
+        $podHrgExclude = !empty($po['harga_satuan_exclude']) ? (float)$po['harga_satuan_exclude'] : 0.0;
+        $lpbHrgSatuan = !empty($po['lpb_harga_satuan']) ? (float)$po['lpb_harga_satuan'] : (float)$fallbackDppPrice;
+
+        if ($ketPpn === 'include') {
+            $tipePajak = 'INCLUDE';
+            $hrgInput = $podHrgSatuan > 0 ? $podHrgSatuan : round($lpbHrgSatuan * 1.11, 2);
+            $hrgExclude = $podHrgExclude > 0 ? $podHrgExclude : $lpbHrgSatuan;
+        } elseif ($ketPpn === 'non_ppn') {
+            $tipePajak = 'NON_PPN';
+            $hrgInput = $podHrgSatuan > 0 ? $podHrgSatuan : $lpbHrgSatuan;
+            $hrgExclude = $hrgInput;
+        } else {
+            $tipePajak = 'EXCLUDE';
+            $hrgInput = $podHrgSatuan > 0 ? $podHrgSatuan : ($podHrgExclude > 0 ? $podHrgExclude : $lpbHrgSatuan);
+            $hrgExclude = $podHrgExclude > 0 ? $podHrgExclude : $hrgInput;
+        }
+
+        return [
+            'no_po'            => !empty($po['no_po']) ? $po['no_po'] : null,
+            'tipe_pajak'       => $tipePajak,
+            'hrg_satuan_input' => $hrgInput,
+            'hrg_beli_satuan'  => $hrgExclude > 0 ? $hrgExclude : (float)$fallbackDppPrice,
+        ];
+    }
+
+    /**
      * Menyinkronkan data tb_konsinyasi_settlement dengan alokasi FIFO LPB aktual di tb_konsinyasi_cogs_allocation
      * - Memastikan id_lpb_asal, nomor_lpb_asal, no_lot, expired_date, dan hrg_beli_satuan mengikuti alokasi FIFO LPB.
      * - Jika satu pembayaran teralokasi lintas batch LPB (misal 10 pcs di LPB A dan 2 pcs di LPB B),
@@ -612,11 +659,17 @@ class M_Konsinyasi extends CI_Model
                         $update['qty_net']     = (float)$alloc['qty_allocated'];
                         $update['subtotal_jual'] = round((float)$alloc['qty_allocated'] * (float)$st['hrg_jual'], 2);
                     }
+
                     $cogsPrice = (float)$alloc['harga_pokok_satuan'];
+                    $pricing = $this->resolve_po_pricing_for_lpb((int)$alloc['id_lpb'], $alloc['kd_barang'], $cogsPrice);
+
                     if ($cogsPrice > 0 && abs((float)$st['hrg_beli_satuan'] - $cogsPrice) > 0.01) {
                         $update['hrg_beli_satuan'] = $cogsPrice;
-                        if ($st['status'] !== 'BILLED') {
-                            $update['hrg_satuan_input'] = $cogsPrice;
+                    }
+                    if ($st['status'] !== 'BILLED') {
+                        $update['tipe_pajak'] = $pricing['tipe_pajak'];
+                        if ($pricing['hrg_satuan_input'] > 0) {
+                            $update['hrg_satuan_input'] = $pricing['hrg_satuan_input'];
                         }
                     }
                     if (!empty($alloc['no_faktur_konsinyasi']) && empty($st['no_faktur'])) {
@@ -635,6 +688,7 @@ class M_Konsinyasi extends CI_Model
                 $firstAlloc = $allocs[0];
                 $firstQty = (float)$firstAlloc['qty_allocated'];
                 $cogsPrice1 = (float)$firstAlloc['harga_pokok_satuan'];
+                $pricing1 = $this->resolve_po_pricing_for_lpb((int)$firstAlloc['id_lpb'], $firstAlloc['kd_barang'], $cogsPrice1);
 
                 $updatePrimary = [
                     'id_lpb_asal'     => (int)$firstAlloc['id_lpb'],
@@ -648,7 +702,10 @@ class M_Konsinyasi extends CI_Model
                     'catatan'         => 'Porsi alokasi FIFO LPB ' . $firstAlloc['nomor_lpb'] . ' (' . $firstQty . ' ' . $primarySt['satuan'] . ')'
                 ];
                 if ($primarySt['status'] !== 'BILLED') {
-                    $updatePrimary['hrg_satuan_input'] = $cogsPrice1;
+                    $updatePrimary['tipe_pajak'] = $pricing1['tipe_pajak'];
+                    if ($pricing1['hrg_satuan_input'] > 0) {
+                        $updatePrimary['hrg_satuan_input'] = $pricing1['hrg_satuan_input'];
+                    }
                 }
                 $this->db->where('id_settlement', (int)$primarySt['id_settlement'])->update('tb_konsinyasi_settlement', $updatePrimary);
                 $syncCount++;
@@ -658,6 +715,7 @@ class M_Konsinyasi extends CI_Model
                     $extraAlloc = $allocs[$j];
                     $extraQty = (float)$extraAlloc['qty_allocated'];
                     $cogsPriceExtra = (float)$extraAlloc['harga_pokok_satuan'];
+                    $extraPricing = $this->resolve_po_pricing_for_lpb((int)$extraAlloc['id_lpb'], $extraAlloc['kd_barang'], $cogsPriceExtra);
 
                     $extraPayload = $primarySt;
                     unset($extraPayload['id_settlement']);
@@ -670,7 +728,12 @@ class M_Konsinyasi extends CI_Model
                     $extraPayload['qty_net']           = $extraQty;
                     $extraPayload['subtotal_jual']     = round($extraQty * (float)$primarySt['hrg_jual'], 2);
                     $extraPayload['hrg_beli_satuan']   = $cogsPriceExtra;
-                    $extraPayload['hrg_satuan_input']  = ($primarySt['status'] !== 'BILLED') ? $cogsPriceExtra : (float)$primarySt['hrg_satuan_input'];
+                    if ($primarySt['status'] !== 'BILLED') {
+                        $extraPayload['tipe_pajak'] = $extraPricing['tipe_pajak'];
+                        $extraPayload['hrg_satuan_input'] = $extraPricing['hrg_satuan_input'] > 0 ? $extraPricing['hrg_satuan_input'] : $cogsPriceExtra;
+                    } else {
+                        $extraPayload['hrg_satuan_input'] = (float)$primarySt['hrg_satuan_input'];
+                    }
                     $extraPayload['subtotal_beli']     = round($extraQty * $cogsPriceExtra, 2);
                     $extraPayload['total_tagihan_beli']= round($extraQty * $cogsPriceExtra, 2);
                     $extraPayload['catatan']           = 'Porsi alokasi FIFO LPB ' . $extraAlloc['nomor_lpb'] . ' (' . $extraQty . ' ' . $primarySt['satuan'] . ')';
@@ -788,7 +851,12 @@ class M_Konsinyasi extends CI_Model
             GROUP_CONCAT(DISTINCT s.nama_barang ORDER BY s.nama_barang ASC SEPARATOR ', ') AS daftar_barang,
             MAX(s.tanggal_settlement) AS tgl_terakhir,
             MIN(s.tanggal_settlement) AS tgl_awal,
-            SUM(s.qty_net * COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0)) AS total_estimasi_tagihan,
+            SUM(s.qty_net * (CASE 
+                WHEN LOWER(po.keterangan_harga_ppn) = 'include' 
+                    THEN COALESCE(NULLIF(pod.hrg_satuan, 0), ROUND(NULLIF(lpbd.harga_satuan, 0) * 1.11, 2), NULLIF(s.hrg_satuan_input, 0), 0)
+                ELSE 
+                    COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_satuan_input, 0), NULLIF(s.hrg_beli_satuan, 0), 0)
+            END)) AS total_estimasi_tagihan,
             MAX(s.satuan) AS satuan
         ", false);
         $this->db->from('tb_konsinyasi_settlement s');
@@ -900,8 +968,13 @@ class M_Konsinyasi extends CI_Model
                     COALESCE(b.satuan, 'PCS') AS satuan,
                     COALESCE(laku.hrg_jual, 0) AS hrg_jual,
                     COALESCE(laku.subtotal_jual, 0) AS subtotal_jual,
-                    COALESCE(pod.hrg_satuan, lpbd.harga_satuan, 0) AS po_hrg_satuan,
-                    COALESCE(pod.harga_satuan_exclude, lpbd.harga_satuan, 0) AS po_hrg_satuan_exclude,
+                    CASE 
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'include' 
+                            THEN COALESCE(NULLIF(pod.hrg_satuan, 0), ROUND(NULLIF(lpbd.harga_satuan, 0) * 1.11, 2), NULLIF(laku.hrg_satuan_input, 0), 0)
+                        ELSE 
+                            COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(laku.hrg_satuan_input, 0), 0)
+                    END AS po_hrg_satuan,
+                    COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude,
                     CASE 
                         WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                         WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
@@ -911,9 +984,19 @@ class M_Konsinyasi extends CI_Model
                         WHEN COALESCE(laku.qty_laku, 0) > 0 THEN 'LAKU'
                         ELSE 'DI_KIOS'
                     END AS status,
-                    COALESCE(laku.tipe_pajak, 'EXCLUDE') AS tipe_pajak,
-                    COALESCE(laku.hrg_satuan_input, pod.hrg_satuan, lpbd.harga_satuan, 0) AS hrg_satuan_input,
-                    COALESCE(laku.hrg_beli_satuan, pod.hrg_satuan, lpbd.harga_satuan, 0) AS hrg_beli_satuan,
+                    CASE 
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'exclude' THEN 'EXCLUDE'
+                        ELSE COALESCE(laku.tipe_pajak, 'EXCLUDE')
+                    END AS tipe_pajak,
+                    CASE 
+                        WHEN LOWER(po.keterangan_harga_ppn) = 'include' 
+                            THEN COALESCE(NULLIF(pod.hrg_satuan, 0), ROUND(NULLIF(lpbd.harga_satuan, 0) * 1.11, 2), NULLIF(laku.hrg_satuan_input, 0), 0)
+                        ELSE 
+                            COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(laku.hrg_satuan_input, 0), 0)
+                    END AS hrg_satuan_input,
+                    COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(laku.hrg_beli_satuan, 0), 0) AS hrg_beli_satuan,
                     COALESCE(laku.subtotal_beli, 0) AS subtotal_beli,
                     COALESCE(laku.ppn_persen, 11) AS ppn_persen,
                     COALESCE(laku.nilai_ppn, 0) AS nilai_ppn,
@@ -1008,8 +1091,13 @@ class M_Konsinyasi extends CI_Model
                   AND (st_sub.no_lot = s.no_lot OR (s.no_lot IS NULL AND st_sub.no_lot IS NULL))
                   AND st_sub.status = 'BILLED'
             ), 0)) AS qty_sisa_belum_lunas,
-            COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
-            COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude,
+            CASE 
+                WHEN LOWER(po.keterangan_harga_ppn) = 'include' 
+                    THEN COALESCE(NULLIF(pod.hrg_satuan, 0), ROUND(NULLIF(lpbd.harga_satuan, 0) * 1.11, 2), NULLIF(s.hrg_satuan_input, 0), 0)
+                ELSE 
+                    COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_satuan_input, 0), NULLIF(s.hrg_beli_satuan, 0), 0)
+            END AS po_hrg_satuan,
+            COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude,
             CASE 
                 WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                 WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
@@ -1184,8 +1272,13 @@ class M_Konsinyasi extends CI_Model
                     WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
                     ELSE 'EXCLUDE'
                 END AS po_tipe_pajak,
-                COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan,
-                COALESCE(NULLIF(s.hrg_beli_satuan, 0), NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), 0) AS po_hrg_satuan_exclude
+                CASE 
+                    WHEN LOWER(po.keterangan_harga_ppn) = 'include' 
+                        THEN COALESCE(NULLIF(pod.hrg_satuan, 0), ROUND(NULLIF(lpbd.harga_satuan, 0) * 1.11, 2), NULLIF(s.hrg_satuan_input, 0), 0)
+                    ELSE 
+                        COALESCE(NULLIF(pod.hrg_satuan, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_satuan_input, 0), NULLIF(s.hrg_beli_satuan, 0), 0)
+                END AS po_hrg_satuan,
+                COALESCE(NULLIF(pod.harga_satuan_exclude, 0), NULLIF(lpbd.harga_satuan, 0), NULLIF(s.hrg_beli_satuan, 0), 0) AS po_hrg_satuan_exclude
             ", false)
             ->from('tb_konsinyasi_settlement s')
             ->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left')
@@ -1197,6 +1290,21 @@ class M_Konsinyasi extends CI_Model
             ->where('s.id_settlement', (int) $idSettlement)
             ->get()
             ->row_array();
+
+        if ($row && $row['status'] !== 'BILLED') {
+            if (!empty($row['po_tipe_pajak'])) {
+                $row['tipe_pajak'] = $row['po_tipe_pajak'];
+            }
+            if ($row['tipe_pajak'] === 'INCLUDE' && (float)$row['po_hrg_satuan'] > 0) {
+                $row['hrg_satuan_input'] = (float)$row['po_hrg_satuan'];
+            } elseif ($row['tipe_pajak'] === 'EXCLUDE' && (float)$row['po_hrg_satuan_exclude'] > 0) {
+                $row['hrg_satuan_input'] = (float)$row['po_hrg_satuan_exclude'];
+            } elseif ((float)$row['po_hrg_satuan'] > 0) {
+                $row['hrg_satuan_input'] = (float)$row['po_hrg_satuan'];
+            }
+        }
+
+        return $row;
     }
 
     /**

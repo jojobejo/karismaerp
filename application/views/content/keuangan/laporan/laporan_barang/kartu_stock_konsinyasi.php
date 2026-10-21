@@ -65,6 +65,19 @@
     }
     .report-table td { padding: 6px 6px; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
     
+    /* Garis pemisah tegas antar transaksi (sesuai coretan acuan kartu stok) */
+    .report-table tr.tr-transaction-end td {
+        border-bottom: 2px solid #111827 !important;
+    }
+    .report-table tr.tr-sub-layer td {
+        border-bottom: 1px dashed #e2e8f0;
+    }
+    @media print {
+        .report-table tr.tr-transaction-end td {
+            border-bottom: 1.5px solid #000 !important;
+        }
+    }
+    
     /* Subtotal Row */
     .subtotal-row {
         font-weight: 700;
@@ -476,70 +489,21 @@ document.addEventListener('DOMContentLoaded', function() {
     bindSearchFilter('#searchSupplier', '#tableSupplier');
     bindSearchFilter('#searchWarehouse', '#tableWarehouse');
 
-    // Susun saldo masuk menurut urutan FIFO dan sejajarkan saldo keluar dengan
-    // identitas lapisannya. Harga menjadi cadangan untuk respons versi lama.
+    // Susun baris mutasi dan saldo menurut urutan FIFO secara rapat dari baris atas.
+    // Jika barang masuk sebelumnya sudah habis keluar semua, saldo yang masih ada
+    // langsung mengisi kolom saldo dari baris paling atas (tidak ada baris kosong di atas).
     function alignFifoLayers(movements, balances, isIncoming) {
-        // Pada transaksi masuk, saldo harus selalu berurutan dari lapisan
-        // paling lama ke lapisan terbaru tanpa dipindahkan agar sejajar harga.
-        if (isIncoming) {
-            var incomingLineCount = Math.max(movements.length, balances.length, 1);
-            var incomingRows = [];
+        var lineCount = Math.max(movements.length, balances.length, 1);
+        var rows = [];
 
-            for (var incomingIndex = 0; incomingIndex < incomingLineCount; incomingIndex++) {
-                incomingRows.push({
-                    movement: movements[incomingIndex] || null,
-                    balance: balances[incomingIndex] || null
-                });
-            }
-
-            return incomingRows;
+        for (var i = 0; i < lineCount; i++) {
+            rows.push({
+                movement: movements[i] || null,
+                balance: balances[i] || null
+            });
         }
 
-        var rows = movements.map(function(movement) {
-            return {
-                movement: movement,
-                balance: null
-            };
-        });
-        var unmatchedBalances = [];
-        var priceTolerance = 0.000001;
-
-        balances.forEach(function(balance) {
-            var matchedIndex = -1;
-
-            for (var index = rows.length - 1; index >= 0; index--) {
-                if (rows[index].balance !== null) {
-                    continue;
-                }
-
-                var movementLayerId = rows[index].movement.layer_id || null;
-                var balanceLayerId = balance.layer_id || null;
-                var sameLayer = movementLayerId && balanceLayerId && movementLayerId === balanceLayerId;
-                var movementPrice = parseFloat(rows[index].movement.harga) || 0;
-                var balancePrice = parseFloat(balance.harga) || 0;
-                var sameLegacyPrice = !movementLayerId && !balanceLayerId && Math.abs(movementPrice - balancePrice) <= priceTolerance;
-
-                if (sameLayer || sameLegacyPrice) {
-                    matchedIndex = index;
-                    break;
-                }
-            }
-
-            if (matchedIndex >= 0) {
-                rows[matchedIndex].balance = balance;
-            } else {
-                unmatchedBalances.push(balance);
-            }
-        });
-
-        unmatchedBalances.forEach(function(balance) {
-            rows.push({
-                movement: null,
-                balance: balance
-            });
-        });
-
-        return rows.length ? rows : [{ movement: null, balance: null }];
+        return rows;
     }
 
     // Fetch and Render Report Data
@@ -622,7 +586,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             nilai: ob.saldo_nilai
                         }];
                         openingLayers.forEach(function(layer, layerIndex) {
-                            html += '      <tr class="text-semibold text-muted-custom">';
+                            var isLastLayer = layerIndex === openingLayers.length - 1;
+                            var rowClass = 'text-semibold text-muted-custom' + (isLastLayer ? ' tr-transaction-end' : ' tr-sub-layer');
+                            html += '      <tr class="' + rowClass + '">';
                             html += '        <td>' + (layerIndex === 0 ? formatDate(start) : '') + '</td>';
                             html += '        <td>' + (layerIndex === 0 ? ob.referensi : '') + '</td>';
                             html += '        <td>' + (layerIndex === 0 ? ob.unit : '') + '</td>';
@@ -649,8 +615,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 var movement = alignedLayers[lineIndex].movement;
                                 var balance = alignedLayers[lineIndex].balance;
                                 var isFirstLine = lineIndex === 0;
+                                var isLastLine = lineIndex === alignedLayers.length - 1;
+                                var rowClass = isLastLine ? 'tr-transaction-end' : 'tr-sub-layer';
 
-                                html += '      <tr>';
+                                html += '      <tr class="' + rowClass + '">';
                                 html += '        <td>' + (isFirstLine ? formatDate(r.tanggal) : '') + '</td>';
                                 html += '        <td>' + (isFirstLine ? r.referensi : '') + '</td>';
                                 html += '        <td>' + (isFirstLine ? r.unit : '') + '</td>';

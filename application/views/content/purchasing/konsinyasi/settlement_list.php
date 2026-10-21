@@ -782,7 +782,7 @@
 
 <!-- Modal Rincian Kios Pemegang Barang Konsinyasi -->
 <div class="modal fade" id="modalTrackingKios" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable" role="document">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 14px;">
             <div class="modal-header border-0 bg-primary text-white" style="border-radius: 14px 14px 0 0;">
                 <h5 class="modal-title font-weight-bold">
@@ -806,6 +806,32 @@
 </div>
 
 <style>
+    #modalTrackingKios .modal-dialog {
+        max-width: 1200px;
+    }
+
+    .kios-scroll-wrapper {
+        max-height: 480px;
+        overflow-y: auto;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        position: relative;
+    }
+
+    .kios-scroll-wrapper table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+
+    .kios-scroll-wrapper table tfoot tr td {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        box-shadow: 0 -1px 2px rgba(0,0,0,0.08);
+    }
+
     #modalSettlement .modal-dialog {
         max-width: 1180px;
     }
@@ -1275,10 +1301,17 @@ window.openModalInputTagihan = function(id, allIds) {
                 $('#input_qty_laku').val(currentQtyNet.toFixed(2));
 
                 // Default Tipe Pajak & Harga dari PO Konsinyasi
-                var defaultTipe = d.po_tipe_pajak || d.tipe_pajak || 'EXCLUDE';
+                var defaultTipe = (d.po_tipe_pajak || d.tipe_pajak || 'EXCLUDE').toUpperCase();
                 $('#tipe_pajak').val(defaultTipe);
 
-                var defaultHrg = parseFloat(d.po_hrg_satuan || d.hrg_satuan_input || 0);
+                var defaultHrg = 0;
+                if (defaultTipe === 'INCLUDE') {
+                    defaultHrg = parseFloat(d.po_hrg_satuan || d.hrg_satuan_input || 0);
+                } else if (defaultTipe === 'EXCLUDE') {
+                    defaultHrg = parseFloat(d.po_hrg_satuan_exclude || d.po_hrg_satuan || d.hrg_satuan_input || 0);
+                } else {
+                    defaultHrg = parseFloat(d.po_hrg_satuan || d.hrg_satuan_input || 0);
+                }
                 $('#hrg_satuan_input').val(defaultHrg > 0 ? defaultHrg : '');
 
                 var tipeKet = (defaultTipe === 'INCLUDE') ? 'Include PPN' : ((defaultTipe === 'NON_PPN') ? 'Non-PPN' : 'Exclude PPN');
@@ -1335,33 +1368,55 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 }
 
                 var fmt = function(n) { return 'Rp ' + parseFloat(n || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-                var html = '<div class="table-responsive">';
-                html += '<table class="table table-bordered table-hover align-middle mb-0" style="font-size:0.88rem;">';
-                html += '<thead style="background:#0f172a; color:#fff;"><tr>';
-                html += '<th class="py-2" style="width:17%;">Lokasi Kios</th>';
-                html += '<th class="py-2">No. Faktur K</th>';
-                html += '<th class="py-2" style="background:#1e293b;"><i class="fas fa-barcode mr-1 text-primary"></i>Asal LPB &amp; PO</th>';
-                html += '<th class="py-2">Tgl Kirim</th>';
-                html += '<th class="py-2">Lot / ED</th>';
-                html += '<th class="py-2 text-right" style="background:#854d0e; color:#fff;"><i class="fas fa-store mr-1"></i>Qty di Kios</th>';
-                html += '<th class="py-2 text-right" style="background:#166534; color:#fff;"><i class="fas fa-shopping-bag mr-1"></i>Qty Laku</th>';
-                html += '<th class="py-2 text-right" style="background:#1e3a8a; color:#fff;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>';
-                html += '<th class="py-2 text-center" style="width:130px;">Status</th>';
-                html += '</tr></thead><tbody>';
-
+                
                 var grandQtyKios = 0;
                 var grandQtyLaku = 0;
                 var grandQtyTotal = 0;
                 var grandSatuan = '';
 
                 $.each(list, function(i, r) {
+                    grandQtyKios += parseFloat(r.qty_kios || 0);
+                    grandQtyLaku += parseFloat(r.qty_laku || 0);
+                    grandQtyTotal += parseFloat(r.qty_total || 0);
+                    if (!grandSatuan && r.satuan) grandSatuan = r.satuan;
+                });
+
+                var html = '';
+
+                // Header Ringkasan & Instant Filter Cepat Kios
+                html += '<div class="row align-items-center mb-3">';
+                html += '<div class="col-md-7 mb-2 mb-md-0">';
+                html += '<div class="d-flex flex-wrap align-items-center">';
+                html += '<span class="badge badge-light border text-dark font-weight-bold px-2 py-2 mr-2 mb-1" style="font-size:0.85rem;"><i class="fas fa-store text-primary mr-1"></i> ' + list.length + ' Titik Kios</span>';
+                html += '<span class="badge badge-warning text-dark font-weight-bold px-2 py-2 mr-2 mb-1" style="font-size:0.85rem;"><i class="fas fa-boxes mr-1"></i>Titipan: ' + grandQtyKios.toFixed(2) + ' ' + grandSatuan + '</span>';
+                html += '<span class="badge badge-success font-weight-bold px-2 py-2 mr-2 mb-1" style="font-size:0.85rem;"><i class="fas fa-shopping-bag mr-1"></i>Laku: ' + grandQtyLaku.toFixed(2) + ' ' + grandSatuan + '</span>';
+                html += '</div>';
+                html += '</div>';
+                html += '<div class="col-md-5 text-right">';
+                html += '<div class="input-group input-group-sm">';
+                html += '<div class="input-group-prepend"><span class="input-group-text bg-white border-right-0"><i class="fas fa-search text-muted"></i></span></div>';
+                html += '<input type="text" id="kiosModalFilterInput" class="form-control border-left-0" placeholder="Cari nama kios, nomor SO, LPB, lot...">';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Scroll Wrapper dengan Sticky Header & Footer
+                html += '<div class="table-responsive kios-scroll-wrapper">';
+                html += '<table class="table table-bordered table-hover align-middle mb-0" id="tableTrackingKios" style="font-size:0.88rem;">';
+                html += '<thead style="background:#0f172a; color:#fff;"><tr>';
+                html += '<th class="py-2" style="width:22%; background:#0f172a;">Lokasi Kios</th>';
+                html += '<th class="py-2" style="background:#1e293b;"><i class="fas fa-barcode mr-1 text-primary"></i>Asal LPB &amp; PO</th>';
+                html += '<th class="py-2" style="background:#0f172a;">Tgl Kirim</th>';
+                html += '<th class="py-2" style="background:#0f172a;">Lot / ED</th>';
+                html += '<th class="py-2 text-right" style="background:#854d0e; color:#fff;"><i class="fas fa-store mr-1"></i>Qty di Kios</th>';
+                html += '<th class="py-2 text-right" style="background:#166534; color:#fff;"><i class="fas fa-shopping-bag mr-1"></i>Qty Laku</th>';
+                html += '<th class="py-2 text-right" style="background:#1e3a8a; color:#fff;"><i class="fas fa-tags mr-1"></i>Harga ketika PO</th>';
+                html += '<th class="py-2 text-center" style="width:130px; background:#0f172a;">Status</th>';
+                html += '</tr></thead><tbody id="tableTrackingKiosBody">';
+
+                $.each(list, function(i, r) {
                     var qtyKios = parseFloat(r.qty_kios || 0);
                     var qtyLaku = parseFloat(r.qty_laku || 0);
-                    var qtyTot = parseFloat(r.qty_total || 0);
-                    grandQtyKios += qtyKios;
-                    grandQtyLaku += qtyLaku;
-                    grandQtyTotal += qtyTot;
-                    if (!grandSatuan && r.satuan) grandSatuan = r.satuan;
 
                     var badge = '';
                     if (qtyKios > 0 && qtyLaku <= 0) {
@@ -1377,9 +1432,8 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                     var tglKirim = r.tanggal_settlement ? new Date(r.tanggal_settlement).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
                     var ed = r.expired_date ? new Date(r.expired_date).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'}) : '-';
 
-                    html += '<tr>';
+                    html += '<tr class="kios-data-row">';
                     html += '<td><strong class="text-dark"><i class="fas fa-store text-warning mr-1"></i>' + (r.customer_name || '-') + '</strong><br><small class="text-muted">SO: ' + (r.no_so || '-') + '</small></td>';
-                    html += '<td><strong class="text-primary">' + (r.no_faktur || '-') + '</strong></td>';
                     html += '<td><span class="badge badge-primary font-weight-bold px-2 py-1" style="font-size:0.80rem;"><i class="fas fa-barcode mr-1"></i>' + (r.nomor_lpb || '-') + '</span><br><small class="text-muted"><i class="fas fa-file-invoice mr-1"></i>PO: <strong class="text-dark">' + (r.no_po || '-') + '</strong></small></td>';
                     html += '<td>' + tglKirim + '</td>';
                     html += '<td><small><strong>' + (r.no_lot || '-') + '</strong><br>ED: ' + ed + '</small></td>';
@@ -1391,14 +1445,27 @@ window.openModalTrackingKios = function(kdBarang, namaBarang) {
                 });
 
                 html += '</tbody>';
-                html += '<tfoot style="background:#f1f5f9; font-weight:bold;"><tr>';
-                html += '<td colspan="5" class="text-right py-2 font-weight-bold">TOTAL TITIPAN &amp; LAKU DI KIOS:</td>';
-                html += '<td class="text-right text-warning py-2" style="font-size:0.95rem;">' + grandQtyKios.toFixed(2) + ' ' + grandSatuan + '</td>';
-                html += '<td class="text-right text-success py-2" style="font-size:0.95rem;">' + grandQtyLaku.toFixed(2) + ' ' + grandSatuan + '</td>';
-                html += '<td colspan="2" class="text-muted small py-2 font-italic text-center">Total Kirim ke Kios: ' + grandQtyTotal.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<tfoot style="background:#f8fafc; font-weight:bold;"><tr>';
+                html += '<td colspan="4" class="text-right py-2 font-weight-bold" style="background:#f8fafc;">TOTAL TITIPAN &amp; LAKU DI KIOS:</td>';
+                html += '<td class="text-right text-warning py-2" style="font-size:0.95rem; background:#fefce8;">' + grandQtyKios.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<td class="text-right text-success py-2" style="font-size:0.95rem; background:#f0fdf4;">' + grandQtyLaku.toFixed(2) + ' ' + grandSatuan + '</td>';
+                html += '<td colspan="2" class="text-muted small py-2 font-italic text-center" style="background:#f8fafc;">Total Kirim: ' + grandQtyTotal.toFixed(2) + ' ' + grandSatuan + '</td>';
                 html += '</tr></tfoot>';
                 html += '</table></div>';
+
                 $('#modalTrackingKiosBody').html(html);
+
+                // Event Live Filter Cepat di dalam Modal
+                $('#kiosModalFilterInput').on('keyup', function() {
+                    var val = $(this).val().toLowerCase().trim();
+                    var visibleCount = 0;
+                    $('#tableTrackingKiosBody tr.kios-data-row').each(function() {
+                        var rowText = $(this).text().toLowerCase();
+                        var match = rowText.indexOf(val) > -1;
+                        $(this).toggle(match);
+                        if (match) visibleCount++;
+                    });
+                });
             } else {
                 $('#modalTrackingKiosBody').html('<div class="alert alert-danger">Gagal memuat rincian kios.</div>');
             }

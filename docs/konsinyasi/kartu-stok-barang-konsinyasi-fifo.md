@@ -101,3 +101,6 @@ Pada transaksi keluar, kolom **Saldo** disejajarkan dengan baris mutasi yang mem
    - Menambahkan method `kartu_stock_konsinyasi_data()` untuk kalkulasi mutasi FIFO dari 3 gudang konsinyasi.
 4. **`application/views/content/keuangan/laporan/laporan_barang/kartu_stock_konsinyasi.php`**:
    - Tampilan visual laporan kartu stok konsinyasi modern, interaktif AJAX, dan siap cetak.
+   - **Update 21 Oktober 2026**:
+     1. Menambahkan garis pembatas tegas horizontal (`tr-transaction-end` dengan `border-bottom: 2px solid #111827`) di setiap akhir transaksi mutasi, sehingga transaksi yang menghasilkan multi-lapisan saldo FIFO (misal saldo 1.000 zak dan saldo 500 zak) memiliki garis pemisah jelas di bagian atas dan bawahnya. Lapisan saldo internal menggunakan garis halus (`tr-sub-layer`).
+     2. Memperbaiki fungsi `alignFifoLayers`: jika suatu transaksi keluar menghabiskan lapisan saldo sebelumnya (sisa 0), lapisan saldo yang masih ada langsung disusun rapat mulai dari baris paling atas (baris 0) sehingga tidak ada lagi baris kosong melompong pada kolom saldo.

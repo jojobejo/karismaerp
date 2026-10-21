@@ -367,18 +367,31 @@ class C_Konsinyasi extends CI_Controller
         $isBilled = $status === 'BILLED';
         $title = $isBilled ? 'Riwayat Barang Konsinyasi Lunas' : 'Barang Konsinyasi Laku';
         $sheet->setTitle($isBilled ? 'Riwayat Lunas' : 'Barang Laku');
-        $sheet->mergeCells('A1:X1');
-        $sheet->setCellValue('A1', $title);
-        $sheet->mergeCells('A2:X2');
-        $sheet->setCellValue('A2', $this->export_filter_description($filters));
+
+        $includeNoFaktur = $isBilled; // Kolom No. Faktur Kios ditiadakan untuk export Barang Laku
 
         $headers = [
             'No.', 'Tanggal Laku', 'No. Settlement', 'Kode Supplier', 'Nama Supplier',
             'Kode Barang', 'Nama Barang', 'Lot', 'Expired', 'No. LPB', 'No. PO',
-            'Kios / Customer', 'No. SO', 'No. Faktur', 'Qty LPB Masuk', 'Qty Laku',
+            'Kios / Customer', 'No. SO'
+        ];
+        if ($includeNoFaktur) {
+            $headers[] = 'No. Faktur';
+        }
+        $headers = array_merge($headers, [
+            'Qty LPB Masuk', 'Qty Laku',
             'Satuan', 'Sisa Belum Lunas', 'Harga PO', 'Nilai Tagihan',
             'Invoice Supplier', 'Tanggal Invoice', 'No. Jurnal', 'Status'
-        ];
+        ]);
+
+        $totalColumns = count($headers);
+        $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($totalColumns);
+
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->setCellValue('A1', $title);
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->setCellValue('A2', $this->export_filter_description($filters));
+
         foreach ($headers as $columnIndex => $header) {
             $sheet->setCellValueByColumnAndRow($columnIndex + 1, 4, $header);
         }
@@ -399,7 +412,11 @@ class C_Konsinyasi extends CI_Controller
                 $row['po_no_po'] ?? '',
                 $row['customer_name'] ?? '',
                 $row['no_so'] ?? '',
-                $row['no_faktur'] ?? '',
+            ];
+            if ($includeNoFaktur) {
+                $values[] = $row['no_faktur'] ?? '';
+            }
+            $values = array_merge($values, [
                 (float)($row['qty_lpb_masuk'] ?? 0),
                 (float)($row['qty_net'] ?? 0),
                 $row['satuan'] ?? '',
@@ -410,7 +427,8 @@ class C_Konsinyasi extends CI_Controller
                 $this->export_date($row['tgl_invoice_supplier'] ?? ''),
                 $row['nomor_jurnal'] ?? '',
                 $row['status'] ?? $status,
-            ];
+            ]);
+
             foreach ($values as $columnIndex => $value) {
                 $sheet->setCellValueByColumnAndRow($columnIndex + 1, $excelRow, $value);
             }
@@ -418,28 +436,34 @@ class C_Konsinyasi extends CI_Controller
         }
 
         $lastRow = max(4, $excelRow - 1);
-        $sheet->getStyle('A1:X1')->applyFromArray([
+        $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => $isBilled ? '15803D' : 'D97706']],
             'alignment' => ['horizontal' => 'center'],
         ]);
-        $sheet->getStyle('A4:X4')->applyFromArray([
+        $sheet->getStyle("A4:{$lastCol}4")->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '334155']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ]);
-        $sheet->getStyle('A4:X' . $lastRow)->applyFromArray([
+        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->applyFromArray([
             'borders' => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => 'CBD5E1']]],
         ]);
         if ($lastRow >= 5) {
-            $sheet->getStyle('O5:P' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00');
-            $sheet->getStyle('R5:T' . $lastRow)->getNumberFormat()->setFormatCode('#,##0.00');
+            $qtyLpbCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(array_search('Qty LPB Masuk', $headers) + 1);
+            $qtyLakuCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(array_search('Qty Laku', $headers) + 1);
+            $sisaCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(array_search('Sisa Belum Lunas', $headers) + 1);
+            $tagihanCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(array_search('Nilai Tagihan', $headers) + 1);
+
+            $sheet->getStyle("{$qtyLpbCol}5:{$qtyLakuCol}{$lastRow}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("{$sisaCol}5:{$tagihanCol}{$lastRow}")->getNumberFormat()->setFormatCode('#,##0.00');
         }
         $sheet->freezePane('A5');
-        $sheet->setAutoFilter('A4:X' . $lastRow);
+        $sheet->setAutoFilter("A4:{$lastCol}{$lastRow}");
 
-        foreach (range('A', 'X') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
+        for ($c = 1; $c <= $totalColumns; $c++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }
 
         while (ob_get_level()) {
