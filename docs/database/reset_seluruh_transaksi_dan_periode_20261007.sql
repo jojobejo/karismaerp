@@ -121,6 +121,8 @@ TRUNCATE TABLE `tb_retur_pembelian_detail`;
 TRUNCATE TABLE `tb_retur_pembelian`;
 
 -- Konsinyasi dan bundling yang menghasilkan transaksi stok.
+TRUNCATE TABLE `tb_konsinyasi_cogs_allocation`;
+TRUNCATE TABLE `tb_konsinyasi_lpb_batch_stock`;
 TRUNCATE TABLE `tb_konsinyasi_settlement`;
 TRUNCATE TABLE `tb_konsinyasi_faktur`;
 TRUNCATE TABLE `tb_konsinyasi_masuk_detail`;

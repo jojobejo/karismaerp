@@ -72,15 +72,18 @@ Contoh:
 4. Ketika keluar `60 unit`, sistem mengambil `50 unit × Rp10.000` terlebih dahulu, kemudian `10 unit × Rp12.000`.
 5. Saldo yang tersisa ditampilkan sebagai `40 unit × Rp12.000`.
 
-Pada transaksi masuk, lapisan yang baru diterima ditempatkan sejajar dengan tanggal dan nomor referensinya. Lapisan saldo lama tetap ditampilkan pada baris lanjutan tanpa tanggal dan referensi. Urutan visual ini hanya mempermudah pembacaan; urutan pengeluaran tetap menggunakan lapisan FIFO paling lama.
+Pada transaksi masuk, kolom **Saldo** selalu ditampilkan menurut antrean FIFO dari lapisan paling lama di bagian atas sampai lapisan terbaru di bagian bawah. Kolom mutasi masuk tetap berada pada baris referensi transaksi, tetapi tidak mengubah urutan visual lapisan saldo.
 
 Jika satu transaksi keluar mengambil lebih dari satu lapisan, kolom **Keluar** juga dipecah menjadi beberapa baris agar kuantitas, harga pokok, dan nilai dari setiap lapisan FIFO dapat diaudit. Total kuantitas dan nilai pada baris subtotal tetap merupakan akumulasi periode laporan.
+
+Pada transaksi keluar, kolom **Saldo** disejajarkan dengan baris mutasi yang mempunyai harga FIFO sama. Jika lapisan harga pertama habis dan transaksi yang sama mengambil sebagian lapisan harga berikutnya, saldo harga berikutnya ditampilkan pada baris harga berikutnya tersebut. Baris lapisan yang sudah habis dibiarkan kosong pada kolom saldo agar hubungan antara mutasi keluar dan sisa stok mudah dibaca.
 
 ### Ketentuan Perhitungan
 
 - Transaksi sebelum tanggal awal filter diproses lebih dahulu untuk membentuk saldo awal per lapisan FIFO.
 - Barang masuk ditambahkan ke lapisan paling belakang.
 - Barang keluar selalu mengambil lapisan paling depan sampai kuantitas transaksi terpenuhi.
+- Mutasi `TITIP-IN` pada Gudang Titipan di Kios mewarisi pecahan kuantitas dan harga FIFO dari mutasi `TITIP-OUT` Gudang Konsinyasi untuk detail faktur yang sama.
 - Nilai barang keluar berasal dari harga lapisan FIFO yang benar, bukan dari harga rata-rata saldo.
 - Total nilai saldo adalah penjumlahan nilai seluruh lapisan yang masih tersedia.
 - Jika saldo akhir terdiri dari lebih dari satu harga, kolom harga pada subtotal menampilkan tanda `-`; rincian harga tetap terlihat pada baris-baris saldo di atasnya.

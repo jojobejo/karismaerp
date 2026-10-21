@@ -759,7 +759,7 @@ class C_Laporan extends CI_Controller
      * Saldo negatif lama diselesaikan terlebih dahulu agar antrean tetap
      * menggambarkan stok fisik yang benar ketika ada transaksi terlambat.
      */
-    private function addKonsinyasiFifoLayer(&$layers, $qty, $price)
+    private function addKonsinyasiFifoLayer(&$layers, $qty, $price, $layerId = null)
     {
         $remainingQty = (float)$qty;
         $epsilon = 0.000001;
@@ -776,8 +776,9 @@ class C_Laporan extends CI_Controller
 
         if ($remainingQty > $epsilon) {
             $layers[] = [
-                'qty'   => $remainingQty,
-                'harga' => (float)$price
+                'layer_id' => $layerId,
+                'qty'      => $remainingQty,
+                'harga'    => (float)$price
             ];
         }
     }
@@ -796,9 +797,10 @@ class C_Laporan extends CI_Controller
             $layers[0]['qty'] -= $remainingQty;
 
             return [[
-                'qty'   => $remainingQty,
-                'harga' => $price,
-                'nilai' => $remainingQty * $price
+                'layer_id' => $layers[0]['layer_id'] ?? null,
+                'qty'      => $remainingQty,
+                'harga'    => $price,
+                'nilai'    => $remainingQty * $price
             ]];
         }
 
@@ -810,9 +812,10 @@ class C_Laporan extends CI_Controller
 
             $takenQty = min($remainingQty, $layers[0]['qty']);
             $segments[] = [
-                'qty'   => $takenQty,
-                'harga' => (float)$layers[0]['harga'],
-                'nilai' => $takenQty * (float)$layers[0]['harga']
+                'layer_id' => $layers[0]['layer_id'] ?? null,
+                'qty'      => $takenQty,
+                'harga'    => (float)$layers[0]['harga'],
+                'nilai'    => $takenQty * (float)$layers[0]['harga']
             ];
 
             $layers[0]['qty'] -= $takenQty;
@@ -826,14 +829,17 @@ class C_Laporan extends CI_Controller
         // Tetap tampilkan kekurangan stok agar selisih data sumber mudah diaudit.
         if ($remainingQty > $epsilon) {
             $price = (float)$fallbackPrice;
+            $shortageLayerId = uniqid('neg_', true);
             $segments[] = [
-                'qty'   => $remainingQty,
-                'harga' => $price,
-                'nilai' => $remainingQty * $price
+                'layer_id' => $shortageLayerId,
+                'qty'      => $remainingQty,
+                'harga'    => $price,
+                'nilai'    => $remainingQty * $price
             ];
             $layers[] = [
-                'qty'   => -$remainingQty,
-                'harga' => $price
+                'layer_id' => $shortageLayerId,
+                'qty'      => -$remainingQty,
+                'harga'    => $price
             ];
         }
 
@@ -864,9 +870,10 @@ class C_Laporan extends CI_Controller
             $summary['qty'] += $qty;
             $summary['nilai'] += $value;
             $summary['layers'][] = [
-                'qty'   => $qty,
-                'harga' => $price,
-                'nilai' => $value
+                'layer_id' => $layer['layer_id'] ?? null,
+                'qty'      => $qty,
+                'harga'    => $price,
+                'nilai'    => $value
             ];
         }
 
@@ -875,6 +882,20 @@ class C_Laporan extends CI_Controller
         }
 
         return $summary;
+    }
+
+    /**
+     * Membentuk identitas detail transfer yang sama untuk sisi keluar Gudang
+     * Konsinyasi dan sisi masuk Gudang Titipan di Kios.
+     */
+    private function getKonsinyasiTransferKey($transaction)
+    {
+        return implode('|', [
+            (string)$transaction['kd_barang'],
+            (string)$transaction['referensi'],
+            (string)$transaction['no_lot'],
+            number_format((float)$transaction['qty'], 6, '.', '')
+        ]);
     }
 
     public function kartu_stock_konsinyasi_data()
@@ -927,7 +948,7 @@ class C_Laporan extends CI_Controller
         $queries = [];
 
         // 1. LPB Penerimaan dari Supplier (Gudang 13 - IN)
-        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi) {
+        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi || $wh_target_id == $id_wh_titipan_kios) {
             $sql_lpb = "SELECT 
                             ld.kd_barang,
                             b.nama_barang,
@@ -956,7 +977,7 @@ class C_Laporan extends CI_Controller
         }
 
         // 2. Faktur Penjualan Titip ke Kios (Gudang 13 - OUT)
-        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi) {
+        if (!$wh_target_id || $wh_target_id == $id_wh_konsinyasi || $wh_target_id == $id_wh_titipan_kios) {
             $sql_kios_out13 = "SELECT 
                             fd.kd_barang,
                             b.nama_barang,
@@ -1122,6 +1143,7 @@ class C_Laporan extends CI_Controller
         }
 
         $all_products_data = [];
+        $titip_transfer_layers = [];
         ksort($grouped);
 
         foreach ($grouped as $kd => $byWarehouse) {
@@ -1181,14 +1203,43 @@ class C_Laporan extends CI_Controller
                     }
 
                     if ($tx['type'] === 'IN') {
-                        $this->addKonsinyasiFifoLayer($fifo_layers, $qty, $harga);
-                        $movement_layers[] = [
-                            'qty'   => $qty,
-                            'harga' => $harga,
-                            'nilai' => $qty * $harga
-                        ];
+                        $transfer_key = $this->getKonsinyasiTransferKey($tx);
+                        $transferred_layers = null;
+
+                        if ($tx['flow_status'] === 'TITIP_DI_KIOS' && !empty($titip_transfer_layers[$transfer_key])) {
+                            $transferred_layers = array_shift($titip_transfer_layers[$transfer_key]);
+                        }
+
+                        if (!empty($transferred_layers)) {
+                            foreach ($transferred_layers as $layer_index => $transferred_layer) {
+                                $layer_qty = (float)$transferred_layer['qty'];
+                                $layer_price = (float)$transferred_layer['harga'];
+                                $layer_id = 'in_' . $wh_id . '_' . $tx['_sequence'] . '_' . $layer_index;
+                                $this->addKonsinyasiFifoLayer($fifo_layers, $layer_qty, $layer_price, $layer_id);
+                                $movement_layers[] = [
+                                    'layer_id' => $layer_id,
+                                    'qty'      => $layer_qty,
+                                    'harga'    => $layer_price,
+                                    'nilai'    => $layer_qty * $layer_price
+                                ];
+                            }
+                        } else {
+                            $layer_id = 'in_' . $wh_id . '_' . $tx['_sequence'] . '_0';
+                            $this->addKonsinyasiFifoLayer($fifo_layers, $qty, $harga, $layer_id);
+                            $movement_layers[] = [
+                                'layer_id' => $layer_id,
+                                'qty'      => $qty,
+                                'harga'    => $harga,
+                                'nilai'    => $qty * $harga
+                            ];
+                        }
                     } else {
                         $movement_layers = $this->consumeKonsinyasiFifoLayers($fifo_layers, $qty, $harga);
+
+                        if ($tx['flow_status'] === 'TITIP_KE_KIOS') {
+                            $transfer_key = $this->getKonsinyasiTransferKey($tx);
+                            $titip_transfer_layers[$transfer_key][] = $movement_layers;
+                        }
                     }
 
                     $saldo_summary = $this->summarizeKonsinyasiFifoLayers($fifo_layers);
@@ -1226,11 +1277,12 @@ class C_Laporan extends CI_Controller
                         ];
 
                         if ($tx['type'] === 'IN') {
+                            $fifo_in_value = array_sum(array_column($movement_layers, 'nilai'));
                             $row['masuk_qty'] = $qty;
-                            $row['masuk_harga'] = $harga;
-                            $row['masuk_nilai'] = $qty * $harga;
+                            $row['masuk_harga'] = $qty > 0 ? ($fifo_in_value / $qty) : 0.0;
+                            $row['masuk_nilai'] = $fifo_in_value;
                             $sub_masuk_qty += $qty;
-                            $sub_masuk_nilai += $qty * $harga;
+                            $sub_masuk_nilai += $fifo_in_value;
                         } else {
                             $fifo_out_value = array_sum(array_column($movement_layers, 'nilai'));
                             $row['keluar_qty'] = $qty;
@@ -1246,7 +1298,9 @@ class C_Laporan extends CI_Controller
 
                 $final_summary = $this->summarizeKonsinyasiFifoLayers($fifo_layers);
 
-                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $final_summary['qty'] != 0) {
+                $should_show_warehouse = !$wh_target_id || $wh_id == $wh_target_id;
+
+                if ($should_show_warehouse && (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $final_summary['qty'] != 0)) {
                     $all_products_data[] = [
                         'id_gudang'         => $wh_id,
                         'warehouse_name'    => $wh_name,
