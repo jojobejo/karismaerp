@@ -23,10 +23,13 @@ class M_Usermanagement extends CI_Model
     private function select_base()
     {
         $select = ['k.id', 'k.nik', 'k.nm_karyawan', 'k.departemen', 'k.jobdesk', 'k.username', 'k.tim', 'k.wilayah', 'k.akses_lv'];
+        $hasJabatan = $this->has('jabatan');
+        if ($hasJabatan) $select[] = 'k.jabatan';
         foreach (['jobdesk_id', 'akses_lv_id', 'status', 'foto', 'last_login'] as $field) {
             if ($this->has($field)) $select[] = 'k.' . $field;
         }
         $this->db->select(implode(',', $select));
+        if (!$hasJabatan) $this->db->select('NULL AS jabatan', false);
         $this->db->from($this->table . ' k');
     }
 
@@ -39,8 +42,11 @@ class M_Usermanagement extends CI_Model
                 ->or_like('k.nm_karyawan', $search)
                 ->or_like('k.username', $search)
                 ->or_like('k.jobdesk', $search)
-                ->or_like('k.departemen', $search)
-                ->group_end();
+                ->or_like('k.departemen', $search);
+            if ($this->has('jabatan')) {
+                $this->db->or_like('k.jabatan', $search);
+            }
+            $this->db->group_end();
         }
         foreach (['departemen', 'jobdesk', 'akses_lv'] as $field) {
             $value = trim((string)($post[$field] ?? ''));
@@ -63,9 +69,12 @@ class M_Usermanagement extends CI_Model
         $start = (int)($post['start'] ?? 0);
 
         $total = $this->db->count_all($this->table);
+        $this->db->from($this->table . ' k');
+        $this->apply_filters($post);
+        $filtered = $this->db->count_all_results();
+
         $this->select_base();
         $this->apply_filters($post);
-        $filtered = $this->db->count_all_results('', false);
         $this->db->order_by('k.id', 'DESC');
         if ($length > 0) $this->db->limit($length, $start);
         $rows = $this->db->get()->result_array();
@@ -134,6 +143,7 @@ class M_Usermanagement extends CI_Model
             'nm_karyawan' => trim((string)($input['nm_karyawan'] ?? '')),
             'departemen' => trim((string)($input['departemen'] ?? '')),
             'jobdesk' => $jobdesk,
+            'jabatan' => trim((string)($input['jabatan'] ?? '')),
             'username' => trim((string)($input['username'] ?? '')),
             'tim' => (int)($input['tim'] ?? 0),
             'wilayah' => (int)($input['wilayah'] ?? 0),
@@ -141,8 +151,10 @@ class M_Usermanagement extends CI_Model
             'jobdesk_id' => $jobdeskId !== '' ? $jobdeskId : null,
             'akses_lv_id' => $aksesId !== '' ? $aksesId : null,
             'status' => (int)($input['status'] ?? 1),
-            'foto' => $input['foto'] ?? null,
         ];
+        if (!$isUpdate || array_key_exists('foto', $input)) {
+            $data['foto'] = $input['foto'] ?? null;
+        }
         if (!$isUpdate || trim((string)($input['password'] ?? '')) !== '') {
             $data['password'] = password_hash((string)$input['password'], PASSWORD_DEFAULT);
         }
@@ -151,7 +163,7 @@ class M_Usermanagement extends CI_Model
 
     public function save($input)
     {
-        $this->db->insert($this->table, $this->payload($input, false));
+        if (!$this->db->insert($this->table, $this->payload($input, false))) return false;
         return $this->db->insert_id();
     }
 
@@ -162,7 +174,8 @@ class M_Usermanagement extends CI_Model
 
     public function delete($id)
     {
-        return $this->db->where('id', $id)->delete($this->table);
+        $this->db->where('id', (int)$id)->delete($this->table);
+        return $this->db->affected_rows() > 0;
     }
 
     public function reset_password($id, $password)

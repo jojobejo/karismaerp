@@ -141,6 +141,32 @@
             transform: translateY(-1px);
         }
 
+        .logout-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 13px;
+            color: #b42335;
+            border: 1px solid rgba(180, 35, 53, .16);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .9);
+            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
+            font-size: .72rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: color .2s ease, background .2s ease, transform .2s ease;
+        }
+
+        .logout-link:hover,
+        .logout-link:focus-visible {
+            color: #fff;
+            background: #b42335;
+            outline: none;
+            transform: translateY(-1px);
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -531,6 +557,7 @@
             .topbar-actions { gap: 7px; }
             .admin-navigation { justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
             .admin-navigation a { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
+            .logout-link { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
             .portal-hero { min-height: 0; border-radius: 24px; }
             .hero-copy { padding: 38px 24px 40px; }
             .portal-title { font-size: 2.55rem; }
@@ -564,8 +591,10 @@
         </div>
         <div class="topbar-actions">
             <div class="system-status"><span class="status-dot"></span> System Online</div>
+            <a class="logout-link" href="<?= base_url('logout') ?>"><i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></a>
             <?php if (!empty($is_admin)): ?>
                 <nav class="admin-navigation" aria-label="Navigasi administrasi">
+                    <a href="<?= base_url('admin/portal-app-access') ?>"><i class="fas fa-th-large" aria-hidden="true"></i><span>Akses Aplikasi</span></a>
                     <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>
                     <a href="<?= base_url('master/menu') ?>"><i class="fas fa-cubes" aria-hidden="true"></i><span>Module Management</span></a>
                 </nav>

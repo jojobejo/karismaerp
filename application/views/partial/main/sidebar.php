@@ -59,6 +59,14 @@
                     <p>User Management</p>
                   </a>
                 </li>
+                <?php if ($this->session->userdata('is_admin_dashboard') || (int)$this->session->userdata('akses_lv') === 1): ?>
+                <li class="nav-item">
+                  <a href="<?= base_url('admin/password-reset-requests') ?>" class="nav-link">
+                    <i class="fas fa-key nav-icon"></i>
+                    <p>Permintaan Reset Password</p>
+                  </a>
+                </li>
+                <?php endif ?>
                 <li class="nav-item">
                   <a href="<?= base_url('master/menu') ?>" class="nav-link">
                     <i class="fas fa-cubes nav-icon"></i>

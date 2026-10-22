@@ -1,6 +1,7 @@
 <?php
 $loginError = $this->session->flashdata('gagal');
-$loginNotice = $this->session->flashdata('logout') ?: $this->session->flashdata('edited');
+$loginErrorType = $this->session->flashdata('login_error_type');
+$loginNotice = $this->session->flashdata('notice') ?: ($this->session->flashdata('logout') ?: $this->session->flashdata('edited'));
 ?>
 <main class="login-shell">
     <section class="login-visual" aria-label="KARISMA ERP">
@@ -23,6 +24,7 @@ $loginNotice = $this->session->flashdata('logout') ?: $this->session->flashdata(
                 <button class="submit-button" type="submit"><span>Masuk ke Portal</span><i class="fas fa-arrow-right"></i><span class="spinner" aria-hidden="true"></span></button>
                 <div class="ajax-message" id="ajaxMessage" role="alert"></div>
             </form>
+            <div style="text-align:center;margin-top:16px"><button type="button" id="forgotPasswordButton" style="border:0;background:none;color:#2774f5;font-weight:600;cursor:pointer">Lupa password?</button></div>
             <div class="secure-note"><i class="fas fa-shield-alt"></i><span>Koneksi aman untuk akun perusahaan Anda.</span></div>
         </div>
         <footer>© <?= date('Y') ?> PT Karisma Indoagro Universal</footer>

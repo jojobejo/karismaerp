@@ -22,7 +22,10 @@
                 <div class="erp-hero mb-3">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
                         <div><h3 class="mb-1 fw-bold">User Management</h3><div class="opacity-75">Hybrid legacy + normalized role permission untuk KARISMA ERP.</div></div>
-                        <button class="btn btn-light fw-semibold" id="btnAdd"><i class="fas fa-user-plus me-1"></i> Tambah User</button>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-sitemap me-1"></i> Master Organisasi</a>
+                            <button class="btn btn-light fw-semibold" id="btnAdd"><i class="fas fa-user-plus me-1"></i> Tambah User</button>
+                        </div>
                     </div>
                 </div>
 
@@ -39,7 +42,7 @@
                     <div class="p-3">
                         <div id="tableSkeleton" class="skeleton mb-2"></div>
                         <table class="table table-hover align-middle w-100 compact" id="tableUsers">
-                            <thead><tr><th>User</th><th>NIK</th><th>Departemen</th><th>Jobdesk</th><th>Akses</th><th>Status</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>User</th><th>NIK</th><th>Departemen</th><th>Jobdesk</th><th>Jabatan</th><th>Akses</th><th>Status</th><th>Aksi</th></tr></thead>
                         </table>
                     </div>
                 </div>
@@ -48,31 +51,32 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalUser" tabindex="-1">
+<div class="modal fade" id="modalUserCreate" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <form class="modal-content" id="formUser" enctype="multipart/form-data">
+        <form class="modal-content" id="formUserCreate" enctype="multipart/form-data">
             <div class="modal-header">
-                <h5 class="modal-title">Form User</h5>
-                <button type="button" class="btn-close js-close-user-modal" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Tambah User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="id" name="id">
-                <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">NIK</label><input class="form-control" name="nik" id="nik" required></div>
-                    <div class="col-md-6"><label class="form-label">Nama</label><input class="form-control" name="nm_karyawan" id="nm_karyawan" required></div>
-                    <div class="col-md-6"><label class="form-label">Username</label><input class="form-control" name="username" id="username" required></div>
-                    <div class="col-md-6"><label class="form-label">Password</label><input type="password" class="form-control" name="password" id="password" placeholder="Isi saat tambah / reset manual"></div>
-                    <div class="col-md-4"><label class="form-label">Departemen</label><input class="form-control" name="departemen" id="departemen" list="listDepartemen"></div>
-                    <div class="col-md-4"><label class="form-label">Jobdesk</label><select class="form-select select2" name="jobdesk_id" id="jobdesk_id"><option value="">Pilih</option><?php foreach($jobdesk as $j): ?><option value="<?= html_escape($j['id_jobdesk'] ?? '') ?>" data-text="<?= html_escape($j['nama_jobdesk']) ?>"><?= html_escape($j['nama_jobdesk']) ?></option><?php endforeach ?></select><input type="hidden" name="jobdesk" id="jobdesk"></div>
-                    <div class="col-md-4"><label class="form-label">Akses Level</label><select class="form-select select2" name="akses_lv_id" id="akses_lv_id"><option value="">Pilih</option><?php foreach($akses_level as $a): ?><option value="<?= html_escape($a['id_akses_level'] ?? '') ?>" data-text="<?= html_escape($a['nama_akses_level']) ?>"><?= html_escape($a['nama_akses_level']) ?></option><?php endforeach ?></select><input type="hidden" name="akses_lv" id="akses_lv"></div>
-                    <div class="col-md-4"><label class="form-label">Tim</label><input type="number" class="form-control" name="tim" id="tim" value="0"></div>
-                    <div class="col-md-4"><label class="form-label">Wilayah</label><input type="number" class="form-control" name="wilayah" id="wilayah" value="0"></div>
-                    <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status" id="status"><option value="1">Aktif</option><option value="0">Nonaktif</option></select></div>
-                    <div class="col-md-12"><label class="form-label">Foto Profile</label><input type="file" class="form-control" name="foto" accept="image/*"></div>
-                </div>
-                <datalist id="listDepartemen"><?php foreach($departemen as $d): ?><option value="<?= html_escape($d['id']) ?>"></option><?php endforeach ?></datalist>
+                <?php $this->load->view('content/master/usermanagement/user_fields', ['idPrefix' => 'create', 'requirePassword' => true]); ?>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary js-close-user-modal" data-bs-dismiss="modal" data-dismiss="modal">Batal</button><button class="btn btn-erp" type="submit"><i class="fas fa-save me-1"></i> Simpan</button></div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button><button class="btn btn-erp" type="submit"><i class="fas fa-save me-1"></i> Simpan User</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalUserEdit" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <form class="modal-content" id="formUserEdit" enctype="multipart/form-data">
+            <div class="modal-header">
+                <h5 class="modal-title">Ubah User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php $this->load->view('content/master/usermanagement/user_fields', ['idPrefix' => 'edit', 'requirePassword' => false]); ?>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button><button class="btn btn-erp" type="submit"><i class="fas fa-save me-1"></i> Simpan Perubahan</button></div>
         </form>
     </div>
 </div>
@@ -86,19 +90,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script>
 $(function(){
-    const modal = new bootstrap.Modal(document.getElementById('modalUser'));
-    $('.select2').select2({width:'100%', dropdownParent: $('#modalUser')});
-    $('.js-close-user-modal').on('click', function(e){
-        e.preventDefault();
-        modal.hide();
-    });
-    function selectedText(id){ return $('#' + id + ' option:selected').data('text') || $('#' + id + ' option:selected').text(); }
+    const createModal = new bootstrap.Modal(document.getElementById('modalUserCreate'));
+    const editModal = new bootstrap.Modal(document.getElementById('modalUserEdit'));
+    $('#modalUserCreate .select2, #modalUserEdit .select2').each(function(){ $(this).select2({width:'100%', dropdownParent: $(this).closest('.modal')}); });
+    function syncLegacyFields($form){
+        const jobdesk = $form.find('[name="jobdesk_id"] option:selected');
+        const akses = $form.find('[name="akses_lv_id"] option:selected');
+        if(jobdesk.val()) $form.find('[name="jobdesk"]').val(jobdesk.data('text') || jobdesk.text());
+        if(akses.val()) $form.find('[name="akses_lv"]').val(akses.data('text') || akses.text());
+    }
+    function setSelectValue($select,value,label){
+        if(value===null || value===undefined || value==='') return;
+        const optionExists=$select.find('option').filter(function(){return String(this.value)===String(value);}).length>0;
+        if(!optionExists) $select.append(new Option(label || value,value,true,true));
+        $select.val(String(value)).trigger('change');
+    }
     const table = $('#tableUsers').DataTable({
         processing:true, serverSide:true, responsive:true, searchDelay:350,
         ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();}},
         columns:[
             {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+r.foto : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${r.nm_karyawan||'-'}</div><small class="text-muted">${r.username||'-'}</small></div></div>`},
-            {data:'nik'}, {data:'departemen'}, {data:'jobdesk'}, {data:'akses_lv'},
+            {data:'nik'}, {data:'departemen'}, {data:'jobdesk'}, {data:'jabatan',defaultContent:'-'}, {data:'akses_lv'},
             {data:null, render:r=> r.status === undefined ? '<span class="badge bg-secondary">Legacy</span>' : (parseInt(r.status)===1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>')},
             {data:null, orderable:false, searchable:false, render:r=>`<div class="action-group"><button class="btn btn-sm btn-outline-primary btn-edit" data-id="${r.id}"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-warning btn-reset" data-id="${r.id}"><i class="fas fa-key"></i></button><button class="btn btn-sm btn-outline-secondary btn-toggle" data-id="${r.id}"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-outline-danger btn-delete" data-id="${r.id}"><i class="fas fa-trash"></i></button></div>`}
         ],
@@ -106,11 +118,32 @@ $(function(){
     });
     $('#filter_departemen,#filter_jobdesk,#filter_akses,#filter_status').on('change',()=>table.ajax.reload());
     $('#btnResetFilter').on('click',function(){ $('.filter-grid select').val(''); table.ajax.reload(); });
-    $('#btnAdd').on('click',function(){ $('#formUser')[0].reset(); $('#id').val(''); $('.select2').val('').trigger('change'); modal.show(); });
-    $('#jobdesk_id').on('change',()=>$('#jobdesk').val(selectedText('jobdesk_id')));
-    $('#akses_lv_id').on('change',()=>$('#akses_lv').val(selectedText('akses_lv_id')));
-    $('#tableUsers').on('click','.btn-edit',function(){ $.getJSON('<?= base_url('master/user-management/detail/') ?>'+$(this).data('id'),function(res){ if(!res.status){toastr.error(res.message);return;} $.each(res.data,function(k,v){$('#'+k).val(v);}); $('#jobdesk_id').val(res.data.jobdesk_id || '').trigger('change'); $('#akses_lv_id').val(res.data.akses_lv_id || '').trigger('change'); $('#password').val(''); modal.show(); }); });
-    $('#formUser').on('submit',function(e){ e.preventDefault(); $('#jobdesk').val(selectedText('jobdesk_id')); $('#akses_lv').val(selectedText('akses_lv_id')); const id=$('#id').val(); const url=id?'<?= base_url('master/user-management/update/') ?>'+id:'<?= base_url('master/user-management/save') ?>'; $.ajax({url:url,type:'POST',data:new FormData(this),processData:false,contentType:false,dataType:'json',success:function(res){res.status?toastr.success(res.message):toastr.error(res.message); if(res.status){modal.hide(); table.ajax.reload(null,false);}},error:function(){toastr.error('Server tidak merespons.');}}); });
+    $('#btnAdd').on('click',function(){ const $form=$('#formUserCreate'); $form[0].reset(); $form.find('.select2').val('').trigger('change'); createModal.show(); });
+    $('#tableUsers').on('click','.btn-edit',function(){
+        const id=$(this).data('id');
+        $.getJSON('<?= base_url('master/user-management/detail/') ?>'+id,function(res){
+            if(!res.status){toastr.error(res.message);return;}
+            const $form=$('#formUserEdit');
+            $form[0].reset();
+            $form.find('.select2').val('').trigger('change');
+            $form.data('user-id',res.data.id);
+            $.each(res.data,function(k,v){ $form.find('[name="'+k+'"]').val(v); });
+            setSelectValue($form.find('[name="departemen"]'),res.data.departemen,res.data.departemen);
+            setSelectValue($form.find('[name="jobdesk_id"]'),res.data.jobdesk_id,res.data.jobdesk);
+            setSelectValue($form.find('[name="akses_lv_id"]'),res.data.akses_lv_id,res.data.akses_lv);
+            setSelectValue($form.find('[name="jabatan"]'),res.data.jabatan,res.data.jabatan);
+            editModal.show();
+        }).fail(function(){toastr.error('Data user gagal dimuat.');});
+    });
+    function submitUserForm($form, url, formModal){
+        syncLegacyFields($form);
+        $.ajax({url:url,type:'POST',data:new FormData($form[0]),processData:false,contentType:false,dataType:'json',success:function(res){
+            res.status?toastr.success(res.message):toastr.error(res.message);
+            if(res.status){formModal.hide();table.ajax.reload(null,false);}
+        },error:function(){toastr.error('Server tidak merespons saat menyimpan user.');}});
+    }
+    $('#formUserCreate').on('submit',function(e){e.preventDefault();submitUserForm($(this),'<?= base_url('master/user-management/save') ?>',createModal);});
+    $('#formUserEdit').on('submit',function(e){e.preventDefault();const id=$(this).data('user-id');if(!id){toastr.error('ID user tidak valid.');return;}submitUserForm($(this),'<?= base_url('master/user-management/update/') ?>'+id,editModal);});
     $('#tableUsers').on('click','.btn-delete',function(){ const id=$(this).data('id'); Swal.fire({title:'Hapus user?',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/delete/') ?>'+id,function(res){res.status?toastr.success(res.message):toastr.error(res.message); table.ajax.reload(null,false);},'json'); }); });
     $('#tableUsers').on('click','.btn-toggle',function(){ $.post('<?= base_url('master/user-management/toggle-status/') ?>'+$(this).data('id'),function(res){res.status?toastr.success(res.message):toastr.warning(res.message); table.ajax.reload(null,false);},'json'); });
     $('#tableUsers').on('click','.btn-reset',function(){ const id=$(this).data('id'); Swal.fire({title:'Reset Password',input:'password',inputPlaceholder:'Password baru minimal 6 karakter',showCancelButton:true,confirmButtonText:'Reset'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/reset-password/') ?>'+id,{password:r.value},function(res){res.status?toastr.success(res.message):toastr.error(res.message);},'json'); }); });

@@ -202,4 +202,22 @@ class M_Auth extends CI_Model
         $payload = array_intersect_key($payload, array_flip($this->fields('tb_login_log')));
         return empty($payload) ? true : $this->db->insert('tb_login_log', $payload);
     }
+
+    public function request_password_reset($user)
+    {
+        if (!$this->db->table_exists('tb_password_reset_request')) return false;
+        $source = $user->auth_source ?? 'tb_karyawan';
+        $userId = (int)($user->id ?? 0);
+        if ($userId < 1 || !in_array($source, ['tb_users', 'tb_karyawan'], true)) return false;
+        $pending = $this->db->where(['auth_source' => $source, 'user_id' => $userId, 'status' => 'PENDING'])
+            ->get('tb_password_reset_request')->row();
+        if ($pending) return true;
+        return $this->db->insert('tb_password_reset_request', [
+            'auth_source' => $source,
+            'user_id' => $userId,
+            'username' => (string)($user->username ?? ''),
+            'status' => 'PENDING',
+            'requested_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
 }

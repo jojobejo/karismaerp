@@ -64,6 +64,11 @@ $route['presentasi_karismaonline']              = 'Presentasi/ppt_karismaonline'
 
 //Auth Login
 $route['process']                                   = 'Auth/process';
+$route['auth/forgot-password']                      = 'Auth/forgot_password';
+$route['admin/password-reset-requests']             = 'admin/C_PasswordResetRequests/index';
+$route['admin/password-reset-requests/reset/(:num)'] = 'admin/C_PasswordResetRequests/reset/$1';
+$route['admin/portal-app-access']                   = 'admin/C_PortalAccess/index';
+$route['admin/portal-app-access/save']              = 'admin/C_PortalAccess/save';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard/index';
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
@@ -203,6 +208,12 @@ $route['master/user-management/delete/(:num)']      = 'master/C_Usermanagement/d
 $route['master/user-management/reset-password/(:num)'] = 'master/C_Usermanagement/reset_password/$1';
 $route['master/user-management/toggle-status/(:num)'] = 'master/C_Usermanagement/toggle_status/$1';
 $route['master/user-management/options']            = 'master/C_Usermanagement/select_options';
+$route['master/organisasi']                         = 'master/C_Organisasi';
+$route['master/organisasi/list/(:any)']             = 'master/C_Organisasi/list/$1';
+$route['master/organisasi/detail/(:any)/(:num)']    = 'master/C_Organisasi/detail/$1/$2';
+$route['master/organisasi/save/(:any)']             = 'master/C_Organisasi/save/$1';
+$route['master/organisasi/save/(:any)/(:num)']      = 'master/C_Organisasi/save/$1/$2';
+$route['master/organisasi/delete/(:any)/(:num)']    = 'master/C_Organisasi/delete/$1/$2';
 $route['master/jobdesk']                            = 'master/C_Jobdesk';
 $route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
 $route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';

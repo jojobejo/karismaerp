@@ -16,6 +16,47 @@ class Auth extends CI_Controller
         $this->load->view("partial/login/footer");
     }
 
+    public function forgot_password()
+    {
+        $username = trim((string) $this->input->post('username', true));
+        if ($username === '') {
+            $this->session->set_flashdata('gagal', 'Username wajib diisi untuk mengajukan reset password.');
+            redirect('Auth');
+            return;
+        }
+        $candidates = $this->M_Auth->get_auth_candidates($username);
+        if (empty($candidates)) {
+            $this->session->set_flashdata('gagal', 'Username tidak ditemukan. Periksa kembali username Anda.');
+            redirect('Auth');
+            return;
+        }
+        $candidate = $candidates[0];
+        if (isset($candidate->status) && (int)$candidate->status !== 1) {
+            $this->session->set_flashdata('gagal', 'Akun nonaktif. Silakan hubungi administrator.');
+            redirect('Auth');
+            return;
+        }
+        $ok = $this->M_Auth->request_password_reset($candidate);
+        $this->session->set_flashdata($ok ? 'notice' : 'gagal', $ok
+            ? 'Permintaan reset password sudah dikirim ke administrator.'
+            : 'Permintaan reset belum dapat disimpan. Silakan coba kembali.');
+        redirect('Auth');
+    }
+
+    private function login_failure($type, $message, $redirectMessage = null)
+    {
+        $acceptHeader = (string)$this->input->server('HTTP_ACCEPT');
+        if ($this->input->is_ajax_request() || stripos($acceptHeader, 'application/json') !== false) {
+            return $this->output
+                ->set_status_header(401)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'type' => $type, 'message' => $message]));
+        }
+        $this->session->set_flashdata('login_error_type', $type);
+        $this->session->set_flashdata('gagal', $redirectMessage ?: $message);
+        redirect('Auth');
+    }
+
     function process()
     {
         $username = trim((string) $this->input->post('user_isi'));
@@ -27,12 +68,20 @@ class Auth extends CI_Controller
 
         if (empty($auth_candidates)) {
             $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Username tidak ditemukan');
-            $this->session->set_flashdata("gagal", "username salah");
-            redirect('Auth');
+            $this->login_failure('username', 'Username tidak ditemukan. Periksa kembali username Anda.');
             return;
         }
 
-        foreach ($auth_candidates as $candidate) {
+        $activeCandidates = array_values(array_filter($auth_candidates, function ($candidate) {
+            return !isset($candidate->status) || (int)$candidate->status === 1;
+        }));
+        if (empty($activeCandidates)) {
+            $this->M_Auth->log_login($auth_candidates[0], 'blocked', 'User nonaktif');
+            $this->login_failure('inactive', 'Akun Anda tidak aktif. Silakan hubungi administrator.');
+            return;
+        }
+
+        foreach ($activeCandidates as $candidate) {
             if ($this->M_Auth->verify_password($password, $candidate->password ?? '')) {
                 $key = $candidate;
                 break;
@@ -40,16 +89,8 @@ class Auth extends CI_Controller
         }
 
         if (!$key) {
-            $this->M_Auth->log_login($auth_candidates[0], 'failed', 'Password salah');
-            $this->session->set_flashdata("gagal", "username / password salah!!!");
-            redirect('Auth');
-            return;
-        }
-
-        if (isset($key->status) && (int)$key->status !== 1) {
-            $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
-            $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
-            redirect('Auth');
+            $this->M_Auth->log_login($activeCandidates[0], 'failed', 'Password salah');
+            $this->login_failure('password', 'Password yang Anda masukkan salah. Silakan coba lagi.');
             return;
         }
 
