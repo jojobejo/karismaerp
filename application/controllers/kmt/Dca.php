@@ -768,6 +768,10 @@ class Dca extends CI_Controller {
         $filter = ['tgl_kasbon' => $tgl_kasbon];
         $no_bukti_values = $this->input->post('no_bukti');
         if (!is_array($no_bukti_values)) $no_bukti_values = [];
+        $um_dca_values = $this->input->post('um_dca');
+        if (!is_array($um_dca_values)) $um_dca_values = [];
+        $note_values = $this->input->post('note');
+        if (!is_array($note_values)) $note_values = [];
 
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
         $grouped = [];
@@ -885,11 +889,20 @@ class Dca extends CI_Controller {
 
             $total_biaya = 0;
             foreach ($data_abm['kegiatan'] as $kg) $total_biaya += $kg['total_biaya'];
+
+            if (isset($um_dca_values[$sheet_index - 1]) && $um_dca_values[$sheet_index - 1] !== '') {
+                $clean_um = preg_replace('/[^\d]/', '', (string)$um_dca_values[$sheet_index - 1]);
+                if ($clean_um !== '') {
+                    $data_abm['um'] = (float)$clean_um;
+                }
+            }
+
             $sisa_dana = $data_abm['um'] - $total_biaya;
             $time_kasbon = strtotime($tgl_kasbon);
             $periode = $nama_bulan[(int)date('n', $time_kasbon)].' '.date('Y', $time_kasbon);
             $uraian = array_values($data_abm['uraian']);
             $no_bukti = mb_substr(trim((string)($no_bukti_values[$sheet_index - 1] ?? '')), 0, 100);
+            $note_value = trim((string)($note_values[$sheet_index - 1] ?? ''));
             $uraian_um = $this->get_dca_um_label($abm_nama, $data_abm);
 
             $tanggal_list = $data_abm['tanggal_kasbon'] ?: $data_abm['tanggal_dca'];
@@ -1003,10 +1016,35 @@ class Dca extends CI_Controller {
                 $sheet->getRowDimension($row++)->setRowHeight(19.5);
             }
 
-            $last_row = $row - 1;
+            $table_data_end_row = $row - 1;
+
+            if (!empty($note_value)) {
+                $row++; // Spacing row
+                $sheet->setCellValue("A{$row}", "NOTE / CATATAN:");
+                $sheet->getStyle("A{$row}")->applyFromArray([
+                    'font' => ['name' => 'Arial', 'size' => 8, 'bold' => true, 'color' => ['rgb' => '000000']],
+                ]);
+                $sheet->getRowDimension($row++)->setRowHeight(16);
+
+                $sheet->setCellValue("A{$row}", $note_value);
+                $sheet->mergeCells("A{$row}:G{$row}");
+                $sheet->getStyle("A{$row}:G{$row}")->applyFromArray([
+                    'font' => ['name' => 'Arial', 'size' => 8, 'italic' => true, 'color' => ['rgb' => '333333']],
+                    'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP, 'wrapText' => true],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '7F7F7F'],
+                        ],
+                    ],
+                ]);
+                $sheet->getRowDimension($row)->setRowHeight(36);
+            }
+
+            $last_row = !empty($note_value) ? $row : $table_data_end_row;
             $sheet->getStyle("A9:A{$last_row}")->getAlignment()->setWrapText(true);
             $sheet->freezePane('A10');
-            $sheet->setAutoFilter("A9:G{$last_row}");
+            $sheet->setAutoFilter("A9:G{$table_data_end_row}");
             $sheet->getPageSetup()->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT);
             $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_LEGAL);
             $sheet->getPageSetup()->setFitToPage(true)->setFitToWidth(1)->setFitToHeight(0);
