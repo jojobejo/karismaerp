@@ -124,12 +124,25 @@ class Auth extends CI_Controller
             'logged_in'     => true
         );
 
+        $this->session->sess_regenerate(true);
         $this->session->set_userdata($data_session);
         if ($this->M_Auth->password_should_be_hashed($key->password ?? '')) {
             $this->M_Auth->update_password_hash($key->id, $auth_source, $password);
         }
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
+        $pendingSso = $this->session->userdata('portal_sso_pending');
+        if (is_array($pendingSso) && !empty($pendingSso['client_id']) && !empty($pendingSso['redirect_uri']) && !empty($pendingSso['state']) && !empty($pendingSso['code_challenge'])) {
+            $this->session->unset_userdata('portal_sso_pending');
+            redirect('sso/authorize?' . http_build_query([
+                'client_id' => $pendingSso['client_id'],
+                'redirect_uri' => $pendingSso['redirect_uri'],
+                'state' => $pendingSso['state'],
+                'code_challenge' => $pendingSso['code_challenge'],
+                'code_challenge_method' => $pendingSso['code_challenge_method'],
+            ], '', '&', PHP_QUERY_RFC3986));
+            return;
+        }
         redirect('portal');
     }
 

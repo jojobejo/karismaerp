@@ -1,7 +1,5 @@
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition no-sidebar">
 <div class="wrapper">
-    <?php $this->load->view('partial/main/navbar') ?>
-    <?php $this->load->view('partial/main/sidebar') ?>
     <div class="content-wrapper">
         <section class="content p-3 p-md-4">
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -9,8 +7,8 @@
             <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
             <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
             <style>
-                .erp-page{color:#172033}.erp-hero{background:linear-gradient(135deg,#0f766e,#2563eb);border-radius:18px;color:#fff;padding:22px 24px;box-shadow:0 18px 40px rgba(37,99,235,.22)}
-                .erp-panel{background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.08)}.erp-panel-header{padding:16px 18px;border-bottom:1px solid #edf2f7}
+                .no-sidebar .content-wrapper{margin-left:0!important}.erp-page{color:#172033}.erp-hero{background:linear-gradient(135deg,#0f766e,#2563eb);border-radius:18px;color:#fff;padding:22px 24px;box-shadow:0 18px 40px rgba(37,99,235,.22)}
+                .erp-panel{background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.08)}.erp-panel-header{padding:16px 18px;border-bottom:1px solid #edf2f7}.icon-chip{width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:#1d4ed8}
                 .btn-erp{background:linear-gradient(135deg,#2563eb,#0f766e);border:0;color:#fff}.btn-erp:hover{color:#fff;filter:brightness(.95)}
                 .form-control,.form-select,.select2-container--default .select2-selection--single{border-radius:10px;border-color:#d7dee8}.select2-container .select2-selection--single{height:38px}.select2-selection__rendered{line-height:36px!important}.select2-selection__arrow{height:36px!important}
                 table.dataTable thead th{position:sticky;top:0;background:#f8fafc!important;z-index:2}.badge-soft-success{background:#dcfce7;color:#166534}.badge-soft-danger{background:#fee2e2;color:#991b1b}
@@ -23,10 +21,17 @@
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
                         <div><h3 class="mb-1 fw-bold">User Management</h3><div class="opacity-75">Hybrid legacy + normalized role permission untuk KARISMA ERP.</div></div>
                         <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-outline-light fw-semibold" href="<?= base_url('portal') ?>"><i class="fas fa-arrow-left me-1"></i> Kembali ke Portal</a>
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-sitemap me-1"></i> Master Organisasi</a>
                             <button class="btn btn-light fw-semibold" id="btnAdd"><i class="fas fa-user-plus me-1"></i> Tambah User</button>
                         </div>
                     </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4 mb-2"><div class="erp-panel p-3 d-flex justify-content-between align-items-center"><div><small class="text-muted text-uppercase font-weight-bold">Total akun</small><div class="h3 font-weight-bold mb-0" id="userTotal">—</div></div><span class="icon-chip"><i class="fas fa-users"></i></span></div></div>
+                    <div class="col-md-4 mb-2"><div class="erp-panel p-3 d-flex justify-content-between align-items-center"><div><small class="text-muted text-uppercase font-weight-bold">Hasil filter</small><div class="h3 font-weight-bold mb-0" id="userFiltered">—</div></div><span class="icon-chip" style="color:#0f766e;background:#e6f5f3"><i class="fas fa-filter"></i></span></div></div>
+                    <div class="col-md-4 mb-2"><div class="erp-panel p-3 d-flex justify-content-between align-items-center"><div><small class="text-muted text-uppercase font-weight-bold">Aktif pada halaman</small><div class="h3 font-weight-bold mb-0 text-success" id="userActivePage">—</div></div><span class="icon-chip" style="color:#16834b;background:#e8f7ee"><i class="fas fa-user-check"></i></span></div></div>
                 </div>
 
                 <div class="erp-panel mb-3">
@@ -90,6 +95,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script>
 $(function(){
+    const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const createModal = new bootstrap.Modal(document.getElementById('modalUserCreate'));
     const editModal = new bootstrap.Modal(document.getElementById('modalUserEdit'));
     $('#modalUserCreate .select2, #modalUserEdit .select2').each(function(){ $(this).select2({width:'100%', dropdownParent: $(this).closest('.modal')}); });
@@ -107,10 +113,10 @@ $(function(){
     }
     const table = $('#tableUsers').DataTable({
         processing:true, serverSide:true, responsive:true, searchDelay:350,
-        ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();}},
+        ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();},dataSrc:function(json){$('#userTotal').text(json.recordsTotal??0);$('#userFiltered').text(json.recordsFiltered??0);$('#userActivePage').text((json.data||[]).filter(user=>parseInt(user.status)===1).length);return json.data||[];}},
         columns:[
-            {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+r.foto : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${r.nm_karyawan||'-'}</div><small class="text-muted">${r.username||'-'}</small></div></div>`},
-            {data:'nik'}, {data:'departemen'}, {data:'jobdesk'}, {data:'jabatan',defaultContent:'-'}, {data:'akses_lv'},
+            {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+encodeURI(r.foto) : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${escapeHtml(r.nm_karyawan||'-')}</div><small class="text-muted">${escapeHtml(r.username||'-')}</small></div></div>`},
+            {data:'nik',render:v=>escapeHtml(v||'-')}, {data:'departemen',render:v=>escapeHtml(v||'-')}, {data:'jobdesk',render:v=>escapeHtml(v||'-')}, {data:'jabatan',defaultContent:'-',render:v=>escapeHtml(v||'-')}, {data:'akses_lv',render:v=>escapeHtml(v||'-')},
             {data:null, render:r=> r.status === undefined ? '<span class="badge bg-secondary">Legacy</span>' : (parseInt(r.status)===1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>')},
             {data:null, orderable:false, searchable:false, render:r=>`<div class="action-group"><button class="btn btn-sm btn-outline-primary btn-edit" data-id="${r.id}"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-warning btn-reset" data-id="${r.id}"><i class="fas fa-key"></i></button><button class="btn btn-sm btn-outline-secondary btn-toggle" data-id="${r.id}"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-outline-danger btn-delete" data-id="${r.id}"><i class="fas fa-trash"></i></button></div>`}
         ],

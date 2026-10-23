@@ -595,6 +595,8 @@
             <?php if (!empty($is_admin)): ?>
                 <nav class="admin-navigation" aria-label="Navigasi administrasi">
                     <a href="<?= base_url('admin/portal-app-access') ?>"><i class="fas fa-th-large" aria-hidden="true"></i><span>Akses Aplikasi</span></a>
+                    <a href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-link" aria-hidden="true"></i><span>Integrasi SSO</span></a>
+                    <a href="<?= base_url('admin/api-documentation') ?>"><i class="fas fa-book-open" aria-hidden="true"></i><span>Dokumentasi API</span></a>
                     <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>
                     <a href="<?= base_url('master/menu') ?>"><i class="fas fa-cubes" aria-hidden="true"></i><span>Module Management</span></a>
                 </nav>
@@ -628,11 +630,10 @@
 
         <div class="portal-grid">
             <?php foreach ($apps as $index => $app): ?>
-                <a class="portal-card"
+                <a class="portal-card<?= !$app['redirect_url'] ? ' portal-card-no-redirect' : '' ?>"
                    style="--accent: <?= html_escape($app['accent']) ?>; --index: <?= (int)$index ?>;"
-                   href="<?= html_escape($app['url']) ?>"
-                   target="_blank"
-                   rel="noopener noreferrer"
+                   href="<?= html_escape($app['redirect_url'] ?: '#') ?>"
+                   <?= $app['redirect_url'] ? 'target="_blank" rel="noopener noreferrer"' : 'data-app-name="' . html_escape($app['name']) . '"' ?>
                    aria-label="Buka <?= html_escape($app['name']) ?> di tab baru">
                     <div class="card-top">
                         <div class="portal-icon-wrap">
@@ -658,5 +659,13 @@
         <span>Independent application access gateway</span>
     </footer>
 </main>
+<script>
+document.querySelectorAll('.portal-card-no-redirect').forEach(function (card) {
+    card.addEventListener('click', function (event) {
+        event.preventDefault();
+        alert('Redirect untuk aplikasi ' + card.dataset.appName + ' belum diatur. Hubungi admin untuk mengganti redirect apps ini.');
+    });
+});
+</script>
 </body>
 </html>

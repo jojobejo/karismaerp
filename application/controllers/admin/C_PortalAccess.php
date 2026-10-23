@@ -14,6 +14,16 @@ class C_PortalAccess extends CI_Controller
         if (!$this->session->userdata('is_admin_dashboard')) show_error('Akses hanya untuk administrator.', 403);
     }
 
+    private function json($status, $message, $data = [])
+    {
+        while (ob_get_level()) ob_end_clean();
+        return $this->output->set_content_type('application/json', 'utf-8')->set_output(json_encode([
+            'status' => (bool)$status,
+            'message' => $message,
+            'data' => $data,
+        ], JSON_UNESCAPED_SLASHES));
+    }
+
     public function index()
     {
         $users = $this->portalAccess->users();
@@ -41,6 +51,30 @@ class C_PortalAccess extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function detail()
+    {
+        if ($this->input->method(true) !== 'GET') show_error('Metode tidak diizinkan.', 405);
+        $source = trim((string)$this->input->get('source', true));
+        $userId = (int)$this->input->get('user_id');
+        $user = null;
+        foreach ($this->portalAccess->users() as $candidate) {
+            if ($candidate['auth_source'] === $source && (int)$candidate['id'] === $userId) {
+                $user = $candidate;
+                break;
+            }
+        }
+        if (!$user) return $this->json(false, 'Akun tidak ditemukan.');
+        $rowCount = $this->db->table_exists('tb_portal_app_access')
+            ? $this->db->where(['auth_source' => $source, 'user_id' => $userId])->count_all_results('tb_portal_app_access')
+            : 0;
+        return $this->json(true, 'Data akses berhasil dimuat.', [
+            'user' => $user,
+            'apps' => $this->portalAccess->apps_with_callbacks(),
+            'denied_apps' => $this->portalAccess->denied_apps($source, $userId),
+            'configured' => $rowCount > 0,
+        ]);
+    }
+
     public function save()
     {
         if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
@@ -53,13 +87,10 @@ class C_PortalAccess extends CI_Controller
                 break;
             }
         }
-        if (!$knownUser) {
-            $this->session->set_flashdata('portal_access_error', 'Akun tidak ditemukan. Pengaturan akses tidak disimpan.');
-        } elseif ($this->portalAccess->save_access($source, $userId, $this->input->post('allowed_apps'), (int)$this->session->userdata('id'))) {
-            $this->session->set_flashdata('portal_access_success', 'Akses aplikasi untuk akun berhasil diperbarui.');
-        } else {
-            $this->session->set_flashdata('portal_access_error', 'Perubahan akses gagal disimpan. Pastikan migrasi database sudah diterapkan.');
+        if (!$knownUser) return $this->json(false, 'Akun tidak ditemukan. Pengaturan akses tidak disimpan.');
+        if ($this->portalAccess->save_access($source, $userId, $this->input->post('allowed_apps'), (int)$this->session->userdata('id'))) {
+            return $this->json(true, 'Akses aplikasi berhasil diperbarui.');
         }
-        redirect('admin/portal-app-access?source=' . rawurlencode($source) . '&user_id=' . $userId);
+        return $this->json(false, 'Perubahan akses gagal disimpan. Pastikan migrasi database sudah diterapkan.');
     }
 }

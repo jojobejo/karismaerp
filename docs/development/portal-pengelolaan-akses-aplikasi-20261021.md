@@ -10,6 +10,7 @@ Admin dapat menentukan aplikasi mana yang tampil bagi setiap akun pada halaman `
 - Portal membaca identitas akun dari sesi login, termasuk sumber akun (`tb_karyawan` atau `tb_users`), lalu menyembunyikan aplikasi yang aksesnya dicabut.
 - Admin memilih akun, mengubah sakelar “Akses di Portal”, lalu menekan “Simpan akses”.
 - Akun yang belum memiliki pengaturan tersimpan tetap memperoleh semua aplikasi, untuk mempertahankan akses yang berlaku sebelum fitur ini dipasang.
+- Visibilitas katalog tersebut tidak otomatis memberi izin masuk SSO. Untuk SSO, admin harus menyimpan penetapan akses akun secara eksplisit; user tanpa penetapan ditolak.
 - Admin membuka pengaturan melalui tombol “Akses Aplikasi” pada bagian navigasi admin di halaman portal.
 
 ## Penerapan
@@ -21,4 +22,6 @@ Admin dapat menentukan aplikasi mana yang tampil bagi setiap akun pada halaman `
 
 ## Batas cakupan
 
-Kontrol ini mengatur visibilitas tautan aplikasi pada portal KARISMA ERP. Aplikasi tujuan berada pada sistem/domain tersendiri; perubahan ini tidak mencabut sesi atau memblokir login langsung pada aplikasi tujuan. Otorisasi di sisi aplikasi tujuan tetap harus dikelola di sana.
+Kontrol ini mengatur visibilitas tautan aplikasi pada portal KARISMA ERP. Setelah integrasi SSO klien diaktifkan, endpoint SSO juga memeriksa penetapan akses ini untuk login baru. Perubahan ini belum mencabut sesi yang sudah aktif, memblokir login lokal langsung, atau mengatur role/modul/data dalam aplikasi tujuan; otorisasi internal aplikasi klien tetap harus dikelola di sana. Lihat `docs/development/portal-sso-dan-hak-akses-klien-20261022.md`.
+
+portal_sso_secret_reveal_20261022

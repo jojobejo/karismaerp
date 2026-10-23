@@ -10,7 +10,7 @@ Jalankan `portal_app_access_20261021.sql` pada database KARISMA ERP. Operasi `CR
 
 ## Nilai bawaan
 
-Tidak adanya baris untuk pasangan akun dan aplikasi berarti akses diizinkan. Baris dengan `is_allowed = 0` berarti akses dicabut. Desain ini mempertahankan daftar aplikasi yang sudah terlihat sebelum fitur diberlakukan. Data akses menggunakan kode aplikasi yang dikelola di `application/models/M_PortalAccess.php`.
+Untuk tampilan katalog lama, tidak adanya baris tetap mempertahankan akses bawaan diizinkan. Untuk otorisasi SSO, akun harus memiliki setidaknya satu penetapan akses eksplisit; tanpa penetapan, login SSO ditolak. Jika akun sudah memiliki konfigurasi lama berbasis baris penolakan saja, aplikasi yang tidak memiliki baris penolakan tetap dianggap diizinkan. Penyimpanan baru menulis satu baris per aplikasi dengan `is_allowed` 1 atau 0. Data akses menggunakan kode aplikasi yang dikelola di `application/models/M_PortalAccess.php`.
 
 ## Pemulihan
 

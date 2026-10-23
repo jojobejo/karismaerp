@@ -6,19 +6,39 @@ class M_PortalAccess extends CI_Model
     public function apps()
     {
         return [
-            'kiu_po' => ['name' => 'KIU PO', 'url' => 'https://kiupo.karismaerp.com', 'icon' => 'fa-shopping-cart', 'description' => 'Purchase Order & Procurement Management.', 'accent' => '#2563eb'],
-            'warehouse' => ['name' => 'Warehouse', 'url' => 'https://kiuwarehouse.karismaerp.com', 'icon' => 'fa-warehouse', 'description' => 'Warehouse Management System.', 'accent' => '#0f766e'],
-            'kmt_corn' => ['name' => 'KMT CORN', 'url' => 'https://kmtcorn.karismaerp.com', 'icon' => 'fa-seedling', 'description' => 'Sales & Operational Management.', 'accent' => '#d97706'],
-            'kpi' => ['name' => 'KPI', 'url' => 'https://kpi.karismaerp.com', 'icon' => 'fa-chart-line', 'description' => 'Employee Performance Dashboard.', 'accent' => '#4338ca'],
-            'pos_security' => ['name' => 'POS Security', 'url' => 'https://hrd.karismaerp.com', 'icon' => 'fa-shield-alt', 'description' => 'Security Activity Journal.', 'accent' => '#0ea5e9'],
-            'katalog_produk' => ['name' => 'Katalog Produk', 'url' => 'https://kiukatalog.karismaerp.com', 'icon' => 'fa-book-open', 'description' => 'Digital Product Catalog.', 'accent' => '#7c3aed'],
-            'plafon_sales' => ['name' => 'Plafon Sales', 'url' => 'https://plafon.karismaerp.com', 'icon' => 'fa-credit-card', 'description' => 'Customer Credit Limit Monitoring.', 'accent' => '#0284c7'],
-            'stockopname' => ['name' => 'Stockopname', 'url' => 'https://stockopname.karismaerp.com', 'icon' => 'fa-boxes', 'description' => 'Stock counting and inventory reconciliation.', 'accent' => '#14b8a6'],
-            'penilaian_lingkungan' => ['name' => 'Penilaian Lingkungan Kerja', 'url' => 'https://karismaerp.com/auth', 'icon' => 'fa-leaf', 'description' => 'Work Environment Assessment & Monitoring.', 'accent' => '#16a34a'],
-            'overdue' => ['name' => 'Overdue', 'url' => 'https://tagpd.karismaerp.com/', 'icon' => 'fa-file-invoice-dollar', 'description' => 'Overdue Invoices & Receivables Monitoring.', 'accent' => '#e11d48'],
-            'kios_transfer' => ['name' => 'Kios Transfer', 'url' => 'https://kiostransfer.karismaerp.com', 'icon' => 'fa-cash-register', 'description' => 'Pencatatan metode pembayaran kios.', 'accent' => '#0891b2'],
-            'sapa_karisma' => ['name' => 'Sapa Karisma', 'url' => 'https://sapakarisma.karismaerp.com', 'icon' => 'fa-users-cog', 'description' => 'HRIS untuk manajemen SDM yang dikelola HRD.', 'accent' => '#7c3aed'],
+            'kiu_po' => ['name' => 'KIU PO', 'icon' => 'fa-shopping-cart', 'description' => 'Purchase Order & Procurement Management.', 'accent' => '#2563eb'],
+            'warehouse' => ['name' => 'Warehouse', 'icon' => 'fa-warehouse', 'description' => 'Warehouse Management System.', 'accent' => '#0f766e'],
+            'kmt_corn' => ['name' => 'KMT CORN', 'icon' => 'fa-seedling', 'description' => 'Sales & Operational Management.', 'accent' => '#d97706'],
+            'kpi' => ['name' => 'KPI', 'icon' => 'fa-chart-line', 'description' => 'Employee Performance Dashboard.', 'accent' => '#4338ca'],
+            'pos_security' => ['name' => 'POS Security', 'icon' => 'fa-shield-alt', 'description' => 'Security Activity Journal.', 'accent' => '#0ea5e9'],
+            'katalog_produk' => ['name' => 'Katalog Produk', 'icon' => 'fa-book-open', 'description' => 'Digital Product Catalog.', 'accent' => '#7c3aed'],
+            'plafon_sales' => ['name' => 'Plafon Sales', 'icon' => 'fa-credit-card', 'description' => 'Customer Credit Limit Monitoring.', 'accent' => '#0284c7'],
+            'stockopname' => ['name' => 'Stockopname', 'icon' => 'fa-boxes', 'description' => 'Stock counting and inventory reconciliation.', 'accent' => '#14b8a6'],
+            'penilaian_lingkungan' => ['name' => 'Penilaian Lingkungan Kerja', 'icon' => 'fa-leaf', 'description' => 'Work Environment Assessment & Monitoring.', 'accent' => '#16a34a'],
+            'overdue' => ['name' => 'Overdue', 'icon' => 'fa-file-invoice-dollar', 'description' => 'Overdue Invoices & Receivables Monitoring.', 'accent' => '#e11d48'],
+            'kios_transfer' => ['name' => 'Kios Transfer', 'icon' => 'fa-cash-register', 'description' => 'Pencatatan metode pembayaran kios.', 'accent' => '#0891b2'],
+            'sapa_karisma' => ['name' => 'Sapa Karisma', 'icon' => 'fa-users-cog', 'description' => 'HRIS untuk manajemen SDM yang dikelola HRD.', 'accent' => '#7c3aed'],
         ];
+    }
+
+    public function registered_callbacks()
+    {
+        if (!$this->db->table_exists('tb_portal_sso_client')) return [];
+        $fields = $this->db->list_fields('tb_portal_sso_client');
+        if (!in_array('app_code', $fields, true) || !in_array('redirect_uri', $fields, true) || !in_array('is_enabled', $fields, true)) return [];
+        $rows = $this->db->select('app_code, redirect_uri')->where('is_enabled', 1)->get('tb_portal_sso_client')->result_array();
+        $callbacks = [];
+        foreach ($rows as $row) $callbacks[$row['app_code']] = trim((string)$row['redirect_uri']);
+        return $callbacks;
+    }
+
+    public function apps_with_callbacks()
+    {
+        $apps = $this->apps();
+        $callbacks = $this->registered_callbacks();
+        foreach ($apps as $code => &$app) $app['callback_url'] = $callbacks[$code] ?? '';
+        unset($app);
+        return $apps;
     }
 
     public function users()
@@ -57,10 +77,43 @@ class M_PortalAccess extends CI_Model
     public function apps_for_user($authSource, $userId)
     {
         $apps = $this->apps();
+        $callbacks = $this->registered_callbacks();
         if ($this->db->table_exists('tb_portal_app_access')) {
-            foreach ($this->denied_apps($authSource, $userId) as $code) unset($apps[$code]);
+            $select = ['app_code', 'is_allowed'];
+            $rows = $this->db->select(implode(',', $select))->where([
+                'auth_source' => $authSource,
+                'user_id' => (int)$userId,
+            ])->get('tb_portal_app_access')->result_array();
+            $settings = [];
+            foreach ($rows as $row) $settings[$row['app_code']] = $row;
+            foreach ($apps as $code => &$app) {
+                if (isset($settings[$code]) && (int)$settings[$code]['is_allowed'] !== 1) {
+                    unset($apps[$code]);
+                    continue;
+                }
+                $app['redirect_url'] = $callbacks[$code] ?? '';
+            }
+            unset($app);
+        } else {
+            foreach ($apps as $code => &$app) $app['redirect_url'] = $callbacks[$code] ?? '';
+            unset($app);
         }
         return array_values($apps);
+    }
+
+    public function user_can_access_app($authSource, $userId, $appCode)
+    {
+        if (!isset($this->apps()[$appCode])) return false;
+        if (!$this->db->table_exists('tb_portal_app_access')) return false;
+        $userRows = $this->db->where(['auth_source' => $authSource, 'user_id' => (int)$userId])->count_all_results('tb_portal_app_access');
+        if ($userRows === 0) return false;
+        $assignment = $this->db->select('is_allowed')->where([
+            'auth_source' => $authSource,
+            'user_id' => (int)$userId,
+            'app_code' => $appCode,
+        ])->get('tb_portal_app_access')->row_array();
+        if (!$assignment) return true;
+        return (int)$assignment['is_allowed'] === 1;
     }
 
     public function save_access($authSource, $userId, $allowedApps, $updatedBy)
@@ -70,11 +123,12 @@ class M_PortalAccess extends CI_Model
         $validSources = ['tb_karyawan', 'tb_users'];
         if (!in_array($authSource, $validSources, true) || (int)$userId < 1) return false;
         $knownApps = array_keys($this->apps());
-        $denied = array_diff($knownApps, array_intersect($knownApps, (array)$allowedApps));
+        $allowed = array_intersect($knownApps, (array)$allowedApps);
         $this->db->trans_begin();
         $this->db->where(['auth_source' => $authSource, 'user_id' => (int)$userId])->delete($table);
-        foreach ($denied as $code) {
-            $this->db->insert($table, ['auth_source' => $authSource, 'user_id' => (int)$userId, 'app_code' => $code, 'is_allowed' => 0, 'updated_by' => (int)$updatedBy]);
+        foreach ($knownApps as $code) {
+            $row = ['auth_source' => $authSource, 'user_id' => (int)$userId, 'app_code' => $code, 'is_allowed' => in_array($code, $allowed, true) ? 1 : 0, 'updated_by' => (int)$updatedBy];
+            $this->db->insert($table, $row);
         }
         if ($this->db->trans_status()) {
             $this->db->trans_commit();

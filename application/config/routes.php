@@ -57,6 +57,8 @@ $route['translate_uri_dashes'] = FALSE;
 
 // Portal Dashboard
 $route['portal'] = 'Portal/index';
+$route['sso/authorize'] = 'Sso/authorize';
+$route['api/sso/token'] = 'Sso/token';
 $route['auth'] = 'Auth/index';
 
 $route['presentasi_erp']                        = 'Presentasi/ppt_erp';
@@ -68,7 +70,15 @@ $route['auth/forgot-password']                      = 'Auth/forgot_password';
 $route['admin/password-reset-requests']             = 'admin/C_PasswordResetRequests/index';
 $route['admin/password-reset-requests/reset/(:num)'] = 'admin/C_PasswordResetRequests/reset/$1';
 $route['admin/portal-app-access']                   = 'admin/C_PortalAccess/index';
+$route['admin/portal-app-access/detail']             = 'admin/C_PortalAccess/detail';
 $route['admin/portal-app-access/save']              = 'admin/C_PortalAccess/save';
+$route['admin/portal-sso-clients']                  = 'admin/C_PortalSsoClients/index';
+$route['admin/portal-sso-clients/generate-encryption-key'] = 'admin/C_PortalSsoClients/generate_encryption_key';
+$route['admin/portal-sso-clients/save']             = 'admin/C_PortalSsoClients/save';
+$route['admin/portal-sso-clients/rotate/(:any)']     = 'admin/C_PortalSsoClients/rotate/$1';
+$route['admin/portal-sso-clients/reveal/(:any)']     = 'admin/C_PortalSsoClients/reveal/$1';
+$route['admin/portal-sso-clients/toggle/(:any)']     = 'admin/C_PortalSsoClients/toggle/$1';
+$route['admin/api-documentation']                    = 'admin/C_ApiDocumentation/index';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard/index';
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
@@ -495,9 +505,11 @@ $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_d
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
 
-// COBA API
-$route['getdata_kiupo']                             = 'api/C_Api';
-$route['sync_pre_po_erp']                          = 'api/C_Api/sync_pre_po_erp';
+// API data Purchasing dan Master Barang
+$route['api/v1/barang']                             = 'api/C_Api/get_data_barang';
+$route['api/v1/pre-po']                             = 'api/C_Api/get_data_pre_po_erp';
+$route['getdata_kiupo']                             = 'api/C_Api/get_data_pre_po_erp';
+$route['sync_pre_po_erp']                           = 'api/C_Api/get_data_pre_po_erp';
 
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';

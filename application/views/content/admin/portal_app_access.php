@@ -1,52 +1,82 @@
-<section class="content-header"><div class="container-fluid"><h1>Akses Aplikasi Portal</h1></div></section>
-<section class="content"><div class="container-fluid">
+<style>
+.pa-page{--pa-ink:#14233b;--pa-muted:#6b7890;--pa-line:#e5eaf2;--pa-primary:#176b78;color:var(--pa-ink)}
+.pa-hero{position:relative;overflow:hidden;border-radius:20px;padding:26px;background:linear-gradient(120deg,#10283d,#145d69 65%,#1c8d83);color:#fff;box-shadow:0 16px 34px rgba(16,40,61,.18)}
+.pa-hero:after{content:"";position:absolute;width:230px;height:230px;right:-55px;top:-95px;border:1px solid rgba(255,255,255,.16);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.04),0 0 0 58px rgba(255,255,255,.03)}
+.pa-widget,.pa-panel,.pa-app{background:#fff;border:1px solid var(--pa-line);border-radius:16px;box-shadow:0 8px 22px rgba(19,35,59,.045)}
+.pa-widget{padding:16px 18px;height:100%}.pa-widget-label{font-size:12px;color:var(--pa-muted);text-transform:uppercase;letter-spacing:.07em}.pa-widget-value{font-size:25px;font-weight:750;margin-top:2px}.pa-widget-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#e8f4f4;color:var(--pa-primary);font-size:17px}
+.pa-panel{padding:18px}.pa-app{padding:16px;height:100%;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}.pa-app:hover{transform:translateY(-2px);border-color:#b9d6da;box-shadow:0 12px 24px rgba(19,35,59,.08)}.pa-app-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#edf5f6;color:var(--pa-accent);font-size:18px}.pa-app-url{font-size:11px;color:var(--pa-muted);overflow-wrap:anywhere}.pa-switch{transform:scale(1.12)}.pa-note{color:var(--pa-muted);font-size:13px}.pa-toolbar{border-bottom:1px solid var(--pa-line);padding-bottom:16px;margin-bottom:16px}
+@media(max-width:767.98px){.pa-hero{padding:20px}.pa-panel{padding:14px}}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<section class="content p-3 p-md-4 pa-page">
+    <div class="pa-hero mb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Portal access control</div><h2 class="font-weight-bold mb-1">Akses Aplikasi</h2><div style="opacity:.78">Atur aplikasi yang dapat dibuka setiap pengguna dari portal.</div></div>
+        <div class="mt-3 mt-md-0 d-flex flex-wrap">
+            <a href="<?= base_url('admin/api-documentation') ?>" class="btn btn-outline-light font-weight-bold mr-2 mb-1"><i class="fas fa-book-open mr-1"></i> Dokumentasi API</a>
+            <a href="<?= base_url('portal') ?>" class="btn btn-outline-light font-weight-bold mr-2 mb-1"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Portal</a>
+            <a href="<?= base_url('admin/portal-sso-clients') ?>" class="btn btn-light font-weight-bold mb-1"><i class="fas fa-link mr-1"></i> Integrasi SSO</a>
+        </div>
+    </div>
     <?php if ($save_success): ?><div class="alert alert-success"><?= html_escape($save_success) ?></div><?php endif ?>
     <?php if ($save_error): ?><div class="alert alert-danger"><?= html_escape($save_error) ?></div><?php endif ?>
-    <?php if (!$this->db->table_exists('tb_portal_app_access')): ?>
-        <div class="alert alert-warning">Tabel pengaturan akses belum tersedia. Terapkan skrip database <code>docs/database/portal_app_access_20261021.sql</code> terlebih dahulu.</div>
-    <?php endif ?>
-    <div class="card"><div class="card-body">
+    <?php if (!$this->db->table_exists('tb_portal_app_access')): ?><div class="alert alert-warning">Tabel akses belum tersedia. Terapkan <code>docs/database/portal_app_access_20261021.sql</code>.</div><?php endif ?>
+    <div class="row mb-3">
+        <div class="col-md-4 mb-2"><div class="pa-widget d-flex justify-content-between align-items-center"><div><div class="pa-widget-label">Aplikasi tersedia</div><div class="pa-widget-value" id="pa-total">0</div></div><div class="pa-widget-icon"><i class="fas fa-th-large"></i></div></div></div>
+        <div class="col-md-4 mb-2"><div class="pa-widget d-flex justify-content-between align-items-center"><div><div class="pa-widget-label">Akses diberikan</div><div class="pa-widget-value text-success" id="pa-allowed">0</div></div><div class="pa-widget-icon" style="background:#e9f7ef;color:#21864a"><i class="fas fa-check"></i></div></div></div>
+        <div class="col-md-4 mb-2"><div class="pa-widget d-flex justify-content-between align-items-center"><div><div class="pa-widget-label">Akses dibatasi</div><div class="pa-widget-value text-danger" id="pa-denied">0</div></div><div class="pa-widget-icon" style="background:#fff0ef;color:#c64c43"><i class="fas fa-lock"></i></div></div></div>
+    </div>
+    <div class="pa-panel">
         <?php if (empty($users)): ?>
-            <div class="alert alert-info mb-0">Belum ada akun yang dapat dikelola.</div>
+            <div class="text-center py-5"><div class="pa-widget-icon mx-auto mb-3"><i class="fas fa-user-slash"></i></div><h5>Belum ada akun</h5><div class="pa-note">Akun portal yang dapat dikelola belum ditemukan.</div></div>
         <?php else: ?>
-            <form method="get" action="<?= base_url('admin/portal-app-access') ?>" class="form-row align-items-end mb-4">
-                <div class="form-group col-md-8"><label for="portal-user">Pilih akun</label>
-                    <select class="form-control" id="portal-user" name="user_id" required>
-                        <?php foreach ($users as $user): ?>
-                            <option value="<?= (int)$user['id'] ?>" data-source="<?= html_escape($user['auth_source']) ?>" <?= $selected_user && $selected_user['auth_source'] === $user['auth_source'] && (int)$selected_user['id'] === (int)$user['id'] ? 'selected' : '' ?>>
-                                <?= html_escape($user['display_name']) ?> — <?= html_escape($user['username']) ?> (<?= html_escape($user['auth_source']) ?><?= (int)$user['status'] === 1 ? '' : ', nonaktif' ?>)
-                            </option>
-                        <?php endforeach ?>
-                    </select>
-                    <input type="hidden" id="portal-user-source" name="source" value="<?= html_escape($selected_user['auth_source'] ?? '') ?>">
+            <div class="pa-toolbar row align-items-end">
+                <div class="col-md-8 mb-2"><label for="pa-user" class="font-weight-bold">Pilih pengguna</label><select id="pa-user" class="form-control">
+                    <?php foreach ($users as $user): ?><option value="<?= (int)$user['id'] ?>" data-source="<?= html_escape($user['auth_source']) ?>" <?= $selected_user && $selected_user['auth_source'] === $user['auth_source'] && (int)$selected_user['id'] === (int)$user['id'] ? 'selected' : '' ?>><?= html_escape($user['display_name']) ?> — <?= html_escape($user['username']) ?> (<?= html_escape($user['auth_source']) ?><?= (int)$user['status'] === 1 ? '' : ', nonaktif' ?>)</option><?php endforeach ?>
+                </select></div>
+                <div class="col-md-4 mb-2 d-flex flex-wrap justify-content-md-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary mr-2 mb-1" id="pa-select-all"><i class="fas fa-check-double mr-1"></i> Semua</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mb-1" id="pa-select-none"><i class="fas fa-ban mr-1"></i> Tidak ada</button>
                 </div>
-                <div class="form-group col-md-4"><button type="submit" class="btn btn-outline-primary">Tampilkan akun</button></div>
+                <div class="col-12 d-flex justify-content-between align-items-center"><div><strong id="pa-user-name"><?= html_escape($selected_user['display_name'] ?? '') ?></strong> <span class="pa-note" id="pa-user-meta"><?= html_escape($selected_user ? $selected_user['username'] . ' · ' . $selected_user['auth_source'] : '') ?></span></div><span class="badge badge-light" id="pa-config-state">Memuat pengaturan…</span></div>
+            </div>
+            <form id="pa-form">
+                <input type="hidden" name="auth_source" id="pa-source" value="<?= html_escape($selected_user['auth_source'] ?? '') ?>">
+                <input type="hidden" name="user_id" id="pa-user-id" value="<?= (int)($selected_user['id'] ?? 0) ?>">
+                <div class="row" id="pa-app-grid"><div class="col-12 text-center py-5 pa-note"><i class="fas fa-circle-notch fa-spin mr-2"></i>Memuat daftar aplikasi…</div></div>
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-3 pt-3 border-top">
+                    <div class="pa-note mb-2 mb-sm-0"><i class="fas fa-info-circle mr-1"></i>Akses SSO memerlukan pengaturan yang disimpan secara eksplisit.</div>
+                    <button type="submit" class="btn btn-primary" id="pa-save"><i class="fas fa-save mr-1"></i> Simpan akses</button>
+                </div>
             </form>
-            <?php if ($selected_user): ?>
-                <div class="mb-3"><strong><?= html_escape($selected_user['display_name']) ?></strong> <span class="text-muted">(<?= html_escape($selected_user['username']) ?> · <?= html_escape($selected_user['auth_source']) ?>)</span></div>
-                <form method="post" action="<?= base_url('admin/portal-app-access/save') ?>">
-                    <?php if (config_item('csrf_protection')): ?><input type="hidden" name="<?= $this->security->get_csrf_token_name() ?>" value="<?= $this->security->get_csrf_hash() ?>"><?php endif ?>
-                    <input type="hidden" name="auth_source" value="<?= html_escape($selected_user['auth_source']) ?>">
-                    <input type="hidden" name="user_id" value="<?= (int)$selected_user['id'] ?>">
-                    <div class="table-responsive"><table class="table table-bordered table-hover">
-                        <thead><tr><th>Aplikasi</th><th>Alamat</th><th class="text-center" style="width:160px">Akses di Portal</th></tr></thead>
-                        <tbody><?php foreach ($apps as $code => $app): ?><tr>
-                            <td><i class="fas <?= html_escape($app['icon']) ?> mr-2"></i><?= html_escape($app['name']) ?></td>
-                            <td><a href="<?= html_escape($app['url']) ?>" target="_blank" rel="noopener noreferrer"><?= html_escape($app['url']) ?></a></td>
-                            <td class="text-center"><div class="custom-control custom-switch d-inline-block">
-                                <input class="custom-control-input" type="checkbox" id="app-<?= html_escape($code) ?>" name="allowed_apps[]" value="<?= html_escape($code) ?>" <?= in_array($code, $denied_apps, true) ? '' : 'checked' ?>>
-                                <label class="custom-control-label" for="app-<?= html_escape($code) ?>">Diizinkan</label>
-                            </div></td>
-                        </tr><?php endforeach ?></tbody>
-                    </table></div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Simpan akses</button>
-                </form>
-            <?php endif ?>
         <?php endif ?>
-    </div></div>
-</div></section>
+    </div>
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script>
-document.getElementById('portal-user')?.addEventListener('change', function () {
-    document.getElementById('portal-user-source').value = this.options[this.selectedIndex].dataset.source;
+$(function(){
+    const detailUrl='<?= base_url('admin/portal-app-access/detail') ?>';
+    const saveUrl='<?= base_url('admin/portal-app-access/save') ?>';
+    const $user=$('#pa-user');
+    const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    function updateCounts(){const total=$('.pa-access-toggle').length,allowed=$('.pa-access-toggle:checked').length;$('#pa-total').text(total);$('#pa-allowed').text(allowed);$('#pa-denied').text(total-allowed);}
+    function loadAccount(){
+        const $option=$user.find(':selected'),source=$option.data('source'),id=$option.val();
+        $('#pa-app-grid').html('<div class="col-12 text-center py-5 pa-note"><i class="fas fa-circle-notch fa-spin mr-2"></i>Memuat pengaturan akses…</div>');
+        $('#pa-save').prop('disabled',true);
+        $.getJSON(detailUrl,{source:source,user_id:id}).done(function(res){
+            if(!res.status){$('#pa-app-grid').html('<div class="col-12"><div class="alert alert-danger mb-0">'+escapeHtml(res.message)+'</div></div>');return;}
+            const data=res.data,user=data.user,denied=data.denied_apps||[];
+            $('#pa-source').val(user.auth_source);$('#pa-user-id').val(user.id);$('#pa-user-name').text(user.display_name);$('#pa-user-meta').text(user.username+' · '+user.auth_source);
+            $('#pa-config-state').attr('class','badge '+(data.configured?'badge-success':'badge-warning')).text(data.configured?'Pengaturan tersimpan':'Belum ada penetapan');
+            let html='';Object.keys(data.apps).forEach(function(code){const app=data.apps[code],allowed=denied.indexOf(code)===-1;
+                const callback=app.callback_url||'';
+                html+='<div class="col-sm-6 col-xl-4 mb-3"><article class="pa-app"><div class="d-flex align-items-start justify-content-between"><div class="pa-app-icon" style="--pa-accent:'+escapeHtml(app.accent)+'"><i class="fas '+escapeHtml(app.icon)+'"></i></div><div class="custom-control custom-switch pa-switch"><input class="custom-control-input pa-access-toggle" type="checkbox" id="pa-'+escapeHtml(code)+'" name="allowed_apps[]" value="'+escapeHtml(code)+'" '+(allowed?'checked':'')+'><label class="custom-control-label" for="pa-'+escapeHtml(code)+'"></label></div></div><h6 class="font-weight-bold mt-3 mb-1">'+escapeHtml(app.name)+'</h6><div class="pa-note mb-2">'+escapeHtml(app.description)+'</div><div class="pa-app-url"><strong>Callback terdaftar:</strong><br>'+(callback?escapeHtml(callback):'Belum terdaftar atau integrasi belum aktif.')+'</div></article></div>';
+            });
+            $('#pa-app-grid').html(html||'<div class="col-12 pa-note">Tidak ada aplikasi pada katalog.</div>');$('#pa-save').prop('disabled',false);updateCounts();
+        }).fail(function(){$('#pa-app-grid').html('<div class="col-12"><div class="alert alert-danger mb-0">Server tidak merespons saat memuat akses.</div></div>');}).always(function(){$('#pa-save').prop('disabled',false);});
+    }
+    if($user.length){if($.fn.select2)$user.select2({width:'100%'});$user.on('change',loadAccount);$('#pa-app-grid').on('change','.pa-access-toggle',updateCounts);$('#pa-select-all').on('click',function(){$('.pa-access-toggle').prop('checked',true);updateCounts();});$('#pa-select-none').on('click',function(){$('.pa-access-toggle').prop('checked',false);updateCounts();});
+        $('#pa-form').on('submit',function(event){event.preventDefault();const $button=$('#pa-save');$button.prop('disabled',true).html('<i class="fas fa-circle-notch fa-spin mr-1"></i>Menyimpan…');$.ajax({url:saveUrl,type:'POST',data:$(this).serialize(),dataType:'json'}).done(function(res){if(res.status){toastr.success(res.message);$('#pa-config-state').attr('class','badge badge-success').text('Pengaturan tersimpan');}else{toastr.error(res.message);}}).fail(function(){toastr.error('Server tidak merespons saat menyimpan akses.');}).always(function(){$button.prop('disabled',false).html('<i class="fas fa-save mr-1"></i> Simpan akses');});});loadAccount();
+    }
 });
 </script>

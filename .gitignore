@@ -18,6 +18,7 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 /vendor/
 
 application/config/plafon_api_local.php
+application/config/portal_sso_local.php
 
 # IDE Files
 #-------------------------

@@ -169,7 +169,19 @@ class M_Usermanagement extends CI_Model
 
     public function update($id, $input)
     {
-        return $this->db->where('id', $id)->update($this->table, $this->payload($input, true));
+        $id = (int)$id;
+        if ($id < 1) return false;
+        $data = $this->payload($input, true);
+        if (!$data) return false;
+
+        // Gunakan kueri terikat dengan batas satu baris agar perubahan selalu
+        // diarahkan ke satu akun berdasarkan primary key, tanpa kondisi builder tersisa.
+        return $this->db->query(
+            'UPDATE `' . $this->table . '` SET ' . implode(', ', array_map(function ($field) {
+                return '`' . str_replace('`', '``', $field) . '` = ?';
+            }, array_keys($data))) . ' WHERE `id` = ? LIMIT 1',
+            array_merge(array_values($data), [$id])
+        );
     }
 
     public function delete($id)
