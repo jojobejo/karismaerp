@@ -15,11 +15,43 @@ class M_PortalSso extends CI_Model
         return $this->db->get_where('tb_portal_sso_client', ['app_code' => $appCode, 'is_enabled' => 1])->row_array();
     }
 
-    public function save_client($appCode, $redirectUri, $secretHash, $secretEncrypted, $updatedBy)
+    public function client_by_code($appCode)
+    {
+        if (!$this->db->table_exists('tb_portal_sso_client')) return null;
+        return $this->db->get_where('tb_portal_sso_client', ['app_code' => $appCode])->row_array();
+    }
+
+    public function update_client_uris($appCode, $redirectUri, $launchUri, $updatedBy)
+    {
+        if (!$this->db->table_exists('tb_portal_sso_client') || !$this->client_by_code($appCode)) return false;
+        return $this->db->where('app_code', $appCode)->update('tb_portal_sso_client', [
+            'redirect_uri' => $redirectUri,
+            'launch_uri' => $launchUri,
+            'updated_by' => (int)$updatedBy,
+        ]);
+    }
+
+    public function delete_client($appCode)
+    {
+        if (!$this->db->table_exists('tb_portal_sso_client') || !$this->client_by_code($appCode)) return false;
+        $this->db->trans_begin();
+        if ($this->db->table_exists('tb_portal_sso_code')) {
+            $this->db->where('app_code', $appCode)->delete('tb_portal_sso_code');
+        }
+        $this->db->where('app_code', $appCode)->delete('tb_portal_sso_client');
+        if ($this->db->trans_status() && $this->db->affected_rows() === 1) {
+            $this->db->trans_commit();
+            return true;
+        }
+        $this->db->trans_rollback();
+        return false;
+    }
+
+    public function save_client($appCode, $redirectUri, $launchUri, $secretHash, $secretEncrypted, $updatedBy)
     {
         if (!$this->db->table_exists('tb_portal_sso_client')) return false;
         $existing = $this->db->get_where('tb_portal_sso_client', ['app_code' => $appCode])->row_array();
-        $data = ['redirect_uri' => $redirectUri, 'is_enabled' => 1, 'updated_by' => (int)$updatedBy, 'client_secret_encrypted' => $secretEncrypted];
+        $data = ['redirect_uri' => $redirectUri, 'launch_uri' => $launchUri, 'is_enabled' => 1, 'updated_by' => (int)$updatedBy, 'client_secret_encrypted' => $secretEncrypted];
         if ($secretHash !== null) $data['client_secret_hash'] = $secretHash;
         if ($existing) {
             $this->db->where('app_code', $appCode)->update('tb_portal_sso_client', $data);

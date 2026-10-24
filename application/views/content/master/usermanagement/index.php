@@ -22,7 +22,7 @@
                         <div><h3 class="mb-1 fw-bold">User Management</h3><div class="opacity-75">Hybrid legacy + normalized role permission untuk KARISMA ERP.</div></div>
                         <div class="d-flex flex-wrap gap-2">
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('portal') ?>"><i class="fas fa-arrow-left me-1"></i> Kembali ke Portal</a>
-                            <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-sitemap me-1"></i> Master Organisasi</a>
+                            <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-building me-1"></i> Setting Master Kantor</a>
                             <button class="btn btn-light fw-semibold" id="btnAdd"><i class="fas fa-user-plus me-1"></i> Tambah User</button>
                         </div>
                     </div>
@@ -116,7 +116,8 @@ $(function(){
         ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();},dataSrc:function(json){$('#userTotal').text(json.recordsTotal??0);$('#userFiltered').text(json.recordsFiltered??0);$('#userActivePage').text((json.data||[]).filter(user=>parseInt(user.status)===1).length);return json.data||[];}},
         columns:[
             {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+encodeURI(r.foto) : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${escapeHtml(r.nm_karyawan||'-')}</div><small class="text-muted">${escapeHtml(r.username||'-')}</small></div></div>`},
-            {data:'nik',render:v=>escapeHtml(v||'-')}, {data:'departemen',render:v=>escapeHtml(v||'-')}, {data:'jobdesk',render:v=>escapeHtml(v||'-')}, {data:'jabatan',defaultContent:'-',render:v=>escapeHtml(v||'-')}, {data:'akses_lv',render:v=>escapeHtml(v||'-')},
+            {data:'nik',render:v=>escapeHtml(v||'-')}, {data:'departemen',render:v=>escapeHtml(v||'-')}, {data:'jobdesk',render:v=>escapeHtml(v||'-')}, {data:'jabatan',defaultContent:'-',render:v=>escapeHtml(v||'-')},
+            {data:null,render:r=>`<a class="btn btn-sm btn-outline-primary" title="Atur akses aplikasi ${escapeHtml(r.nm_karyawan||r.username||'user')}" aria-label="Atur akses aplikasi ${escapeHtml(r.nm_karyawan||r.username||'user')}" href="<?= base_url('admin/portal-app-access') ?>?source=tb_karyawan&user_id=${encodeURIComponent(r.id)}"><i class="fas fa-cog"></i></a>`},
             {data:null, render:r=> r.status === undefined ? '<span class="badge bg-secondary">Legacy</span>' : (parseInt(r.status)===1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>')},
             {data:null, orderable:false, searchable:false, render:r=>`<div class="action-group"><button class="btn btn-sm btn-outline-primary btn-edit" data-id="${r.id}"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-warning btn-reset" data-id="${r.id}"><i class="fas fa-key"></i></button><button class="btn btn-sm btn-outline-secondary btn-toggle" data-id="${r.id}"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-outline-danger btn-delete" data-id="${r.id}"><i class="fas fa-trash"></i></button></div>`}
         ],

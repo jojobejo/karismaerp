@@ -7,11 +7,12 @@ class C_PortalAccess extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_PortalAccess', 'portalAccess');
+        $this->load->library('permission');
         if (!$this->session->userdata('logged_in')) {
             redirect('Auth');
             return;
         }
-        if (!$this->session->userdata('is_admin_dashboard')) show_error('Akses hanya untuk administrator.', 403);
+        $this->permission->guard('master/user-management');
     }
 
     private function json($status, $message, $data = [])
@@ -29,6 +30,7 @@ class C_PortalAccess extends CI_Controller
         $users = $this->portalAccess->users();
         $source = trim((string)$this->input->get('source', true));
         $userId = (int)$this->input->get('user_id');
+        if ($source === '' || $userId < 1) redirect('master/user-management');
         $selected = null;
         foreach ($users as $user) {
             if ($user['auth_source'] === $source && (int)$user['id'] === $userId) {
@@ -36,9 +38,10 @@ class C_PortalAccess extends CI_Controller
                 break;
             }
         }
+        if ($source !== '' && $userId > 0 && !$selected) show_404();
         if (!$selected && !empty($users)) $selected = $users[0];
         $data = [
-            'page_title' => 'Pengaturan Akses Aplikasi Portal',
+            'page_title' => 'User Management - Akses Aplikasi',
             'users' => $users,
             'selected_user' => $selected,
             'apps' => $this->portalAccess->apps(),

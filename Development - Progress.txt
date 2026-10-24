@@ -1,0 +1,51 @@
+Saya ingin melanjutkan development KARISMA ERP berdasarkan project yang sudah ada. Tujuan utama: perubahan harus tetap konsisten dengan implementasi, alur bisnis, struktur, dan keputusan yang sudah dibuat di project—jangan membangun ulang atau mengubah arah tanpa alasan yang terverifikasi.
+
+## Aturan kerja
+
+1. Gunakan Bahasa Indonesia untuk komunikasi dan dokumentasi. Komentar kode baru juga berbahasa Indonesia; nama variabel dan fungsi tetap berbahasa Inggris.
+2. Mulai dengan membaca `AGENTS.md` dan instruksi lain yang berlaku di folder target. Ikuti aturan proyek tersebut.
+3. Sebelum mengubah apa pun, periksa:
+   - branch dan status Git;
+   - perubahan lokal, file baru, serta pekerjaan yang belum di-commit;
+   - dokumentasi `docs/` yang relevan;
+   - route → controller → model → view untuk alur yang akan disentuh;
+   - skema dan query database yang berkaitan.
+4. Jangan menimpa, membuang, mereset, atau menganggap perubahan lokal sebagai pekerjaan yang boleh dihapus. Pertahankan semua perubahan yang sudah ada dan pahami konteksnya sebelum mengedit file yang sama.
+5. Jangan menyalin atau menerapkan perubahan secara massal dari database, backup, atau file SQL. Pastikan file dan skema yang dipakai memang sesuai dengan kebutuhan.
+6. Gunakan implementasi dan kontrak yang sudah ada sebagai acuan. Pertahankan route, hak akses, nama field, format respons AJAX/API, dan alur bisnis yang tidak diminta untuk diubah.
+7. Kerjakan hanya scope yang dijelaskan di bagian **Tugas**. Jangan memperluas fitur atau merapikan area lain tanpa kebutuhan yang jelas.
+8. Bila informasi belum pasti, telusuri kode, dokumentasi, dan data yang tersedia. Nyatakan asumsi secara terbuka dan jangan mengarang hasil, proses, atau validasi.
+
+## Dokumentasi
+
+Simpan dokumentasi di `docs/`, per fitur atau modul, dengan pemisahan berikut:
+- Development aplikasi: `docs/development/` atau subfolder modul yang sesuai.
+- Perubahan database, skema, migration, SQL, atau rollback: `docs/database/`.
+
+Jangan mencampur dokumentasi development aplikasi dan database. Jika tidak ada perubahan database, tulis secara jelas: **Tidak ada perubahan skema database**. Untuk modul baru atau perubahan alur pengguna, sertakan cara penggunaan dan dampaknya pada role atau izin yang terkait.
+
+## Langkah pengerjaan
+
+1. Ringkas kondisi implementasi sekarang berdasarkan file dan dokumentasi yang benar-benar ditemukan.
+2. Jelaskan rencana dan daftar file yang kemungkinan akan dibuat atau diubah.
+3. Terapkan perubahan dengan cakupan sekecil mungkin dan selaras dengan pola project.
+4. Periksa diff untuk memastikan tidak ada perubahan yang tidak terkait.
+5. Jalankan pemeriksaan yang relevan dengan perubahan, misalnya lint atau pemeriksaan sintaks. Jangan menyebut validasi yang belum dilakukan sebagai berhasil.
+6. Perbarui dokumentasi development dan database secara terpisah sesuai perubahan.
+
+## Tugas
+
+[Isi dengan fitur atau perbaikan yang ingin dilanjutkan.]
+
+## Batasan tambahan
+
+[Isi dengan hal yang tidak boleh berubah, role yang terlibat, route/field yang harus dipertahankan, atau kriteria khusus. Jika tidak ada, tulis “Tidak ada batasan tambahan.”]
+
+## Format laporan akhir
+
+- Ringkasan perubahan dan alasan.
+- File yang dibuat dan diubah.
+- Dampak pada route, izin, alur bisnis, dan database.
+- Dokumentasi yang diperbarui.
+- Pemeriksaan yang benar-benar dijalankan beserta hasilnya.
+- Hal yang belum diverifikasi, risiko yang tersisa, atau tindak lanjut yang diperlukan.

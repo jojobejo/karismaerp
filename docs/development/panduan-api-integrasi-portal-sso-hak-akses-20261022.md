@@ -8,70 +8,32 @@ Portal tidak membagikan cookie/session portal atau password pengguna. Backend ap
 
 Hak akses yang dikelola portal saat ini adalah izin masuk ke aplikasi klien. Role, menu/modul, aksi, dan cakupan data di dalam aplikasi tetap harus dikelola dan ditegakkan oleh aplikasi klien. Portal belum mengirim role/permission klien dan belum menyediakan API provisioning user atau role ke aplikasi klien.
 
-## 2. Route dan pemakai
+## 2. Endpoint Portal yang dipakai klien
 
 | Fungsi | Route | Pemakai |
 |---|---|---|
 | Memulai autentikasi dan meminta authorization code | GET /sso/authorize | Browser pengguna, atas nama aplikasi klien |
 | Menukar code menjadi klaim identitas | POST /api/sso/token | Backend aplikasi klien saja |
-| Membaca izin aplikasi untuk satu akun | GET /admin/portal-app-access/detail?source=...&user_id=... | AJAX halaman admin portal |
-| Menyimpan izin aplikasi akun | POST /admin/portal-app-access/save | AJAX halaman admin portal |
-| Registrasi/perbarui klien | POST /admin/portal-sso-clients/save | AJAX administrator portal |
-| Buat kunci enkripsi lokal | POST /admin/portal-sso-clients/generate-encryption-key | AJAX administrator portal |
-| Aktifkan/nonaktifkan klien | POST /admin/portal-sso-clients/toggle/{app_code} | AJAX administrator portal |
-| Rotasi secret klien | POST /admin/portal-sso-clients/rotate/{app_code} | AJAX administrator portal |
-| Tampilkan ulang secret | POST /admin/portal-sso-clients/reveal/{app_code} | AJAX administrator portal dengan PIN |
+| Memulai autentikasi | GET /sso/authorize | Browser pengguna melalui route start klien |
+| Menukar code menjadi klaim identitas | POST /api/sso/token | Backend aplikasi klien saja |
 
-## 2A. API operasional dari modul ERP
+Gunakan base URL portal yang diberikan tim operasional. Portal dan aplikasi klien wajib memakai HTTPS dengan sertifikat yang dipercaya. Route admin Portal hanya untuk administrator; route tersebut bukan kontrak integrasi klien. Portal tidak memanggil API bisnis internal klien.
 
-Selain SSO, project menyediakan endpoint baca untuk data Purchasing/Master Barang dan Logistik. Route ini berbeda dari API SSO dan pada implementasi saat ini tidak memakai autentikasi client_id/client_secret atau session portal.
+## 3. Data aplikasi dan URL
 
-| Modul | Metode dan route | Parameter | Respons ringkas |
-|---|---|---|---|
-| Master Barang / Purchasing | GET /api/v1/barang | search, kode_barang, kd_suplier, limit (default 100, maksimum 500), offset | status, total_data, total_filter, limit, offset, data |
-| Purchase Order / Pre-PO | GET /api/v1/pre-po | Tidak ada; hanya baris bertanggal transaksi | status, total_data, data PO dan histori diskon |
-| Logistik / Stok per Gudang | GET /ics/api/stock_per_gudang?gudang={kode} | gudang opsional | status, data stok per gudang |
-
-Endpoint barang dan Pre-PO mengirim `Access-Control-Allow-Origin: *`. Endpoint stok belum menambahkan mekanisme autentikasi. Batasi akses jaringan dan jangan menganggap SSO melindungi endpoint data ini; autentikasi/otorisasi perlu ditambahkan sebelum data dibuka ke pihak eksternal.
-
-User Management, Master Organisasi, Jobdesk, Akses Level, Master Menu, Akses Aplikasi, dan Integrasi SSO dikelola melalui halaman ERP dengan session dan hak admin. Route AJAX halaman tersebut adalah endpoint UI internal, bukan API provisioning/integrasi untuk aplikasi klien. Modul Sales, Keuangan, Stock Opname, HRD, Inventaris, Purchasing, dan Logistik tidak otomatis menyediakan API publik hanya karena memiliki controller atau route.
-
-Kartu aplikasi Portal memakai **Callback Terdaftar** dari Integrasi SSO yang aktif (`tb_portal_sso_client.redirect_uri`). Hak tampil kartu tetap mengikuti pengaturan hak aplikasi user. Integrasi belum terdaftar atau nonaktif tidak memiliki redirect; klik kartu meminta user menghubungi admin. Setiap `app_code` memakai satu callback HTTPS yang dikelola melalui menu `admin/portal-sso-clients`.
-
-Route admin memakai session portal dan kewenangan admin. Route tersebut bukan API integrasi untuk aplikasi klien. Route master/user-management mengelola akun ERP dan bukan API provisioning user pada aplikasi klien.
-
-Gunakan base URL portal yang diberikan tim operasional, misalnya {PORTAL_BASE_URL}/sso/authorize. Portal dan aplikasi klien wajib menggunakan HTTPS.
-
-## 3. Katalog app_code
-
-client_id adalah kode aplikasi yang dipilih dan didaftarkan administrator portal.
-
-| app_code | Nama aplikasi |
-|---|---|
-| kiu_po | KIU PO |
-| warehouse | Warehouse |
-| kmt_corn | KMT CORN |
-| kpi | KPI |
-| pos_security | POS Security |
-| katalog_produk | Katalog Produk |
-| plafon_sales | Plafon Sales |
-| stockopname | Stockopname |
-| penilaian_lingkungan | Penilaian Lingkungan Kerja |
-| overdue | Overdue |
-| kios_transfer | Kios Transfer |
-| sapa_karisma | Sapa Karisma |
-
-Satu app_code memiliki satu callback terdaftar pada satu waktu. Callback harus HTTPS dan nilainya harus sama persis pada authorize dan token.
+Administrator memilih satu `app_code` resmi untuk klien. `client_id` sama dengan `app_code`. Satu klien memiliki URL peluncuran aplikasi (`launch_uri`) dan satu callback HTTPS (`redirect_uri`); keduanya berbeda dan callback harus cocok persis pada authorize serta token.
 
 ## 4. Tata cara penggunaan oleh administrator portal
 
 1. Pastikan schema SSO sudah diterapkan sesuai `docs/database/portal_sso_20261022.md`.
 2. Pastikan user portal sudah tersedia dan aktif pada sumber akun yang benar (`tb_karyawan` atau `tb_users`).
-3. Buka **Integrasi SSO**, pilih `app_code`, masukkan callback HTTPS milik aplikasi klien, lalu simpan.
+3. Buka **Integrasi SSO**, pilih `app_code`, isi URL peluncuran dan callback HTTPS, lalu simpan. URL peluncuran membuka aplikasi klien; callback menerima `code` dan `state`.
 4. Salin secret ke secret manager backend klien. Admin dapat menampilkan ulang secret melalui ikon key setelah PIN diverifikasi; secret tetap tidak boleh disimpan pada browser klien, file konfigurasi publik, atau Git.
 5. Buka **Akses Aplikasi**, pilih user portal, atur aplikasi yang diizinkan, lalu tekan **Simpan akses**. Tanpa konfigurasi akses yang disimpan, request SSO user ditolak.
-6. Tim aplikasi klien mengimplementasikan callback, validasi state, pertukaran code server-to-server, pemetaan user lokal, dan otorisasi internal.
+6. Tim aplikasi klien menyiapkan konfigurasi backend, route start/callback, pemetaan subject lokal, session, role, dan otorisasi internal.
 7. Jalankan UAT bersama user yang diizinkan dan ditolak sebelum membuka akses production.
+
+Klien menyimpan konfigurasi seperti `PORTAL_BASE_URL`, `PORTAL_CLIENT_ID`, `PORTAL_CLIENT_SECRET`, dan `PORTAL_CALLBACK_URL` pada environment server atau secret manager. Nama environment di atas contoh; jangan commit secret. Pastikan PHP cURL/HTTP client memvalidasi CA dan nama host HTTPS.
 
 Untuk membuka tampilan ulang secret, terapkan migration `docs/database/portal_sso_secret_reveal_20261022.sql` dan atur `PORTAL_SSO_ENCRYPTION_KEY` yang persisten pada environment server. PIN awal `898989` dapat diganti dengan `PORTAL_SSO_KEY_PIN`. Klien lama sebelum migration tambahan perlu dirotasi karena hanya memiliki hash dan tidak bisa dipulihkan. Jika secret bocor, lakukan rotasi dan perbarui server klien. Menonaktifkan klien menghentikan login baru dan pertukaran code, tetapi tidak mematikan session lokal yang sudah dimiliki pengguna.
 
@@ -79,11 +41,13 @@ Untuk membuka tampilan ulang secret, terapkan migration `docs/database/portal_ss
 
 ### 5.1 Siapkan request di backend klien
 
-Saat pengguna membuka aplikasi klien tanpa session lokal, backend membuat:
+Saat user memulai SSO, backend klien membuat:
 - state acak dengan panjang 16–512 karakter;
 - code_verifier acak 43–128 karakter dari A-Z, a-z, 0-9, titik, underscore, tilde, atau tanda minus;
 - code_challenge = BASE64URL(SHA256(code_verifier)), tanpa padding. Hasilnya 43 karakter;
 - simpan state dan code_verifier sementara di session server klien.
+
+Setiap kartu/URL peluncuran menuju route awal klien, bukan callback. Untuk browser yang dapat berganti akun Portal, klien harus memulai SSO ulang atau memastikan session lokal tidak mempertahankan identitas berbeda. Hapus/rotasi session ID lama sebelum menetapkan identitas klien yang baru.
 
 Contoh generator PHP:
 
@@ -166,7 +130,7 @@ Respons sukses HTTP 200:
       "username": "contoh.user",
       "name": "Nama Pengguna"
     },
-    "app_code": "kiu_po",
+    "app_code": "{APP_CODE}",
     "state": "state-yang-dikirim-klien"
   }
 }
@@ -197,12 +161,13 @@ Jika role/menu/modul aplikasi klien harus dikelola dari portal, dibutuhkan kontr
 | Data/keputusan | Penanggung jawab | Ketentuan |
 |---|---|---|
 | Nama dan pemilik bisnis aplikasi | Pemilik aplikasi | Nama modul, unit pemilik, PIC operasional |
-| app_code | Admin portal | Pilih dari katalog resmi pada bagian 3 |
+| app_code | Admin portal | Pilih kode yang tersedia dan daftarkan pada menu Integrasi SSO |
 | Domain environment | Tim klien/infra | URL development/UAT dan production; HTTPS |
+| URL peluncuran | Tim klien | Halaman awal aplikasi; HTTPS |
 | Callback URL | Tim klien | Route callback backend stabil; didaftarkan persis |
 | client_id | Portal | Sama dengan app_code |
 | client_secret | Portal dan tim klien | Ditampilkan saat registrasi/rotasi atau melalui ikon key dengan PIN; simpan di secret manager, jangan commit |
-| Kunci akun lokal | Tim klien | Simpan sub sebagai external identity key; tetapkan auto-provision atau akun harus disiapkan terlebih dahulu |
+| Kunci akun lokal | Tim klien | Simpan `sub` sebagai external identity key; tentukan auto-provision atau akun lokal pradaftar |
 | Pemetaan profil | Pemilik user dan tim klien | Tentukan penggunaan username dan name; atribut lain tidak tersedia |
 | Matriks role dan modul | Pemilik bisnis aplikasi | Role → modul → aksi → cakupan data; dikelola di aplikasi klien |
 | Kebijakan user nonaktif/keluar | Pemilik bisnis dan tim klien | Dampak pencabutan akses portal pada akun/session lokal |
@@ -219,21 +184,46 @@ Jika role/menu/modul aplikasi klien harus dikelola dari portal, dibutuhkan kontr
 - Tim menyepakati logout, pencabutan akses, user nonaktif, dan rotasi secret.
 - Password portal, cookie session, code, verifier, dan secret tidak masuk log.
 
-## 8. Route admin dan format AJAX
+## 8. Modul dan route yang harus disiapkan klien
 
-### Akses aplikasi
-GET /admin/portal-app-access/detail?source=tb_karyawan&user_id=123 mengembalikan status, message, dan data berisi user, katalog apps, callback terdaftar untuk integrasi aktif, denied_apps, serta configured.
+| Modul klien | Tanggung jawab |
+|---|---|
+| Konfigurasi dan koneksi | HTTPS, sertifikat tepercaya, HTTP client/cURL, app_code, secret server, base URL Portal, callback. |
+| Adapter SSO | Route start membuat state/verifier; callback memvalidasi state dan menukar code dari backend. |
+| Identity mapping | Cocokkan `sub` ke satu user lokal; tolak subject duplikat/tidak dikenal, akun nonaktif, atau role invalid. |
+| Session/authentication | Rotasi ID session, hapus identitas lama saat pergantian user, session expiry, dan logout lokal. |
+| Authorization | Periksa role, menu, aksi, serta cakupan data di server pada setiap route/API; gunakan deny-by-default. |
+| Audit/error | Catat status login tanpa secret, code, verifier, atau payload sensitif. |
 
-POST /admin/portal-app-access/save menerima auth_source, user_id, dan allowed_apps[]. Hak akses user menentukan tile mana yang dapat dilihat. URL tile tidak disimpan pada tabel akses user; portal menggunakan callback `redirect_uri` dari klien SSO aktif dengan app_code yang sama. Respons berbentuk { "status": true|false, "message": "...", "data": [] }.
+Contoh route klien (nama bebas, kecuali callback yang didaftarkan): `GET /auth/sso/start`, `GET /auth/sso/callback`, `POST /auth/logout`, serta route bisnis `/api/{modul}` yang dilindungi role lokal. Route start/callback bukan endpoint Portal; Portal hanya menyediakan `GET /sso/authorize` dan `POST /api/sso/token`. Jangan membuka endpoint token klien ke browser.
 
-### Integrasi klien
-POST /admin/portal-sso-clients/save menerima form_token, app_code, dan redirect_uri. Secret dibuat portal; database menyimpan hash SHA-256 untuk verifikasi dan ciphertext AES-256-GCM untuk tampilan ulang di portal.
+## 9. Pengetesan hit endpoint Portal
 
-POST /admin/portal-sso-clients/toggle/{app_code} menerima form_token dan enabled (1/0). POST /admin/portal-sso-clients/rotate/{app_code} menerima form_token. POST /admin/portal-sso-clients/reveal/{app_code} menerima form_token dan pin. Token form diperbarui melalui data.form_token setelah tiap aksi. Route ini hanya untuk UI administrator portal; endpoint reveal memberlakukan lock lima menit setelah lima PIN salah dalam satu sesi.
+1. Di browser UAT, buka route start klien. Pastikan browser diarahkan ke `GET {PORTAL_BASE_URL}/sso/authorize` dengan `client_id`, `redirect_uri`, `state`, `code_challenge`, dan `code_challenge_method=S256`.
+2. Login ke Portal jika diminta. User yang memiliki izin aplikasi akan kembali ke callback dengan `code` dan `state`; user tanpa izin mendapat `403 access_denied`.
+3. Pastikan callback mencocokkan state sebelum backend klien mengirim `POST {PORTAL_BASE_URL}/api/sso/token` dengan `application/x-www-form-urlencoded`: `client_id`, `client_secret`, `code`, `redirect_uri`, `code_verifier`.
+4. Respons sukses adalah HTTP 200 dengan `success=true`, `data.app_code`, `data.state`, dan `data.user` (`sub`, `user_id`, `auth_source`, `username`, `name`). Setelah itu klien memetakan user dan membuat session lokal.
+5. Ulangi pengujian dengan callback/state/challenge salah, secret/verifier salah, code expired/replay, klien nonaktif, user tanpa izin, dan user yang tidak memiliki mapping/role lokal. Semua kasus harus ditolak tanpa membuat session.
 
-Endpoint admin bukan endpoint public. Guard session dan kewenangan admin tetap berlaku. Konfigurasi CSRF global CI saat ini nonaktif; halaman Integrasi SSO memiliki form token khusus, sedangkan penyimpanan Akses Aplikasi belum memakai token endpoint khusus. Pertahankan akses pada konteks session admin tepercaya dan rencanakan hardening CSRF sebelum memperluas pemakaiannya.
+Authorize sebaiknya diuji lewat browser dan route start klien karena memerlukan autentikasi/session Portal; token diuji dari backend/terminal UAT dengan code baru yang belum digunakan. Code berlaku 120 detik dan hanya sekali pakai. Jangan salin secret, code, verifier, atau body token ke browser, screenshot, tiket, atau log.
 
-## 9. Error dan batasan
+## 10. Kebutuhan database
+
+### Database Portal
+
+Terapkan hanya jika belum ada pada environment Portal:
+- `docs/database/portal_sso_20261022.sql`: tabel registry klien dan authorization code sementara.
+- `docs/database/portal_sso_secret_reveal_20261022.sql`: kolom secret terenkripsi untuk tampilan ulang admin.
+- `docs/database/portal_sso_launch_uri_20261024.sql`: kolom URL peluncuran, terpisah dari callback.
+- Tabel hak aplikasi user Portal sudah menjadi data/sumber yang diperiksa oleh authorize; panduan ini tidak menambah tabel akses baru.
+
+### Database aplikasi klien
+
+Klien perlu tabel akun lokal dan tabel penghubung identity yang memuat sumber/issuer, `external_sub`, `local_user_id`, dan timestamp. Terapkan unique key pada `(provider, external_sub)`, foreign key ke tabel user lokal, serta unique `(provider, local_user_id)` bila pemetaan satu-ke-satu. Role dan permission tetap disimpan/dikelola pada schema masing-masing klien. Nama tabel/kolom dan migration dibuat di repository klien; Portal tidak membuat atau mengubah database aplikasi klien. Jangan menyimpan `client_secret` atau code sekali pakai sebagai data akun.
+
+Perubahan URL peluncuran hanya menambah kolom Portal. Perubahan policy/session pada klien tidak memerlukan DDL Portal tambahan. Backup dan verifikasi tiap migration pada database target sebelum mengaktifkan SSO.
+
+## 11. Error dan batasan
 
 | HTTP | Error | Arti/tindakan |
 |---|---|---|
@@ -245,7 +235,7 @@ Endpoint admin bukan endpoint public. Guard session dan kewenangan admin tetap b
 
 Belum tersedia: introspection/revoke endpoint, access/refresh token, OIDC discovery/JWKS, userinfo terpisah, logout lintas aplikasi, sinkronisasi role/module, provisioning/deprovisioning API, audit API terpusat, atau pencabutan session klien aktif. Respons token adalah klaim identitas sekali pakai untuk bootstrap session lokal, bukan bearer token untuk API portal lain.
 
-## 10. Referensi implementasi portal
+## 12. Referensi implementasi portal
 
 - Route: application/config/routes.php
 - Authorize/token: application/controllers/Sso.php
@@ -253,5 +243,7 @@ Belum tersedia: introspection/revoke endpoint, access/refresh token, OIDC discov
 - Pemeriksaan izin aplikasi: application/models/M_PortalAccess.php
 - Registrasi klien admin: application/controllers/admin/C_PortalSsoClients.php
 - Akses per user admin: application/controllers/admin/C_PortalAccess.php
-- Skema SSO: docs/database/portal_sso_20261022.md dan docs/database/portal_sso_20261022.sql
+- Skema SSO: `docs/database/portal_sso_20261022.md`, `docs/database/portal_sso_20261022.sql`, dan `docs/database/portal_sso_launch_uri_20261024.md`
+- Persyaratan database mapping klien: `docs/database/portal-sso-prasyarat-database-klien-20261024.md`
+- Panduan ringkas administrator/pengguna dan uji endpoint tampil di route `admin/api-documentation`.
 

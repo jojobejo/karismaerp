@@ -17,6 +17,8 @@ Repositori ini hanya berisi portal. Integrasi callback, pembuatan session, provi
 - `application/controllers/Auth.php`: setelah login, melanjutkan request SSO tervalidasi dan merotasi ID session.
 - `application/config/routes.php`: route SSO dan administrasi.
 
+Fitur edit dan hapus pada daftar integrasi dijelaskan di `docs/development/portal-sso-klien-edit-hapus-20261024.md`.
+
 ## Cara aktivasi admin
 
 1. Terapkan database sesuai `docs/database/portal_sso_20261022.md`.
@@ -26,7 +28,7 @@ Repositori ini hanya berisi portal. Integrasi callback, pembuatan session, provi
 5. Buka **Akses Aplikasi**, pilih akun, lalu simpan aplikasi yang boleh diakses. Tanpa penetapan ini, endpoint authorize menolak user.
 6. Nonaktifkan registrasi untuk menghentikan login baru ke klien. Ini tidak mengakhiri session klien yang sudah diterbitkan.
 
-Kartu aplikasi pada route `portal` mengambil URL dari callback yang terdaftar pada Integrasi SSO aktif untuk `app_code` terkait. Admin mengubah callback melalui menu Integrasi SSO; hak tampil kartu tetap dikendalikan oleh Akses Aplikasi. Jika callback belum didaftarkan atau integrasi dinonaktifkan, klik kartu memberi instruksi agar user menghubungi admin. Callback digunakan sebagai tujuan kartu sesuai pengaturan integrasi yang tersedia.
+Kartu aplikasi pada route `portal` mengambil URL peluncuran dari `tb_portal_sso_client.launch_uri` untuk `app_code` yang aktif. URL ini membuka halaman awal aplikasi klien; aplikasi lalu memulai authorization-code flow. Callback SSO disimpan terpisah di `redirect_uri` dan hanya digunakan untuk menerima `code` dan `state`. Pengaturan `launch_uri` dijelaskan pada `docs/database/portal_sso_launch_uri_20261024.md`. Hak tampil kartu tetap dikendalikan oleh Akses Aplikasi.
 
 ## Kontrak integrasi sisi klien
 

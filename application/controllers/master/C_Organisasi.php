@@ -27,7 +27,7 @@ class C_Organisasi extends CI_Controller
 
     public function index()
     {
-        $data['page_title'] = 'KARISMA ERP - Master Organisasi';
+        $data['page_title'] = 'KARISMA ERP - Setting Master Kantor';
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/master/organisasi/index.php', $data);
         $this->load->view('partial/main/footer.php');

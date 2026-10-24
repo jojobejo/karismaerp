@@ -1,7 +1,7 @@
-# Catatan Database: Sumber Redirect Portal
+# Catatan Database: URL Peluncuran dan Callback Portal
 
 Tanggal: 23 Oktober 2026
 
-Tidak ada perubahan skema atau data database. Route `portal` membaca kolom `redirect_uri` dan `is_enabled` yang sudah tersedia pada tabel `tb_portal_sso_client`, lalu menggunakan callback integrasi aktif sebagai tujuan kartu aplikasi. Pengaturan hak akses user tetap dibaca dari `tb_portal_app_access`.
+Catatan awal menyebut kartu portal membaca callback dari `redirect_uri`. Setelah pemisahan pada 24 Oktober 2026, kartu membaca `launch_uri` dan callback tetap menggunakan `redirect_uri`. Kedua URL diambil hanya untuk integrasi dengan `is_enabled = 1`; hak akses user tetap dibaca dari `tb_portal_app_access`.
 
-Tidak dibuat kolom redirect tambahan pada tabel hak akses. Jika callback belum terdaftar atau klien dinonaktifkan, redirect tidak tersedia sampai admin memperbarui integrasi pada menu `admin/portal-sso-clients`.
+Kolom `launch_uri` ditambahkan pada `tb_portal_sso_client` melalui `portal_sso_launch_uri_20261024.sql`; tabel akses user tidak berubah. Migration sudah dijalankan pada database lokal pengembangan. Jika URL peluncuran kosong atau klien dinonaktifkan, kartu tidak memiliki tujuan sampai admin memperbarui integrasi pada menu `admin/portal-sso-clients`.

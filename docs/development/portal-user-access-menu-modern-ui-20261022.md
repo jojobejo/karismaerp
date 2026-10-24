@@ -13,7 +13,7 @@ Gaya halaman memakai palet biru-hijau dan kartu yang mengikuti AdminLTE/KARISMA 
 
 ## Cara menggunakan
 
-1. Dari menu admin, buka **Akses Aplikasi**; pilih akun dan sesuaikan toggle aplikasi. Widget berubah langsung dan tombol **Simpan akses** mengirim perubahan melalui AJAX.
+1. Dari **User Management**, klik ikon roda gigi pada kolom **Akses** untuk membuka pengaturan bagi user terkait. Sesuaikan toggle aplikasi lalu tekan **Simpan akses**; perubahan dikirim melalui AJAX.
 2. Pada **Integrasi SSO**, cari atau filter klien, daftarkan callback HTTPS, atau ubah status/rotasi secret. Ikon key membuka modal PIN sebelum menampilkan secret terenkripsi. Untuk integrasi lama yang belum memiliki ciphertext, rotasi secret setelah migration database tambahan.
 3. Pada **Master User**, gunakan filter departemen/jobdesk/akses/status, pencarian tabel, lalu tombol tambah/ubah/reset/nonaktifkan/hapus sesuai kewenangan yang sudah berlaku.
 4. Pada **Master Menu**, gunakan pencarian dan filter status. Form menyediakan pilihan induk, pratinjau ikon dan route, urutan, serta status.

@@ -20,3 +20,5 @@ Skrip awal menggunakan `CREATE TABLE IF NOT EXISTS` dan dapat dijalankan ulang. 
 ## Hubungan hak akses aplikasi
 
 Hak masuk ke aplikasi menggunakan tabel `tb_portal_app_access` yang sudah ada. Simpan pilihan untuk setiap user melalui menu **Akses Aplikasi** sebelum mengaktifkan penggunaan SSO untuk user tersebut. Pada flow SSO, user yang belum memiliki penetapan akses ditolak. Aturan kompatibilitas menu portal yang menampilkan katalog lama bagi user tanpa konfigurasi tidak memberikan izin SSO.
+
+URL yang dibuka user berbeda dari callback protokol SSO. Terapkan `portal_sso_launch_uri_20261024.sql` dan isi URL peluncuran klien pada menu Integrasi SSO. Callback pada `redirect_uri` tetap hanya digunakan untuk respons authorization-code; detail migration ada di `portal_sso_launch_uri_20261024.md`.

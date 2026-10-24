@@ -7,7 +7,7 @@
         <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
         <style>.erp-hero{background:linear-gradient(135deg,#0f766e,#2563eb);border-radius:18px;color:#fff;padding:22px;box-shadow:0 18px 40px rgba(37,99,235,.2)}.erp-panel{background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 12px 30px rgba(15,23,42,.08)}.btn-erp{background:linear-gradient(135deg,#2563eb,#0f766e);border:0;color:#fff}table.dataTable thead th{background:#f8fafc!important}</style>
-        <div class="erp-hero mb-3 d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center"><div><h3 class="mb-1 fw-bold">Master Organisasi</h3><div class="opacity-75">Kelola departemen, jobdesk, dan jabatan pada satu halaman.</div></div><a href="<?= base_url('master/user-management') ?>" class="btn btn-light"><i class="fas fa-arrow-left me-1"></i> Kembali ke User Management</a></div>
+        <div class="erp-hero mb-3 d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center"><div><h3 class="mb-1 fw-bold">Setting Master Kantor</h3><div class="opacity-75">Kelola departemen, jobdesk, dan jabatan pada satu halaman.</div></div><a href="<?= base_url('master/user-management') ?>" class="btn btn-light"><i class="fas fa-arrow-left me-1"></i> Kembali ke User Management</a></div>
         <div class="erp-panel p-3">
             <ul class="nav nav-pills gap-2 mb-3" role="tablist">
                 <li class="nav-item"><button class="nav-link active" data-entity="departemen" data-bs-toggle="pill" data-bs-target="#tab-departemen" type="button">Departemen</button></li>

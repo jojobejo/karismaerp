@@ -117,10 +117,18 @@ class C_PortalSsoClients extends CI_Controller
         return $secret === false ? false : $secret;
     }
 
+    private function valid_https_uri($uri)
+    {
+        $parts = parse_url((string)$uri);
+        return $parts && strtolower($parts['scheme'] ?? '') === 'https' && !empty($parts['host'])
+            && !isset($parts['user']) && !isset($parts['pass']) && !isset($parts['fragment']);
+    }
+
     public function index()
     {
         if (!$this->db->table_exists('tb_portal_sso_client')) show_error('Tabel integrasi SSO belum diterapkan. Lihat docs/database/portal_sso_20261022.sql.', 500);
         if (!$this->db->field_exists('client_secret_encrypted', 'tb_portal_sso_client')) show_error('Migration tampilan ulang secret belum diterapkan. Jalankan docs/database/portal_sso_secret_reveal_20261022.sql.', 500);
+        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal_sso_launch_uri_20261024.sql.', 500);
         if (!$this->session->userdata('portal_sso_admin_csrf')) $this->session->set_userdata('portal_sso_admin_csrf', bin2hex(random_bytes(32)));
         $data = [
             'page_title' => 'Registrasi Klien SSO Portal',
@@ -140,18 +148,61 @@ class C_PortalSsoClients extends CI_Controller
     {
         if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
         $this->verify_form_token();
+        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal_sso_launch_uri_20261024.sql.', 500);
         $appCode = trim((string)$this->input->post('app_code', true));
         $redirectUri = trim((string)$this->input->post('redirect_uri', true));
+        $launchUri = trim((string)$this->input->post('launch_uri', true));
         $apps = $this->portalAccess->apps();
-        $parts = parse_url($redirectUri);
-        if (!isset($apps[$appCode]) || !$parts || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])) {
-            return $this->respond(false, 'Aplikasi harus dipilih dan callback harus URL HTTPS yang valid tanpa kredensial atau fragment.');
+        if (!isset($apps[$appCode]) || !$this->valid_https_uri($redirectUri) || !$this->valid_https_uri($launchUri)) {
+            return $this->respond(false, 'Aplikasi harus dipilih serta URL callback dan URL peluncuran harus HTTPS yang valid tanpa kredensial atau fragment.');
         }
         $secret = bin2hex(random_bytes(32));
         $encrypted = $this->encrypt_secret($secret);
         if ($encrypted === false) return $this->respond(false, 'Kunci enkripsi belum dikonfigurasi. Atur PORTAL_SSO_ENCRYPTION_KEY minimal 32 karakter sebelum membuat secret.');
-        $saved = $this->portalSso->save_client($appCode, $redirectUri, hash('sha256', $secret), $encrypted, (int)$this->session->userdata('id'));
-        return $this->respond($saved, $saved ? 'Klien berhasil disimpan. Secret tersimpan terenkripsi dan dapat dibuka melalui PIN admin.' : 'Klien gagal disimpan. Pastikan migrasi database telah diterapkan.', $saved ? ['app_code' => $appCode, 'redirect_uri' => $redirectUri, 'secret' => $secret] : []);
+        $saved = $this->portalSso->save_client($appCode, $redirectUri, $launchUri, hash('sha256', $secret), $encrypted, (int)$this->session->userdata('id'));
+        return $this->respond($saved, $saved ? 'Klien berhasil disimpan. Secret tersimpan terenkripsi dan dapat dibuka melalui PIN admin.' : 'Klien gagal disimpan. Pastikan migrasi database telah diterapkan.', $saved ? ['app_code' => $appCode, 'redirect_uri' => $redirectUri, 'launch_uri' => $launchUri, 'secret' => $secret] : []);
+    }
+
+    public function edit($appCode)
+    {
+        if ($this->input->method(true) !== 'GET') show_error('Metode tidak diizinkan.', 405);
+        if (!isset($this->portalAccess->apps()[$appCode])) show_404();
+        $client = $this->portalSso->client_by_code($appCode);
+        if (!$client) show_404();
+        unset($client['client_secret_hash'], $client['client_secret_encrypted']);
+        $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        return $this->output->set_content_type('application/json', 'utf-8')->set_output(json_encode([
+            'success' => true,
+            'data' => $client,
+        ], JSON_UNESCAPED_SLASHES));
+    }
+
+    public function update($appCode)
+    {
+        if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
+        $this->verify_form_token();
+        if (!isset($this->portalAccess->apps()[$appCode])) return $this->respond(false, 'Kode aplikasi tidak valid.');
+        $redirectUri = trim((string)$this->input->post('redirect_uri', true));
+        $launchUri = trim((string)$this->input->post('launch_uri', true));
+        if (!$this->valid_https_uri($redirectUri) || !$this->valid_https_uri($launchUri)) {
+            return $this->respond(false, 'URL callback dan URL peluncuran harus HTTPS yang valid tanpa kredensial atau fragment.');
+        }
+        $saved = $this->portalSso->update_client_uris($appCode, $redirectUri, $launchUri, (int)$this->session->userdata('id'));
+        $client = $saved ? $this->portalSso->client_by_code($appCode) : null;
+        return $this->respond($saved, $saved ? 'Konfigurasi URL klien berhasil diperbarui tanpa mengubah secret.' : 'Klien tidak ditemukan atau konfigurasi gagal diperbarui.', $saved ? [
+            'app_code' => $appCode,
+            'redirect_uri' => $client['redirect_uri'],
+            'launch_uri' => $client['launch_uri'],
+        ] : []);
+    }
+
+    public function delete($appCode)
+    {
+        if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
+        $this->verify_form_token();
+        if (!isset($this->portalAccess->apps()[$appCode])) return $this->respond(false, 'Kode aplikasi tidak valid.');
+        $deleted = $this->portalSso->delete_client($appCode);
+        return $this->respond($deleted, $deleted ? 'Integrasi ' . $appCode . ' dan kode SSO terkait berhasil dihapus.' : 'Klien tidak ditemukan atau penghapusan gagal.', $deleted ? ['app_code' => $appCode] : []);
     }
 
     public function rotate($appCode)

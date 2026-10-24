@@ -13,7 +13,7 @@ Modal **Tambah User** dan **Ubah User** memakai form serta aksi submit yang berb
 ## Cara penggunaan
 
 1. Buka **Master > User Management**.
-2. Pastikan jabatan yang akan dipakai sudah dibuat dan berstatus aktif pada **Master Organisasi > Jabatan**.
+2. Pastikan jabatan yang akan dipakai sudah dibuat dan berstatus aktif pada **Setting Master Kantor > Jabatan**.
 3. Klik **Tambah User** untuk membuat akun. Isi NIK, nama, username, password, serta data wajib lainnya, lalu klik **Simpan User**.
 4. Klik ikon pensil pada baris user untuk mengubah akun. Form edit tidak meminta password; pertahankan NIK jika tidak berubah, lalu klik **Simpan Perubahan**.
 5. Untuk mengganti password, gunakan ikon kunci **Reset Password** pada baris user.

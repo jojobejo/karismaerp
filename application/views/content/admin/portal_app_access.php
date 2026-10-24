@@ -13,7 +13,7 @@
         <div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Portal access control</div><h2 class="font-weight-bold mb-1">Akses Aplikasi</h2><div style="opacity:.78">Atur aplikasi yang dapat dibuka setiap pengguna dari portal.</div></div>
         <div class="mt-3 mt-md-0 d-flex flex-wrap">
             <a href="<?= base_url('admin/api-documentation') ?>" class="btn btn-outline-light font-weight-bold mr-2 mb-1"><i class="fas fa-book-open mr-1"></i> Dokumentasi API</a>
-            <a href="<?= base_url('portal') ?>" class="btn btn-outline-light font-weight-bold mr-2 mb-1"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Portal</a>
+            <a href="<?= base_url('master/user-management') ?>" class="btn btn-outline-light font-weight-bold mr-2 mb-1"><i class="fas fa-arrow-left mr-1"></i> Kembali ke User Management</a>
             <a href="<?= base_url('admin/portal-sso-clients') ?>" class="btn btn-light font-weight-bold mb-1"><i class="fas fa-link mr-1"></i> Integrasi SSO</a>
         </div>
     </div>
@@ -30,14 +30,11 @@
             <div class="text-center py-5"><div class="pa-widget-icon mx-auto mb-3"><i class="fas fa-user-slash"></i></div><h5>Belum ada akun</h5><div class="pa-note">Akun portal yang dapat dikelola belum ditemukan.</div></div>
         <?php else: ?>
             <div class="pa-toolbar row align-items-end">
-                <div class="col-md-8 mb-2"><label for="pa-user" class="font-weight-bold">Pilih pengguna</label><select id="pa-user" class="form-control">
-                    <?php foreach ($users as $user): ?><option value="<?= (int)$user['id'] ?>" data-source="<?= html_escape($user['auth_source']) ?>" <?= $selected_user && $selected_user['auth_source'] === $user['auth_source'] && (int)$selected_user['id'] === (int)$user['id'] ? 'selected' : '' ?>><?= html_escape($user['display_name']) ?> — <?= html_escape($user['username']) ?> (<?= html_escape($user['auth_source']) ?><?= (int)$user['status'] === 1 ? '' : ', nonaktif' ?>)</option><?php endforeach ?>
-                </select></div>
-                <div class="col-md-4 mb-2 d-flex flex-wrap justify-content-md-end">
+                <div class="col-md-8 mb-2 d-flex flex-wrap justify-content-md-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary mr-2 mb-1" id="pa-select-all"><i class="fas fa-check-double mr-1"></i> Semua</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary mb-1" id="pa-select-none"><i class="fas fa-ban mr-1"></i> Tidak ada</button>
                 </div>
-                <div class="col-12 d-flex justify-content-between align-items-center"><div><strong id="pa-user-name"><?= html_escape($selected_user['display_name'] ?? '') ?></strong> <span class="pa-note" id="pa-user-meta"><?= html_escape($selected_user ? $selected_user['username'] . ' · ' . $selected_user['auth_source'] : '') ?></span></div><span class="badge badge-light" id="pa-config-state">Memuat pengaturan…</span></div>
+                <div class="col-12 d-flex flex-column flex-md-row justify-content-between align-items-md-center"><div><strong class="d-block" id="pa-user-name"><?= html_escape($selected_user['display_name'] ?? '') ?></strong><div class="mt-1"><span class="mr-3"><strong>Departemen:</strong> <span id="pa-user-department"><?= html_escape($selected_user['departemen'] ?? '-') ?></span></span><span><strong>Jobdesk:</strong> <span id="pa-user-jobdesk"><?= html_escape($selected_user['jobdesk'] ?? '-') ?></span></span></div></div><span class="badge badge-light mt-2 mt-md-0" id="pa-config-state">Memuat pengaturan…</span></div>
             </div>
             <form id="pa-form">
                 <input type="hidden" name="auth_source" id="pa-source" value="<?= html_escape($selected_user['auth_source'] ?? '') ?>">
@@ -56,26 +53,26 @@
 $(function(){
     const detailUrl='<?= base_url('admin/portal-app-access/detail') ?>';
     const saveUrl='<?= base_url('admin/portal-app-access/save') ?>';
-    const $user=$('#pa-user');
     const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     function updateCounts(){const total=$('.pa-access-toggle').length,allowed=$('.pa-access-toggle:checked').length;$('#pa-total').text(total);$('#pa-allowed').text(allowed);$('#pa-denied').text(total-allowed);}
     function loadAccount(){
-        const $option=$user.find(':selected'),source=$option.data('source'),id=$option.val();
+        const source=$('#pa-source').val(),id=$('#pa-user-id').val();
         $('#pa-app-grid').html('<div class="col-12 text-center py-5 pa-note"><i class="fas fa-circle-notch fa-spin mr-2"></i>Memuat pengaturan akses…</div>');
         $('#pa-save').prop('disabled',true);
         $.getJSON(detailUrl,{source:source,user_id:id}).done(function(res){
             if(!res.status){$('#pa-app-grid').html('<div class="col-12"><div class="alert alert-danger mb-0">'+escapeHtml(res.message)+'</div></div>');return;}
             const data=res.data,user=data.user,denied=data.denied_apps||[];
-            $('#pa-source').val(user.auth_source);$('#pa-user-id').val(user.id);$('#pa-user-name').text(user.display_name);$('#pa-user-meta').text(user.username+' · '+user.auth_source);
+            $('#pa-source').val(user.auth_source);$('#pa-user-id').val(user.id);$('#pa-user-name').text(user.display_name);$('#pa-user-department').text(user.departemen||'-');$('#pa-user-jobdesk').text(user.jobdesk||'-');
             $('#pa-config-state').attr('class','badge '+(data.configured?'badge-success':'badge-warning')).text(data.configured?'Pengaturan tersimpan':'Belum ada penetapan');
             let html='';Object.keys(data.apps).forEach(function(code){const app=data.apps[code],allowed=denied.indexOf(code)===-1;
                 const callback=app.callback_url||'';
-                html+='<div class="col-sm-6 col-xl-4 mb-3"><article class="pa-app"><div class="d-flex align-items-start justify-content-between"><div class="pa-app-icon" style="--pa-accent:'+escapeHtml(app.accent)+'"><i class="fas '+escapeHtml(app.icon)+'"></i></div><div class="custom-control custom-switch pa-switch"><input class="custom-control-input pa-access-toggle" type="checkbox" id="pa-'+escapeHtml(code)+'" name="allowed_apps[]" value="'+escapeHtml(code)+'" '+(allowed?'checked':'')+'><label class="custom-control-label" for="pa-'+escapeHtml(code)+'"></label></div></div><h6 class="font-weight-bold mt-3 mb-1">'+escapeHtml(app.name)+'</h6><div class="pa-note mb-2">'+escapeHtml(app.description)+'</div><div class="pa-app-url"><strong>Callback terdaftar:</strong><br>'+(callback?escapeHtml(callback):'Belum terdaftar atau integrasi belum aktif.')+'</div></article></div>';
+                const moduleUrl='<?= base_url('admin/portal-app-modules') ?>?app_code='+encodeURIComponent(code)+'&source='+encodeURIComponent($('#pa-source').val())+'&user_id='+encodeURIComponent($('#pa-user-id').val());
+                html+='<div class="col-sm-6 col-xl-4 mb-3"><article class="pa-app"><div class="d-flex align-items-start justify-content-between"><div class="pa-app-icon" style="--pa-accent:'+escapeHtml(app.accent)+'"><i class="fas '+escapeHtml(app.icon)+'"></i></div><div class="custom-control custom-switch pa-switch"><input class="custom-control-input pa-access-toggle" type="checkbox" id="pa-'+escapeHtml(code)+'" name="allowed_apps[]" value="'+escapeHtml(code)+'" '+(allowed?'checked':'')+'><label class="custom-control-label" for="pa-'+escapeHtml(code)+'"></label></div></div><h6 class="font-weight-bold mt-3 mb-1">'+escapeHtml(app.name)+'</h6><div class="pa-note mb-2">'+escapeHtml(app.description)+'</div><div class="pa-app-url"><strong>Callback terdaftar:</strong><br>'+(callback?escapeHtml(callback):'Belum terdaftar atau integrasi belum aktif.')+'</div><a class="btn btn-sm btn-outline-primary mt-3" href="'+moduleUrl+'"><i class="fas fa-list-alt mr-1"></i> Detail Module</a></article></div>';
             });
             $('#pa-app-grid').html(html||'<div class="col-12 pa-note">Tidak ada aplikasi pada katalog.</div>');$('#pa-save').prop('disabled',false);updateCounts();
         }).fail(function(){$('#pa-app-grid').html('<div class="col-12"><div class="alert alert-danger mb-0">Server tidak merespons saat memuat akses.</div></div>');}).always(function(){$('#pa-save').prop('disabled',false);});
     }
-    if($user.length){if($.fn.select2)$user.select2({width:'100%'});$user.on('change',loadAccount);$('#pa-app-grid').on('change','.pa-access-toggle',updateCounts);$('#pa-select-all').on('click',function(){$('.pa-access-toggle').prop('checked',true);updateCounts();});$('#pa-select-none').on('click',function(){$('.pa-access-toggle').prop('checked',false);updateCounts();});
+    if($('#pa-user-id').val()){$('#pa-app-grid').on('change','.pa-access-toggle',updateCounts);$('#pa-select-all').on('click',function(){$('.pa-access-toggle').prop('checked',true);updateCounts();});$('#pa-select-none').on('click',function(){$('.pa-access-toggle').prop('checked',false);updateCounts();});
         $('#pa-form').on('submit',function(event){event.preventDefault();const $button=$('#pa-save');$button.prop('disabled',true).html('<i class="fas fa-circle-notch fa-spin mr-1"></i>Menyimpan…');$.ajax({url:saveUrl,type:'POST',data:$(this).serialize(),dataType:'json'}).done(function(res){if(res.status){toastr.success(res.message);$('#pa-config-state').attr('class','badge badge-success').text('Pengaturan tersimpan');}else{toastr.error(res.message);}}).fail(function(){toastr.error('Server tidak merespons saat menyimpan akses.');}).always(function(){$button.prop('disabled',false).html('<i class="fas fa-save mr-1"></i> Simpan akses');});});loadAccount();
     }
 });

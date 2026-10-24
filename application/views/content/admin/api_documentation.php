@@ -4,7 +4,7 @@
 </style>
 <section class="content p-3 p-md-4 api-doc">
     <div class="api-hero mb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-        <div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Developer guide · KARISMA ERP</div><h2 class="font-weight-bold mb-1">Dokumentasi API Integrasi</h2><div style="opacity:.8">Referensi API SSO Portal, master barang, data Pre-PO, dan stok logistik yang tersedia di project.</div></div>
+        <div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Developer guide · KARISMA ERP</div><h2 class="font-weight-bold mb-1">Dokumentasi API Integrasi</h2><div style="opacity:.8">Panduan klien untuk berintegrasi dengan autentikasi dan hak akses SSO Portal.</div></div>
         <div class="d-flex flex-wrap mt-3 mt-md-0"><a class="btn btn-outline-light font-weight-bold mr-2 mb-1" href="<?= base_url('portal') ?>"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Portal</a><a class="btn btn-light font-weight-bold mb-1" href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-plug mr-1"></i> Integrasi SSO</a></div>
     </div>
     <div class="row mb-3">
@@ -18,7 +18,7 @@
         <div class="api-result mt-2" id="api-search-result">Panduan integrasi dan referensi endpoint portal.</div>
     </div>
     <div class="row">
-        <div class="col-lg-3 mb-3"><nav class="api-card api-nav" aria-label="Daftar isi"><div class="api-kicker px-2 mb-2">Daftar isi</div><a href="#overview">Prinsip integrasi</a><a href="#admin-setup">Pengaturan admin</a><a href="#flow">Alur SSO</a><a href="#endpoints">Endpoint API</a><a href="#modules">API per modul ERP</a><a href="#claims">Respons identitas</a><a href="#access">Hak akses</a><a href="#onboarding">Data onboarding</a><a href="#errors">Error dan batas</a></nav></div>
+        <div class="col-lg-3 mb-3"><nav class="api-card api-nav" aria-label="Daftar isi"><div class="api-kicker px-2 mb-2">Daftar isi</div><a href="#overview">Prinsip integrasi</a><a href="#admin-setup">Persiapan admin</a><a href="#flow">Alur SSO</a><a href="#endpoints">Endpoint Portal</a><a href="#modules">Modul sisi klien</a><a href="#client-routes">Route sisi klien</a><a href="#claims">Respons identitas</a><a href="#access">Hak akses</a><a href="#usage">Tata cara pengguna</a><a href="#endpoint-test">Uji endpoint</a><a href="#onboarding">Data yang diperlukan</a><a href="#database">Kebutuhan database</a><a href="#errors">Error dan batas</a></nav></div>
         <div class="col-lg-9">
             <article class="api-section" id="overview" data-api-section>
                 <div class="api-kicker">01 · Model keamanan</div><h4 class="font-weight-bold mt-1">Portal memverifikasi identitas; klien membuat session sendiri</h4>
@@ -32,24 +32,32 @@
             <article class="api-section" id="admin-setup" data-api-section>
                 <div class="api-kicker">02 · Pengaturan administrator</div><h4 class="font-weight-bold mt-1">Aktifkan klien dan izin pengguna</h4>
                 <div class="row">
-                    <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">1</span><div><strong>Daftarkan callback</strong><div class="small text-muted">Buka Integrasi SSO, pilih app_code, masukkan callback HTTPS klien.</div></div></div></div>
+                    <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">1</span><div><strong>Daftarkan klien</strong><div class="small text-muted">Pilih app_code, isi URL peluncuran dan callback HTTPS. URL peluncuran membuka klien; callback menerima code dan harus cocok persis.</div></div></div></div>
                     <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">2</span><div><strong>Simpan secret</strong><div class="small text-muted">Simpan pada secret manager server klien. Admin portal dapat membukanya melalui ikon key dengan PIN keamanan.</div></div></div></div>
                     <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">3</span><div><strong>Berikan izin aplikasi</strong><div class="small text-muted">Pada Akses Aplikasi, pilih user lalu simpan aplikasi yang boleh digunakan.</div></div></div></div>
-                    <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">4</span><div><strong>Uji sebelum rilis</strong><div class="small text-muted">Uji user diizinkan/ditolak, state, PKCE, code replay, callback, dan user nonaktif.</div></div></div></div>
+                    <div class="col-md-6 mb-2"><div class="api-step"><span class="api-step-num">4</span><div><strong>Siapkan klien dan uji</strong><div class="small text-muted">Aktifkan HTTPS/cURL, simpan secret di backend, siapkan akun serta role lokal, lalu uji user diizinkan dan ditolak.</div></div></div></div>
                 </div>
+                <div class="api-callout mt-2"><strong>Contoh pola URL:</strong> peluncuran <code>https://&lt;host&gt;/&lt;app&gt;/</code>; callback <code>https://&lt;host&gt;/&lt;app&gt;/auth/sso/callback</code>.</div>
+                <div class="table-responsive mt-3"><table class="table table-bordered table-sm api-table mb-0"><thead><tr><th>Konfigurasi backend klien</th><th>Nilai</th></tr></thead><tbody>
+                    <tr><td><code>PORTAL_BASE_URL</code></td><td>Base URL HTTPS Portal, misalnya <code>https://portal.example/</code>.</td></tr>
+                    <tr><td><code>PORTAL_CLIENT_ID</code></td><td><code>app_code</code> yang didaftarkan Portal.</td></tr>
+                    <tr><td><code>PORTAL_CLIENT_SECRET</code></td><td>Secret klien; simpan pada environment/secret manager server.</td></tr>
+                    <tr><td><code>PORTAL_CALLBACK_URL</code></td><td>Callback HTTPS yang sama persis dengan registrasi Portal.</td></tr>
+                </tbody></table></div>
                 <div class="mt-3"><a class="btn btn-sm btn-outline-primary mr-2" href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-plug mr-1"></i> Buka Integrasi SSO</a><a class="btn btn-sm btn-outline-primary" href="<?= base_url('admin/portal-app-access') ?>"><i class="fas fa-user-shield mr-1"></i> Buka Akses Aplikasi</a></div>
             </article>
             <article class="api-section" id="flow" data-api-section>
                 <div class="api-kicker">03 · SSO client flow</div><h4 class="font-weight-bold mt-1">Authorization code dengan PKCE S256</h4>
                 <ol class="pl-3">
-                    <li>Backend klien membuat <code>state</code> dan <code>code_verifier</code> acak, lalu menyimpan sementara di session server klien.</li>
+                    <li>Klien membuka flow dari route awal aplikasi. Jika kebijakan klien mengizinkan pergantian user pada browser yang sama, lakukan re-auth SSO dan buang identitas lokal lama sebelum menerbitkan session baru.</li>
                     <li>Klien menghitung <code>code_challenge = BASE64URL(SHA256(code_verifier))</code> tanpa padding dan mengarahkan browser ke portal.</li>
                     <li>Portal memvalidasi klien, callback persis, PKCE, dan izin user. Jika user belum login, portal login dahulu lalu melanjutkan permintaan.</li>
                     <li>Portal mengarahkan callback klien dengan <code>code</code> dan <code>state</code>. Klien wajib cocokkan state dengan session miliknya.</li>
                     <li>Backend klien menukar code ke endpoint token dengan client secret dan code verifier.</li>
-                    <li>Klien menghubungkan akun berdasarkan <code>sub</code>, menetapkan role lokal, dan membuat session lokal.</li>
+                    <li>Klien mencocokkan <code>sub</code> ke satu akun lokal, memeriksa user dan level akses setempat, lalu membuat session baru dengan role aplikasi lokal.</li>
                 </ol>
                 <div class="api-callout"><strong>Jangan kirim client_secret atau code_verifier ke browser.</strong> Code hanya dapat digunakan sekali dan berlaku 120 detik.</div>
+                <div class="api-callout mt-2"><strong>Ganti akun:</strong> pastikan Portal sedang login sebagai user tujuan. Klien harus memastikan session lokal lama tidak dipakai untuk identitas Portal yang berbeda. Logout dari aplikasi klien saja tidak mengakhiri session Portal.</div>
                 <h6 class="font-weight-bold mt-4">Contoh pembentukan PKCE di PHP</h6>
                 <div class="position-relative"><button type="button" class="btn btn-sm btn-light api-copy" data-copy="pkce-code"><i class="fas fa-copy mr-1"></i>Salin</button><pre class="api-code" id="pkce-code"><code>$base64Url = function ($value) {
     return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
@@ -82,18 +90,32 @@ $_SESSION['portal_sso'] = [
 POST <?= html_escape(base_url('api/sso/token')) ?></code></div>
             </article>
             <article class="api-section" id="modules" data-api-section>
-                <div class="api-kicker">05 · API per modul ERP</div><h4 class="font-weight-bold mt-1">Endpoint operasional yang tersedia</h4>
-                <p class="text-muted">Project juga menyediakan API baca untuk katalog master barang, data Pre-PO, dan stok per gudang. Endpoint tersebut terpisah dari SSO dan belum menggunakan autentikasi client SSO.</p>
-                <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Modul</th><th>Metode dan route</th><th>Parameter</th><th>Format respons</th></tr></thead><tbody>
-                    <tr><td>Master Barang / Purchasing</td><td><span class="api-badge api-badge-green">GET</span><br><code><?= html_escape(base_url('api/v1/barang')) ?></code></td><td><code>search</code>, <code>kode_barang</code>, <code>kd_suplier</code>, <code>limit</code> (maks. 500), <code>offset</code></td><td>JSON <code>status</code>, <code>total_data</code>, <code>total_filter</code>, paging, dan daftar barang.</td></tr>
-                    <tr><td>Purchase Order / Pre-PO</td><td><span class="api-badge api-badge-green">GET</span><br><code><?= html_escape(base_url('api/v1/pre-po')) ?></code></td><td>Tidak ada. Mengambil baris dengan tanggal transaksi terisi.</td><td>JSON <code>status</code>, <code>total_data</code>, dan detail PO beserta histori diskon.</td></tr>
-                    <tr><td>Logistik / Stok per Gudang</td><td><span class="api-badge api-badge-green">GET</span><br><code><?= html_escape(base_url('ics/api/stock_per_gudang')) ?></code></td><td><code>gudang</code> (opsional)</td><td>JSON <code>status</code> dan <code>data</code> stok dari laporan stok per gudang.</td></tr>
+                <div class="api-kicker">05 · Komponen klien</div><h4 class="font-weight-bold mt-1">Modul yang perlu disiapkan aplikasi klien</h4>
+                <p class="text-muted">Portal hanya menyediakan autentikasi dan izin masuk aplikasi. Integrasi berikut dibuat pada backend masing-masing klien; desain menu dan route menyesuaikan arsitektur klien.</p>
+                <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Modul/fungsi</th><th>Tanggung jawab klien</th></tr></thead><tbody>
+                    <tr><td>Konfigurasi SSO</td><td>Muat app_code, secret server, URL Portal, callback terdaftar, dan CA HTTPS secara aman.</td></tr>
+                    <tr><td>Adapter authorization-code + PKCE</td><td>Buat state/verifier, arahkan user ke authorize, validasi callback, lalu tukar code dari backend.</td></tr>
+                    <tr><td>Pemetaan identitas</td><td>Temukan/buat akun lokal dengan kunci stabil <code>sub</code>; tolak akun hilang, ganda, nonaktif, atau tidak terpetakan.</td></tr>
+                    <tr><td>Session dan logout lokal</td><td>Rotasi session ID saat login, bersihkan identitas lama, batasi masa session, dan sediakan logout lokal.</td></tr>
+                    <tr><td>Role dan otorisasi</td><td>Gunakan role/permission klien sendiri; periksa akses server-side pada setiap route/API dengan deny-by-default.</td></tr>
+                    <tr><td>Audit dan error</td><td>Catat hasil autentikasi tanpa secret, code, verifier, atau payload sensitif; tampilkan error yang aman kepada user.</td></tr>
                 </tbody></table></div>
-                <div class="api-callout api-callout-danger mt-3"><strong>Batas keamanan API operasional:</strong> route master barang, Pre-PO, dan stok ini saat ini tidak memeriksa client_id/client_secret atau session user. Endpoint barang dan Pre-PO juga mengizinkan CORS <code>*</code>. Jangan menganggap login SSO melindungi endpoint ini; batasi akses jaringan atau tambahkan autentikasi dan otorisasi sebelum mengekspos data ke pihak luar.</div>
-                <h6 class="font-weight-bold mt-3">Modul ERP lain</h6><p class="small text-muted mb-0">User Management, Master Organisasi, Jobdesk, Akses Level, Master Menu, Akses Aplikasi, dan Integrasi SSO saat ini dikelola melalui halaman ERP yang memakai session dan hak admin. Endpoint AJAX internalnya bukan kontrak API untuk aplikasi klien. Modul Sales, Keuangan, Stock Opname, HRD, Inventaris, Purchasing, dan Logistik juga tidak otomatis menjadi API publik hanya karena memiliki route/controller.</p>
+                <div class="api-callout mt-3"><strong>Portal tidak menyediakan provisioning user, API role/menu, atau API bisnis milik klien.</strong> Jangan membuat endpoint klien untuk menerima password/secret Portal. Pertukaran token adalah request backend klien ke Portal.</div>
+            </article>
+            <article class="api-section" id="client-routes" data-api-section>
+                <div class="api-kicker">06 · Route yang dibuat klien</div><h4 class="font-weight-bold mt-1">API klien tetap milik aplikasi klien</h4>
+                <p class="text-muted">Nama route berikut contoh. Portal tidak memanggil API internal klien; satu-satunya URL klien yang dipanggil browser Portal adalah callback terdaftar.</p>
+                <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Route contoh</th><th>Fungsi dan aturan</th></tr></thead><tbody>
+                    <tr><td><code>GET /auth/sso/start</code></td><td>Buat state/verifier di session server, lalu redirect browser ke <code>GET {PORTAL}/sso/authorize</code>.</td></tr>
+                    <tr><td><code>GET /auth/sso/callback</code></td><td>Callback HTTPS yang didaftarkan persis; validasi state, lalu tukar code dari backend klien.</td></tr>
+                    <tr><td><code>GET /api/session</code> (opsional)</td><td>Berikan status dan profil session lokal tanpa mengungkap secret/token Portal.</td></tr>
+                    <tr><td><code>POST /auth/logout</code></td><td>Hapus session lokal dan rotasi session ID; logout Portal terpisah.</td></tr>
+                    <tr><td><code>/api/&lt;modul-klien&gt;</code></td><td>API bisnis klien sendiri. Setiap route wajib memeriksa session, role, tindakan, dan cakupan datanya di server.</td></tr>
+                </tbody></table></div>
+                <div class="api-callout api-callout-danger mt-3"><strong>Jangan publikasikan route pertukaran token.</strong> POST <code>{PORTAL}/api/sso/token</code> dipanggil backend klien, bukan browser atau frontend.</div>
             </article>
             <article class="api-section" id="claims" data-api-section>
-                <div class="api-kicker">06 · Identitas pengguna</div><h4 class="font-weight-bold mt-1">Klaim yang dikembalikan</h4>
+                <div class="api-kicker">07 · Identitas pengguna</div><h4 class="font-weight-bold mt-1">Klaim yang dikembalikan</h4>
                 <div class="api-code"><code>{
   "success": true,
   "data": {
@@ -104,14 +126,14 @@ POST <?= html_escape(base_url('api/sso/token')) ?></code></div>
       "username": "contoh.user",
       "name": "Nama Pengguna"
     },
-    "app_code": "kiu_po",
+    "app_code": "{APP_CODE}",
     "state": "state-dari-klien"
   }
 }</code></div>
                 <p class="small text-muted mt-3 mb-0"><code>sub</code> menggabungkan sumber akun dan ID agar ID sama pada <code>tb_karyawan</code> dan <code>tb_users</code> tidak tertukar. Portal tidak mengirim email, password, departemen, role klien, atau izin modul.</p>
             </article>
             <article class="api-section" id="access" data-api-section>
-                <div class="api-kicker">07 · Otorisasi</div><h4 class="font-weight-bold mt-1">Portal mengatur akses aplikasi; klien mengatur isi aplikasinya</h4>
+                <div class="api-kicker">08 · Otorisasi</div><h4 class="font-weight-bold mt-1">Portal mengatur akses aplikasi; klien mengatur isi aplikasinya</h4>
                 <div class="row">
                     <div class="col-md-6"><h6 class="font-weight-bold text-success">Dikelola Portal</h6><ul class="small text-muted"><li>Akun boleh/tidak boleh masuk ke app_code tertentu.</li><li>Status klien dan callback terdaftar.</li><li>Penghentian login baru setelah akses dicabut.</li></ul></div>
                     <div class="col-md-6"><h6 class="font-weight-bold text-primary">Dikelola Aplikasi Klien</h6><ul class="small text-muted"><li>Role user, menu/modul, aksi CRUD/approval.</li><li>Cakupan data, departemen, lokasi, dan kepemilikan.</li><li>Session lokal, logout, dan pencabutan session aktif.</li></ul></div>
@@ -119,10 +141,38 @@ POST <?= html_escape(base_url('api/sso/token')) ?></code></div>
                 <div class="api-callout api-callout-danger"><strong>User tanpa penetapan izin SSO ditolak.</strong> Visibilitas tile portal saja tidak mengamankan aplikasi. Klien harus menegakkan otorisasi pada setiap request server-side dengan prinsip deny-by-default.</div>
                 <p class="small text-muted mt-3 mb-0">Authorization code yang sudah terbit masih dapat ditukar sampai kedaluwarsa (maksimal 120 detik). Session klien yang sudah berjalan tidak otomatis dicabut.</p>
             </article>
+            <article class="api-section" id="usage" data-api-section>
+                <div class="api-kicker">09 · Tata cara pengguna</div><h4 class="font-weight-bold mt-1">Login ke aplikasi klien melalui Portal</h4>
+                <ol class="pl-3 mb-3">
+                    <li>User login ke Portal dan memilih kartu aplikasi yang telah diberikan kepadanya.</li>
+                    <li>Jika session Portal masih aktif, Portal memeriksa izin aplikasi tanpa meminta login Portal ulang.</li>
+                    <li>Klien menerima callback, memeriksa state dan authorization code, lalu memetakan subject ke akun lokal.</li>
+                    <li>Klien membuat session sesuai role lokal. Akses Portal atau akun/role lokal yang tidak valid harus ditolak.</li>
+                </ol>
+                <div class="api-callout"><strong>Berganti user:</strong> login Portal sebagai user tujuan sebelum memilih kartu aplikasi. Jika Portal masih login sebagai user sebelumnya, logout Portal terlebih dahulu. Logout aplikasi klien tidak mengakhiri session Portal.</div>
+            </article>
+            <article class="api-section" id="endpoint-test" data-api-section>
+                <div class="api-kicker">10 · Pengetesan endpoint</div><h4 class="font-weight-bold mt-1">Uji alur dari browser sampai token</h4>
+                <ol class="pl-3">
+                    <li>Di browser UAT, buka route start klien, misalnya <code>GET {CLIENT_BASE_URL}/auth/sso/start</code>. Jangan menguji authorize dengan cURL anonim karena endpoint ini memakai session login Portal dan alur redirect browser.</li>
+                    <li>Pastikan browser menuju <code>GET {PORTAL_BASE_URL}/sso/authorize</code> dengan <code>client_id</code>, callback HTTPS, state, challenge, dan metode <code>S256</code>.</li>
+                    <li>Uji user yang diberi izin. Portal mengembalikan browser ke callback dengan code dan state; klien memvalidasi state sebelum melanjutkan.</li>
+                    <li>Pastikan log server klien menunjukkan request backend <code>POST {PORTAL_BASE_URL}/api/sso/token</code> memakai form URL-encoded, secret, code, callback yang sama, dan verifier. Code berlaku 120 detik dan hanya sekali pakai.</li>
+                    <li>Respons sukses harus HTTP 200 dan memuat <code>success</code>, <code>data.app_code</code>, <code>data.state</code>, serta klaim user. Pastikan klien lalu membentuk session dan route terlindungi memeriksa role lokal.</li>
+                </ol>
+                <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Skenario</th><th>Hasil yang diharapkan</th></tr></thead><tbody>
+                    <tr><td>User Portal diizinkan + akun lokal valid</td><td>Authorize diteruskan, token sukses, session klien terbentuk.</td></tr>
+                    <tr><td>User Portal tanpa izin</td><td><code>403 access_denied</code>; tidak ada session klien.</td></tr>
+                    <tr><td>Callback, state, atau PKCE salah</td><td><code>400 invalid_request</code> atau callback ditolak; tidak ada session.</td></tr>
+                    <tr><td>Secret, verifier, callback salah; code expired/replay; klien nonaktif</td><td><code>400 invalid_grant</code>; login ditolak.</td></tr>
+                    <tr><td>Akun lokal tidak ada/nonaktif atau role tidak valid</td><td>Portal dapat sukses, tetapi klien tetap menolak session lokal.</td></tr>
+                </tbody></table></div>
+                <div class="api-callout api-callout-danger mt-3"><strong>Gunakan environment UAT dan user uji.</strong> Jangan menaruh secret, code, verifier, atau body token di browser, screenshot, tiket, atau log. Untuk uji token manual, jalankan hanya dari backend/terminal aman dengan code baru yang belum pernah ditukar.</div>
+            </article>
             <article class="api-section" id="onboarding" data-api-section>
-                <div class="api-kicker">08 · Persiapan integrasi</div><h4 class="font-weight-bold mt-1">Data onboarding yang harus disepakati</h4>
+                <div class="api-kicker">11 · Persiapan integrasi</div><h4 class="font-weight-bold mt-1">Data yang harus disiapkan</h4>
                 <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Data</th><th>Yang perlu disiapkan</th></tr></thead><tbody>
-                    <tr><td>Identitas aplikasi</td><td>Nama, pemilik bisnis/PIC, dan app_code dari katalog portal.</td></tr><tr><td>Environment</td><td>Domain development/UAT/production dengan HTTPS.</td></tr><tr><td>Callback</td><td>Route backend yang stabil; daftarkan URL secara persis di portal.</td></tr><tr><td>Kredensial</td><td>client_id dan client_secret; secret disimpan dalam secret manager backend.</td></tr><tr><td>Pemetaan akun</td><td>Pakai sub sebagai external key; putuskan auto-provision atau akun lokal harus dibuat lebih dulu.</td></tr><tr><td>Role &amp; izin</td><td>Matriks role → modul → aksi → cakupan data; konfigurasi dan enforcement pada klien.</td></tr><tr><td>Siklus hidup</td><td>Aturan user nonaktif, pencabutan akses, session expiry, logout, dan rotasi secret.</td></tr><tr><td>UAT</td><td>User allow/deny/nonaktif, state mismatch, callback/verifier salah, code expired/replay, klien nonaktif.</td></tr>
+                    <tr><td>Identitas aplikasi</td><td>Nama, pemilik/PIC, dan satu app_code yang didaftarkan Portal.</td></tr><tr><td>URL</td><td>URL peluncuran aplikasi dan callback HTTPS terpisah; callback persis sama pada klien dan Portal.</td></tr><tr><td>Kredensial</td><td>client_id dan client_secret; simpan secret hanya di environment atau secret manager backend.</td></tr><tr><td>Server</td><td>HTTPS dengan sertifikat tepercaya, PHP cURL/HTTP client TLS, session server, dan waktu server tersinkron.</td></tr><tr><td>Akun dan role</td><td>Kebijakan akun lokal, kunci sub, role lokal, izin modul/aksi, aturan user nonaktif.</td></tr><tr><td>Operasional</td><td>Owner/PIC, secret rotation, masa session, logout, log aman, akun uji allow/deny.</td></tr>
                 </tbody></table></div>
                 <div class="api-checklist mt-3" id="api-checklist"><div class="font-weight-bold mb-1">Checklist kesiapan klien <span class="text-muted font-weight-normal" id="check-progress">0/6</span></div>
                     <label><input type="checkbox" data-check="callback"> Callback HTTPS sudah terdaftar dan cocok persis</label>
@@ -134,8 +184,30 @@ POST <?= html_escape(base_url('api/sso/token')) ?></code></div>
                     <div class="progress mt-2" style="height:7px"><div class="progress-bar bg-success" id="check-progress-bar" style="width:0%"></div></div>
                 </div>
             </article>
+            <article class="api-section" id="module-catalog" data-api-section>
+                <div class="api-kicker">Katalog Module Klien</div><h4 class="font-weight-bold mt-1">Klien dapat mengelola daftar module aplikasinya</h4>
+                <p>Admin mengelola katalog dari tombol <strong>Detail Module</strong> pada kartu aplikasi di halaman Akses Aplikasi. Klien dapat mengelola katalog aplikasi miliknya melalui endpoint berikut menggunakan HTTPS.</p>
+                <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>Method</th><th>Route</th><th>Fungsi</th></tr></thead><tbody>
+                    <tr><td>GET</td><td><code>/api/client/modules</code></td><td>Daftar module aplikasi klien, termasuk status nonaktif.</td></tr>
+                    <tr><td>GET</td><td><code>/api/client/modules/{module_code}</code></td><td>Detail module milik klien.</td></tr>
+                    <tr><td>POST</td><td><code>/api/client/modules</code></td><td>Tambah module.</td></tr>
+                    <tr><td>PUT/PATCH</td><td><code>/api/client/modules/{module_code}</code></td><td>Ubah module.</td></tr>
+                    <tr><td>DELETE</td><td><code>/api/client/modules/{module_code}</code></td><td>Hapus module secara permanen.</td></tr>
+                </tbody></table></div>
+                <div class="api-callout api-callout-danger"><strong>Autentikasi:</strong> HTTP Basic, username berupa <code>app_code</code> dan password berupa client secret. Kirim melalui header <code>Authorization</code> hanya lewat HTTPS. Server mengikat semua operasi ke aplikasi dari kredensial tersebut; klien tidak dapat menentukan atau mengubah <code>app_code</code> tujuan.</div>
+                <p class="small text-muted mb-0">Body JSON untuk POST/PUT/PATCH menerima <code>module_code</code>, <code>module_name</code>, <code>description</code>, <code>module_url</code>, <code>sort_order</code>, dan <code>is_active</code>. Dokumentasi lengkap dan contoh body tersedia di <code>docs/development/portal-app-module-catalog-20261024.md</code>.</p>
+            </article>
+            <article class="api-section" id="database" data-api-section>
+                <div class="api-kicker">12 · Prasyarat database</div><h4 class="font-weight-bold mt-1">Pisahkan data Portal dan aplikasi klien</h4>
+                <ul class="mb-2">
+                    <li><strong>Database Portal:</strong> jika belum ada, terapkan <code>docs/database/portal_sso_20261022.sql</code> (tabel klien/kode), <code>portal_sso_secret_reveal_20261022.sql</code> (kolom secret terenkripsi), dan <code>portal_sso_launch_uri_20261024.sql</code> (URL peluncuran). Hak user memakai tabel akses Portal yang sudah ada; tidak ada migration akses baru pada panduan ini.</li>
+                    <li><strong>Database klien:</strong> siapkan tabel user lokal, role/permission aplikasi, dan tabel mapping identitas yang menyimpan <code>auth_source</code>, <code>external_sub</code>, <code>local_user_id</code>, serta waktu pembuatan/perubahan.</li>
+                </ul>
+                <div class="api-callout"><strong>Constraint minimal klien:</strong> <code>external_sub</code> unik per provider, foreign key <code>local_user_id</code> ke user lokal, dan aturan unik tambahan jika satu user lokal hanya boleh terhubung ke satu identitas Portal. Nama tabel/kolom dan DDL klien mengikuti skema aplikasi masing-masing. Jangan menyimpan client_secret atau authorization code di tabel user.</div>
+                <div class="small text-muted mt-3">Backup database sebelum migration. Pastikan semua tabel/kolom Portal di atas tersedia di environment target. Perubahan alur session klien tidak menambah skema Portal; kebutuhan mapping klien adalah bagian implementasi klien. Rincian field dan aturan mapping ada di <code>docs/database/portal-sso-prasyarat-database-klien-20261024.md</code>.</div>
+            </article>
             <article class="api-section mb-0" id="errors" data-api-section>
-                <div class="api-kicker">09 · Error dan batasan</div><h4 class="font-weight-bold mt-1">Respons yang perlu ditangani klien</h4>
+                <div class="api-kicker">13 · Error dan batasan</div><h4 class="font-weight-bold mt-1">Respons yang perlu ditangani klien</h4>
                 <div class="table-responsive"><table class="table table-bordered table-sm api-table"><thead><tr><th>HTTP</th><th>Error</th><th>Tindakan</th></tr></thead><tbody>
                     <tr><td>400</td><td><code>invalid_request</code></td><td>Periksa parameter wajib dan format PKCE.</td></tr><tr><td>400</td><td><code>invalid_grant</code></td><td>Code, secret, callback, verifier, masa berlaku, atau status klien tidak cocok.</td></tr><tr><td>403</td><td><code>access_denied</code></td><td>Admin portal perlu meninjau izin user untuk aplikasi.</td></tr><tr><td>405</td><td><code>method_not_allowed</code></td><td>Gunakan GET untuk authorize dan POST untuk token.</td></tr><tr><td>503</td><td><code>temporarily_unavailable</code></td><td>Periksa layanan portal/database dan coba kembali.</td></tr>
                 </tbody></table></div>

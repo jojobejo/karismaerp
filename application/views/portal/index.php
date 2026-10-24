@@ -594,7 +594,6 @@
             <a class="logout-link" href="<?= base_url('logout') ?>"><i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></a>
             <?php if (!empty($is_admin)): ?>
                 <nav class="admin-navigation" aria-label="Navigasi administrasi">
-                    <a href="<?= base_url('admin/portal-app-access') ?>"><i class="fas fa-th-large" aria-hidden="true"></i><span>Akses Aplikasi</span></a>
                     <a href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-link" aria-hidden="true"></i><span>Integrasi SSO</span></a>
                     <a href="<?= base_url('admin/api-documentation') ?>"><i class="fas fa-book-open" aria-hidden="true"></i><span>Dokumentasi API</span></a>
                     <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>

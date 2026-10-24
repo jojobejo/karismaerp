@@ -2,14 +2,14 @@
 
 ## Cakupan
 
-Ditambahkan halaman `master/organisasi` untuk mengelola departemen, jobdesk, dan jabatan melalui satu antarmuka bertab. Tombol **Master Organisasi** tersedia sebaris dengan **Tambah User** di halaman User Management.
+Ditambahkan halaman `master/organisasi` untuk mengelola departemen, jobdesk, dan jabatan melalui satu antarmuka bertab. Tautan **Setting Master Kantor** tersedia sebaris dengan **Tambah User** di halaman User Management.
 
 CRUD departemen menggunakan tabel `tb_departemen`; CRUD jobdesk menggunakan `tb_jobdesk` yang sudah dipakai sistem; CRUD jabatan menggunakan tabel `tb_jabatan` yang dibuat melalui skrip database terpisah. Endpoint modul dilindungi izin `master/user-management`.
 
 ## Cara penggunaan
 
 1. Buka **Master > User Management**.
-2. Klik **Master Organisasi** di sebelah **Tambah User**.
+2. Klik **Setting Master Kantor** di sebelah **Tambah User**.
 3. Pilih tab Departemen, Jobdesk, atau Jabatan.
 4. Gunakan tombol tambah untuk membuat data, ikon pensil untuk mengubah, dan ikon tempat sampah untuk menghapus.
 
