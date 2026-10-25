@@ -186,7 +186,7 @@
                             <thead style="background: #f1f5f9; color: #334155;">
                                 <tr>
                                     <th style="width: 40%;">Barang Komponen</th>
-                                    <th style="width: 20%;" class="text-center" id="thQtyKomponen">Isi dalam 1 Innerbox</th>
+                                    <th style="width: 20%;" class="text-center" id="thQtyKomponen">Qty</th>
                                     <th style="width: 12%;" class="text-center">Satuan Stok</th>
                                     <th style="width: 20%;" class="text-center bg-primary text-white" id="thTotalPaket">Total Isi / 1 Paket</th>
                                     <th style="width: 8%;" class="text-center">Aksi</th>
@@ -507,7 +507,7 @@ function updateInnerboxUIMode() {
         $('#f_innerbox_desc').text('1 Paket (Master Box) berisi beberapa Innerbox dengan isi seragam.');
         $('#labelKomposisiTitle').html('<i class="fas fa-layer-group text-primary mr-1"></i> Isi Barang dalam 1 Innerbox:');
         $('#labelKomposisiSubtitle').text('Tentukan komposisi barang penyusun dalam 1 Innerbox. Total isi 1 Paket akan dikalikan otomatis dengan jumlah Innerbox.');
-        $('#thQtyKomponen').text('Isi dalam 1 Innerbox');
+        $('#thQtyKomponen').text('Qty');
         $('#thTotalPaket').show();
         $('.col-total-paket').show();
     } else {
@@ -516,7 +516,7 @@ function updateInnerboxUIMode() {
         $('#f_innerbox_desc').text('Kemasan Standar: Barang komponen langsung dimasukkan ke dalam 1 Paket.');
         $('#labelKomposisiTitle').html('<i class="fas fa-layer-group text-primary mr-1"></i> Isi Barang per 1 Paket:');
         $('#labelKomposisiSubtitle').text('Tentukan jumlah masing-masing barang per 1 Paket langsung.');
-        $('#thQtyKomponen').text('Isi per 1 Paket');
+        $('#thQtyKomponen').text('Qty');
         $('#thTotalPaket').hide();
         $('.col-total-paket').hide();
     }
