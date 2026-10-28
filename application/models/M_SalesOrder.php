@@ -1172,10 +1172,12 @@ class M_SalesOrder extends CI_Model
             so.*,
             c.nama_customer,
             c.regional,
-            c.kd_rute AS customer_kd_rute
+            c.kd_rute AS customer_kd_rute,
+            g.nama_gudang
         ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
+        $this->db->join('tb_gudang g', 'g.id_gudang = so.gudang_id', 'left');
         $this->db->where('so.id_so', $id_so);
         return $this->db->get()->row_array();
     }
@@ -1304,6 +1306,14 @@ class M_SalesOrder extends CI_Model
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['jumlah_item' => count($details)]);
 
+        if (!empty($header['is_test_market'])) {
+            $this->load->model('M_TestMarket');
+            if (!$this->M_TestMarket->transfer_so_to_test_market($id_so, $header['create_by'] ?? 'system')) {
+                $this->db->trans_rollback();
+                return false;
+            }
+        }
+
         $this->db->trans_complete();
         return $this->db->trans_status() ? $id_so : false;
     }
@@ -1363,6 +1373,14 @@ class M_SalesOrder extends CI_Model
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);
+
+        if (!empty($so['is_test_market'])) {
+            $this->load->model('M_TestMarket');
+            if (!$this->M_TestMarket->transfer_so_to_test_market($id_so, $update_by)) {
+                $this->db->trans_rollback();
+                return false;
+            }
+        }
 
         $this->db->trans_complete();
         return $this->db->trans_status();
@@ -2281,19 +2299,24 @@ class M_SalesOrder extends CI_Model
         ]);
 
         if ($status === 'cancelled') {
-            $gudang_id = $so['gudang_id'];
-            $details  = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+            if (!empty($so['is_test_market'])) {
+                $this->load->model('M_TestMarket');
+                $this->M_TestMarket->reverse_transfer_so_test_market($id_so, $update_by);
+            } else {
+                $gudang_id = $so['gudang_id'];
+                $details  = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
 
-            foreach ($details as $d) {
-                $outstanding = (float)$d['qty'] - (float)$d['qty_faktur'];
-                if ($outstanding <= 0) continue;
+                foreach ($details as $d) {
+                    $outstanding = (float)$d['qty'] - (float)$d['qty_faktur'];
+                    if ($outstanding <= 0) continue;
 
-                $this->_kurangi_reserved_batch(
-                    $so['no_so'],
-                    $d['kd_barang'], $d['expired_date'],
-                    $d['no_lot'] ?? '', $gudang_id,
-                    $outstanding
-                );
+                    $this->_kurangi_reserved_batch(
+                        $so['no_so'],
+                        $d['kd_barang'], $d['expired_date'],
+                        $d['no_lot'] ?? '', $gudang_id,
+                        $outstanding
+                    );
+                }
             }
         }
 

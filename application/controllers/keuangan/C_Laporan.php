@@ -233,6 +233,21 @@ class C_Laporan extends CI_Controller
             ->limit(1)->get()->row_array();
         $id_wh_test_market = $wh_test_market ? (int)$wh_test_market['id_gudang'] : null;
 
+        $wh_transit_tm = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->group_start()
+                ->where('nama_gudang', 'Gudang Test Market')
+                ->or_where('nama_gudang', 'Gdg. Test Market')
+            ->group_end()
+            ->limit(1)->get()->row_array();
+        $id_wh_transit_tm = $wh_transit_tm ? (int)$wh_transit_tm['id_gudang'] : 17;
+
+        $wh_induk = $this->db->select('id_gudang')
+            ->from('tb_gudang')
+            ->like('nama_gudang', 'Induk')
+            ->limit(1)->get()->row_array();
+        $id_wh_induk = $wh_induk ? (int)$wh_induk['id_gudang'] : 2;
+
         // Ambil master gudang aktif
         $warehouses_raw = $this->db->get_where('tb_gudang', ['is_active' => 1])->result_array();
         $warehouses_map = [];
@@ -388,6 +403,57 @@ class C_Laporan extends CI_Controller
                               AND r.tanggal_realisasi <= " . $this->db->escape($end_date) . "
                               {$prod_filter_clause}";
                 $queries[] = "($sql_test_market_out)";
+            }
+        }
+
+        // 4b. Arus Mutasi SO Test Market (Dari Gudang Induk ke Gudang Test Market)
+        if ($this->db->table_exists('tbso_sales_order') && $this->db->table_exists('tbso_sales_order_detail')) {
+            // IN: Masuk ke Gudang Test Market saat SO dibuat
+            if (!$wh_target_id || $wh_target_id == $id_wh_transit_tm) {
+                $sql_tm_so_in = "SELECT 
+                                    sd.kd_barang,
+                                    {$id_wh_transit_tm} AS gudang_id,
+                                    COALESCE(so.tanggal_transaksi, DATE(so.create_at)) AS tanggal,
+                                    CONCAT(so.no_so, ' (Mutasi SO dari Gdg. Induk)') AS referensi,
+                                    sd.qty,
+                                    sd.hrg_pokok AS harga,
+                                    'IN' AS type,
+                                    'SO ' AS ref_prefix,
+                                    b.satuan,
+                                    b.nama_barang,
+                                    b.kelompok_dagang
+                                FROM tbso_sales_order so
+                                JOIN tbso_sales_order_detail sd ON so.id_so = sd.id_so
+                                JOIN tbpo_barang b ON sd.kd_barang = b.kode_barang
+                                WHERE so.is_test_market = 1
+                                  AND so.status NOT IN ('cancelled')
+                                  AND COALESCE(so.tanggal_transaksi, DATE(so.create_at)) <= " . $this->db->escape($end_date) . "
+                                  {$prod_filter_clause}";
+                $queries[] = "($sql_tm_so_in)";
+            }
+
+            // OUT: Keluar dari Gudang Induk menuju Gudang Test Market saat SO dibuat
+            if (!$wh_target_id || $wh_target_id == $id_wh_induk) {
+                $sql_tm_so_out = "SELECT 
+                                    sd.kd_barang,
+                                    {$id_wh_induk} AS gudang_id,
+                                    COALESCE(so.tanggal_transaksi, DATE(so.create_at)) AS tanggal,
+                                    CONCAT(so.no_so, ' (Mutasi SO ke Gudang Test Market)') AS referensi,
+                                    sd.qty,
+                                    sd.hrg_pokok AS harga,
+                                    'OUT' AS type,
+                                    'SO ' AS ref_prefix,
+                                    b.satuan,
+                                    b.nama_barang,
+                                    b.kelompok_dagang
+                                FROM tbso_sales_order so
+                                JOIN tbso_sales_order_detail sd ON so.id_so = sd.id_so
+                                JOIN tbpo_barang b ON sd.kd_barang = b.kode_barang
+                                WHERE so.is_test_market = 1
+                                  AND so.status NOT IN ('cancelled')
+                                  AND COALESCE(so.tanggal_transaksi, DATE(so.create_at)) <= " . $this->db->escape($end_date) . "
+                                  {$prod_filter_clause}";
+                $queries[] = "($sql_tm_so_out)";
             }
         }
 

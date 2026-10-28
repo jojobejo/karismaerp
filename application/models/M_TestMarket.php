@@ -4,6 +4,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class M_TestMarket extends CI_Model
 {
     const WAREHOUSE_NAME = 'Gdg. Test Market di Kios';
+    const WAREHOUSE_KIOS_NAME = 'Gdg. Test Market di Kios';
+    const TRANSIT_WAREHOUSE_NAME = 'Gudang Test Market';
 
     public function __construct()
     {
@@ -13,9 +15,63 @@ class M_TestMarket extends CI_Model
 
     public function ensure_schema()
     {
-        $this->db->query("\n            CREATE TABLE IF NOT EXISTS `tb_test_market_position` (\n                `id_position` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,\n                `id_faktur` INT NOT NULL,\n                `id_faktur_detail` INT NOT NULL,\n                `id_so` INT DEFAULT NULL,\n                `no_faktur` VARCHAR(30) NOT NULL,\n                `no_so` VARCHAR(30) DEFAULT NULL,\n                `kd_customer` VARCHAR(50) NOT NULL,\n                `customer_name` VARCHAR(150) DEFAULT NULL,\n                `kd_barang` VARCHAR(50) NOT NULL,\n                `nama_barang` VARCHAR(200) DEFAULT NULL,\n                `no_lot` VARCHAR(50) DEFAULT NULL,\n                `expired_date` DATE DEFAULT NULL,\n                `satuan` VARCHAR(20) DEFAULT NULL,\n                `gudang_asal_id` VARCHAR(30) DEFAULT NULL,\n                `gudang_test_market_id` INT NOT NULL,\n                `qty_titip` DECIMAL(15,3) NOT NULL DEFAULT 0.000,\n                `qty_terjual` DECIMAL(15,3) NOT NULL DEFAULT 0.000,\n                `qty_sisa` DECIMAL(15,3) NOT NULL DEFAULT 0.000,\n                `harga_jual` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `harga_pokok` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `status` ENUM('DI_KIOS','SEBAGIAN','HABIS','DIBATALKAN') NOT NULL DEFAULT 'DI_KIOS',\n                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n                PRIMARY KEY (`id_position`),\n                UNIQUE KEY `uk_test_market_faktur_detail` (`id_faktur_detail`),\n                KEY `idx_test_market_customer` (`kd_customer`, `status`),\n                KEY `idx_test_market_barang` (`kd_barang`, `status`),\n                KEY `idx_test_market_faktur` (`id_faktur`, `no_faktur`)\n            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci\n        ");
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_test_market_position` (
+                `id_position` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `id_faktur` INT NOT NULL,
+                `id_faktur_detail` INT NOT NULL,
+                `id_so` INT DEFAULT NULL,
+                `no_faktur` VARCHAR(30) NOT NULL,
+                `no_so` VARCHAR(30) DEFAULT NULL,
+                `kd_customer` VARCHAR(50) NOT NULL,
+                `customer_name` VARCHAR(150) DEFAULT NULL,
+                `kd_barang` VARCHAR(50) NOT NULL,
+                `nama_barang` VARCHAR(200) DEFAULT NULL,
+                `no_lot` VARCHAR(50) DEFAULT NULL,
+                `expired_date` DATE DEFAULT NULL,
+                `satuan` VARCHAR(20) DEFAULT NULL,
+                `gudang_asal_id` VARCHAR(30) DEFAULT NULL,
+                `gudang_test_market_id` INT NOT NULL,
+                `qty_titip` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                `qty_terjual` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                `qty_sisa` DECIMAL(15,3) NOT NULL DEFAULT 0.000,
+                `harga_jual` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `harga_pokok` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `status` ENUM('DI_KIOS','SEBAGIAN','HABIS','DIBATALKAN') NOT NULL DEFAULT 'DI_KIOS',
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_position`),
+                UNIQUE KEY `uk_test_market_faktur_detail` (`id_faktur_detail`),
+                KEY `idx_test_market_customer` (`kd_customer`, `status`),
+                KEY `idx_test_market_barang` (`kd_barang`, `status`),
+                KEY `idx_test_market_faktur` (`id_faktur`, `no_faktur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
 
-        $this->db->query("\n            CREATE TABLE IF NOT EXISTS `tb_test_market_realisasi` (\n                `id_realisasi` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,\n                `id_position` BIGINT UNSIGNED NOT NULL,\n                `id_pembayaran` INT UNSIGNED NOT NULL,\n                `id_faktur` INT NOT NULL,\n                `id_faktur_detail` INT NOT NULL,\n                `no_faktur` VARCHAR(30) NOT NULL,\n                `kd_customer` VARCHAR(50) NOT NULL,\n                `kd_barang` VARCHAR(50) NOT NULL,\n                `qty` DECIMAL(15,3) NOT NULL,\n                `harga_satuan` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `subtotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00,\n                `tanggal_realisasi` DATE NOT NULL,\n                `status` ENUM('POSTED','DIBATALKAN') NOT NULL DEFAULT 'POSTED',\n                `created_by` VARCHAR(100) DEFAULT NULL,\n                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n                PRIMARY KEY (`id_realisasi`),\n                UNIQUE KEY `uk_test_market_pembayaran` (`id_pembayaran`),\n                KEY `idx_test_market_realisasi_position` (`id_position`, `status`),\n                KEY `idx_test_market_realisasi_tanggal` (`tanggal_realisasi`)\n            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci\n        ");
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_test_market_realisasi` (
+                `id_realisasi` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `id_position` BIGINT UNSIGNED NOT NULL,
+                `id_pembayaran` INT UNSIGNED NOT NULL,
+                `id_faktur` INT NOT NULL,
+                `id_faktur_detail` INT NOT NULL,
+                `no_faktur` VARCHAR(30) NOT NULL,
+                `kd_customer` VARCHAR(50) NOT NULL,
+                `kd_barang` VARCHAR(50) NOT NULL,
+                `qty` DECIMAL(15,3) NOT NULL,
+                `harga_satuan` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `subtotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `tanggal_realisasi` DATE NOT NULL,
+                `status` ENUM('POSTED','DIBATALKAN') NOT NULL DEFAULT 'POSTED',
+                `created_by` VARCHAR(100) DEFAULT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_realisasi`),
+                UNIQUE KEY `uk_test_market_pembayaran` (`id_pembayaran`),
+                KEY `idx_test_market_realisasi_position` (`id_position`, `status`),
+                KEY `idx_test_market_realisasi_tanggal` (`tanggal_realisasi`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
 
         if ($this->db->table_exists('tb_test_market_realisasi') && !$this->db->field_exists('no_faktur_realisasi', 'tb_test_market_realisasi')) {
             $this->db->query("ALTER TABLE `tb_test_market_realisasi` ADD COLUMN `no_faktur_realisasi` VARCHAR(50) NULL DEFAULT NULL AFTER `no_faktur`, ADD INDEX `idx_no_faktur_realisasi` (`no_faktur_realisasi`)");
@@ -23,7 +79,33 @@ class M_TestMarket extends CI_Model
 
         $this->_align_table_collation('tb_test_market_position', 'tbso_faktur_detail');
         $this->_align_table_collation('tb_test_market_realisasi', 'tbkeu_pembayaran_faktur');
+        $this->get_transit_warehouse_id();
         return $this->get_warehouse_id();
+    }
+
+    public function get_transit_warehouse_id()
+    {
+        $row = $this->db->group_start()
+            ->where('nama_gudang', self::TRANSIT_WAREHOUSE_NAME)
+            ->or_where('nama_gudang', 'Gdg. Test Market')
+            ->group_end()
+            ->get('tb_gudang')
+            ->row_array();
+
+        if ($row) {
+            if (empty($row['is_active'])) {
+                $this->db->where('id_gudang', (int)$row['id_gudang'])->update('tb_gudang', ['is_active' => 1]);
+            }
+            return (int)$row['id_gudang'];
+        }
+
+        $this->db->insert('tb_gudang', [
+            'nama_gudang' => self::TRANSIT_WAREHOUSE_NAME,
+            'tipe'        => 'INDUK',
+            'is_active'   => 1,
+            'created_at'  => date('Y-m-d H:i:s'),
+        ]);
+        return (int)$this->db->insert_id();
     }
 
     public function get_warehouse_id()
@@ -461,5 +543,242 @@ class M_TestMarket extends CI_Model
             'created_at'   => date('Y-m-d H:i:s'),
         ]);
         return $this->db->trans_status();
+    }
+
+    /**
+     * Memutasikan stok barang dari Gudang Induk ke Gudang Test Market ketika SO dibuat dan direkam (Open).
+     *
+     * @param int|string $id_so
+     * @param string $user
+     * @return bool
+     */
+    public function transfer_so_to_test_market($id_so, $user = 'system')
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => (int)$id_so])->row_array();
+        if (!$so || empty($so['is_test_market'])) {
+            return true;
+        }
+
+        $transitWarehouseId = $this->get_transit_warehouse_id();
+
+        // Cek apakah mutasi untuk SO ini sudah pernah dicatat di stock ledger
+        $alreadyMutated = $this->db
+            ->where('ref_no', $so['no_so'])
+            ->where('ref_type', 'MUTASI TEST MARKET')
+            ->count_all_results('tberp_stock_ledger');
+
+        if ($alreadyMutated > 0 && (int)$so['gudang_id'] === (int)$transitWarehouseId) {
+            return true;
+        }
+
+        $sourceGudangId = (int)$so['gudang_id'];
+        if ($sourceGudangId <= 0 || $sourceGudangId === (int)$transitWarehouseId) {
+            $sourceGudangId = 2; // Default Gdg. Induk
+        }
+
+        $details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => (int)$id_so])->result_array();
+        if (empty($details)) {
+            return true;
+        }
+
+        foreach ($details as $d) {
+            $qty = (float)$d['qty'];
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $item = [
+                'kd_barang'    => $d['kd_barang'],
+                'no_lot'       => !empty($d['no_lot']) ? $d['no_lot'] : null,
+                'expired_date' => !empty($d['expired_date']) ? $d['expired_date'] : null,
+            ];
+
+            // 1. Kurangi stok fisik & reservasi di Gudang Asal (Gudang Induk)
+            $batchAsal = $this->_stock_batch($item, $sourceGudangId);
+            if ($batchAsal) {
+                $this->db->where('id', (int)$batchAsal['id'])
+                    ->set('qty_on_hand', 'GREATEST(0, qty_on_hand - ' . $qty . ')', false)
+                    ->set('qty_reserved', 'GREATEST(0, qty_reserved - ' . $qty . ')', false)
+                    ->set('update_at', date('Y-m-d H:i:s'))
+                    ->update('tberp_stock_batch');
+            }
+
+            // Ledger OUT dari Gudang Asal
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$sourceGudangId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'OUT',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'MUTASI TEST MARKET',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // 2. Tambah stok fisik & reservasi di Gudang Test Market (Transit)
+            $batchTransit = $this->_stock_batch($item, $transitWarehouseId);
+            if ($batchTransit) {
+                $this->db->where('id', (int)$batchTransit['id'])
+                    ->set('qty_on_hand', 'qty_on_hand + ' . $qty, false)
+                    ->set('qty_reserved', 'qty_reserved + ' . $qty, false)
+                    ->set('update_at', date('Y-m-d H:i:s'))
+                    ->update('tberp_stock_batch');
+            } else {
+                $this->db->insert('tberp_stock_batch', [
+                    'kd_barang'    => $item['kd_barang'],
+                    'gudang_id'    => (string)$transitWarehouseId,
+                    'no_lot'       => $item['no_lot'],
+                    'expired_date' => $item['expired_date'],
+                    'qty_on_hand'  => $qty,
+                    'qty_reserved' => $qty,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                    'update_at'    => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // Ledger IN mutasi masuk ke Gudang Test Market
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$transitWarehouseId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'IN',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'MUTASI TEST MARKET',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // Ledger RESERVE untuk SO pada Gudang Test Market
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$transitWarehouseId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'SALES_ORDER',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // 3. Update lokasi gudang SO ke Gudang Test Market
+        $this->db->where('id_so', (int)$id_so)->update('tbso_sales_order', [
+            'gudang_id' => (string)$transitWarehouseId,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Mengembalikan mutasi barang dari Gudang Test Market ke Gudang Induk jika SO dibatalkan.
+     *
+     * @param int|string $id_so
+     * @param string $user
+     * @return bool
+     */
+    public function reverse_transfer_so_test_market($id_so, $user = 'system')
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => (int)$id_so])->row_array();
+        if (!$so || empty($so['is_test_market'])) {
+            return true;
+        }
+
+        $transitWarehouseId = $this->get_transit_warehouse_id();
+        if ((int)$so['gudang_id'] !== (int)$transitWarehouseId) {
+            return true;
+        }
+
+        $defaultIndukId = 2; // Gudang Induk
+        $details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => (int)$id_so])->result_array();
+
+        foreach ($details as $d) {
+            $qty = (float)$d['qty'] - (float)($d['qty_faktur'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+
+            $item = [
+                'kd_barang'    => $d['kd_barang'],
+                'no_lot'       => !empty($d['no_lot']) ? $d['no_lot'] : null,
+                'expired_date' => !empty($d['expired_date']) ? $d['expired_date'] : null,
+            ];
+
+            // 1. Kurangi dari Gudang Test Market
+            $batchTransit = $this->_stock_batch($item, $transitWarehouseId);
+            if ($batchTransit) {
+                $this->db->where('id', (int)$batchTransit['id'])
+                    ->set('qty_on_hand', 'GREATEST(0, qty_on_hand - ' . $qty . ')', false)
+                    ->set('qty_reserved', 'GREATEST(0, qty_reserved - ' . $qty . ')', false)
+                    ->set('update_at', date('Y-m-d H:i:s'))
+                    ->update('tberp_stock_batch');
+            }
+
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$transitWarehouseId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'OUT',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'MUTASI TEST MARKET BATAL',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$transitWarehouseId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'RELEASE',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'SALES_ORDER_CANCEL',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // 2. Kembalikan ke Gudang Induk
+            $batchInduk = $this->_stock_batch($item, $defaultIndukId);
+            if ($batchInduk) {
+                $this->db->where('id', (int)$batchInduk['id'])
+                    ->set('qty_on_hand', 'qty_on_hand + ' . $qty, false)
+                    ->set('update_at', date('Y-m-d H:i:s'))
+                    ->update('tberp_stock_batch');
+            } else {
+                $this->db->insert('tberp_stock_batch', [
+                    'kd_barang'    => $item['kd_barang'],
+                    'gudang_id'    => (string)$defaultIndukId,
+                    'no_lot'       => $item['no_lot'],
+                    'expired_date' => $item['expired_date'],
+                    'qty_on_hand'  => $qty,
+                    'qty_reserved' => 0,
+                    'created_at'   => date('Y-m-d H:i:s'),
+                    'update_at'    => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $item['kd_barang'],
+                'gudang_id'    => (string)$defaultIndukId,
+                'no_lot'       => $item['no_lot'],
+                'expired_date' => $item['expired_date'],
+                'qty'          => $qty,
+                'tipe'         => 'IN',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'MUTASI TEST MARKET BATAL',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $this->db->where('id_so', (int)$id_so)->update('tbso_sales_order', [
+            'gudang_id' => (string)$defaultIndukId,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return true;
     }
 }

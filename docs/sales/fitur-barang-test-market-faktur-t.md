@@ -6,7 +6,9 @@ Barang **Test Market** adalah barang dagangan milik Karisma sendiri (pembelian s
 ### Karakteristik & Perbedaan Utama:
 | Parameter | Faktur Reguler (INV) | Faktur Konsinyasi (KINV) | Faktur Test Market (TINV) |
 | :--- | :--- | :--- | :--- |
-| **Sumber Fisik Barang** | Gudang Induk / Umum | Gudang Titipan Kios (15) | **Gudang Induk / Umum** |
+| **Sumber Fisik Barang** | Gudang Induk / Umum | Gudang Titipan Kios (15) | **Gudang Induk $\rightarrow$ Gudang Test Market** |
+| **Gudang Transit Saat SO** | Tetap di Gudang Induk (Reserve) | Tetap di Gudang Konsinyasi | **Dimutasi ke Gudang Test Market (Transit)** |
+| **Gudang Titipan di Kios** | Tidak Ada | Gdg. Titipan di Kios (14) | **Gdg. Test Market di Kios (16)** |
 | **Kepemilikan Barang** | Milik Karisma | Milik Supplier Konsinyasi | **Milik Karisma** |
 | **Pengakuan Jurnal Penjualan** | Saat Faktur Terbit | Saat Pembayaran di Keuangan | **Saat Pembayaran di Keuangan** |
 | **Pengakuan Jurnal HPP & Persediaan** | Saat Faktur Terbit | Saat Pembayaran di Keuangan (FIFO LPB Supplier) | **Saat Pembayaran di Keuangan (Harga Pokok Persediaan Karisma)** |
@@ -15,118 +17,106 @@ Barang **Test Market** adalah barang dagangan milik Karisma sendiri (pembelian s
 
 ---
 
-## 2. Skema & Perubahan Database
-Telah ditambahkan kolom flag `is_test_market` pada dua tabel utama:
+## 2. Struktur Gudang & Skema Database
 
-1. **`tbso_sales_order`**:
-   - Kolom: `is_test_market TINYINT(1) NOT NULL DEFAULT 0` (setelah `catatan`).
-   - Berisi status penanda apakah Sales Order tersebut merupakan pesanan barang test market.
+Untuk mengakomodasi alur uji pasar secara terisolasi dan tertib audit, terdapat **dua entitas gudang** yang bekerja bersama:
 
-2. **`tbso_faktur_penjualan`**:
-   - Kolom: `is_test_market TINYINT(1) NOT NULL DEFAULT 0` (setelah `cara_pembayaran`).
-   - Berisi status penanda faktur test market sehingga saat pembayaran di Keuangan dikenali secara tepat.
+1. **`Gudang Test Market` (Gudang Transit Karisma)**:
+   - Tipe: `INDUK` (Gudang Internal).
+   - Fungsi: Menampung barang yang sudah disiapkan untuk pesanan Test Market saat Sales Order (SO) selesai dibuat & direkam. Memastikan stok fisik di Gudang Induk berkurang secara riil dan teralokasi khusus ke gudang uji pasar.
 
-Migrasi database tersedia pada `db/migrations/20261015_add_test_market_sales.sql`. Controller juga memeriksa keberadaan kedua kolom sebelum form SO atau faktur digunakan agar instalasi yang belum menjalankan migrasi tidak menghilangkan pilihan Test Market secara diam-diam.
+2. **`Gdg. Test Market di Kios` (Gudang Virtual Titipan)**:
+   - Tipe: `INDUK` (Gudang Virtual Kios).
+   - Fungsi: Menampung posisi titipan barang di masing-masing kios setelah Faktur T resmi diterbitkan oleh Admin SC / Logistik hingga kios melakukan pembayaran/pembelian.
 
-### Tracking Titipan di Kios
+### Skema & Migrasi Database:
+- Migrasi Gudang Transit: `database/migrations/20261028_add_gudang_test_market.sql`
+- Migrasi Flag Test Market: `db/migrations/20261015_add_test_market_sales.sql`
+- Migrasi Tracking Posisi Kios: `db/migrations/20261015_test_market_tracking.sql`
 
-Tracking operasional menggunakan gudang virtual terpisah bernama **Gdg. Test Market di Kios**. Gudang ini tidak digabung dengan **Gdg. Titipan di Kios** milik alur Faktur K karena Test Market merupakan persediaan milik Karisma dan tidak menimbulkan settlement atau hutang kepada supplier konsinyasi.
-
-Migrasi `db/migrations/20261015_test_market_tracking.sql` menyediakan:
-
-1. Master gudang virtual Test Market.
-2. Tabel `tb_test_market_position` untuk saldo per faktur, kios, barang, lot, dan expired date.
-3. Tabel `tb_test_market_realisasi` untuk barang dan qty yang dibeli kios pada setiap pembayaran.
-4. Kolom referensi item dan qty realisasi pada `tbkeu_pembayaran_faktur`.
-
-Alur stoknya adalah:
-
-1. Saat Faktur T diterbitkan, stok keluar dari Gudang Induk dan masuk ke Gdg. Test Market di Kios.
-2. Posisi awal dicatat sebagai `qty_titip` dan `qty_sisa`.
-3. Saat pembayaran, petugas memilih barang dan mengisi qty yang dibeli kios.
-4. Sistem mengurangi `qty_sisa`, menambah `qty_terjual`, dan mengeluarkan stok dari gudang virtual.
-5. Jika pembayaran di-unpost, qty dan stok virtual dikembalikan ke posisi titipan.
-6. Faktur T tidak pernah dimasukkan ke `tb_konsinyasi_settlement` atau alokasi FIFO konsinyasi supplier.
-
-Halaman monitoring tersedia melalui menu **Test Market** di dashboard atau URL `/test-market`. Ringkasan utama hanya menampilkan jumlah di kios, jumlah dibeli kios, dan sisa di kios. Informasi operasional dipisahkan menjadi dua tab: **Barang Test Market di Kios** untuk rekap posisi per barang dan **Barang yang Sudah Dibeli Kios** untuk riwayat realisasi pembelian. Kedua tab menggunakan pagination server-side sebanyak 20 data per halaman dengan parameter halaman terpisah. Daftar posisi dikelompokkan berdasarkan barang serta menampilkan jumlah kios dan faktur. Nama barang dapat diklik untuk menuju halaman detail tersendiri. Halaman detail menampilkan ringkasan jumlah dititipkan, laku/dibeli, sisa dan nilai laku; posisi barang per kios; rincian faktur, lot, expired; serta riwayat transaksi barang yang sudah dibeli kios. Filter kios serta status dari halaman rekap ikut diterapkan pada halaman detail.
+Kolom penanda:
+- `tbso_sales_order.is_test_market` (TINYINT 1)
+- `tbso_faktur_penjualan.is_test_market` (TINYINT 1)
 
 ---
 
-## 3. Alur Operasional (Step-by-Step)
+## 3. Rantai Pergerakan Barang (Multi-Stage Stock Movement)
 
 ```mermaid
 graph TD
-    A["1. Sales membuat SO<br/>Checklist: [✓] Barang Test Market"] --> B["2. Logistik / Admin SC Verifikasi &amp; Buat Faktur"]
-    B --> C["3. Terbit Faktur Prefix 'T'<br/>(TINVddmmyyxxxx)"]
-    C --> D["4. Stok Gudang Induk berkurang<br/>(Jurnal Penjualan DIPENDING)"]
-    D --> E["5. Kios Membeli / Membayar di Keuangan<br/>(/keuangan/pembayaran/bayar/{id})"]
-    E --> F["6. Terbit Jurnal SJ (Penjualan Test Market)<br/>&amp; Jurnal GI Persediaan / HPP"]
-    E --> G["7. Bersih dari Modul Purchasing Konsinyasi<br/>(Tanpa pelunasan hutang supplier)"]
+    A["1. Form Sales Order<br/>Pilih Gudang Induk &amp; Ceklis [✓] Test Market"] -->|Simpan SO (Draft)| B["Stok di Gudang Induk di-RESERVE"]
+    B -->|Klik 'Rekam SO' (Status Jadi Open)| C["2. MUTASI OTOMATIS<br/>Gudang Induk (OUT) ➔ Gudang Test Market (IN + RESERVE)<br/>Lokasi SO beralih ke Gudang Test Market"]
+    C -->|Verifikasi &amp; Terbitkan Faktur T| D["3. FAKTUR PENJUALAN (Prefix T)<br/>Gudang Test Market (OUT)<br/>➔ Masuk ke Gdg. Test Market di Kios (IN Titipan)"]
+    D -->|Kios Membayar / Beli di Keuangan| E["4. REALISASI PEMBAYARAN<br/>Gdg. Test Market di Kios (OUT Terjual)<br/>Terbit Jurnal Penjualan (SJ) &amp; HPP (GI)"]
+    C -.->|Jika SO Dibatalkan / Cancel| F["MUTASI ROLLBACK<br/>Gudang Test Market (OUT) ➔ Gudang Induk (IN)<br/>Stok fisik kembali utuh ke Gudang Induk"]
 ```
 
-### Langkah 1: Input Sales Order
-- Buka menu **Sales Order $\rightarrow$ Buat Sales Order Baru**.
-- Pilih Gudang Induk (non-konsinyasi) dan Customer.
-- Beri tanda centang pada checkbox:
-  `[✓] Barang Test Market (Faktur T)`
-  *(Stok fisik bersumber dari Gudang Induk. Penjualan & HPP diakui saat dibeli/dibayar kios via Faktur T).*
-- Simpan SO. Nomor SO akan memiliki badge penanda `Test Market`.
+### Tahapan Mutasi & Pengaruh Stok:
 
-### Langkah 2: Pembuatan Faktur (Admin SC)
-- Masuk ke menu **Admin SC $\rightarrow$ SO Siap Faktur** (atau Pilih Barang Faktur).
-- Saat membuka form faktur, sistem mendeteksi `is_test_market = 1` dan otomatis mengarahkan prefix nomor faktur menjadi **`T`** (`TINVddmmyyxxxx`).
-- Pada form faktur terdapat notifikasi:
-  *Faktur Barang Test Market (Kode Awalan T • Jurnal Penjualan diakui saat dibayar oleh kios).*
-- Saat faktur disimpan:
-  - Stok fisik di batch Gudang Induk berkurang.
-  - Jurnal penjualan **ditunda/dipending** (tidak langsung posting ke general ledger).
-
-### Langkah 3: Penerimaan Pembayaran (Keuangan)
-- Saat kios membayar/membeli barang test market tersebut:
-  Buka halaman pembayaran nota di `/keuangan/pembayaran/bayar/{id_faktur}`.
-- Lakukan pembayaran sesuai nominal laku kios.
-- Sistem secara otomatis menerbitkan:
-  1. **Jurnal Penjualan (`SALES_INVOICE`)**:
-     - *Keterangan*: `Penjualan Test Market: TINV... - [Nama Customer] (Realisasi Pembelian Kios)`
-     - *Debit*: Piutang Usaha (13099)
-     - *Kredit*: Penjualan Barang Dagang (41011/41010)
-     - *Kredit*: PPN Keluaran (23011) jika barang kena pajak
-  2. **Jurnal HPP & Persediaan (`GOODS_ISSUE`)**:
-     - *Keterangan*: `Penyesuaian persediaan test market, untuk SJ...`
-     - *Debit*: Harga Pokok Penjualan Test Market (51010)
-     - *Kredit*: Persediaan Barang Dagang (Test Market) (14010)
-  3. **Jurnal Pembayaran Kas/Bank (`RECEIPT`)**:
-     - *Debit*: Kas / Bank
-     - *Kredit*: Piutang Usaha
-- **Penerbitan Faktur Realisasi Mandiri (`TINV...-1`, `TINV...-2`)**:
-  - Saat pembayaran di Keuangan dicatat, sistem menerbitkan nomor faktur realisasi mandiri bertanda strip (contoh `TINV2010260001-1`).
-  - Dokumen ini tersimpan secara mandiri dan dapat dilihat di halaman **Admin Transaksi** (`admin/transaksi`) pada tab **Faktur Test Market**.
-  - Dilengkapi tombol cetak faktur penjualan resmi serta audit jurnal akuntansi (Jurnal Penjualan SJ dan Jurnal HPP GI).
-- **Modul Purchasing Konsinyasi**:
-  Faktur T sama sekali **tidak disinkronkan** ke tabel `tb_konsinyasi_settlement`, sehingga halaman pelunasan hutang supplier konsinyasi tetap bersih dari transaksi test market.
+| Tahapan | Lokasi Keluar (OUT) | Lokasi Masuk (IN) | Keterangan / Ledger Ref Type | Dampak Finansial / Jurnal |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Simpan SO (Draft)** | - | Gudang Induk | `SALES_ORDER` (`RESERVE`) | Belum ada jurnal (hanya reservasi stok) |
+| **2. Rekam SO (Open / Jadi)** | **Gudang Induk** | **Gudang Test Market** | `MUTASI TEST MARKET` | Mutasi antar gudang internal Karisma |
+| **3. Terbit Faktur (TINV...)** | **Gudang Test Market** | **Gdg. Test Market di Kios** | `FAKTUR PENJUALAN` $\rightarrow$ `TEST MARKET TITIP` | Jurnal penjualan & HPP dipending |
+| **4. Pembayaran Kios** | **Gdg. Test Market di Kios** | - | `TEST MARKET TERJUAL` | Pengakuan Penjualan (`SJ`) & HPP (`GI`) |
+| **5. Cancel SO (Batal)** | **Gudang Test Market** | **Gudang Induk** | `MUTASI TEST MARKET BATAL` | Stok fisik dikembalikan utuh ke Gudang Induk |
 
 ---
 
-## 4. Integrasi Admin Transaksi Hub (`admin/transaksi`)
-Tersedia tab khusus **Faktur Test Market** berdampingan dengan **Faktur Konsinyasi**:
-- Menampilkan nomor faktur anak (`TINV...-1`), nomor faktur induk / SO, tanggal transaksi, kios/customer, status realisasi (`LAKU`), nominal bayar, status jurnal (`POSTED`), serta jurnal debit/kredit.
-- Tombol **Detail** menampilkan rincian barang yang laku, lot, kuantitas, harga, dan multi-jurnal akuntansi terkait.
-- Tombol **Cetak Faktur Realisasi** pada modal detail untuk mencetak nota penjualan test market resmi.
-- Mendukung repost, unpost (rollback), dan delete transaksi secara sinkron dengan saldo stok virtual kios.
+## 4. Alur Operasional Pengguna (Step-by-Step)
+
+### Langkah 1: Input Sales Order (Sales)
+1. Buka menu **Sales Order $\rightarrow$ Buat Sales Order Baru**.
+2. Pilih Customer dan Gudang (default **Gdg. Induk**).
+3. Beri tanda centang pada checkbox:
+   `[✓] Barang Test Market (Faktur T)`
+4. Simpan SO (status awal: `Draft`).
+
+### Langkah 2: Rekam Sales Order (Sales / Admin)
+1. Buka halaman detail SO.
+2. Klik tombol **Rekam SO**.
+3. Sistem secara otomatis:
+   - Mengubah status SO dari `Draft` menjadi `Open`.
+   - Menjalankan mutasi stok otomatis dari **Gdg. Induk** ke **Gudang Test Market** (mengurangi stok fisik & reserved di Gudang Induk, dan menambah stok fisik & reserved di Gudang Test Market).
+   - Memperbarui entitas gudang SO menjadi **Gudang Test Market**.
+
+### Langkah 3: Verifikasi Logistik & Cetak Faktur (Logistik / Admin SC)
+1. SO diproses verifikasi rute dan loading seperti biasa.
+2. Masuk ke menu **Admin SC $\rightarrow$ SO Siap Faktur** (atau Pilih Barang Faktur).
+3. Saat membuka form faktur, sistem mendeteksi penanda Test Market dan memberikan nomor faktur awalan **`T`** (`TINVddmmyyxxxx`).
+4. Saat Faktur disimpan:
+   - Stok fisik & reserved berkurang dari **Gudang Test Market**.
+   - Stok virtual otomatis dicatat masuk ke **Gdg. Test Market di Kios**.
+   - Data posisi titipan tercatat di `tb_test_market_position`.
+   - Jurnal piutang dan penjualan **ditunda/dipending** sampai kios membayar.
+
+### Langkah 4: Realisasi Pembayaran di Keuangan (Kasir / Keuangan)
+1. Saat kios membayar/membeli barang test market, buka halaman pembayaran di `/keuangan/pembayaran/bayar/{id_faktur}`.
+2. Input qty yang dibeli oleh kios.
+3. Sistem otomatis:
+   - Mengurangi stok virtual di **Gdg. Test Market di Kios**.
+   - Memperbarui status posisi di kios (`SEBAGIAN` atau `HABIS`).
+   - Menerbitkan **Jurnal Penjualan** (`SALES_INVOICE`) dan **Jurnal HPP & Persediaan** (`GOODS_ISSUE`).
+   - Menerbitkan nomor faktur realisasi mandiri (`TINV...-1`, `TINV...-2`) pada **Admin Transaksi** tab **Faktur Test Market**.
 
 ---
 
-## 5. File-File Yang Dimodifikasi
-1. `application/views/content/sales/so_form.php` (penambahan checkbox Test Market).
-2. `application/views/content/sales/so_list.php` (badge visual Test Market pada tabel SO).
-3. `application/views/content/sales/so_detail.php` (rincian jenis SO Test Market).
-4. `application/views/content/sales/faktur_form.php` (notifikasi faktur Test Market prefix T).
-5. `application/controllers/sales/C_SalesOrder.php` (handling parameter `is_test_market` pada create/update SO dan generate nomor faktur prefix T).
-6. `application/models/M_SalesOrder.php` (persistensi header SO & faktur, serta penundaan jurnal otomatis untuk faktur T).
-7. `application/models/M_Journal.php` (realisasi jurnal penjualan, pengakuan HPP dari harga pokok barang dagang induk, dan penerbitan faktur turunan T).
-8. `application/controllers/keuangan/C_pembayaran.php` (penomoran otomatis termin `T...-1`, `T...-2` saat pembayaran dan dukungan cetak faktur test market).
-9. `application/models/M_Konsinyasi.php` (penerbitan record faktur realisasi mandiri untuk Test Market dengan entitas Gudang Induk).
-10. `application/models/M_TestMarket.php` (penambahan kolom `no_faktur_realisasi` pada `tb_test_market_realisasi`).
-11. `application/models/admin/M_Transaksi.php` (subquery filter tab `faktur_test_market`, detail breakdown jurnal, unpost/repost/delete).
-12. `application/views/content/admin/transaksi/index.php` (navigasi tab Faktur Test Market, styling badge, dan tombol Cetak Faktur Realisasi).
+## 5. File & Modul Terkait
+1. `database/migrations/20261028_add_gudang_test_market.sql` (Master Gudang Test Market).
+2. `application/models/M_TestMarket.php`:
+   - `get_transit_warehouse_id()`: Pengelolaan ID Gudang Test Market.
+   - `transfer_so_to_test_market()`: Eksekutor mutasi stok saat SO direkam.
+   - `reverse_transfer_so_test_market()`: Rollback mutasi stok jika SO dibatalkan.
+   - `register_invoice()`: Perpindahan stok ke Gdg. Test Market di Kios saat Faktur T terbit.
+   - `realize_payment()`: Pengurangan stok virtual saat pembayaran di Keuangan.
+3. `application/models/M_SalesOrder.php`:
+   - `rekam_so()`: Trigger mutasi otomatis dari Gudang Induk ke Gudang Test Market saat SO Open.
+   - `update_status()`: Trigger rollback stok ke Gudang Induk saat SO dibatalkan (`cancelled`).
+   - `buat_faktur()`: Pemotongan stok dari Gudang Test Market dan delegasi ke `register_invoice()`.
+   - `get_so()`: Join ke `tb_gudang` untuk menampilkan nama gudang secara jelas.
+4. `application/controllers/keuangan/C_Laporan.php`:
+   - `kartu_stock_gudang_data()`: Sinkronisasi arus mutasi SO Test Market (`IN` ke Gudang Test Market dan `OUT` dari Gudang Induk) agar kartu stok per gudang tetap seimbang (*balance*).
+5. `application/views/content/sales/so_form.php` (Checkbox Test Market).
+6. `application/views/content/sales/so_detail.php` (Tampilan nama gudang dan badge Test Market).
+7. `application/views/content/keuangan/laporan/laporan_barang/kartu_stock_gudang.php` (Laporan Kartu Stok Per Gudang).
 

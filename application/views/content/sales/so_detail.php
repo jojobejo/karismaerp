@@ -301,7 +301,7 @@ $format_payment = function($value) {
                                 </tr>
                                 <tr>
                                     <td class="text-muted pl-3">Gudang</td>
-                                    <td><?= htmlspecialchars($so['gudang_id']) ?></td>
+                                    <td><strong><?= !empty($so['nama_gudang']) ? htmlspecialchars($so['nama_gudang']) : htmlspecialchars($so['gudang_id']) ?></strong></td>
                                 </tr>
                             </table>
                         </div>
