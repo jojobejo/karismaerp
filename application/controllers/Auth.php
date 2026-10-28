@@ -11,6 +11,10 @@ class Auth extends CI_Controller
 
     function index()
     {
+        if ($this->uri->segment(1) === null) {
+            redirect('Auth');
+            return;
+        }
         $this->load->view("partial/login/header");
         $this->load->view("content/login/body");
         $this->load->view("partial/login/footer");
