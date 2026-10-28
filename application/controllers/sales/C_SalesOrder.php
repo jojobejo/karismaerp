@@ -19,6 +19,43 @@ class C_SalesOrder extends CI_Controller
         $this->load->helper(['url', 'form']);
         $this->config->load('plafon_api', false, true);
         $this->_initApprovalTable();
+
+        // Pembatasan akses khusus user admkeu: hanya boleh mengakses fitur Pecah Faktur
+        if (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu') {
+            $allowedAdmkeuMethods = [
+                'pecah_faktur',
+                'import_faktur_z',
+                'template_import_faktur_z',
+                'pecah_faktur_kios',
+                'auto_split_kios',
+                'split_faktur',
+                'simpan_split_faktur',
+                'split_faktur_batch',
+                'simpan_split_faktur_batch',
+                'detail_faktur',
+                'detail_faktur_pecah',
+                'cetak_faktur_pecah',
+                'cetak_faktur',
+                'hapus_faktur_pecah',
+                'reset_pecah_faktur_induk',
+                'export_faktur_pecah',
+                'export_faktur_z_selesai',
+                'customer_acak',
+                'sync_customer_acak',
+                'simpan_customer_acak',
+                'update_customer_acak',
+                'hapus_customer_acak',
+                'get_next_kode_acak',
+                'ajax_search_kios',
+                'admin_sc_activity_log',
+                'get_faktur_activity_log_json',
+            ];
+            $currentMethod = strtolower((string)$this->router->fetch_method());
+            if (!in_array($currentMethod, $allowedAdmkeuMethods, true)) {
+                redirect('sales_order/pecah_faktur');
+                return;
+            }
+        }
     }
 
     private function _initApprovalTable()
@@ -2218,7 +2255,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         $has_remaining_split_qty = false;
-        if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && !in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+        if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && $this->_canSplitFakturZStatus($faktur)) {
             $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
                 ->from('tbso_faktur_z_pecah_detail fd')
                 ->where('fd.parent_id_faktur', $numeric_id_faktur)
@@ -2390,6 +2427,564 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    /**
+     * Mengunduh template Excel untuk import Faktur Z dari sistem eksternal.
+     */
+    public function template_import_faktur_z()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data Faktur Z');
+
+        $headers = [
+            'no_faktur_z', 'tanggal_faktur', 'kd_customer', 'gudang_id', 'salesman',
+            'cara_pembayaran', 'tanggal_jatuh_tempo', 'kd_barang', 'qty_box', 'qty_pcs', 'satuan',
+            'isi_per_box', 'harga_satuan_z', 'diskon_persen', 'pajak_persen', 'no_lot',
+            'expired_date', 'berat_gram', 'kubikasi_m3', 'catatan'
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+        $sampleCustomer = $this->db->select('kd_customer')->from('tb_customer')->order_by('kd_customer', 'ASC')->limit(1)->get()->row_array();
+        $sampleVolumeSelect = $this->db->field_exists('kubikasi', 'tbpo_barang') ? 'kubikasi' : '0 AS kubikasi';
+        $sampleItem = $this->db->select('kode_barang, satuan, isi, berat, ' . $sampleVolumeSelect, false)->from('tbpo_barang')
+            ->where('is_active', 'T')->where('isi >', 1)->order_by('kode_barang', 'ASC')->limit(1)->get()->row_array();
+        if (empty($sampleItem)) {
+            $sampleItem = $this->db->select('kode_barang, satuan, isi, berat, ' . $sampleVolumeSelect, false)->from('tbpo_barang')
+                ->where('is_active', 'T')->order_by('kode_barang', 'ASC')->limit(1)->get()->row_array();
+        }
+        $samplePackSize = max(1, (int)round((float)($sampleItem['isi'] ?? 1)));
+        $sampleExtraPcs = $samplePackSize > 2 ? 2 : 0;
+        $sheet->fromArray([
+            'ZEXT' . date('dmy') . '001', date('Y-m-d'), $sampleCustomer['kd_customer'] ?? 'KODE_CUSTOMER', 'BLI-1', 'Nama Sales',
+            'cash', date('Y-m-d'), $sampleItem['kode_barang'] ?? 'KODE_BARANG', 1, (string)$sampleExtraPcs,
+            $sampleItem['satuan'] ?? 'PCS', $samplePackSize,
+            125000, 0, 11, 'LOT-001', date('Y-m-d', strtotime('+2 years')),
+            (float)($sampleItem['berat'] ?? 0), (float)($sampleItem['kubikasi'] ?? 0), 'Import dari sistem eksternal'
+        ], null, 'A2');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '198754']
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+        ];
+        $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter('A1:T5001');
+        $sheet->getStyle('B2:B5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('G2:G5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('Q2:Q5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('M2:O5001')->getNumberFormat()->setFormatCode('#,##0.00');
+        foreach (range('A', 'T') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $guide = $spreadsheet->createSheet();
+        $guide->setTitle('Petunjuk');
+        $guideRows = [
+            ['PETUNJUK IMPORT FAKTUR Z EKSTERNAL'],
+            ['1. Jangan mengubah nama atau urutan kolom pada sheet Data Faktur Z.'],
+            ['2. Satu baris mewakili satu barang. Ulangi data header untuk setiap barang dalam faktur yang sama.'],
+            ['3. Nomor Faktur Z wajib diawali huruf Z, unik, dan maksimal 30 karakter.'],
+            ['4. kd_customer dan kd_barang wajib cocok dengan sheet referensi.'],
+            ['5. Format tanggal menggunakan YYYY-MM-DD. expired_date boleh kosong untuk barang tanpa lot/kedaluwarsa.'],
+            ['6. qty_box adalah jumlah box dan qty_pcs adalah tambahan pcs di luar box. Keduanya tidak boleh kosong bersamaan.'],
+            ['7. Total qty pcs dihitung: (qty_box × isi_per_box) + qty_pcs. qty_pcs harus lebih kecil dari isi_per_box.'],
+            ['8. harga_satuan_z adalah harga per pcs yang SUDAH termasuk PPN, sama seperti transaksi KARISMA ERP.'],
+            ['9. pajak_persen hanya memisahkan DPP dan PPN dari harga include pajak; pajak tidak ditambahkan lagi.'],
+            ['10. diskon_persen dan pajak_persen diisi angka 0 sampai 100.'],
+            ['11. berat_gram dan kubikasi_m3 boleh kosong; sistem mengambil nilai master barang.'],
+            ['12. Import bersifat atomik: jika satu baris salah, seluruh file tidak disimpan.'],
+            ['13. Import ini tidak mengurangi stok dan tidak membentuk jurnal penjualan.']
+        ];
+        $guide->fromArray($guideRows, null, 'A1');
+        $guide->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $guide->getColumnDimension('A')->setWidth(115);
+
+        $customerSheet = $spreadsheet->createSheet();
+        $customerSheet->setTitle('Referensi Customer');
+        $customerSheet->fromArray(['kd_customer', 'nama_customer', 'nama_kios'], null, 'A1');
+        $customers = $this->db->select('kd_customer, nama_customer, nama_kios')
+            ->from('tb_customer')->order_by('kd_customer', 'ASC')->get()->result_array();
+        if (!empty($customers)) {
+            $customerSheet->fromArray($customers, null, 'A2');
+        }
+        $customerSheet->getStyle('A1:C1')->applyFromArray($headerStyle);
+        $customerSheet->freezePane('A2');
+        $customerSheet->setAutoFilter('A1:C' . max(2, count($customers) + 1));
+        foreach (range('A', 'C') as $column) {
+            $customerSheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $itemSheet = $spreadsheet->createSheet();
+        $itemSheet->setTitle('Referensi Barang');
+        $itemSheet->fromArray(['kd_barang', 'nama_barang', 'satuan', 'isi_per_box', 'berat_gram', 'kubikasi_m3'], null, 'A1');
+        $itemVolumeSelect = $this->db->field_exists('kubikasi', 'tbpo_barang') ? 'kubikasi AS kubikasi_m3' : '0 AS kubikasi_m3';
+        $items = $this->db->select('kode_barang AS kd_barang, nama_barang, satuan, isi AS isi_per_box, berat AS berat_gram, ' . $itemVolumeSelect, false)
+            ->from('tbpo_barang')->where('is_active', 'T')->order_by('kode_barang', 'ASC')->get()->result_array();
+        if (!empty($items)) {
+            $itemSheet->fromArray($items, null, 'A2');
+        }
+        $itemSheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $itemSheet->freezePane('A2');
+        $itemSheet->setAutoFilter('A1:F' . max(2, count($items) + 1));
+        foreach (range('A', 'F') as $column) {
+            $itemSheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+        $filename = 'template_import_faktur_z_' . date('Ymd') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Mengimpor Faktur Z eksternal sebagai sumber khusus pemecahan Faktur H.
+     * Data tidak menjalankan proses stok maupun jurnal.
+     */
+    public function import_faktur_z()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+        if (strtoupper((string)$this->input->method()) !== 'POST') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
+
+        $file = $_FILES['file_faktur_z'] ?? null;
+        if (!$file || (int)$file['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('error', 'File Excel Faktur Z belum dipilih atau gagal diunggah.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xlsx', 'xls'], true) || (int)$file['size'] > (5 * 1024 * 1024)) {
+            $this->session->set_flashdata('error', 'File harus berformat .xlsx/.xls dan berukuran maksimal 5 MB.');
+            redirect('sales_order/pecah_faktur');
+            return;
+        }
+
+        try {
+            $this->_loadPhpSpreadsheetForFakturZ();
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($file['tmp_name']);
+            $sheet = $spreadsheet->getSheetByName('Data Faktur Z') ?: $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, false, false, false);
+
+            if (count($rows) < 2) {
+                throw new \RuntimeException('Sheet Data Faktur Z tidak memiliki data.');
+            }
+            if (count($rows) > 5001) {
+                throw new \RuntimeException('Jumlah data melebihi batas 5.000 baris.');
+            }
+
+            $importFields = [
+                'no_faktur_z', 'tanggal_faktur', 'kd_customer', 'gudang_id', 'salesman',
+                'cara_pembayaran', 'tanggal_jatuh_tempo', 'kd_barang', 'qty_box', 'qty_pcs', 'satuan',
+                'isi_per_box', 'harga_satuan_z', 'diskon_persen', 'pajak_persen', 'no_lot',
+                'expired_date', 'berat_gram', 'kubikasi_m3', 'catatan'
+            ];
+            $requiredHeaders = [
+                'no_faktur_z', 'tanggal_faktur', 'kd_customer', 'kd_barang',
+                'qty_box', 'qty_pcs', 'isi_per_box', 'harga_satuan_z'
+            ];
+            $headerAliases = [
+                'nomor_faktur_z' => 'no_faktur_z',
+                'kode_kios' => 'kd_customer',
+                'kode_customer' => 'kd_customer',
+                'kode_barang' => 'kd_barang',
+                'jumlah_box' => 'qty_box',
+                'jumlah_pcs' => 'qty_pcs',
+                'harga_satuan' => 'harga_satuan_z',
+                'diskon' => 'diskon_persen',
+                'pajak' => 'pajak_persen',
+                'nomor_lot' => 'no_lot',
+                'kedaluwarsa' => 'expired_date',
+                'jatuh_tempo' => 'tanggal_jatuh_tempo'
+            ];
+            $headerMap = [];
+            foreach (($rows[0] ?? []) as $index => $header) {
+                $normalized = strtolower(trim((string)$header));
+                $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized);
+                $normalized = trim($normalized, '_');
+                $normalized = $headerAliases[$normalized] ?? $normalized;
+                $headerMap[$normalized] = $index;
+            }
+            $missingHeaders = array_values(array_diff($requiredHeaders, array_keys($headerMap)));
+            if (!empty($missingHeaders)) {
+                throw new \RuntimeException(
+                    'Kolom template tidak lengkap: ' . implode(', ', $missingHeaders) .
+                    '. Silakan unduh dan gunakan template Faktur Z terbaru.'
+                );
+            }
+
+            $rawData = [];
+            $customerCodes = [];
+            $itemCodes = [];
+            $defaultWarehouse = trim((string)($this->_getCurrentUser()['wilayah'] ?? '')) ?: 'EXTERNAL';
+            foreach (array_slice($rows, 1, null, true) as $rowIndex => $row) {
+                $hasValue = false;
+                foreach ($row as $cell) {
+                    if (trim((string)$cell) !== '') {
+                        $hasValue = true;
+                        break;
+                    }
+                }
+                if (!$hasValue) {
+                    continue;
+                }
+
+                $line = $rowIndex + 1;
+                foreach ($row as $cell) {
+                    if (is_string($cell) && strpos(ltrim($cell), '=') === 0) {
+                        throw new \RuntimeException('Baris ' . $line . ': formula Excel tidak diizinkan pada file import.');
+                    }
+                }
+                $data = [];
+                foreach ($importFields as $field) {
+                    $data[$field] = isset($headerMap[$field]) ? ($row[$headerMap[$field]] ?? null) : null;
+                }
+                $data['_line'] = $line;
+                $data['no_faktur_z'] = strtoupper(trim((string)$data['no_faktur_z']));
+                $data['kd_customer'] = strtoupper(trim((string)$data['kd_customer']));
+                $data['kd_barang'] = strtoupper(trim((string)$data['kd_barang']));
+                $data['gudang_id'] = trim((string)$data['gudang_id']);
+                if ($data['gudang_id'] === '') {
+                    $data['gudang_id'] = $defaultWarehouse;
+                }
+
+                if ($data['no_faktur_z'] === '' || $data['kd_customer'] === '' || $data['kd_barang'] === '') {
+                    throw new \RuntimeException('Baris ' . $line . ': no_faktur_z, kd_customer, dan kd_barang wajib diisi.');
+                }
+                if (strlen($data['no_faktur_z']) > 30 || strpos($data['no_faktur_z'], 'Z') !== 0) {
+                    throw new \RuntimeException('Baris ' . $line . ': nomor Faktur Z wajib diawali Z dan maksimal 30 karakter.');
+                }
+                if (strlen($data['gudang_id']) > 30 || strlen(trim((string)$data['salesman'])) > 100 ||
+                    strlen(trim((string)$data['satuan'])) > 20 || strlen(trim((string)$data['no_lot'])) > 50) {
+                    throw new \RuntimeException('Baris ' . $line . ': panjang gudang, salesman, satuan, atau nomor lot melebihi batas database.');
+                }
+
+                $data['tanggal_faktur'] = $this->_parseExcelDateFakturZ($data['tanggal_faktur'], 'tanggal_faktur', $line, false);
+                $data['tanggal_jatuh_tempo'] = $this->_parseExcelDateFakturZ($data['tanggal_jatuh_tempo'], 'tanggal_jatuh_tempo', $line, true);
+                $data['expired_date'] = $this->_parseExcelDateFakturZ($data['expired_date'], 'expired_date', $line, true);
+                $data['isi_per_box'] = (int)round($this->_parse_number_input($data['isi_per_box']));
+                $data['qty_box'] = $this->_parse_number_input($data['qty_box']);
+                $data['qty_pcs'] = $this->_parse_number_input($data['qty_pcs']);
+                if ($data['isi_per_box'] <= 0) {
+                    throw new \RuntimeException('Baris ' . $line . ': isi_per_box wajib lebih dari 0 untuk format qty_box/qty_pcs.');
+                }
+                if ($data['qty_box'] < 0 || floor($data['qty_box']) != $data['qty_box'] || $data['qty_pcs'] < 0) {
+                    throw new \RuntimeException('Baris ' . $line . ': qty_box harus bilangan bulat dan kuantitas tidak boleh negatif.');
+                }
+                if ($data['qty_pcs'] >= $data['isi_per_box']) {
+                    throw new \RuntimeException('Baris ' . $line . ': qty_pcs harus lebih kecil dari isi_per_box. Tambahkan ke qty_box bila sudah satu box.');
+                }
+                $data['qty'] = ($data['qty_box'] * $data['isi_per_box']) + $data['qty_pcs'];
+                $data['harga_satuan_z'] = $this->_parse_number_input($data['harga_satuan_z']);
+                $data['diskon_persen'] = $this->_parse_number_input($data['diskon_persen']);
+                $data['pajak_persen'] = $this->_parse_number_input($data['pajak_persen']);
+                $data['berat_gram'] = $this->_parse_number_input($data['berat_gram']);
+                $data['kubikasi_m3'] = $this->_parse_number_input($data['kubikasi_m3']);
+                if ($data['qty'] <= 0 || $data['harga_satuan_z'] < 0) {
+                    throw new \RuntimeException('Baris ' . $line . ': total kuantitas harus lebih dari 0 dan harga tidak boleh negatif.');
+                }
+                if ($data['diskon_persen'] < 0 || $data['diskon_persen'] > 100 || $data['pajak_persen'] < 0 || $data['pajak_persen'] > 100) {
+                    throw new \RuntimeException('Baris ' . $line . ': diskon dan pajak harus berada pada rentang 0 sampai 100.');
+                }
+
+                $rawData[] = $data;
+                $customerCodes[$data['kd_customer']] = true;
+                $itemCodes[$data['kd_barang']] = true;
+            }
+            if (empty($rawData)) {
+                throw new \RuntimeException('Tidak ada baris data yang dapat diimpor.');
+            }
+
+            $customers = $this->db->select('kd_customer, nama_customer, nama_kios, kd_rute')
+                ->from('tb_customer')->where_in('kd_customer', array_keys($customerCodes))->get()->result_array();
+            $customerMap = [];
+            foreach ($customers as $customer) {
+                $customerMap[strtoupper($customer['kd_customer'])] = $customer;
+            }
+            $itemVolumeSelect = $this->db->field_exists('kubikasi', 'tbpo_barang') ? 'kubikasi' : '0 AS kubikasi';
+            $items = $this->db->select('kode_barang, nama_barang, satuan, isi, berat, kode_akun_penjualan, ' . $itemVolumeSelect, false)
+                ->from('tbpo_barang')->where_in('kode_barang', array_keys($itemCodes))->where('is_active', 'T')->get()->result_array();
+            $itemMap = [];
+            foreach ($items as $item) {
+                $itemMap[strtoupper($item['kode_barang'])] = $item;
+            }
+
+            $invoiceGroups = [];
+            foreach ($rawData as $data) {
+                $line = $data['_line'];
+                if (!isset($customerMap[$data['kd_customer']])) {
+                    throw new \RuntimeException('Baris ' . $line . ': customer ' . $data['kd_customer'] . ' tidak ditemukan.');
+                }
+                if (!isset($itemMap[$data['kd_barang']])) {
+                    throw new \RuntimeException('Baris ' . $line . ': barang aktif ' . $data['kd_barang'] . ' tidak ditemukan.');
+                }
+
+                $number = $data['no_faktur_z'];
+                $paymentMethod = strtolower(trim((string)$data['cara_pembayaran'])) ?: 'cash';
+                if (strlen($paymentMethod) > 20) {
+                    throw new \RuntimeException('Baris ' . $line . ': cara_pembayaran maksimal 20 karakter.');
+                }
+                $headerSignature = implode('|', [
+                    $data['tanggal_faktur'], $data['kd_customer'], $data['gudang_id'],
+                    trim((string)$data['salesman']), $paymentMethod, $data['tanggal_jatuh_tempo'] ?: ''
+                ]);
+                if (isset($invoiceGroups[$number]) && $invoiceGroups[$number]['signature'] !== $headerSignature) {
+                    throw new \RuntimeException('Baris ' . $line . ': data header untuk faktur ' . $number . ' tidak konsisten.');
+                }
+                if (!isset($invoiceGroups[$number])) {
+                    $invoiceGroups[$number] = [
+                        'signature' => $headerSignature,
+                        'header' => $data,
+                        'items' => []
+                    ];
+                }
+                $invoiceGroups[$number]['items'][] = $data;
+            }
+
+            $invoiceNumbers = array_keys($invoiceGroups);
+            $duplicateInvoices = $this->db->select('no_faktur')->from('tbso_faktur_penjualan')
+                ->where_in('no_faktur', $invoiceNumbers)->get()->result_array();
+            $duplicateSalesOrders = $this->db->select('no_faktur')->from('tbso_sales_order')
+                ->where_in('no_faktur', $invoiceNumbers)->get()->result_array();
+            $duplicateInvoices = array_merge($duplicateInvoices, $duplicateSalesOrders);
+            if (!empty($duplicateInvoices)) {
+                $numbers = array_values(array_unique(array_column($duplicateInvoices, 'no_faktur')));
+                throw new \RuntimeException('Nomor faktur sudah ada: ' . implode(', ', $numbers) . '.');
+            }
+
+            $username = $this->_getUsername();
+            $now = date('Y-m-d H:i:s');
+            $totalItems = 0;
+            $this->db->trans_begin();
+
+            foreach ($invoiceGroups as $invoiceNumber => $group) {
+                $header = $group['header'];
+                $customer = $customerMap[$header['kd_customer']];
+                $noSo = 'IMPZ/' . date('ymdHis') . '/' . strtoupper(substr(md5($invoiceNumber), 0, 5));
+                $totalTonase = 0.0;
+                $totalVolume = 0.0;
+                foreach ($group['items'] as $row) {
+                    $masterItem = $itemMap[$row['kd_barang']];
+                    $weight = $row['berat_gram'] > 0 ? $row['berat_gram'] : (float)$masterItem['berat'];
+                    $volume = $row['kubikasi_m3'] > 0 ? $row['kubikasi_m3'] : (float)$masterItem['kubikasi'];
+                    $totalTonase += ($row['qty'] * $weight) / 1000000;
+                    $totalVolume += $row['qty'] * $volume;
+                }
+
+                $soData = [
+                    'no_so' => $noSo,
+                    'no_faktur' => $invoiceNumber,
+                    'tanggal_transaksi' => $header['tanggal_faktur'],
+                    'kd_customer' => $header['kd_customer'],
+                    'kd_rute' => $customer['kd_rute'] ?? null,
+                    'customer_name' => $customer['nama_customer'],
+                    'gudang_id' => $header['gudang_id'],
+                    'jumlah_item' => count($group['items']),
+                    'total_tonase' => round($totalTonase, 3),
+                    'total_kubikasi' => round($totalVolume, 5),
+                    'status' => 'completed',
+                    'catatan' => '[IMPORT FAKTUR Z EKSTERNAL] ' . trim((string)$header['catatan']),
+                    'cara_pembayaran' => strtolower(trim((string)$header['cara_pembayaran'])) ?: 'cash',
+                    'is_faktur_z' => 1,
+                    'create_by' => $username,
+                    'create_at' => $now,
+                    'approve_by' => $username
+                ];
+                if ($this->db->field_exists('so_source', 'tbso_sales_order')) {
+                    $soData['so_source'] = 'EXTERNAL_Z';
+                }
+                $this->db->insert('tbso_sales_order', $soData);
+                $idSo = (int)$this->db->insert_id();
+
+                $invoiceData = [
+                    'no_faktur' => $invoiceNumber,
+                    'id_so' => $idSo,
+                    'no_so' => $noSo,
+                    'kd_customer' => $header['kd_customer'],
+                    'customer_name' => $customer['nama_customer'],
+                    'gudang_id' => $header['gudang_id'],
+                    'tanggal_faktur' => $header['tanggal_faktur'],
+                    'tanggal_jatuh_tempo' => $header['tanggal_jatuh_tempo'] ?: $header['tanggal_faktur'],
+                    'salesman' => trim((string)$header['salesman']),
+                    'cara_pembayaran' => strtolower(trim((string)$header['cara_pembayaran'])) ?: 'cash',
+                    'total_tonase' => round($totalTonase, 3),
+                    'total_kubikasi' => round($totalVolume, 5),
+                    'catatan' => '[IMPORT FAKTUR Z EKSTERNAL] ' . trim((string)$header['catatan']),
+                    // Status draft mengisolasi faktur eksternal dari piutang dan antrean logistik.
+                    // Modul Pecah Faktur mengenali sumber EXTERNAL_Z sebagai draft yang boleh dipecah.
+                    'status' => 'draft',
+                    'create_by' => $username,
+                    'create_at' => $now
+                ];
+                if ($this->db->field_exists('so_source', 'tbso_faktur_penjualan')) {
+                    $invoiceData['so_source'] = 'EXTERNAL_Z';
+                }
+                $this->db->insert('tbso_faktur_penjualan', $invoiceData);
+                $idInvoice = (int)$this->db->insert_id();
+
+                foreach ($group['items'] as $row) {
+                    $masterItem = $itemMap[$row['kd_barang']];
+                    $packSize = $row['isi_per_box'] > 0 ? $row['isi_per_box'] : max(1, (int)round((float)$masterItem['isi']));
+                    $unit = trim((string)$row['satuan']) ?: ((string)$masterItem['satuan'] ?: 'PCS');
+                    $expiry = $row['expired_date'] ?: '2099-12-31';
+                    $weight = $row['berat_gram'] > 0 ? $row['berat_gram'] : (float)$masterItem['berat'];
+                    $volume = $row['kubikasi_m3'] > 0 ? $row['kubikasi_m3'] : (float)$masterItem['kubikasi'];
+                    $qtyBox = floor($row['qty'] / $packSize);
+                    $qtyUnit = fmod($row['qty'], $packSize);
+                    $beforeDiscount = round($row['qty'] * $row['harga_satuan_z'], 2);
+                    $afterDiscount = round($beforeDiscount * (1 - ($row['diskon_persen'] / 100)), 2);
+                    // Harga satuan KARISMA ERP sudah termasuk PPN.
+                    // Nilai pajak hanya diekstrak saat tampilan/jurnal dan tidak ditambahkan lagi.
+                    $totalPrice = $afterDiscount;
+
+                    $soDetail = [
+                        'id_so' => $idSo, 'no_so' => $noSo, 'no_faktur' => $invoiceNumber,
+                        'produk_id' => $masterItem['kode_barang'], 'kd_barang' => $masterItem['kode_barang'],
+                        'nama_barang' => $masterItem['nama_barang'], 'qty' => $row['qty'],
+                        'qty_box' => $qtyBox, 'qty_satuan' => $qtyUnit, 'isi_per_box' => $packSize,
+                        'satuan' => $unit, 'expired_date' => $expiry, 'no_lot' => trim((string)$row['no_lot']),
+                        'pajak' => $row['pajak_persen'], 'disc' => $row['diskon_persen'],
+                        'subtotal_before_disc' => $beforeDiscount, 'subtotal_after_disc' => $afterDiscount,
+                        'hrg_satuan' => $row['harga_satuan_z'], 'hrg_pokok' => 0, 'total_harga' => $totalPrice,
+                        'berat_gram' => $weight, 'kubikasi_m3' => $volume,
+                        'kode_akun' => $masterItem['kode_akun_penjualan'], 'create_at' => $now,
+                        'create_by' => $username, 'qty_siap_faktur' => 0, 'qty_delivered' => 0
+                    ];
+                    $this->db->insert('tbso_sales_order_detail', $soDetail);
+                    $idSoDetail = (int)$this->db->insert_id();
+
+                    $this->db->insert('tbso_faktur_detail', [
+                        'id_faktur' => $idInvoice, 'no_faktur' => $invoiceNumber,
+                        'id_so' => $idSo, 'id_so_detail' => $idSoDetail,
+                        'kd_barang' => $masterItem['kode_barang'], 'nama_barang' => $masterItem['nama_barang'],
+                        'no_lot' => trim((string)$row['no_lot']), 'expired_date' => $expiry,
+                        'qty' => $row['qty'], 'qty_box' => $qtyBox, 'qty_satuan' => $qtyUnit,
+                        'isi_per_box' => $packSize, 'satuan' => $unit, 'hrg_satuan' => $row['harga_satuan_z'],
+                        'hrg_pokok' => 0, 'disc' => $row['diskon_persen'], 'pajak' => $row['pajak_persen'],
+                        'subtotal_before_disc' => $beforeDiscount, 'subtotal_after_disc' => $afterDiscount,
+                        'total_harga' => $totalPrice, 'berat_gram' => $weight, 'kubikasi_m3' => $volume,
+                        'gudang_id' => $header['gudang_id'], 'create_by' => $username, 'create_at' => $now
+                    ]);
+                    $totalItems++;
+                }
+
+                $this->M_ActivityLog->log(
+                    $noSo,
+                    $invoiceNumber,
+                    'IMPORT_FAKTUR_Z',
+                    'Faktur Z eksternal ' . $invoiceNumber . ' diimpor untuk proses pemecahan.',
+                    $username,
+                    count($group['items']) . ' baris barang; tanpa mutasi stok dan jurnal.'
+                );
+            }
+
+            if (!$this->db->trans_status()) {
+                throw new \RuntimeException('Database menolak sebagian data import.');
+            }
+            $this->db->trans_commit();
+            $this->session->set_flashdata('success', 'Berhasil mengimpor <b>' . count($invoiceGroups) . ' Faktur Z</b> dengan <b>' . $totalItems . ' baris barang</b>. Data siap dipecah menjadi Faktur H.');
+        } catch (\Throwable $e) {
+            if (method_exists($this->db, 'trans_rollback')) {
+                $this->db->trans_rollback();
+            }
+            log_message('error', 'Import Faktur Z gagal: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'Import Faktur Z gagal: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+        }
+
+        redirect('sales_order/pecah_faktur');
+    }
+
+    /**
+     * Memuat PhpSpreadsheet dari Composer atau library kompatibilitas aplikasi.
+     */
+    private function _loadPhpSpreadsheetForFakturZ()
+    {
+        if (class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+            return;
+        }
+        if (file_exists(FCPATH . 'vendor/autoload.php')) {
+            require_once FCPATH . 'vendor/autoload.php';
+        } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
+            require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+        }
+        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+            throw new \RuntimeException('Library PhpSpreadsheet tidak tersedia.');
+        }
+    }
+
+    /**
+     * Menentukan apakah faktur merupakan sumber pemecahan dari sistem eksternal.
+     */
+    private function _isImportedExternalFakturZ(array $faktur)
+    {
+        return strtoupper((string)($faktur['so_source'] ?? '')) === 'EXTERNAL_Z';
+    }
+
+    /**
+     * Faktur batal selalu ditolak; status draft hanya diizinkan untuk import eksternal.
+     */
+    private function _canSplitFakturZStatus(array $faktur)
+    {
+        $status = strtolower((string)($faktur['status'] ?? ''));
+        if ($status === 'cancelled') {
+            return false;
+        }
+        return $status !== 'draft' || $this->_isImportedExternalFakturZ($faktur);
+    }
+
+    /**
+     * Mengubah tanggal Excel atau teks menjadi format tanggal database.
+     */
+    private function _parseExcelDateFakturZ($value, $field, $line, $allowEmpty = false)
+    {
+        if ($value === null || trim((string)$value) === '') {
+            if ($allowEmpty) {
+                return null;
+            }
+            throw new \RuntimeException('Baris ' . $line . ': ' . $field . ' wajib diisi.');
+        }
+
+        try {
+            if (is_numeric($value)) {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$value)->format('Y-m-d');
+            }
+            $text = trim((string)$value);
+            foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y'] as $format) {
+                $date = \DateTime::createFromFormat('!' . $format, $text);
+                $errors = \DateTime::getLastErrors();
+                if ($date && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))) {
+                    return $date->format('Y-m-d');
+                }
+            }
+        } catch (\Throwable $e) {
+            // Pesan validasi yang seragam ditampilkan di bawah.
+        }
+        throw new \RuntimeException('Baris ' . $line . ': format ' . $field . ' tidak valid. Gunakan YYYY-MM-DD.');
+    }
+
     public function pecah_faktur_kios($kd_customer = null)
     {
         if (!$this->session->userdata('logged_in')) {
@@ -2553,7 +3148,7 @@ class C_SalesOrder extends CI_Controller
             redirect('sales_order/pecah_faktur');
             return;
         }
-        if (in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+        if (!$this->_canSplitFakturZStatus($faktur)) {
             $this->session->set_flashdata('error', 'Faktur dengan status Draft atau Cancelled tidak dapat dipecah.');
             redirect('sales_order/pecah_faktur');
             return;
@@ -2631,7 +3226,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        if (empty($so['is_faktur_z']) || !empty($faktur['parent_id_faktur']) || in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+        if (empty($so['is_faktur_z']) || !empty($faktur['parent_id_faktur']) || !$this->_canSplitFakturZStatus($faktur)) {
             $this->session->set_flashdata('error', 'Proses pemecahan faktur tidak valid.');
             redirect('sales_order/detail_faktur/' . $id_faktur);
             return;
@@ -2837,7 +3432,7 @@ class C_SalesOrder extends CI_Controller
                 $invalid_reasons[] = "Faktur " . $f['no_faktur'] . " adalah faktur turunan dan tidak dapat dipecah lagi.";
                 continue;
             }
-            if (in_array($f['status'], ['cancelled', 'draft'], true)) {
+            if (!$this->_canSplitFakturZStatus($f)) {
                 $invalid_reasons[] = "Faktur " . $f['no_faktur'] . " berstatus " . $f['status'] . " sehingga tidak dapat dipecah.";
                 continue;
             }
@@ -3442,10 +4037,16 @@ class C_SalesOrder extends CI_Controller
             $this->db->where('p.parent_id_faktur', $id_faktur);
         }
         if (!empty($date1)) {
+            $this->db->group_start();
             $this->db->where('p.tanggal_faktur >=', $date1);
+            $this->db->or_where('fz.tanggal_faktur >=', $date1);
+            $this->db->group_end();
         }
         if (!empty($date2)) {
+            $this->db->group_start();
             $this->db->where('p.tanggal_faktur <=', $date2);
+            $this->db->or_where('fz.tanggal_faktur <=', $date2);
+            $this->db->group_end();
         }
 
         $this->db->order_by('p.tanggal_faktur', 'ASC');

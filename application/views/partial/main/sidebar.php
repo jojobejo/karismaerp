@@ -1,7 +1,8 @@
   <!-- Main Sidebar Container -->
+  <?php $is_admkeu_only = (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu'); ?>
   <aside class="main-sidebar sidebar-dark-primary elevation-2">
     <!-- Brand Logo -->
-    <a href="<?php echo base_url('dashboard') ?>" class="brand-link">
+    <a href="<?php echo base_url($is_admkeu_only ? 'sales_order/pecah_faktur' : 'dashboard') ?>" class="brand-link">
       <img src="<?php echo base_url("assets/images/Karisma.png") ?>" style="width: 50px; height: 30px;" alt="Karisma Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
       <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
@@ -91,7 +92,26 @@
     <?php endif; ?>
 
     <!-- Sidebar -->
-    <?php if (!empty($dynamicSidebarTree)) : ?>
+    <?php if ($is_admkeu_only) : ?>
+      <div class="sidebar">
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link active">
+                <i class="nav-icon fas fa-cut"></i>
+                <p>Pecah Faktur</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>Log Out</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    <?php elseif (!empty($dynamicSidebarTree)) : ?>
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">

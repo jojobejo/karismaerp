@@ -474,11 +474,8 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                             </small>
                                         </td>
                                         <td class="text-right">
-                                            <?= $qty_box > 0 ? $qty_box . ' box' : '' ?>
-                                            <?= $qty_pcs > 0 ? ($qty_box > 0 ? '+ ' : '') . (int)$qty_pcs . ' pcs' : '' ?>
-                                            <?php if ($qty_box == 0): ?>
-                                                <?= number_format($d['qty']) ?> pcs
-                                            <?php endif; ?>
+                                            <?= $qty_box > 0 ? number_format($qty_box, 0, ',', '.') . ' box' : '' ?>
+                                            <?= $qty_pcs > 0 ? ($qty_box > 0 ? ' + ' : '') . number_format($qty_pcs, 0, ',', '.') . ' pcs' : '' ?>
                                         </td>
                                         <td class="text-right">
                                             Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?>

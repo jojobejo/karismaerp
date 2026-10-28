@@ -686,6 +686,7 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
+        $this->db->where("(so.so_source IS NULL OR so.so_source != 'EXTERNAL_Z')", null, false);
 
         if (!empty($filter['status']))      $this->db->where('so.status', $filter['status']);
         if (!empty($filter['exclude_status'])) {
@@ -2747,7 +2748,9 @@ class M_SalesOrder extends CI_Model
                 $r['remaining_split_qty'] = 0;
             } else {
                 // Faktur Induk
-                if (in_array($r['status'], ['cancelled', 'draft'], true)) {
+                $is_external_import = strtoupper((string)($r['so_source'] ?? '')) === 'EXTERNAL_Z';
+                $is_blocked_status = $r['status'] === 'cancelled' || ($r['status'] === 'draft' && !$is_external_import);
+                if ($is_blocked_status) {
                     $r['tipe_faktur'] = empty($r['is_split_parent']) ? 'belum_dipecah' : 'sudah_dipecah';
                     $r['can_split']   = false;
                     $r['remaining_split_qty'] = 0;
@@ -3220,7 +3223,13 @@ class M_SalesOrder extends CI_Model
         $this->db->where('kd_customer', $kd_customer);
         $this->db->like('no_faktur', 'Z', 'after');
         $this->db->where('is_split_parent', 0);
+        $this->db->group_start();
         $this->db->where_in('status', ['confirmed', 'selesai', 'selesai_do', 'proses_do']);
+        $this->db->or_group_start();
+        $this->db->where('status', 'draft');
+        $this->db->where('so_source', 'EXTERNAL_Z');
+        $this->db->group_end();
+        $this->db->group_end();
         $this->db->order_by('id_faktur', 'ASC');
         $fakturs = $this->db->get()->result_array();
 
@@ -3601,11 +3610,22 @@ class M_SalesOrder extends CI_Model
             COALESCE(SUM(pd.total_harga), 0) AS grand_total,
             COUNT(pd.id) AS total_barang');
         $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
         $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
         $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
         $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
-        if (!empty($filter['date1'])) $this->db->where('p.tanggal_faktur >=', $filter['date1']);
-        if (!empty($filter['date2'])) $this->db->where('p.tanggal_faktur <=', $filter['date2']);
+        if (!empty($filter['date1'])) {
+            $this->db->group_start();
+            $this->db->where('p.tanggal_faktur >=', $filter['date1']);
+            $this->db->or_where('fp.tanggal_faktur >=', $filter['date1']);
+            $this->db->group_end();
+        }
+        if (!empty($filter['date2'])) {
+            $this->db->group_start();
+            $this->db->where('p.tanggal_faktur <=', $filter['date2']);
+            $this->db->or_where('fp.tanggal_faktur <=', $filter['date2']);
+            $this->db->group_end();
+        }
         if (!empty($filter['create_by'])) $this->db->where('p.create_by', $filter['create_by']);
         if (!empty($filter['search'])) {
             $q = trim((string)$filter['search']);

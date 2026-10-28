@@ -30,6 +30,10 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
     }
 
     /* Styling Tata Letak Batch Split */
+    .card-body.d-flex::after,
+    .card-header.d-flex::after {
+        display: none !important;
+    }
     .split-top-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -183,26 +187,6 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>
-
-                <?php if (!empty($is_auto_prefilled)): ?>
-                    <div class="alert alert-info border-info shadow-sm mb-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-clipboard-check fa-2x text-info mr-3"></i>
-                            <div>
-                                <h6 class="font-weight-bold mb-1 text-dark">
-                                    <i class="fas fa-magic text-warning mr-1"></i> Rancangan Pemecahan Otomatis Siap Diperiksa
-                                </h6>
-                                <div class="small text-dark">
-                                    Sistem telah menyusun rancangan pembagian menjadi <strong><?= (int)$jumlah_pecah ?> Faktur Pecahan (Kode H)</strong> dengan batas maksimal <strong>Rp <?= number_format($max_plafon ?? 25000000, 0, ',', '.') ?></strong> per faktur. Barang antar Faktur Z <strong>terisolasi (tidak bercampur)</strong>.
-                                    <br>
-                                    <span class="text-primary font-weight-bold">
-                                        <i class="fas fa-search mr-1"></i> Silakan periksa kembali kuantitas barang, customer penerima, dan nominal di bawah ini. Anda dapat mengeditnya sebelum menekan tombol simpan di bawah.
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
 
                 <form action="<?= base_url('sales_order/simpan_split_faktur_batch') ?>" method="post" id="formBatchSplit">
                     <!-- Hidden Parent IDs -->
@@ -381,26 +365,28 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                     <!-- Panel Info Total Nilai & Fitur Bagi Rata Otomatis -->
                     <div class="card bg-light border shadow-sm mb-3">
-                        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap">
-                            <div class="my-1">
-                                <span class="text-muted small">Total Nilai Faktur Induk:</span>
-                                <strong class="text-primary ml-1" style="font-size: 15px;">Rp <?= number_format($total_induk_nilai, 0, ',', '.') ?></strong>
-                                <span class="mx-2 text-muted">&bull;</span>
-                                <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11.5px;" title="Harga barang pada Faktur H terdiskon 20%">
-                                    <i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp <?= number_format($total_induk_nilai * 0.8, 0, ',', '.') ?>)
-                                </span>
-                                <span class="mx-2 text-muted">&bull;</span>
-                                <span class="badge badge-info font-weight-bold" style="font-size: 11.5px;">
-                                    <i class="fas fa-boxes mr-1"></i> Total Kuantitas: <?= number_format($total_pool_qty) ?> pcs
-                                </span>
-                            </div>
-                            <div class="my-1 d-flex align-items-center">
-                                <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
-                                    <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetQty" title="Kosongkan semua input kuantitas">
-                                    <i class="fas fa-undo mr-1"></i> Kosongkan Qty
-                                </button>
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap w-100">
+                                <div class="my-1">
+                                    <span class="text-muted small">Total Nilai Faktur Induk:</span>
+                                    <strong class="text-primary ml-1" style="font-size: 15px;">Rp <?= number_format($total_induk_nilai, 0, ',', '.') ?></strong>
+                                    <span class="mx-2 text-muted">&bull;</span>
+                                    <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11.5px;" title="Harga barang pada Faktur H terdiskon 20%">
+                                        <i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp <?= number_format($total_induk_nilai * 0.8, 0, ',', '.') ?>)
+                                    </span>
+                                    <span class="mx-2 text-muted">&bull;</span>
+                                    <span class="badge badge-info font-weight-bold" style="font-size: 11.5px;">
+                                        <i class="fas fa-boxes mr-1"></i> Total Kuantitas: <?= number_format($total_pool_qty) ?> pcs
+                                    </span>
+                                </div>
+                                <div class="my-1 d-flex align-items-center ml-auto">
+                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
+                                        <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetQty" title="Kosongkan semua input kuantitas">
+                                        <i class="fas fa-undo mr-1"></i> Kosongkan Qty
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -414,6 +400,21 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                             $pre_slot = $pre_allocated_splits[$slot_idx] ?? null;
                             $auto_cust_kd = $pre_slot['kd_customer'] ?? ($customers[$slot_idx]['kd_customer'] ?? '');
                             $slot_parent_no = $pre_slot['parent_no_faktur'] ?? '';
+                            $slot_parent_id = $pre_slot['parent_id_faktur'] ?? null;
+
+                            // Default tanggal faktur & jatuh tempo mengikuti Faktur Z Induk
+                            $first_parent = !empty($parent_fakturs) ? reset($parent_fakturs) : [];
+                            $slot_parent_row = ($slot_parent_id && isset($parent_fakturs[$slot_parent_id])) ? $parent_fakturs[$slot_parent_id] : $first_parent;
+                            if (empty($slot_parent_row['tanggal_faktur']) && !empty($slot_parent_no)) {
+                                foreach ($parent_fakturs as $pf_cand) {
+                                    if (($pf_cand['no_faktur'] ?? '') === $slot_parent_no) {
+                                        $slot_parent_row = $pf_cand;
+                                        break;
+                                    }
+                                }
+                            }
+                            $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
+                            $slot_tgl_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : date('Y-m-d', strtotime($slot_tgl_faktur . ' +30 days'));
 
                             // Cari objek customer
                             $auto_c = null;
@@ -518,11 +519,11 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                             <div class="row">
                                                 <div class="col-6 mb-2">
                                                     <label class="small font-weight-bold mb-0" style="font-size: 10.5px;">Tgl Faktur</label>
-                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_faktur]" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" style="font-size: 11px; height: 28px;">
+                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_faktur]" class="form-control form-control-sm" value="<?= $slot_tgl_faktur ?>" style="font-size: 11px; height: 28px;">
                                                 </div>
                                                 <div class="col-6 mb-2">
                                                     <label class="small font-weight-bold mb-0" style="font-size: 10.5px;">Jatuh Tempo</label>
-                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_jatuh_tempo]" class="form-control form-control-sm" value="<?= date('Y-m-d', strtotime('+30 days')) ?>" style="font-size: 11px; height: 28px;">
+                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_jatuh_tempo]" class="form-control form-control-sm" value="<?= $slot_tgl_jtempo ?>" style="font-size: 11px; height: 28px;">
                                                 </div>
                                             </div>
 
@@ -618,22 +619,24 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                     <!-- Tombol Aksi Simpan Semua -->
                     <div class="card card-outline card-success shadow-sm mb-4 mt-2">
-                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap py-3">
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 15px;">
-                                    <i class="fas fa-check-double text-success mr-1"></i> Siap Menerbitkan Seluruh Faktur Pecahan H?
-                                </span>
-                                <span class="text-muted small">
-                                    Faktur pecahan tersimpan di tabel khusus tanpa mempengaruhi kartu stok dan tanpa penjurnalan ulang.
-                                </span>
-                            </div>
-                            <div class="mt-2 mt-sm-0">
-                                <a href="<?= $back_url ?>" class="btn btn-secondary mr-1">
-                                    <i class="fas fa-times mr-1"></i> Batal
-                                </a>
-                                <button type="submit" class="btn btn-success font-weight-bold shadow-sm px-4" id="btnSubmitBatch">
-                                    <i class="fas fa-save mr-1"></i> Simpan & Terbitkan Semua Faktur H
-                                </button>
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap w-100">
+                                <div>
+                                    <span class="font-weight-bold text-dark d-block" style="font-size: 15px;">
+                                        <i class="fas fa-check-double text-success mr-1"></i> Siap Menerbitkan Seluruh Faktur Pecahan H?
+                                    </span>
+                                    <span class="text-muted small">
+                                        Faktur pecahan tersimpan di tabel khusus tanpa mempengaruhi kartu stok dan tanpa penjurnalan ulang.
+                                    </span>
+                                </div>
+                                <div class="mt-2 mt-sm-0 ml-auto">
+                                    <a href="<?= $back_url ?>" class="btn btn-secondary mr-1">
+                                        <i class="fas fa-times mr-1"></i> Batal
+                                    </a>
+                                    <button type="submit" class="btn btn-success font-weight-bold shadow-sm px-4" id="btnSubmitBatch">
+                                        <i class="fas fa-save mr-1"></i> Simpan & Terbitkan Semua Faktur H
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

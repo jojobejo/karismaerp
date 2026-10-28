@@ -138,17 +138,23 @@
                 <?php endforeach; ?>
 
                 <!-- Tombol Navigasi Cepat -->
+                <?php $is_admkeu_only = (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu'); ?>
                 <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap">
                     <div>
+                        <?php if (!$is_admkeu_only): ?>
                         <a href="<?= base_url('dashboard') ?>" class="btn btn-secondary btn-sm mr-1">
                             <i class="fas fa-arrow-left mr-1"></i> Kembali ke Dashboard
                         </a>
                         <a href="<?= base_url('sales_order/admin_sc/activity_log') ?>" class="btn btn-outline-info btn-sm mr-1">
                             <i class="fas fa-history mr-1"></i> Log Aktivitas Faktur
                         </a>
+                        <?php endif; ?>
                         <a href="<?= base_url('sales_order/customer_acak') ?>" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-users mr-1"></i> Master Customer Acak
                         </a>
+                        <button type="button" class="btn btn-success btn-sm ml-1" data-toggle="modal" data-target="#modalImportFakturZ">
+                            <i class="fas fa-file-import mr-1"></i> Import Faktur Z
+                        </button>
                     </div>
                     <div>
                         <span class="text-muted small">
@@ -753,6 +759,50 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalImportFakturZ" tabindex="-1" role="dialog" aria-labelledby="modalImportFakturZLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <form action="<?= base_url('sales_order/import_faktur_z') ?>" method="post" enctype="multipart/form-data" id="formImportFakturZ">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="modalImportFakturZLabel">
+                            <i class="fas fa-file-import mr-1"></i> Import Faktur Z Eksternal
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2">
+                            <strong>Alur:</strong> unduh template, isi satu baris untuk setiap barang, lalu unggah kembali file Excel. Satu file dapat berisi beberapa Faktur Z.
+                        </div>
+                        <div class="form-group">
+                            <label for="fileImportFakturZ" class="font-weight-bold">File Excel (.xlsx atau .xls)</label>
+                            <div class="custom-file">
+                                <input type="file" name="file_faktur_z" id="fileImportFakturZ" class="custom-file-input" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="fileImportFakturZ">Pilih file template yang telah diisi</label>
+                            </div>
+                            <small class="form-text text-muted">Maksimal 5 MB dan 5.000 baris. Seluruh file dibatalkan apabila ada satu baris yang tidak valid.</small>
+                        </div>
+                        <ul class="small text-muted mb-0 pl-3">
+                            <li>Nomor faktur harus unik dan maksimal 30 karakter.</li>
+                            <li>Kode customer dan kode barang harus tersedia pada master KARISMA ERP.</li>
+                            <li>Kuantitas diisi terpisah pada <code>qty_box</code> dan <code>qty_pcs</code>; total pcs dihitung otomatis.</li>
+                            <li>Harga per pcs sudah termasuk PPN; persentase pajak hanya memisahkan DPP dan PPN, bukan menambah harga.</li>
+                            <li>Import ini hanya menjadi sumber pemecahan Faktur Z; tidak mengurangi stok dan tidak membentuk jurnal.</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="<?= base_url('sales_order/template_import_faktur_z') ?>" class="btn btn-outline-success btn-sm mr-auto">
+                            <i class="fas fa-download mr-1"></i> Unduh Template
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success btn-sm" id="btnImportFakturZ">
+                            <i class="fas fa-upload mr-1"></i> Proses Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.
@@ -762,6 +812,26 @@
 <script>
 function formatRupiahJs(num) {
     return 'Rp ' + Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+var fileImportFakturZ = document.getElementById('fileImportFakturZ');
+if (fileImportFakturZ) {
+    fileImportFakturZ.addEventListener('change', function() {
+        var fileName = this.files && this.files[0] ? this.files[0].name : 'Pilih file template yang telah diisi';
+        var label = this.parentNode.querySelector('.custom-file-label');
+        if (label) label.textContent = fileName;
+    });
+}
+
+var formImportFakturZ = document.getElementById('formImportFakturZ');
+if (formImportFakturZ) {
+    formImportFakturZ.addEventListener('submit', function() {
+        var button = document.getElementById('btnImportFakturZ');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...';
+        }
+    });
 }
 
 // Variabel penampung total nilai & qty saat modal dibuka

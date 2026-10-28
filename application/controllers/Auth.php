@@ -90,8 +90,10 @@ class Auth extends CI_Controller
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        // Redirect based on jobdesk
-        if ($jobdesk_hrd === 'direksi_readonly') {
+        // Redirect based on jobdesk / username
+        if ($username_login === 'admkeu') {
+            redirect('sales_order/pecah_faktur');
+        } else if ($jobdesk_hrd === 'direksi_readonly') {
             redirect('dashboard_penilaian');
         } else if ($jobdesk == 'LOGISTIK') {
             redirect('logistik');
