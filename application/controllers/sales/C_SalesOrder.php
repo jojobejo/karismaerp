@@ -2429,6 +2429,7 @@ class C_SalesOrder extends CI_Controller
 
     /**
      * Mengunduh template Excel untuk import Faktur Z dari sistem eksternal.
+     * Hanya menyertakan 1 sheet (Data Faktur Z) untuk memastikan proses unduh sangat cepat.
      */
     public function template_import_faktur_z()
     {
@@ -2450,6 +2451,8 @@ class C_SalesOrder extends CI_Controller
             'expired_date', 'berat_gram', 'kubikasi_m3', 'catatan'
         ];
         $sheet->fromArray($headers, null, 'A1');
+
+        // Ambil 1 sampel customer dan 1 sampel barang untuk baris contoh
         $sampleCustomer = $this->db->select('kd_customer')->from('tb_customer')->order_by('kd_customer', 'ASC')->limit(1)->get()->row_array();
         $sampleVolumeSelect = $this->db->field_exists('kubikasi', 'tbpo_barang') ? 'kubikasi' : '0 AS kubikasi';
         $sampleItem = $this->db->select('kode_barang, satuan, isi, berat, ' . $sampleVolumeSelect, false)->from('tbpo_barang')
@@ -2461,8 +2464,8 @@ class C_SalesOrder extends CI_Controller
         $samplePackSize = max(1, (int)round((float)($sampleItem['isi'] ?? 1)));
         $sampleExtraPcs = $samplePackSize > 2 ? 2 : 0;
         $sheet->fromArray([
-            'ZEXT' . date('dmy') . '001', date('Y-m-d'), $sampleCustomer['kd_customer'] ?? 'KODE_CUSTOMER', 'BLI-1', 'Nama Sales',
-            'cash', date('Y-m-d'), $sampleItem['kode_barang'] ?? 'KODE_BARANG', 1, (string)$sampleExtraPcs,
+            'ZEXT' . date('dmy') . '001', date('Y-m-d'), $sampleCustomer['kd_customer'] ?? 'CUST001', 'BLI-1', 'Nama Sales',
+            'cash', date('Y-m-d'), $sampleItem['kode_barang'] ?? 'BRG001', 1, (string)$sampleExtraPcs,
             $sampleItem['satuan'] ?? 'PCS', $samplePackSize,
             125000, 0, 11, 'LOT-001', date('Y-m-d', strtotime('+2 years')),
             (float)($sampleItem['berat'] ?? 0), (float)($sampleItem['kubikasi'] ?? 0), 'Import dari sistem eksternal'
@@ -2478,67 +2481,39 @@ class C_SalesOrder extends CI_Controller
         ];
         $sheet->getStyle('A1:T1')->applyFromArray($headerStyle);
         $sheet->freezePane('A2');
-        $sheet->setAutoFilter('A1:T5001');
-        $sheet->getStyle('B2:B5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-        $sheet->getStyle('G2:G5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-        $sheet->getStyle('Q2:Q5001')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-        $sheet->getStyle('M2:O5001')->getNumberFormat()->setFormatCode('#,##0.00');
-        foreach (range('A', 'T') as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
 
-        $guide = $spreadsheet->createSheet();
-        $guide->setTitle('Petunjuk');
-        $guideRows = [
-            ['PETUNJUK IMPORT FAKTUR Z EKSTERNAL'],
-            ['1. Jangan mengubah nama atau urutan kolom pada sheet Data Faktur Z.'],
-            ['2. Satu baris mewakili satu barang. Ulangi data header untuk setiap barang dalam faktur yang sama.'],
-            ['3. Nomor Faktur Z wajib diawali huruf Z, unik, dan maksimal 30 karakter.'],
-            ['4. kd_customer dan kd_barang wajib cocok dengan sheet referensi.'],
-            ['5. Format tanggal menggunakan YYYY-MM-DD. expired_date boleh kosong untuk barang tanpa lot/kedaluwarsa.'],
-            ['6. qty_box adalah jumlah box dan qty_pcs adalah tambahan pcs di luar box. Keduanya tidak boleh kosong bersamaan.'],
-            ['7. Total qty pcs dihitung: (qty_box × isi_per_box) + qty_pcs. qty_pcs harus lebih kecil dari isi_per_box.'],
-            ['8. harga_satuan_z adalah harga per pcs yang SUDAH termasuk PPN, sama seperti transaksi KARISMA ERP.'],
-            ['9. pajak_persen hanya memisahkan DPP dan PPN dari harga include pajak; pajak tidak ditambahkan lagi.'],
-            ['10. diskon_persen dan pajak_persen diisi angka 0 sampai 100.'],
-            ['11. berat_gram dan kubikasi_m3 boleh kosong; sistem mengambil nilai master barang.'],
-            ['12. Import bersifat atomik: jika satu baris salah, seluruh file tidak disimpan.'],
-            ['13. Import ini tidak mengurangi stok dan tidak membentuk jurnal penjualan.']
+        // Gunakan lebar kolom tetap untuk performa instan tanpa kalkulasi font metrics (setAutoSize)
+        $columnWidths = [
+            'A' => 20, // no_faktur_z
+            'B' => 15, // tanggal_faktur
+            'C' => 16, // kd_customer
+            'D' => 14, // gudang_id
+            'E' => 18, // salesman
+            'F' => 16, // cara_pembayaran
+            'G' => 20, // tanggal_jatuh_tempo
+            'H' => 16, // kd_barang
+            'I' => 12, // qty_box
+            'J' => 12, // qty_pcs
+            'K' => 12, // satuan
+            'L' => 14, // isi_per_box
+            'M' => 16, // harga_satuan_z
+            'N' => 14, // diskon_persen
+            'O' => 14, // pajak_persen
+            'P' => 14, // no_lot
+            'Q' => 15, // expired_date
+            'R' => 14, // berat_gram
+            'S' => 14, // kubikasi_m3
+            'T' => 30  // catatan
         ];
-        $guide->fromArray($guideRows, null, 'A1');
-        $guide->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $guide->getColumnDimension('A')->setWidth(115);
-
-        $customerSheet = $spreadsheet->createSheet();
-        $customerSheet->setTitle('Referensi Customer');
-        $customerSheet->fromArray(['kd_customer', 'nama_customer', 'nama_kios'], null, 'A1');
-        $customers = $this->db->select('kd_customer, nama_customer, nama_kios')
-            ->from('tb_customer')->order_by('kd_customer', 'ASC')->get()->result_array();
-        if (!empty($customers)) {
-            $customerSheet->fromArray($customers, null, 'A2');
-        }
-        $customerSheet->getStyle('A1:C1')->applyFromArray($headerStyle);
-        $customerSheet->freezePane('A2');
-        $customerSheet->setAutoFilter('A1:C' . max(2, count($customers) + 1));
-        foreach (range('A', 'C') as $column) {
-            $customerSheet->getColumnDimension($column)->setAutoSize(true);
+        foreach ($columnWidths as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
         }
 
-        $itemSheet = $spreadsheet->createSheet();
-        $itemSheet->setTitle('Referensi Barang');
-        $itemSheet->fromArray(['kd_barang', 'nama_barang', 'satuan', 'isi_per_box', 'berat_gram', 'kubikasi_m3'], null, 'A1');
-        $itemVolumeSelect = $this->db->field_exists('kubikasi', 'tbpo_barang') ? 'kubikasi AS kubikasi_m3' : '0 AS kubikasi_m3';
-        $items = $this->db->select('kode_barang AS kd_barang, nama_barang, satuan, isi AS isi_per_box, berat AS berat_gram, ' . $itemVolumeSelect, false)
-            ->from('tbpo_barang')->where('is_active', 'T')->order_by('kode_barang', 'ASC')->get()->result_array();
-        if (!empty($items)) {
-            $itemSheet->fromArray($items, null, 'A2');
-        }
-        $itemSheet->getStyle('A1:F1')->applyFromArray($headerStyle);
-        $itemSheet->freezePane('A2');
-        $itemSheet->setAutoFilter('A1:F' . max(2, count($items) + 1));
-        foreach (range('A', 'F') as $column) {
-            $itemSheet->getColumnDimension($column)->setAutoSize(true);
-        }
+        // Terapkan format hanya pada baris sampel contoh (A2:T2)
+        $sheet->getStyle('B2')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('G2')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('Q2')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('M2:O2')->getNumberFormat()->setFormatCode('#,##0.00');
 
         $spreadsheet->setActiveSheetIndex(0);
         $filename = 'template_import_faktur_z_' . date('Ymd') . '.xlsx';
@@ -2585,9 +2560,23 @@ class C_SalesOrder extends CI_Controller
             $this->_loadPhpSpreadsheetForFakturZ();
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
             $reader->setReadDataOnly(true);
+            $reader->setReadEmptyCells(false);
+
+            // Optimasi: Hanya muat sheet 'Data Faktur Z' agar menghemat memori dan waktu eksekusi
+            $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
+            if (in_array('Data Faktur Z', $worksheetNames, true)) {
+                $reader->setLoadSheetsOnly(['Data Faktur Z']);
+            } elseif (!empty($worksheetNames)) {
+                $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+            }
+
             $spreadsheet = $reader->load($file['tmp_name']);
             $sheet = $spreadsheet->getSheetByName('Data Faktur Z') ?: $spreadsheet->getActiveSheet();
             $rows = $sheet->toArray(null, false, false, false);
+
+            // Lepas referensi spreadsheet untuk menghemat memori
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $sheet, $reader);
 
             if (count($rows) < 2) {
                 throw new \RuntimeException('Sheet Data Faktur Z tidak memiliki data.');
@@ -2780,6 +2769,9 @@ class C_SalesOrder extends CI_Controller
             $totalItems = 0;
             $this->db->trans_begin();
 
+            $hasSoSourceInSo = $this->db->field_exists('so_source', 'tbso_sales_order');
+            $hasSoSourceInFaktur = $this->db->field_exists('so_source', 'tbso_faktur_penjualan');
+
             foreach ($invoiceGroups as $invoiceNumber => $group) {
                 $header = $group['header'];
                 $customer = $customerMap[$header['kd_customer']];
@@ -2813,7 +2805,7 @@ class C_SalesOrder extends CI_Controller
                     'create_at' => $now,
                     'approve_by' => $username
                 ];
-                if ($this->db->field_exists('so_source', 'tbso_sales_order')) {
+                if ($hasSoSourceInSo) {
                     $soData['so_source'] = 'EXTERNAL_Z';
                 }
                 $this->db->insert('tbso_sales_order', $soData);
@@ -2833,13 +2825,11 @@ class C_SalesOrder extends CI_Controller
                     'total_tonase' => round($totalTonase, 3),
                     'total_kubikasi' => round($totalVolume, 5),
                     'catatan' => '[IMPORT FAKTUR Z EKSTERNAL] ' . trim((string)$header['catatan']),
-                    // Status draft mengisolasi faktur eksternal dari piutang dan antrean logistik.
-                    // Modul Pecah Faktur mengenali sumber EXTERNAL_Z sebagai draft yang boleh dipecah.
-                    'status' => 'draft',
+                    'status' => 'selesai',
                     'create_by' => $username,
                     'create_at' => $now
                 ];
-                if ($this->db->field_exists('so_source', 'tbso_faktur_penjualan')) {
+                if ($hasSoSourceInFaktur) {
                     $invoiceData['so_source'] = 'EXTERNAL_Z';
                 }
                 $this->db->insert('tbso_faktur_penjualan', $invoiceData);
