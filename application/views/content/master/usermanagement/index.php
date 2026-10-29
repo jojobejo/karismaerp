@@ -19,7 +19,7 @@
             <div class="erp-page">
                 <div class="erp-hero mb-3">
                     <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
-                        <div><h3 class="mb-1 fw-bold">User Management</h3><div class="opacity-75">Hybrid legacy + normalized role permission untuk KARISMA ERP.</div></div>
+                        <div><h3 class="mb-1 fw-bold">User Management</h3><div class="opacity-75">Kelola akun pada tabel tb_users.</div></div>
                         <div class="d-flex flex-wrap gap-2">
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('portal') ?>"><i class="fas fa-arrow-left me-1"></i> Kembali ke Portal</a>
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-building me-1"></i> Setting Master Kantor</a>
@@ -37,9 +37,8 @@
                 <div class="erp-panel mb-3">
                     <div class="erp-panel-header">
                         <div class="d-grid filter-grid gap-2" style="grid-template-columns:repeat(5,minmax(0,1fr));">
-                            <select id="filter_departemen" class="form-select"><option value="">Departemen</option><?php foreach($departemen as $d): ?><option value="<?= html_escape($d['id']) ?>"><?= html_escape($d['text']) ?></option><?php endforeach ?></select>
-                            <select id="filter_jobdesk" class="form-select"><option value="">Jobdesk</option><?php foreach($jobdesk as $j): ?><option value="<?= html_escape($j['nama_jobdesk']) ?>"><?= html_escape($j['nama_jobdesk']) ?></option><?php endforeach ?></select>
-                            <select id="filter_akses" class="form-select"><option value="">Akses</option><?php foreach($akses_level as $a): ?><option value="<?= html_escape($a['nama_akses_level']) ?>"><?= html_escape($a['nama_akses_level']) ?></option><?php endforeach ?></select>
+                            <select id="filter_departemen" class="form-select"><option value="">Departemen</option><?php foreach($departemen_options as $d): ?><option value="<?= html_escape($d['id']) ?>"><?= html_escape($d['text']) ?></option><?php endforeach ?></select>
+                            <select id="filter_level" class="form-select"><option value="">Level</option><?php foreach($level_options as $level): ?><option value="<?= html_escape($level['id']) ?>"><?= html_escape($level['text']) ?></option><?php endforeach ?></select>
                             <select id="filter_status" class="form-select"><option value="">Status</option><option value="1">Aktif</option><option value="0">Nonaktif</option></select>
                             <button class="btn btn-outline-secondary" id="btnResetFilter"><i class="fas fa-undo me-1"></i> Reset</button>
                         </div>
@@ -47,7 +46,7 @@
                     <div class="p-3">
                         <div id="tableSkeleton" class="skeleton mb-2"></div>
                         <table class="table table-hover align-middle w-100 compact" id="tableUsers">
-                            <thead><tr><th>User</th><th>NIK</th><th>Departemen</th><th>Jobdesk</th><th>Jabatan</th><th>Akses</th><th>Status</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>Nama</th><th>Username</th><th>NIK</th><th>Bagian</th><th>Departemen</th><th>Jabatan</th><th>Level</th><th>Status</th><th>Akses Aplikasi</th><th>Aksi</th></tr></thead>
                         </table>
                     </div>
                 </div>
@@ -98,32 +97,18 @@ $(function(){
     const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const createModal = new bootstrap.Modal(document.getElementById('modalUserCreate'));
     const editModal = new bootstrap.Modal(document.getElementById('modalUserEdit'));
-    $('#modalUserCreate .select2, #modalUserEdit .select2').each(function(){ $(this).select2({width:'100%', dropdownParent: $(this).closest('.modal')}); });
-    function syncLegacyFields($form){
-        const jobdesk = $form.find('[name="jobdesk_id"] option:selected');
-        const akses = $form.find('[name="akses_lv_id"] option:selected');
-        if(jobdesk.val()) $form.find('[name="jobdesk"]').val(jobdesk.data('text') || jobdesk.text());
-        if(akses.val()) $form.find('[name="akses_lv"]').val(akses.data('text') || akses.text());
-    }
-    function setSelectValue($select,value,label){
-        if(value===null || value===undefined || value==='') return;
-        const optionExists=$select.find('option').filter(function(){return String(this.value)===String(value);}).length>0;
-        if(!optionExists) $select.append(new Option(label || value,value,true,true));
-        $select.val(String(value)).trigger('change');
-    }
     const table = $('#tableUsers').DataTable({
         processing:true, serverSide:true, responsive:true, searchDelay:350,
-        ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();},dataSrc:function(json){$('#userTotal').text(json.recordsTotal??0);$('#userFiltered').text(json.recordsFiltered??0);$('#userActivePage').text((json.data||[]).filter(user=>parseInt(user.status)===1).length);return json.data||[];}},
+        ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.level=$('#filter_level').val();d.status=$('#filter_status').val();},dataSrc:function(json){$('#userTotal').text(json.recordsTotal??0);$('#userFiltered').text(json.recordsFiltered??0);$('#userActivePage').text((json.data||[]).filter(user=>parseInt(user.status)===1).length);return json.data||[];}},
         columns:[
-            {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+encodeURI(r.foto) : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${escapeHtml(r.nm_karyawan||'-')}</div><small class="text-muted">${escapeHtml(r.username||'-')}</small></div></div>`},
-            {data:'nik',render:v=>escapeHtml(v||'-')}, {data:'departemen',render:v=>escapeHtml(v||'-')}, {data:'jobdesk',render:v=>escapeHtml(v||'-')}, {data:'jabatan',defaultContent:'-',render:v=>escapeHtml(v||'-')},
-            {data:null,render:r=>`<a class="btn btn-sm btn-outline-primary" title="Atur akses aplikasi ${escapeHtml(r.nm_karyawan||r.username||'user')}" aria-label="Atur akses aplikasi ${escapeHtml(r.nm_karyawan||r.username||'user')}" href="<?= base_url('admin/portal-app-access') ?>?source=tb_karyawan&user_id=${encodeURIComponent(r.id)}"><i class="fas fa-cog"></i></a>`},
+            {data:'nama_lngkp',render:v=>escapeHtml(v||'-')}, {data:'username',render:v=>escapeHtml(v||'-')}, {data:'nik',render:v=>escapeHtml(v||'-')}, {data:'bagian',render:v=>escapeHtml(v||'-')}, {data:'departemen',render:v=>escapeHtml(v||'-')}, {data:'jabatan',render:v=>escapeHtml(v||'-')}, {data:'level',render:v=>escapeHtml(v||'-')},
             {data:null, render:r=> r.status === undefined ? '<span class="badge bg-secondary">Legacy</span>' : (parseInt(r.status)===1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>')},
+            {data:null,render:r=>`<a class="btn btn-sm btn-outline-primary" title="Atur akses aplikasi ${escapeHtml(r.nama_lngkp||r.username||'user')}" aria-label="Atur akses aplikasi ${escapeHtml(r.nama_lngkp||r.username||'user')}" href="<?= base_url('admin/portal-app-access') ?>?source=tb_users&user_id=${encodeURIComponent(r.id)}"><i class="fas fa-cog"></i></a>`},
             {data:null, orderable:false, searchable:false, render:r=>`<div class="action-group"><button class="btn btn-sm btn-outline-primary btn-edit" data-id="${r.id}"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-warning btn-reset" data-id="${r.id}"><i class="fas fa-key"></i></button><button class="btn btn-sm btn-outline-secondary btn-toggle" data-id="${r.id}"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-outline-danger btn-delete" data-id="${r.id}"><i class="fas fa-trash"></i></button></div>`}
         ],
         initComplete:function(){ $('#tableSkeleton').hide(); }
     });
-    $('#filter_departemen,#filter_jobdesk,#filter_akses,#filter_status').on('change',()=>table.ajax.reload());
+    $('#filter_departemen,#filter_level,#filter_status').on('change',()=>table.ajax.reload());
     $('#btnResetFilter').on('click',function(){ $('.filter-grid select').val(''); table.ajax.reload(); });
     $('#btnAdd').on('click',function(){ const $form=$('#formUserCreate'); $form[0].reset(); $form.find('.select2').val('').trigger('change'); createModal.show(); });
     $('#tableUsers').on('click','.btn-edit',function(){
@@ -135,15 +120,10 @@ $(function(){
             $form.find('.select2').val('').trigger('change');
             $form.data('user-id',res.data.id);
             $.each(res.data,function(k,v){ $form.find('[name="'+k+'"]').val(v); });
-            setSelectValue($form.find('[name="departemen"]'),res.data.departemen,res.data.departemen);
-            setSelectValue($form.find('[name="jobdesk_id"]'),res.data.jobdesk_id,res.data.jobdesk);
-            setSelectValue($form.find('[name="akses_lv_id"]'),res.data.akses_lv_id,res.data.akses_lv);
-            setSelectValue($form.find('[name="jabatan"]'),res.data.jabatan,res.data.jabatan);
             editModal.show();
         }).fail(function(){toastr.error('Data user gagal dimuat.');});
     });
     function submitUserForm($form, url, formModal){
-        syncLegacyFields($form);
         $.ajax({url:url,type:'POST',data:new FormData($form[0]),processData:false,contentType:false,dataType:'json',success:function(res){
             res.status?toastr.success(res.message):toastr.error(res.message);
             if(res.status){formModal.hide();table.ajax.reload(null,false);}

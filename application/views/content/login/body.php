@@ -6,6 +6,14 @@ $loginNotice = $this->session->flashdata('notice') ?: ($this->session->flashdata
 <main class="login-shell">
     <section class="login-visual" aria-label="KARISMA ERP">
         <div class="visual-grid"></div>
+        <div class="visual-constellation" aria-hidden="true">
+            <span class="constellation-ring ring-outer"></span>
+            <span class="constellation-ring ring-inner"></span>
+            <span class="constellation-core"><i class="fas fa-cubes"></i></span>
+            <span class="constellation-node node-one"><i class="fas fa-chart-line"></i></span>
+            <span class="constellation-node node-two"><i class="fas fa-shield-alt"></i></span>
+            <span class="constellation-node node-three"><i class="fas fa-sitemap"></i></span>
+        </div>
         <div class="visual-top"><img src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo Karisma"><span>ENTERPRISE PLATFORM</span></div>
         <div class="visual-copy"><div class="eyebrow"><i class="fas fa-circle"></i> EKOSISTEM DIGITAL TERINTEGRASI</div><h1>Satu gerbang.<br><span>Seluruh operasional.</span></h1><p>Akses perangkat kerja KARISMA ERP dalam satu platform yang aman, cepat, dan terhubung.</p></div>
         <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
@@ -24,8 +32,6 @@ $loginNotice = $this->session->flashdata('notice') ?: ($this->session->flashdata
                 <button class="submit-button" type="submit"><span>Masuk ke Portal</span><i class="fas fa-arrow-right"></i><span class="spinner" aria-hidden="true"></span></button>
                 <div class="ajax-message" id="ajaxMessage" role="alert"></div>
             </form>
-            <div style="text-align:center;margin-top:16px"><button type="button" id="forgotPasswordButton" style="border:0;background:none;color:#2774f5;font-weight:600;cursor:pointer">Lupa password?</button></div>
-            <div class="secure-note"><i class="fas fa-shield-alt"></i><span>Koneksi aman untuk akun perusahaan Anda.</span></div>
         </div>
         <footer>© <?= date('Y') ?> PT Karisma Indoagro Universal</footer>
     </section>

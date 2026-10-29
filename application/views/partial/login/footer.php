@@ -5,32 +5,6 @@
     const submit = form.querySelector('.submit-button');
     const message = document.getElementById('ajaxMessage');
     const password = document.getElementById('pass_isi');
-    document.getElementById('forgotPasswordButton').addEventListener('click', async () => {
-        const result = await Swal.fire({
-            title: 'Ajukan reset password',
-            text: 'Masukkan username. Administrator akan meninjau permintaan Anda.',
-            input: 'text', inputLabel: 'Username', inputPlaceholder: 'Username akun Anda',
-            inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-            showCancelButton: true, confirmButtonText: 'Kirim permintaan', cancelButtonText: 'Batal',
-            confirmButtonColor: '#2774f5', inputValidator: value => !value.trim() ? 'Username wajib diisi.' : undefined
-        });
-        if (!result.isConfirmed) return;
-        const requestForm = new FormData();
-        requestForm.append('username', result.value.trim());
-        <?php if (config_item('csrf_protection')): ?>requestForm.append('<?= $this->security->get_csrf_token_name() ?>', '<?= $this->security->get_csrf_hash() ?>');<?php endif ?>
-        try {
-            const response = await fetch('<?= base_url('auth/forgot-password') ?>', { method: 'POST', body: requestForm, credentials: 'same-origin' });
-            if (!response.ok) throw new Error('Permintaan tidak berhasil diproses.');
-            const html = await response.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            const error = doc.querySelector('.login-alert.error');
-            const notice = doc.querySelector('.login-alert.success');
-            const message = error?.textContent.trim() || notice?.textContent.trim() || 'Permintaan sudah diproses.';
-            await Swal.fire({ icon: error ? 'error' : 'success', title: error ? 'Belum berhasil' : 'Permintaan terkirim', text: message, confirmButtonColor: '#2774f5' });
-        } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Terjadi kendala', text: error.message, confirmButtonColor: '#2774f5' });
-        }
-    });
     document.getElementById('togglePassword').addEventListener('click', function () {
         const visible = password.type === 'password';
         password.type = visible ? 'text' : 'password';

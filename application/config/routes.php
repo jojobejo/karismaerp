@@ -58,6 +58,7 @@ $route['translate_uri_dashes'] = FALSE;
 // Portal Dashboard
 $route['portal'] = 'Portal/index';
 $route['sso/authorize'] = 'Sso/authorize';
+$route['sso/panduan-klien'] = 'SsoGuide/index';
 $route['api/sso/token'] = 'Sso/token';
 $route['auth'] = 'Auth/index';
 
@@ -72,6 +73,8 @@ $route['admin/password-reset-requests/reset/(:num)'] = 'admin/C_PasswordResetReq
 $route['admin/portal-app-access']                   = 'admin/C_PortalAccess/index';
 $route['admin/portal-app-access/detail']             = 'admin/C_PortalAccess/detail';
 $route['admin/portal-app-access/save']              = 'admin/C_PortalAccess/save';
+$route['admin/portal-app-directory']                 = 'admin/C_PortalAppDirectory/index';
+$route['admin/portal-app-directory/save']             = 'admin/C_PortalAppDirectory/save';
 $route['admin/portal-app-modules']                  = 'admin/C_PortalAppModules/index';
 $route['admin/portal-app-modules/list']             = 'admin/C_PortalAppModules/list';
 $route['admin/portal-app-modules/save']             = 'admin/C_PortalAppModules/save';

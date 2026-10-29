@@ -167,6 +167,21 @@
             transform: translateY(-1px);
         }
 
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 13px;
+            color: #16447c;
+            border: 1px solid rgba(32, 86, 158, .15);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .86);
+            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
+            font-size: .72rem;
+            font-weight: 800;
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -557,6 +572,7 @@
             .topbar-actions { gap: 7px; }
             .admin-navigation { justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
             .admin-navigation a { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
+            .user-chip { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
             .logout-link { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
             .portal-hero { min-height: 0; border-radius: 24px; }
             .hero-copy { padding: 38px 24px 40px; }
@@ -590,10 +606,13 @@
             <span>PT. Karisma Indoagro Universal</span>
         </div>
         <div class="topbar-actions">
-            <div class="system-status"><span class="status-dot"></span> System Online</div>
+            <?php if (!empty($is_admin_user)): ?><div class="system-status"><span class="status-dot"></span> System Online</div><?php endif; ?>
+            <span class="user-chip"><i class="fas fa-user-circle" aria-hidden="true"></i><span><?= html_escape($user_name ?: 'Pengguna') ?></span></span>
             <a class="logout-link" href="<?= base_url('logout') ?>"><i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></a>
-            <?php if (!empty($is_admin)): ?>
+            <?php if (!empty($is_admin_user)): ?>
                 <nav class="admin-navigation" aria-label="Navigasi administrasi">
+                    <a href="<?= base_url('admin/portal-app-directory') ?>"><i class="fas fa-th-large" aria-hidden="true"></i><span>Application Directory</span></a>
+                    <a href="<?= base_url('sso/panduan-klien') ?>"><i class="fas fa-book-reader" aria-hidden="true"></i><span>Panduan Integrasi SSO</span></a>
                     <a href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-link" aria-hidden="true"></i><span>Integrasi SSO</span></a>
                     <a href="<?= base_url('admin/api-documentation') ?>"><i class="fas fa-book-open" aria-hidden="true"></i><span>Dokumentasi API</span></a>
                     <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>

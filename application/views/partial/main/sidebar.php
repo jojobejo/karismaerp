@@ -73,6 +73,12 @@
                     <p>Module Management</p>
                   </a>
                 </li>
+                <li class="nav-item">
+                  <a href="<?= base_url('admin/portal-app-directory') ?>" class="nav-link">
+                    <i class="fas fa-th-large nav-icon"></i>
+                    <p>Application Directory</p>
+                  </a>
+                </li>
               </ul>
             </li>
           </ul>

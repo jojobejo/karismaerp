@@ -3,167 +3,136 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class M_Usermanagement extends CI_Model
 {
-    private $table = 'tb_karyawan';
+    private $table = 'tb_users';
 
-    private function fields($table = null)
+    private function fields()
     {
-        static $cache = [];
-        $table = $table ?: $this->table;
-        if (!isset($cache[$table])) {
-            $cache[$table] = $this->db->table_exists($table) ? $this->db->list_fields($table) : [];
+        static $fields;
+        if ($fields === null) {
+            $fields = $this->db->table_exists($this->table) ? $this->db->list_fields($this->table) : [];
         }
-        return $cache[$table];
+        return $fields;
     }
 
-    private function has($field, $table = null)
+    private function has($field)
     {
-        return in_array($field, $this->fields($table), true);
+        return in_array($field, $this->fields(), true);
+    }
+
+    private function departmentField()
+    {
+        return $this->has('departemen') ? 'departemen' : ($this->has('departement') ? 'departement' : null);
     }
 
     private function select_base()
     {
-        $select = ['k.id', 'k.nik', 'k.nm_karyawan', 'k.departemen', 'k.jobdesk', 'k.username', 'k.tim', 'k.wilayah', 'k.akses_lv'];
-        $hasJabatan = $this->has('jabatan');
-        if ($hasJabatan) $select[] = 'k.jabatan';
-        foreach (['jobdesk_id', 'akses_lv_id', 'status', 'foto', 'last_login'] as $field) {
-            if ($this->has($field)) $select[] = 'k.' . $field;
+        $fields = ['id', 'username', 'nama_lngkp', 'nik', 'bagian', 'jabatan', 'atasan', 'penilai', 'level', 'status', 'default_redirect', 'last_login'];
+        $select = [];
+        foreach ($fields as $field) {
+            if ($this->has($field)) $select[] = 'u.' . $field;
         }
-        $this->db->select(implode(',', $select));
-        if (!$hasJabatan) $this->db->select('NULL AS jabatan', false);
-        $this->db->from($this->table . ' k');
+        $departmentField = $this->departmentField();
+        if ($departmentField) $select[] = 'u.' . $departmentField . ' AS departemen';
+        $this->db->select(implode(',', $select), false)->from($this->table . ' u');
     }
 
     private function apply_filters($post)
     {
         $search = trim((string)($post['search']['value'] ?? $post['search'] ?? ''));
         if ($search !== '') {
-            $this->db->group_start()
-                ->like('k.nik', $search)
-                ->or_like('k.nm_karyawan', $search)
-                ->or_like('k.username', $search)
-                ->or_like('k.jobdesk', $search)
-                ->or_like('k.departemen', $search);
-            if ($this->has('jabatan')) {
-                $this->db->or_like('k.jabatan', $search);
+            $this->db->group_start();
+            $searchFields = ['username', 'nama_lngkp', 'nik', 'bagian', 'jabatan'];
+            if ($this->departmentField()) $searchFields[] = $this->departmentField();
+            foreach ($searchFields as $index => $field) {
+                if (!$this->has($field)) continue;
+                if ($index === 0) $this->db->like('u.' . $field, $search);
+                else $this->db->or_like('u.' . $field, $search);
             }
             $this->db->group_end();
         }
-        foreach (['departemen', 'jobdesk', 'akses_lv'] as $field) {
+        foreach (['level', 'status'] as $field) {
             $value = trim((string)($post[$field] ?? ''));
-            if ($value !== '') $this->db->where('k.' . $field, $value);
+            if ($value !== '' && $this->has($field)) $this->db->where('u.' . $field, $value);
         }
-        if ($this->has('jobdesk_id') && trim((string)($post['jobdesk_id'] ?? '')) !== '') {
-            $this->db->where('k.jobdesk_id', $post['jobdesk_id']);
-        }
-        if ($this->has('akses_lv_id') && trim((string)($post['akses_lv_id'] ?? '')) !== '') {
-            $this->db->where('k.akses_lv_id', $post['akses_lv_id']);
-        }
-        if ($this->has('status') && trim((string)($post['status'] ?? '')) !== '') {
-            $this->db->where('k.status', $post['status']);
+        $departmentField = $this->departmentField();
+        $department = trim((string)($post['departemen'] ?? ''));
+        if ($departmentField && $department !== '') {
+            $this->db->where('u.' . $departmentField, $department);
         }
     }
 
     public function datatable($post)
     {
+        if (!$this->db->table_exists($this->table)) {
+            return ['draw' => (int)($post['draw'] ?? 1), 'recordsTotal' => 0, 'recordsFiltered' => 0, 'data' => []];
+        }
         $length = (int)($post['length'] ?? 10);
         $start = (int)($post['start'] ?? 0);
-
         $total = $this->db->count_all($this->table);
-        $this->db->from($this->table . ' k');
+
+        $this->db->from($this->table . ' u');
         $this->apply_filters($post);
         $filtered = $this->db->count_all_results();
 
         $this->select_base();
         $this->apply_filters($post);
-        $this->db->order_by('k.id', 'DESC');
+        $this->db->order_by('u.id', 'DESC');
         if ($length > 0) $this->db->limit($length, $start);
-        $rows = $this->db->get()->result_array();
 
         return [
             'draw' => (int)($post['draw'] ?? 1),
             'recordsTotal' => $total,
             'recordsFiltered' => $filtered,
-            'data' => $rows,
+            'data' => $this->db->get()->result_array(),
         ];
     }
 
     public function find($id)
     {
+        if (!$this->db->table_exists($this->table)) return null;
         $this->select_base();
-        return $this->db->where('k.id', $id)->get()->row_array();
+        return $this->db->where('u.id', (int)$id)->get()->row_array();
     }
 
     public function unique($field, $value, $excludeId = null)
     {
-        if (!$this->has($field)) return true;
-        $this->db->where($field, $value);
-        if ($excludeId) $this->db->where('id !=', $excludeId);
+        if (!in_array($field, ['username', 'nik'], true) || !$this->has($field)) return false;
+        $this->db->where($field, trim((string)$value));
+        if ($excludeId) $this->db->where('id !=', (int)$excludeId);
         return $this->db->count_all_results($this->table) === 0;
-    }
-
-    public function resolve_jobdesk_name($id, $fallback)
-    {
-        $fallback = trim((string)$fallback);
-        if ($id && $this->db->table_exists('tb_jobdesk')) {
-            $fields = $this->fields('tb_jobdesk');
-            $idField = in_array('id_jobdesk', $fields, true) ? 'id_jobdesk' : (in_array('id', $fields, true) ? 'id' : null);
-            $nameField = in_array('nama_jobdesk', $fields, true) ? 'nama_jobdesk' : (in_array('jobdesk', $fields, true) ? 'jobdesk' : null);
-            if ($idField && $nameField) {
-                $row = $this->db->select($nameField)->where($idField, $id)->get('tb_jobdesk')->row_array();
-                if ($row) return $row[$nameField];
-            }
-        }
-        return $fallback;
-    }
-
-    public function resolve_akses_name($id, $fallback)
-    {
-        $fallback = trim((string)$fallback);
-        if ($id && $this->db->table_exists('tb_akses_level')) {
-            $fields = $this->fields('tb_akses_level');
-            $idField = in_array('id_akses_level', $fields, true) ? 'id_akses_level' : (in_array('id', $fields, true) ? 'id' : null);
-            $nameField = in_array('nama_akses_level', $fields, true) ? 'nama_akses_level' : (in_array('akses_lv', $fields, true) ? 'akses_lv' : null);
-            if ($idField && $nameField) {
-                $row = $this->db->select($nameField)->where($idField, $id)->get('tb_akses_level')->row_array();
-                if ($row) return $row[$nameField];
-            }
-        }
-        return $fallback;
     }
 
     private function payload($input, $isUpdate = false)
     {
-        $jobdeskId = trim((string)($input['jobdesk_id'] ?? ''));
-        $aksesId = trim((string)($input['akses_lv_id'] ?? ''));
-        $jobdesk = $this->resolve_jobdesk_name($jobdeskId, $input['jobdesk'] ?? '');
-        $akses = $this->resolve_akses_name($aksesId, $input['akses_lv'] ?? '');
-
         $data = [
-            'nik' => trim((string)($input['nik'] ?? '')),
-            'nm_karyawan' => trim((string)($input['nm_karyawan'] ?? '')),
-            'departemen' => trim((string)($input['departemen'] ?? '')),
-            'jobdesk' => $jobdesk,
-            'jabatan' => trim((string)($input['jabatan'] ?? '')),
             'username' => trim((string)($input['username'] ?? '')),
-            'tim' => (int)($input['tim'] ?? 0),
-            'wilayah' => (int)($input['wilayah'] ?? 0),
-            'akses_lv' => $akses,
-            'jobdesk_id' => $jobdeskId !== '' ? $jobdeskId : null,
-            'akses_lv_id' => $aksesId !== '' ? $aksesId : null,
-            'status' => (int)($input['status'] ?? 1),
+            'nama_lngkp' => trim((string)($input['nama_lngkp'] ?? '')),
+            'nik' => trim((string)($input['nik'] ?? '')),
+            'bagian' => trim((string)($input['bagian'] ?? '')),
+            'departemen' => trim((string)($input['departemen'] ?? '')),
+            'jabatan' => trim((string)($input['jabatan'] ?? '')),
+            'atasan' => trim((string)($input['atasan'] ?? '')),
+            'penilai' => trim((string)($input['penilai'] ?? '')),
+            'level' => (int)($input['level'] ?? 1),
+            'status' => (int)($input['status'] ?? 1) === 1 ? 1 : 0,
+            'default_redirect' => trim((string)($input['default_redirect'] ?? '')) ?: null,
         ];
-        if (!$isUpdate || array_key_exists('foto', $input)) {
-            $data['foto'] = $input['foto'] ?? null;
-        }
         if (!$isUpdate || trim((string)($input['password'] ?? '')) !== '') {
-            $data['password'] = password_hash((string)$input['password'], PASSWORD_DEFAULT);
+            $data['password'] = password_hash((string)($input['password'] ?? ''), PASSWORD_DEFAULT);
+        }
+        if (!$isUpdate && $this->has('created_at')) $data['created_at'] = date('Y-m-d H:i:s');
+        if ($this->has('updated_at')) $data['updated_at'] = date('Y-m-d H:i:s');
+        $departmentField = $this->departmentField();
+        if ($departmentField && array_key_exists('departemen', $data)) {
+            $data[$departmentField] = $data['departemen'];
+            unset($data['departemen']);
         }
         return array_intersect_key($data, array_flip($this->fields()));
     }
 
     public function save($input)
     {
-        if (!$this->db->insert($this->table, $this->payload($input, false))) return false;
+        if (!$this->db->insert($this->table, $this->payload($input))) return false;
         return $this->db->insert_id();
     }
 
@@ -172,16 +141,7 @@ class M_Usermanagement extends CI_Model
         $id = (int)$id;
         if ($id < 1) return false;
         $data = $this->payload($input, true);
-        if (!$data) return false;
-
-        // Gunakan kueri terikat dengan batas satu baris agar perubahan selalu
-        // diarahkan ke satu akun berdasarkan primary key, tanpa kondisi builder tersisa.
-        return $this->db->query(
-            'UPDATE `' . $this->table . '` SET ' . implode(', ', array_map(function ($field) {
-                return '`' . str_replace('`', '``', $field) . '` = ?';
-            }, array_keys($data))) . ' WHERE `id` = ? LIMIT 1',
-            array_merge(array_values($data), [$id])
-        );
+        return $data ? $this->db->where('id', $id)->update($this->table, $data) : false;
     }
 
     public function delete($id)
@@ -192,29 +152,24 @@ class M_Usermanagement extends CI_Model
 
     public function reset_password($id, $password)
     {
-        return $this->db->where('id', $id)->update($this->table, ['password' => password_hash($password, PASSWORD_DEFAULT)]);
+        return $this->db->where('id', (int)$id)->update($this->table, ['password' => password_hash($password, PASSWORD_DEFAULT)]);
     }
 
     public function toggle_status($id)
     {
         if (!$this->has('status')) return false;
-        $row = $this->db->select('status')->where('id', $id)->get($this->table)->row_array();
+        $row = $this->db->select('status')->where('id', (int)$id)->get($this->table)->row_array();
         if (!$row) return false;
-        return $this->db->where('id', $id)->update($this->table, ['status' => ((int)$row['status'] === 1 ? 0 : 1)]);
-    }
-
-    public function reference($table, $valueField, $textField)
-    {
-        if (!$this->db->table_exists($table)) return [];
-        $fields = $this->fields($table);
-        if (!in_array($valueField, $fields, true) || !in_array($textField, $fields, true)) return [];
-        if (in_array('status', $fields, true)) $this->db->where('status', 1);
-        return $this->db->select($valueField . ' AS id,' . $textField . ' AS text')->order_by($textField, 'ASC')->get($table)->result_array();
+        return $this->db->where('id', (int)$id)->update($this->table, ['status' => ((int)$row['status'] === 1 ? 0 : 1)]);
     }
 
     public function distinct_options($field)
     {
-        if (!$this->has($field)) return [];
-        return $this->db->select($field . ' AS id, ' . $field . ' AS text')->distinct()->where($field . ' IS NOT NULL', null, false)->order_by($field, 'ASC')->get($this->table)->result_array();
+        if ($field === 'departemen') $field = $this->departmentField();
+        if (!in_array($field, ['level'], true) && !($field && in_array($field, ['departemen', 'departement'], true))) return [];
+        if (!$field || !$this->has($field)) return [];
+        return $this->db->select($field . ' AS id, ' . $field . ' AS text')->distinct()
+            ->where($field . ' IS NOT NULL', null, false)->where($field . ' !=', '')
+            ->order_by($field, 'ASC')->get($this->table)->result_array();
     }
 }

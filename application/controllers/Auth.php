@@ -61,9 +61,9 @@ class Auth extends CI_Controller
     {
         $username = trim((string) $this->input->post('user_isi'));
         $password = (string) $this->input->post('pass_isi');
-        $auth_candidates = method_exists($this->M_Auth, 'get_auth_candidates')
-            ? $this->M_Auth->get_auth_candidates($username)
-            : array_filter([$this->M_Auth->get_auth_user($username)]);
+        // Autentikasi route auth hanya menggunakan kredensial dari tb_users.
+        $tbUsers = $this->M_Auth->get_tb_users_user($username);
+        $auth_candidates = $tbUsers ? [$tbUsers] : [];
         $key = null;
 
         if (empty($auth_candidates)) {

@@ -7,9 +7,6 @@ class C_Usermanagement extends CI_Controller
     {
         parent::__construct();
         $this->load->model('master/M_Usermanagement', 'users');
-        $this->load->model('master/M_Jobdesk', 'jobdeskModel');
-        $this->load->model('master/M_Organisasi', 'organisasiModel');
-        $this->load->model('master/M_Akseslevel', 'aksesModel');
         $this->load->library('permission');
         $this->guard();
     }
@@ -41,13 +38,8 @@ class C_Usermanagement extends CI_Controller
     public function index()
     {
         $data['page_title'] = 'KARISMA ERP - User Management';
-        $data['jobdesk'] = $this->jobdeskModel->options();
-        $data['jabatan'] = $this->organisasiModel->jabatan_options();
-        $data['akses_level'] = $this->aksesModel->options();
-        $data['departemen'] = $this->users->distinct_options('departemen');
-        $data['departemen_options'] = $this->users->reference('tb_departemen', 'id', 'nama_departemen');
-        $data['tim'] = $this->users->distinct_options('tim');
-        $data['wilayah'] = $this->users->distinct_options('wilayah');
+        $data['departemen_options'] = $this->users->distinct_options('departemen');
+        $data['level_options'] = $this->users->distinct_options('level');
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/master/usermanagement/index.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -66,15 +58,13 @@ class C_Usermanagement extends CI_Controller
 
     private function validate_user($input, $id = null, $existing = null)
     {
-        foreach (['nik' => 'NIK', 'nm_karyawan' => 'Nama karyawan', 'username' => 'Username', 'jobdesk' => 'Jobdesk', 'jabatan' => 'Jabatan', 'akses_lv' => 'Akses level'] as $field => $label) {
-            if (trim((string)($input[$field] ?? '')) === '' && trim((string)($input[$field . '_id'] ?? '')) === '') {
+        foreach (['nik' => 'NIK', 'nama_lngkp' => 'Nama lengkap', 'username' => 'Username', 'bagian' => 'Bagian', 'departemen' => 'Departemen', 'jabatan' => 'Jabatan'] as $field => $label) {
+            if (trim((string)($input[$field] ?? '')) === '') {
                 return $label . ' wajib diisi.';
             }
         }
-        $jabatan = trim((string)($input['jabatan'] ?? ''));
-        $jabatanTidakBerubah = $id && $jabatan === trim((string)($existing['jabatan'] ?? ''));
-        if (!$jabatanTidakBerubah && !$this->organisasiModel->is_active_jabatan($jabatan)) return 'Jabatan tidak valid atau sudah nonaktif.';
         if (!$id && strlen((string)($input['password'] ?? '')) < 6) return 'Password minimum 6 karakter.';
+        if ((int)($input['level'] ?? 0) < 1) return 'Level akses minimal 1.';
         if (!$id || trim((string)($input['username'] ?? '')) !== trim((string)($existing['username'] ?? ''))) {
             if (!$this->users->unique('username', $input['username'] ?? '', $id)) return 'Username sudah digunakan.';
         }
@@ -84,31 +74,9 @@ class C_Usermanagement extends CI_Controller
         return true;
     }
 
-    private function uploaded_photo()
-    {
-        if (empty($_FILES['foto']['name'])) return null;
-        $dir = FCPATH . 'uploads/profile/';
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
-        $config = [
-            'upload_path' => $dir,
-            'allowed_types' => 'jpg|jpeg|png|webp',
-            'max_size' => 2048,
-            'encrypt_name' => true,
-        ];
-        $this->load->library('upload', $config);
-        if (!$this->upload->do_upload('foto')) {
-            return ['error' => strip_tags($this->upload->display_errors())];
-        }
-        return ['path' => 'uploads/profile/' . $this->upload->data('file_name')];
-    }
-
     public function save()
     {
         $input = $this->post();
-        $photo = $this->uploaded_photo();
-        if (isset($photo['error'])) return $this->json(false, $photo['error']);
-        if (isset($photo['path'])) $input['foto'] = $photo['path'];
-
         $valid = $this->validate_user($input);
         if ($valid !== true) return $this->json(false, $valid);
         $id = $this->users->save($input);
@@ -123,10 +91,6 @@ class C_Usermanagement extends CI_Controller
             return $this->json(false, 'Data user tidak ditemukan.');
         }
         $input = $this->post();
-        $photo = $this->uploaded_photo();
-        if (isset($photo['error'])) return $this->json(false, $photo['error']);
-        if (isset($photo['path'])) $input['foto'] = $photo['path'];
-
         $valid = $this->validate_user($input, $id, $existing);
         if ($valid !== true) return $this->json(false, $valid);
         $ok = $this->users->update($id, $input);
@@ -145,6 +109,7 @@ class C_Usermanagement extends CI_Controller
 
     public function reset_password($id = null)
     {
+        if (!$this->users->find((int)$id)) return $this->json(false, 'Data user tidak ditemukan.');
         $password = trim((string)$this->input->post('password', true));
         if (strlen($password) < 6) return $this->json(false, 'Password minimum 6 karakter.');
         $ok = $this->users->reset_password((int)$id, $password);
@@ -160,12 +125,8 @@ class C_Usermanagement extends CI_Controller
     public function select_options()
     {
         $data = [
-            'jobdesk' => $this->jobdeskModel->options(),
-            'jabatan' => $this->organisasiModel->jabatan_options(),
-            'akses_level' => $this->aksesModel->options(),
-            'departemen' => $this->users->reference('tb_departemen', 'id', 'nama_departemen'),
-            'tim' => $this->users->distinct_options('tim'),
-            'wilayah' => $this->users->distinct_options('wilayah'),
+            'departemen' => $this->users->distinct_options('departemen'),
+            'level' => $this->users->distinct_options('level'),
         ];
         $this->json(true, 'OK', $data);
     }

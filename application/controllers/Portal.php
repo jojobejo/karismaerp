@@ -24,7 +24,8 @@ class Portal extends CI_Controller
         $data = [
             'apps' => $apps,
             'app_count' => count($apps),
-            'is_admin' => (bool) $this->session->userdata('is_admin_dashboard'),
+            'user_name' => trim((string)($this->session->userdata('nama_user') ?: $this->session->userdata('nama') ?: $this->session->userdata('username'))),
+            'is_admin_user' => strtolower(trim((string)$this->session->userdata('username'))) === 'admin',
         ];
 
         $this->load->view('portal/index', $data);

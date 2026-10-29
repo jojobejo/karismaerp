@@ -30,8 +30,8 @@ Tanggal: 20 Oktober 2026
 - `application/libraries/Permission.php`, helper autentikasi, serta controller Portal dan modul manajemen: menampilkan notifikasi ketika sesi tidak lagi aktif.
 - `application/controllers/Portal.php` dan `application/views/portal/index.php`: navigasi administrasi khusus username `admin` ditempatkan di area System Online.
 - `application/controllers/master/C_Menu.php` dan `application/views/content/master/menu/index.php`: halaman pengaturan modul navigasi menggunakan label Module Management.
-- `application/controllers/master/C_Usermanagement.php` dan `application/models/master/M_Usermanagement.php`: CRUD pengguna yang telah tersedia, menggunakan `tb_karyawan` dan pengaturan akses yang ada.
+- `application/controllers/master/C_Usermanagement.php` dan `application/models/master/M_Usermanagement.php`: CRUD pengguna pada `tb_users`, dengan sumber akses aplikasi `tb_users`.
 
 ## Batas Validasi
 
-Modul User Management membaca, membuat, dan memperbarui akun di `tb_karyawan`; sesi login turut menyimpan ID karyawan dari tabel tersebut. Perubahan kode ini belum menjalani uji login berbasis browser untuk akun aktif/nonaktif, uji seluruh peran, atau uji modul user management dengan sesi berizin. Lakukan validasi tersebut pada lingkungan aplikasi sebelum rilis.
+Catatan implementasi 29 Oktober 2026: modul User Management memakai `tb_users`; sebelumnya modul mengelola `tb_karyawan`. Login tetap dapat membaca kedua sumber akun melalui `M_Auth`. Perubahan modul belum menjalani uji browser atau CRUD terautentikasi. Lakukan validasi tersebut pada lingkungan aplikasi sebelum rilis. Rincian field dan cara penggunaan ada di `docs/development/user-management-tb-users-20261029.md`.
