@@ -210,9 +210,15 @@ $catatan_clean = trim(preg_replace('/Pecahan\s*(Massal|Otomatis)?\s*dari\s*Faktu
                     <a href="<?= $back_url ?>" class="btn btn-secondary btn-sm mr-1">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke Modul Pecah Faktur
                     </a>
-                    <button class="btn btn-info btn-sm mr-1" onclick="window.print()">
-                        <i class="fas fa-print mr-1"></i> Cetak Faktur Pecahan
-                    </button>
+                    <a href="<?= base_url('sales_order/cetak_faktur_pecah/' . $faktur['id_pecah']) ?>" target="_blank" class="btn btn-info btn-sm mr-1" title="Cetak Faktur Format Epson LX-310 (Continuous Form 21x14 cm)">
+                        <i class="fas fa-print mr-1"></i> Cetak Faktur (LX-310)
+                    </a>
+                    <a href="<?= base_url('sales_order/hapus_faktur_pecah/' . $faktur['id_pecah']) ?>" 
+                       class="btn btn-outline-danger btn-sm mr-1"
+                       title="Unpost / Batalkan Faktur Pecahan ini"
+                       onclick="return confirm('Apakah Anda yakin ingin meng-unpost / membatalkan Faktur Pecahan <?= htmlspecialchars($faktur['no_faktur']) ?>?\n\nKuantitas barang akan otomatis dikembalikan ke Faktur Z Induk (<?= htmlspecialchars($faktur['parent_no_faktur']) ?>).')">
+                        <i class="fas fa-undo mr-1"></i> Unpost Faktur Pecahan
+                    </a>
                     <?php if (!empty($parent_faktur)): ?>
                         <a href="<?= base_url('sales_order/detail_faktur/' . $parent_faktur['id_faktur']) ?>" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-external-link-alt mr-1"></i> Buka Faktur Z Induk (<?= htmlspecialchars($parent_faktur['no_faktur']) ?>)

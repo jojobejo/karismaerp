@@ -414,7 +414,12 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 }
                             }
                             $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
-                            $slot_tgl_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : date('Y-m-d', strtotime($slot_tgl_faktur . ' +30 days'));
+                            $slot_parent_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : null;
+                            if (!empty($slot_parent_jtempo) && $slot_parent_jtempo > $slot_tgl_faktur) {
+                                $slot_tgl_jtempo = $slot_parent_jtempo;
+                            } else {
+                                $slot_tgl_jtempo = date('Y-m-d', strtotime($slot_tgl_faktur . ' +30 days'));
+                            }
 
                             // Cari objek customer
                             $auto_c = null;
@@ -1166,7 +1171,21 @@ $(document).ready(function() {
             return false;
         }
 
-        return confirm('Konfirmasi: Terbitkan seluruh Faktur Pecahan (Kode H) sekarang?');
+        if (!confirm('Konfirmasi: Terbitkan seluruh Faktur Pecahan (Kode H) sekarang?')) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Nonaktifkan input pada baris barang dengan kuantitas 0 agar payload POST ringan dan tidak melebihi batas max_input_vars PHP
+        $('.row-item-split').each(function() {
+            var q = parseFloat($(this).find('.input-qty-split').val()) || 0;
+            if (q <= 0.0001) {
+                $(this).find('input').prop('disabled', true);
+            }
+        });
+
+        $('#btnSubmitBatch').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses & Menerbitkan...');
+        return true;
     });
 
     // Inisialisasi awal: jika mode auto-split terisi, langsung hitung subtotal & pantau alokasi

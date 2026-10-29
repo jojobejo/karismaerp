@@ -248,63 +248,111 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Generate No. Faktur — format: [prefix urutan user]INVDDMMYYXXXX
-     * Faktur sekarang hidup di tbso_faktur_penjualan.
+     * Generate No. Faktur — format:
+     * - Faktur Pecahan H : H[YY][6 digit counter] (contoh: H26000001, H26000002)
+     * - Faktur Umum/Lain : [prefix]INV[DDMMYY][4 digit counter]
      */
     public function generate_no_faktur($user_prefix = '')
     {
         $user_prefix = preg_replace('/[^A-Z]/', '', strtoupper((string)$user_prefix));
-        $prefix = $user_prefix . 'INV' . date('dmy');
 
-        $row = $this->db->query("
+        if ($user_prefix === 'H') {
+            // Format Faktur Pecahan H: H + 2 digit tahun + 6 digit nomor urut (e.g. H26000001, H26000002)
+            $prefix  = 'H' . date('y');
+            $pad_len = 6;
+        } else {
+            $prefix  = $user_prefix . 'INV' . date('dmy');
+            $pad_len = 4;
+        }
+
+        // Bangun daftar tabel secara dinamis sesuai ketersediaan tabel di database aktif (misal admkeu)
+        $unions = [
+            "SELECT CAST(no_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+             FROM tbso_faktur_penjualan
+             WHERE no_faktur LIKE ?"
+        ];
+        $params = [$prefix . '%'];
+
+        if ($this->db->table_exists('tbso_faktur_z_pecah')) {
+            $unions[] = "SELECT CAST(no_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tbso_faktur_z_pecah
+                         WHERE no_faktur LIKE ?";
+            $params[] = $prefix . '%';
+        }
+
+        if ($this->db->table_exists('tb_detail_do')) {
+            $unions[] = "SELECT CAST(kd_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tb_detail_do
+                         WHERE kd_faktur LIKE ?";
+            $params[] = $prefix . '%';
+        }
+
+        if ($this->db->table_exists('tb_tmp_detaildo')) {
+            $unions[] = "SELECT CAST(kd_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tb_tmp_detaildo
+                         WHERE kd_faktur LIKE ?";
+            $params[] = $prefix . '%';
+        }
+
+        $sql = "
             SELECT nomor
             FROM (
-                SELECT no_faktur AS nomor
-                FROM tbso_faktur_penjualan
-                WHERE no_faktur LIKE ?
-                UNION
-                SELECT no_faktur AS nomor
-                FROM tbso_faktur_z_pecah
-                WHERE no_faktur LIKE ?
-                UNION
-                SELECT kd_faktur AS nomor
-                FROM tb_detail_do
-                WHERE kd_faktur LIKE ?
-                UNION
-                SELECT kd_faktur AS nomor
-                FROM tb_tmp_detaildo
-                WHERE kd_faktur LIKE ?
+                " . implode("\n                UNION\n                ", $unions) . "
             ) faktur_terpakai
             ORDER BY nomor DESC
             LIMIT 1
-        ", [$prefix . '%', $prefix . '%', $prefix . '%', $prefix . '%'])->row();
+        ";
 
-        if ($row) {
-            $last = (int)substr($row->nomor, -4);
-            return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        $query = $this->db->query($sql, $params);
+        $row   = ($query && is_object($query)) ? $query->row() : null;
+
+        if ($row && !empty($row->nomor)) {
+            $last = (int)substr($row->nomor, -$pad_len);
+            return $prefix . str_pad($last + 1, $pad_len, '0', STR_PAD_LEFT);
         }
-        return $prefix . '0001';
+        return $prefix . str_pad(1, $pad_len, '0', STR_PAD_LEFT);
     }
 
     public function is_no_faktur_used($no_faktur)
     {
-        $row = $this->db->query("
+        $unions = [
+            "SELECT CAST(no_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+             FROM tbso_faktur_penjualan
+             WHERE no_faktur = ?"
+        ];
+        $params = [$no_faktur];
+
+        if ($this->db->table_exists('tbso_faktur_z_pecah')) {
+            $unions[] = "SELECT CAST(no_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tbso_faktur_z_pecah
+                         WHERE no_faktur = ?";
+            $params[] = $no_faktur;
+        }
+
+        if ($this->db->table_exists('tb_detail_do')) {
+            $unions[] = "SELECT CAST(kd_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tb_detail_do
+                         WHERE kd_faktur = ?";
+            $params[] = $no_faktur;
+        }
+
+        if ($this->db->table_exists('tb_tmp_detaildo')) {
+            $unions[] = "SELECT CAST(kd_faktur AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_general_ci AS nomor
+                         FROM tb_tmp_detaildo
+                         WHERE kd_faktur = ?";
+            $params[] = $no_faktur;
+        }
+
+        $sql = "
             SELECT nomor
             FROM (
-                SELECT no_faktur AS nomor
-                FROM tbso_faktur_penjualan
-                WHERE no_faktur = ?
-                UNION
-                SELECT kd_faktur AS nomor
-                FROM tb_detail_do
-                WHERE kd_faktur = ?
-                UNION
-                SELECT kd_faktur AS nomor
-                FROM tb_tmp_detaildo
-                WHERE kd_faktur = ?
+                " . implode("\n                UNION\n                ", $unions) . "
             ) faktur_terpakai
             LIMIT 1
-        ", [$no_faktur, $no_faktur, $no_faktur])->row();
+        ";
+
+        $query = $this->db->query($sql, $params);
+        $row   = ($query && is_object($query)) ? $query->row() : null;
 
         return !empty($row);
     }
@@ -407,9 +455,13 @@ class M_SalesOrder extends CI_Model
 
     public function get_tax_list()
     {
-        return $this->db->order_by('nm_tax', 'ASC')
-            ->get('tb_set_tax')
-            ->result_array();
+        if (!$this->db->table_exists('tb_set_tax')) {
+            return [
+                ['id_tax' => 1, 'nm_tax' => 'PPN 11%', 'nilai_tax' => 11]
+            ];
+        }
+        $q = $this->db->order_by('nm_tax', 'ASC')->get('tb_set_tax');
+        return ($q && is_object($q)) ? $q->result_array() : [];
     }
 
     // ================================================================
@@ -433,21 +485,24 @@ class M_SalesOrder extends CI_Model
             ->get('tbpo_barang')
             ->result_array();
 
-        // Fetch HPP from tb_lpb_detail for these items
+        // Fetch HPP from tb_lpb_detail for these items jika tabel tersedia
         $hpp_map = [];
-        $lpb_rows = $this->db->query("
-            SELECT d.kd_barang, d.harga_satuan
-            FROM tb_lpb_detail d
-            JOIN (
-                SELECT kd_barang, MAX(id_detail_lpb) AS max_id
-                FROM tb_lpb_detail
-                WHERE kd_barang IN ? AND COALESCE(harga_satuan, 0) > 0
-                GROUP BY kd_barang
-            ) latest ON d.id_detail_lpb = latest.max_id
-        ", [$unique_kds])->result_array();
+        if ($this->db->table_exists('tb_lpb_detail')) {
+            $lpb_q = $this->db->query("
+                SELECT d.kd_barang, d.harga_satuan
+                FROM tb_lpb_detail d
+                JOIN (
+                    SELECT kd_barang, MAX(id_detail_lpb) AS max_id
+                    FROM tb_lpb_detail
+                    WHERE kd_barang IN ? AND COALESCE(harga_satuan, 0) > 0
+                    GROUP BY kd_barang
+                ) latest ON d.id_detail_lpb = latest.max_id
+            ", [$unique_kds]);
+            $lpb_rows = ($lpb_q && is_object($lpb_q)) ? $lpb_q->result_array() : [];
 
-        foreach ($lpb_rows as $lr) {
-            $hpp_map[$lr['kd_barang']] = (float)$lr['harga_satuan'];
+            foreach ($lpb_rows as $lr) {
+                $hpp_map[$lr['kd_barang']] = (float)$lr['harga_satuan'];
+            }
         }
 
         $map = [];
@@ -2847,6 +2902,22 @@ class M_SalesOrder extends CI_Model
             // Hasil pecahan menggunakan kode awalan H
             $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
 
+            $tgl_faktur = !empty($parent_faktur['tanggal_faktur']) ? $parent_faktur['tanggal_faktur'] : date('Y-m-d');
+            $tgl_tempo  = !empty($parent_faktur['tanggal_jatuh_tempo']) ? $parent_faktur['tanggal_jatuh_tempo'] : null;
+            $tempo_calc = (int)($parent_faktur['tempo'] ?? ($parent_faktur['jtempo'] ?? 0));
+            if ($tempo_calc <= 0 && !empty($tgl_faktur) && !empty($tgl_tempo)) {
+                $diff = round((strtotime($tgl_tempo) - strtotime($tgl_faktur)) / 86400);
+                if ($diff > 0) {
+                    $tempo_calc = (int)$diff;
+                }
+            }
+            if ($tempo_calc <= 0) {
+                $tempo_calc = 30; // Default tempo distribusi Karisma ERP
+            }
+            if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+                $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
+            }
+
             $fh = [
                 'no_faktur'           => $no_faktur_child,
                 'parent_id_faktur'    => $parent_faktur['id_faktur'],
@@ -2856,12 +2927,12 @@ class M_SalesOrder extends CI_Model
                 'kd_customer'         => $kd_cust,
                 'customer_name'       => $customer_name,
                 'gudang_id'           => $parent_faktur['gudang_id'],
-                'tanggal_faktur'      => $parent_faktur['tanggal_faktur'],
-                'tanggal_jatuh_tempo' => $parent_faktur['tanggal_jatuh_tempo'],
+                'tanggal_faktur'      => $tgl_faktur,
+                'tanggal_jatuh_tempo' => $tgl_tempo,
                 'salesman'            => $parent_faktur['salesman'],
-                'cara_pembayaran'     => $parent_faktur['cara_pembayaran'],
-                'jtempo'              => $parent_faktur['jtempo'],
-                'tempo'               => $parent_faktur['tempo'],
+                'cara_pembayaran'     => 'tempo',
+                'jtempo'              => $tempo_calc,
+                'tempo'               => $tempo_calc,
                 'catatan'             => 'Pecahan dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
                 'status'              => 'confirmed',
                 'create_by'           => $username,
@@ -3024,10 +3095,25 @@ class M_SalesOrder extends CI_Model
                     $slot_parent_nos[] = $parent_fakturs[$pid_in_slot]['no_faktur'];
                 }
             }
-            $parent_no_header = !empty($slot_parent_nos) ? implode(', ', array_unique($slot_parent_nos)) : (string)($slot_parent['no_faktur'] ?? '');
+            $parent_no_full   = !empty($slot_parent_nos) ? implode(', ', array_unique($slot_parent_nos)) : (string)($slot_parent['no_faktur'] ?? '');
+            $parent_no_header = substr($parent_no_full, 0, 50);
 
             $tgl_faktur = !empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : ($slot_parent['tanggal_faktur'] ?? date('Y-m-d'));
             $tgl_tempo  = !empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : ($slot_parent['tanggal_jatuh_tempo'] ?? null);
+
+            $tempo_calc = (int)($slot_parent['tempo'] ?? ($slot_parent['jtempo'] ?? 0));
+            if (!empty($tgl_faktur) && !empty($tgl_tempo)) {
+                $diff = round((strtotime($tgl_tempo) - strtotime($tgl_faktur)) / 86400);
+                if ($diff > 0) {
+                    $tempo_calc = (int)$diff;
+                }
+            }
+            if ($tempo_calc <= 0) {
+                $tempo_calc = 30; // Default tempo distribusi Karisma ERP
+            }
+            if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+                $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
+            }
 
             $fh = [
                 'no_faktur'           => $no_faktur_child,
@@ -3041,10 +3127,10 @@ class M_SalesOrder extends CI_Model
                 'tanggal_faktur'      => $tgl_faktur,
                 'tanggal_jatuh_tempo' => $tgl_tempo,
                 'salesman'            => $slot_parent['salesman'] ?? null,
-                'cara_pembayaran'     => $slot_parent['cara_pembayaran'] ?? 'tempo',
-                'jtempo'              => (int)($slot_parent['jtempo'] ?? 0),
-                'tempo'               => (int)($slot_parent['tempo'] ?? 0),
-                'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_header . "\n" . trim((string)($s['catatan'] ?? '')),
+                'cara_pembayaran'     => 'tempo',
+                'jtempo'              => $tempo_calc,
+                'tempo'               => $tempo_calc,
+                'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_full . "\n" . trim((string)($s['catatan'] ?? '')),
                 'status'              => 'confirmed',
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
@@ -3120,7 +3206,7 @@ class M_SalesOrder extends CI_Model
                     'total_harga'             => $total_harga,
                     'berat_gram'              => (float)($pd['berat_gram'] ?? 0),
                     'kubikasi_m3'             => (float)($pd['kubikasi_m3'] ?? 0),
-                    'gudang_id'               => $pd['gudang_id'] ?? $first_parent['gudang_id'],
+                    'gudang_id'               => $pd['gudang_id'] ?? ($slot_parent['gudang_id'] ?? null),
                     'create_by'               => $username,
                     'create_at'               => date('Y-m-d H:i:s')
                 ];
@@ -3375,6 +3461,22 @@ class M_SalesOrder extends CI_Model
 
                 $no_faktur_child = $this->_generate_and_track_no_faktur('H', $generated_numbers);
 
+                $tgl_faktur = !empty($parent_faktur['tanggal_faktur']) ? $parent_faktur['tanggal_faktur'] : date('Y-m-d');
+                $tgl_tempo  = !empty($parent_faktur['tanggal_jatuh_tempo']) ? $parent_faktur['tanggal_jatuh_tempo'] : null;
+                $tempo_calc = (int)($parent_faktur['tempo'] ?? ($parent_faktur['jtempo'] ?? 0));
+                if ($tempo_calc <= 0 && !empty($tgl_faktur) && !empty($tgl_tempo)) {
+                    $diff = round((strtotime($tgl_tempo) - strtotime($tgl_faktur)) / 86400);
+                    if ($diff > 0) {
+                        $tempo_calc = (int)$diff;
+                    }
+                }
+                if ($tempo_calc <= 0) {
+                    $tempo_calc = 30; // Default tempo distribusi Karisma ERP
+                }
+                if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+                    $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
+                }
+
                 $fh = [
                     'no_faktur'           => $no_faktur_child,
                     'parent_id_faktur'    => $parent_faktur['id_faktur'],
@@ -3384,12 +3486,12 @@ class M_SalesOrder extends CI_Model
                     'kd_customer'         => $kd_cust_h,
                     'customer_name'       => $customer_name_h,
                     'gudang_id'           => $parent_faktur['gudang_id'],
-                    'tanggal_faktur'      => $parent_faktur['tanggal_faktur'],
-                    'tanggal_jatuh_tempo' => $parent_faktur['tanggal_jatuh_tempo'],
+                    'tanggal_faktur'      => $tgl_faktur,
+                    'tanggal_jatuh_tempo' => $tgl_tempo,
                     'salesman'            => $parent_faktur['salesman'],
-                    'cara_pembayaran'     => $parent_faktur['cara_pembayaran'],
-                    'jtempo'              => $parent_faktur['jtempo'],
-                    'tempo'               => $parent_faktur['tempo'],
+                    'cara_pembayaran'     => 'tempo',
+                    'jtempo'              => $tempo_calc,
+                    'tempo'               => $tempo_calc,
                     'catatan'             => 'Pecahan Otomatis dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
                     'status'              => 'confirmed',
                     'create_by'           => $username,
@@ -3579,10 +3681,15 @@ class M_SalesOrder extends CI_Model
         $this->db->select('p.*, 
             COALESCE(ca.kontak_person, c.nama_customer) AS full_customer_name, 
             ca.nama_toko, ca.alamat AS ca_alamat, ca.kota AS ca_kota, ca.nik AS ca_nik, ca.npwp AS ca_npwp,
-            c.kd_rute AS customer_kd_rute');
+            COALESCE(NULLIF(c.kd_rute, ""), cp.kd_rute) AS customer_kd_rute, 
+            COALESCE(NULLIF(c.alamat_kios, ""), cp.alamat_kios) AS alamat_kios, 
+            COALESCE(NULLIF(c.regional, ""), cp.regional) AS regional, 
+            COALESCE(NULLIF(c.nama_kios, ""), cp.nama_kios) AS nama_kios');
         $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
         $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
         $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
+        $this->db->join('tb_customer cp', 'cp.kd_customer = fp.kd_customer', 'left');
         if (is_numeric($id_pecah)) {
             $this->db->where('p.id_pecah', (int)$id_pecah);
         } else {
@@ -3874,11 +3981,12 @@ class M_SalesOrder extends CI_Model
 
     private function _generate_and_track_no_faktur($prefix, &$generated_numbers)
     {
+        $pad_len   = ($prefix === 'H') ? 6 : 4;
         $no_faktur = $this->generate_no_faktur($prefix);
         while (in_array($no_faktur, $generated_numbers, true)) {
-            $base = substr($no_faktur, 0, -4);
-            $last = (int)substr($no_faktur, -4);
-            $no_faktur = $base . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+            $base = substr($no_faktur, 0, -$pad_len);
+            $last = (int)substr($no_faktur, -$pad_len);
+            $no_faktur = $base . str_pad($last + 1, $pad_len, '0', STR_PAD_LEFT);
         }
         $generated_numbers[] = $no_faktur;
         return $no_faktur;

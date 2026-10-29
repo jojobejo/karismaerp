@@ -93,13 +93,25 @@
 
     <!-- Sidebar -->
     <?php if ($is_admkeu_only) : ?>
+      <?php
+      $admkeuUri1 = strtolower((string)$this->uri->segment(1));
+      $admkeuUri2 = strtolower((string)$this->uri->segment(2));
+      $isAdmkeuMasterBarang = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
+      $isAdmkeuPecahFaktur = !$isAdmkeuMasterBarang;
+      ?>
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link active">
+              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link <?= $isAdmkeuPecahFaktur ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-cut"></i>
                 <p>Pecah Faktur</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= $isAdmkeuMasterBarang ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-boxes"></i>
+                <p>Master Barang</p>
               </a>
             </li>
             <li class="nav-item">

@@ -10,8 +10,9 @@
             $('#kd_suplier').select2({
                 theme: 'bootstrap4',
                 width: '100%',
-                placeholder: 'Pilih Supplier',
-                allowClear: true
+                placeholder: 'Pilih atau Ketik Supplier',
+                allowClear: true,
+                tags: true
             });
         }
 
@@ -210,10 +211,17 @@
             $('#kelompok').val(row.kelompok || '');
             $('#komposisi').val(row.komposisi || '');
             $('#grup').val(row.grup || '');
+            const suplierVal = row.kd_suplier || '';
+            if (suplierVal !== '' && $('#kd_suplier option[value="' + suplierVal.replace(/"/g, '\\"') + '"]').length === 0) {
+                $('#kd_suplier').append($('<option>', {
+                    value: suplierVal,
+                    text: (row.nama_suplier ? row.nama_suplier + ' (' + suplierVal + ')' : suplierVal)
+                }));
+            }
             if ($.fn.select2) {
-                $('#kd_suplier').val(row.kd_suplier || '').trigger('change');
+                $('#kd_suplier').val(suplierVal).trigger('change');
             } else {
-                $('#kd_suplier').val(row.kd_suplier || '');
+                $('#kd_suplier').val(suplierVal);
             }
             $('#stock_minimum').val(row.stock_minimum || 0);
             $('#produk_fokus').val(row.produk_fokus || '');
@@ -464,5 +472,72 @@
         setFormReadOnlyState();
         resetKodeAkunDefaults();
         loadList('', '');
+
+        $('#fileImportMasterBarang').on('change', function() {
+            const fileName = (this.files && this.files[0]) ? this.files[0].name : 'Pilih file template Master Barang yang telah diisi';
+            $(this).siblings('.custom-file-label').text(fileName);
+        });
+
+        $('#formImportMasterBarang').on('submit', function(e) {
+            if (typeof window.FormData === 'undefined') {
+                $('#btnImportMasterBarang').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...');
+                return;
+            }
+            e.preventDefault();
+            const $form = $(this);
+            const $btn = $('#btnImportMasterBarang');
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Import...');
+
+            const formData = new FormData(this);
+            formData.append('ajax', '1');
+
+            $.ajax({
+                url: $form.attr('action'),
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(resp) {
+                    $btn.prop('disabled', false).html(originalHtml);
+                    $('#modalImportMasterBarang').modal('hide');
+
+                    const isOk = resp && resp.status;
+                    const title = isOk ? 'Import Master Barang Berhasil' : 'Import Master Barang Gagal';
+                    const htmlMsg = (resp && (resp.html_message || resp.message)) || 'Proses import selesai.';
+                    const plainMsg = (resp && resp.message) || 'Proses import selesai.';
+
+                    const $container = $('section.content .container-fluid').first();
+                    if ($container.length) {
+                        const alertHtml = '<div class="alert alert-' + (isOk ? 'success' : 'danger') + ' alert-dismissible fade show shadow-sm">' +
+                            '<i class="fas fa-' + (isOk ? 'check-circle' : 'exclamation-circle') + ' mr-1"></i> ' +
+                            htmlMsg +
+                            '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
+                            '</div>';
+                        $container.prepend(alertHtml);
+                    }
+
+                    if (isOk) {
+                        loadList(currentSearch, currentKelompokBarang);
+                    }
+
+                    if (hasSwal) {
+                        Swal.fire({
+                            icon: isOk ? 'success' : 'error',
+                            title: title,
+                            html: htmlMsg,
+                            confirmButtonText: 'OK'
+                        });
+                    } else {
+                        alert(title + '\n\n' + plainMsg);
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false).html(originalHtml);
+                    notify('error', 'Import Master Barang Gagal', 'Terjadi kesalahan saat mengunggah atau memproses file Master Barang.');
+                }
+            });
+        });
     });
 </script>

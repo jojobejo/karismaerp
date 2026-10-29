@@ -262,12 +262,24 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                 <a href="<?= base_url('sales_order/detail_faktur/' . $faktur['id_faktur'] . '?print=1') ?>" target="_blank" class="btn btn-info btn-sm">
                     <i class="fas fa-print"></i> Cetak Faktur
                 </a>
+                <?php if (!empty($faktur['is_split_parent'])): ?>
+                    <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?parent_id_faktur=' . $faktur['id_faktur']) ?>" target="_blank" class="btn btn-primary btn-sm ml-1" title="Cetak Seluruh Faktur Pecahan Kode H ke Printer Dot-Matrix LX-310">
+                        <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
+                    </a>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($faktur['is_split_parent'])): ?>
                 <div class="alert alert-warning mb-3 no-print shadow-sm">
-                    <h5><i class="icon fas fa-exclamation-triangle"></i> Faktur Z Telah Dipecah!</h5>
-                    Faktur Z induk ini telah dipecah ke faktur pecahan (Kode H) pada tabel terpisah:
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5><i class="icon fas fa-exclamation-triangle"></i> Faktur Z Telah Dipecah!</h5>
+                            Faktur Z induk ini telah dipecah ke faktur pecahan (Kode H) pada tabel terpisah:
+                        </div>
+                        <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?parent_id_faktur=' . $faktur['id_faktur']) ?>" target="_blank" class="btn btn-primary btn-sm font-weight-bold shadow-sm my-1">
+                            <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
+                        </a>
+                    </div>
                     <ul class="mb-0 mt-2">
                         <?php foreach ($child_fakturs as $cf): ?>
                             <?php 
@@ -278,6 +290,11 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                     <i class="fas fa-tag mr-1 text-warning"></i><?= htmlspecialchars($cf['no_faktur']) ?>
                                 </a> 
                                 &bull; Customer Penerima: <strong><?= htmlspecialchars($cf['customer_name']) ?></strong>
+                                <?php if (!empty($cf['id_pecah'])): ?>
+                                    <a href="<?= base_url('sales_order/cetak_faktur_pecah/' . $cf['id_pecah']) ?>" target="_blank" class="badge badge-info ml-2 px-2 py-1" title="Cetak Format LX-310">
+                                        <i class="fas fa-print mr-1"></i> Cetak (LX-310)
+                                    </a>
+                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>

@@ -2038,7 +2038,17 @@ class C_ReturPenjualan extends CI_Controller
     /** Real-time pending approval notifications */
     public function get_pending_notifications()
     {
+        // Pertahankan flashdata agar request polling background tidak menghapus notifikasi redirect
+        if (isset($this->session) && method_exists($this->session, 'get_flash_keys')) {
+            $flashKeys = $this->session->get_flash_keys();
+            if (!empty($flashKeys)) {
+                $this->session->keep_flashdata($flashKeys);
+            }
+        }
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
         $pending_items = [];
         
         // 1. Manager SC

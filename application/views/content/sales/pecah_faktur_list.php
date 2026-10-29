@@ -152,6 +152,12 @@
                         <a href="<?= base_url('sales_order/customer_acak') ?>" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-users mr-1"></i> Master Customer Acak
                         </a>
+                        <a href="<?= base_url('master_barang') ?>" class="btn btn-outline-primary btn-sm ml-1">
+                            <i class="fas fa-boxes mr-1"></i> Master Barang
+                        </a>
+                        <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#modalImportMasterBarang">
+                            <i class="fas fa-file-excel mr-1"></i> Import Master Barang
+                        </button>
                         <button type="button" class="btn btn-success btn-sm ml-1" data-toggle="modal" data-target="#modalImportFakturZ">
                             <i class="fas fa-file-import mr-1"></i> Import Faktur Z
                         </button>
@@ -284,7 +290,7 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link font-weight-bold" id="tab-faktur-h" data-toggle="pill" href="#content-faktur-h" role="tab" aria-controls="content-faktur-h" aria-selected="false">
-                                    <i class="fas fa-tag text-info mr-1"></i> Faktur Pecahan Kode H (Tabel Terpisah)
+                                    <i class="fas fa-tag text-info mr-1"></i> Faktur Pecahan Kode H
                                     <span class="badge badge-info ml-1"><?= count($fakturs_h) ?></span>
                                 </a>
                             </li>
@@ -303,10 +309,15 @@
                                             Hanya menampilkan kios-kios yang masih memiliki Faktur Z induk belum dipecah.
                                         </span>
                                     </div>
-                                    <div>
-                                        <span class="badge badge-warning font-weight-bold p-2 border text-dark" style="font-size: 12px;">
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <span class="badge badge-warning font-weight-bold p-2 border text-dark mr-2" style="font-size: 12px;">
                                             Total: <strong><?= count($kios_grouped_belum ?? []) ?></strong> Kios (<strong><?= count($fakturs_belum_dipecah ?? []) ?></strong> Faktur Z Belum Dipecah)
                                         </span>
+                                        <a href="<?= base_url('sales_order/export_faktur_z_belum?' . http_build_query($filter ?? [])) ?>" 
+                                           class="btn btn-success btn-sm font-weight-bold shadow-sm"
+                                           title="Export Daftar Faktur Z Induk (Belum Dipecah) per Faktur ke Excel (.xlsx)">
+                                            <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                                        </a>
                                     </div>
                                 </div>
 
@@ -523,18 +534,21 @@
                             <div class="tab-pane fade" id="content-faktur-h" role="tabpanel" aria-labelledby="tab-faktur-h">
                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
                                     <div>
-                                        <span class="font-weight-bold text-dark">
-                                            <i class="fas fa-shield-alt text-success mr-1"></i> Tabel Terpisah (`tbso_faktur_z_pecah`):
-                                        </span>
-                                        <span class="text-muted small">
-                                            Faktur hasil pecahan berawalan <strong>kode H</strong> murni bersifat administratif pembagian pengiriman/customer, <strong>tidak terjurnal</strong> dan <strong>tidak memotong stok</strong> ulang.
+                                        <span class="font-weight-bold text-dark" style="font-size: 15px;">
+                                            <i class="fas fa-tag text-info mr-1"></i> Daftar Faktur Pecahan (Kode H)
                                         </span>
                                     </div>
                                     <div class="d-flex align-items-center mt-2 mt-md-0">
                                         <span class="badge badge-warning p-2 mr-2">
                                             Total: <strong><?= count($fakturs_h) ?></strong> Faktur Pecahan H
                                         </span>
-                                        <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query($filter ?? [])) ?>" 
+                                        <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?' . http_build_query(array_filter($filter ?? []))) ?>" 
+                                           target="_blank"
+                                           class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2"
+                                           title="Cetak Semua Faktur Pecahan Kode H Sekaligus ke Printer Dot-Matrix Epson LX-310">
+                                            <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
+                                        </a>
+                                        <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query(array_filter($filter ?? []))) ?>" 
                                            class="btn btn-success btn-sm font-weight-bold shadow-sm"
                                            title="Export Faktur Pecahan Kode H ke Excel (.xlsx)">
                                             <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
@@ -608,11 +622,25 @@
                                                             <span style="font-size: 10px;"><?= !empty($fh['create_at']) ? date('d/m/y H:i', strtotime($fh['create_at'])) : '' ?></span>
                                                         </td>
                                                         <td class="text-center align-middle">
-                                                            <a href="<?= base_url('sales_order/detail_faktur_pecah/' . $fh['id_pecah']) ?>"
-                                                               class="btn btn-default btn-sm border"
-                                                               title="Lihat Rincian / Cetak Faktur Pecahan">
-                                                                <i class="fas fa-eye text-primary mr-1"></i> Detail
-                                                            </a>
+                                                            <div class="btn-group btn-group-sm">
+                                                                <a href="<?= base_url('sales_order/detail_faktur_pecah/' . $fh['id_pecah']) ?>"
+                                                                   class="btn btn-default btn-sm border"
+                                                                   title="Lihat Rincian Faktur Pecahan">
+                                                                    <i class="fas fa-eye text-primary mr-1"></i> Detail
+                                                                </a>
+                                                                <a href="<?= base_url('sales_order/cetak_faktur_pecah/' . $fh['id_pecah']) ?>"
+                                                                   target="_blank"
+                                                                   class="btn btn-outline-info btn-sm"
+                                                                   title="Cetak Faktur (Printer LX-310)">
+                                                                    <i class="fas fa-print mr-1"></i> Cetak
+                                                                </a>
+                                                                <a href="<?= base_url('sales_order/hapus_faktur_pecah/' . $fh['id_pecah']) ?>"
+                                                                   class="btn btn-outline-danger btn-sm"
+                                                                   title="Unpost / Batalkan Faktur Pecahan ini"
+                                                                   onclick="return confirm('Apakah Anda yakin ingin meng-unpost / membatalkan Faktur Pecahan <?= htmlspecialchars($fh['no_faktur']) ?>?\n\nKuantitas barang akan otomatis dikembalikan ke Faktur Z Induk (<?= htmlspecialchars($fh['parent_no_faktur']) ?>).')">
+                                                                    <i class="fas fa-undo mr-1"></i> Unpost
+                                                                </a>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
@@ -803,6 +831,50 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalImportMasterBarang" tabindex="-1" role="dialog" aria-labelledby="modalImportMasterBarangLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <form action="<?= base_url('sales_order/import_master_barang') ?>" method="post" enctype="multipart/form-data" id="formImportMasterBarang">
+                    <input type="hidden" name="redirect_to" value="sales_order/pecah_faktur">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalImportMasterBarangLabel">
+                            <i class="fas fa-boxes mr-1"></i> Import Data Master Barang
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2">
+                            <strong>Alur:</strong> unduh template Master Barang, isi daftar barang, lalu unggah kembali file Excel/CSV. Barang dengan kode baru akan ditambahkan, sedangkan kode yang sudah ada akan diperbarui otomatis.
+                        </div>
+                        <div class="form-group">
+                            <label for="fileImportMasterBarang" class="font-weight-bold">File Excel / CSV (.xlsx, .xls, atau .csv)</label>
+                            <div class="custom-file">
+                                <input type="file" name="file_master_barang" id="fileImportMasterBarang" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
+                                <label class="custom-file-label" for="fileImportMasterBarang">Pilih file template Master Barang yang telah diisi</label>
+                            </div>
+                            <small class="form-text text-muted">Maksimal 5 MB dan 10.000 baris. Seluruh file dibatalkan apabila ada baris dengan format tidak valid.</small>
+                        </div>
+                        <ul class="small text-muted mb-0 pl-3">
+                            <li>Kolom <code>kode_barang</code> (maks. 25 karakter) dan <code>nama_barang</code> wajib diisi pada setiap baris.</li>
+                            <li>Kolom <code>isi_per_box</code> digunakan sebagai acuan konversi kuantitas box ke pcs pada Faktur Z.</li>
+                            <li>Kolom opsional seperti <code>satuan</code>, <code>berat_gram</code>, <code>kubikasi_m3</code>, <code>kd_suplier</code>, <code>merk_barang</code>, dan <code>bahan_aktif</code> akan otomatis dilengkapi nilai standar apabila dikosongkan.</li>
+                            <li>Jika <code>kode_barang</code> sudah terdaftar di Master Barang, data barang tersebut akan diperbarui (Upsert).</li>
+                        </ul>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="<?= base_url('sales_order/template_import_master_barang') ?>" class="btn btn-outline-primary btn-sm mr-auto">
+                            <i class="fas fa-download mr-1"></i> Unduh Template Master Barang
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary btn-sm" id="btnImportMasterBarang">
+                            <i class="fas fa-upload mr-1"></i> Proses Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.
@@ -831,6 +903,97 @@ if (formImportFakturZ) {
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...';
         }
+    });
+}
+
+var fileImportMasterBarang = document.getElementById('fileImportMasterBarang');
+if (fileImportMasterBarang) {
+    fileImportMasterBarang.addEventListener('change', function() {
+        var fileName = this.files && this.files[0] ? this.files[0].name : 'Pilih file template Master Barang yang telah diisi';
+        var label = this.parentNode.querySelector('.custom-file-label');
+        if (label) label.textContent = fileName;
+    });
+}
+
+var formImportMasterBarang = document.getElementById('formImportMasterBarang');
+if (formImportMasterBarang) {
+    formImportMasterBarang.addEventListener('submit', function(e) {
+        if (!window.fetch || !window.FormData) {
+            var btnFallback = document.getElementById('btnImportMasterBarang');
+            if (btnFallback) {
+                btnFallback.disabled = true;
+                btnFallback.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...';
+            }
+            return;
+        }
+        e.preventDefault();
+        var button = document.getElementById('btnImportMasterBarang');
+        var originalHtml = button ? button.innerHTML : '<i class="fas fa-upload mr-1"></i> Proses Import';
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Import...';
+        }
+
+        var formData = new FormData(formImportMasterBarang);
+        formData.append('ajax', '1');
+
+        fetch(formImportMasterBarang.action, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(resp) {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+            }
+            if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+                window.jQuery('#modalImportMasterBarang').modal('hide');
+            }
+            var isOk = resp && resp.status;
+            var title = isOk ? 'Import Master Barang Berhasil' : 'Import Master Barang Gagal';
+            var htmlMsg = (resp && (resp.html_message || resp.message)) || 'Proses import selesai.';
+            var plainMsg = (resp && resp.message) || 'Proses import selesai.';
+
+            // Tampilkan banner alert di bagian atas halaman
+            var container = document.querySelector('section.content .container-fluid');
+            if (container) {
+                var alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-' + (isOk ? 'success' : 'danger') + ' alert-dismissible fade show shadow-sm';
+                alertDiv.innerHTML = '<i class="fas fa-' + (isOk ? 'check-circle' : 'exclamation-circle') + ' mr-1"></i> ' +
+                    htmlMsg +
+                    '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>';
+                container.insertBefore(alertDiv, container.firstChild);
+            }
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: isOk ? 'success' : 'error',
+                    title: title,
+                    html: htmlMsg,
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                alert(title + '\n\n' + plainMsg);
+            }
+        })
+        .catch(function(err) {
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+            }
+            var errMsg = 'Terjadi kesalahan saat mengunggah atau memproses file Master Barang.';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Master Barang Gagal',
+                    text: errMsg
+                });
+            } else {
+                alert('Import Master Barang Gagal: ' + errMsg);
+            }
+        });
     });
 }
 

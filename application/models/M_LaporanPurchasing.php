@@ -87,7 +87,7 @@ class M_LaporanPurchasing extends CI_Model
         }
 
         // 5. tblpb_faktur_pajak creation
-        if (!$this->db->table_exists('tblpb_faktur_pajak')) {
+        if ($this->db->table_exists('tb_lpb') && !$this->db->table_exists('tblpb_faktur_pajak')) {
             @$this->db->query("CREATE TABLE `tblpb_faktur_pajak` (
               `id_faktur_pajak` INT(11) NOT NULL AUTO_INCREMENT,
               `id_lpb` INT(11) NOT NULL,

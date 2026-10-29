@@ -204,6 +204,11 @@
                             </ul>
                             <div class="pb-2">
                                 <?php if (!empty($stat['belum_dipecah']) && $stat['belum_dipecah'] > 0): ?>
+                                    <a href="<?= base_url('sales_order/export_faktur_z_belum?kd_customer=' . rawurlencode($kd_customer)) ?>" 
+                                       class="btn btn-success btn-sm font-weight-bold shadow-sm mr-1"
+                                       title="Export Daftar Faktur Z Belum Dipecah milik kios ini ke Excel (.xlsx)">
+                                        <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                                    </a>
                                     <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalAutoSplitKios">
                                         <i class="fas fa-magic mr-1"></i> Pecahkan Semua (<?= $stat['belum_dipecah'] ?>)
                                     </button>
@@ -333,11 +338,19 @@
                                         </span>
                                     </div>
                                     <?php if (!empty($kios_fakturs_sudah)): ?>
-                                        <a href="<?= base_url('sales_order/export_faktur_pecah?kd_customer=' . $kd_customer) ?>" 
-                                           class="btn btn-success btn-sm font-weight-bold shadow-sm"
-                                           title="Export Seluruh Faktur Pecahan Kode H milik kios ini ke Excel (.xlsx)">
-                                            <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
-                                        </a>
+                                        <div class="d-flex align-items-center mt-2 mt-md-0">
+                                            <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?kd_customer=' . $kd_customer) ?>" 
+                                               target="_blank"
+                                               class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2"
+                                               title="Cetak Semua Faktur Pecahan Kode H milik kios ini ke Printer Dot-Matrix LX-310">
+                                                <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
+                                            </a>
+                                            <a href="<?= base_url('sales_order/export_faktur_pecah?kd_customer=' . $kd_customer) ?>" 
+                                               class="btn btn-success btn-sm font-weight-bold shadow-sm"
+                                               title="Export Seluruh Faktur Pecahan Kode H milik kios ini ke Excel (.xlsx)">
+                                                <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                                            </a>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <div class="table-responsive p-3">
@@ -407,6 +420,12 @@
                                                                    class="btn btn-default btn-sm border"
                                                                    title="Lihat Detail Faktur Z">
                                                                     <i class="fas fa-eye text-primary"></i>
+                                                                </a>
+                                                                <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?parent_id_faktur=' . $fs['id_faktur']) ?>"
+                                                                   target="_blank"
+                                                                   class="btn btn-default btn-sm border"
+                                                                   title="Cetak Seluruh Faktur H dari Faktur Z ini (LX-310)">
+                                                                    <i class="fas fa-print text-info"></i>
                                                                 </a>
                                                                 <a href="<?= base_url('sales_order/reset_pecah_faktur_induk/' . $fs['id_faktur']) ?>"
                                                                    class="btn btn-outline-danger btn-sm"
