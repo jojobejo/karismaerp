@@ -393,12 +393,22 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                     <!-- Container Grid Slot Pecahan (3 Kolom: col-lg-4 col-md-6 col-12) -->
                     <div class="row" id="slotsContainer">
+                        <?php 
+                        // Prioritaskan kontak person yang belum limit untuk slot awal jika mode manual
+                        $valid_customers = array_values(array_filter($customers, function($c) {
+                            $nom = (float)($c['total_nominal_pecah'] ?? 0);
+                            return empty($c['is_limit_reached']) && $nom < 250000000;
+                        }));
+                        if (empty($valid_customers)) {
+                            $valid_customers = $customers;
+                        }
+                        ?>
                         <?php for ($slot_idx = 0; $slot_idx < $jumlah_pecah; $slot_idx++): ?>
                             <?php 
                             $slot_no = $slot_idx + 1; 
                             // Tentukan customer penerima dari pre_allocated_splits atau urutan prioritas
                             $pre_slot = $pre_allocated_splits[$slot_idx] ?? null;
-                            $auto_cust_kd = $pre_slot['kd_customer'] ?? ($customers[$slot_idx]['kd_customer'] ?? '');
+                            $auto_cust_kd = $pre_slot['kd_customer'] ?? ($valid_customers[$slot_idx % count($valid_customers)]['kd_customer'] ?? '');
                             $slot_parent_no = $pre_slot['parent_no_faktur'] ?? '';
                             $slot_parent_id = $pre_slot['parent_id_faktur'] ?? null;
 
@@ -1041,7 +1051,56 @@ $(document).ready(function() {
             }
         });
 
-        if (hasOverAllocation) {
+        var hasQuotaViolation = false;
+        if (isCustomerAcak) {
+            // Hitung akumulasi per customer di seluruh slot
+            var custUsage = {};
+            $('.slot-column').each(function() {
+                var custVal = $(this).find('.select-customer').val();
+                var slotNominal = 0;
+                $(this).find('.row-item-split').each(function() {
+                    var q = parseFloat($(this).find('.input-qty-split').val()) || 0;
+                    var h = parseFloat($(this).find('.input-hrg-split').val()) || 0;
+                    slotNominal += q * h;
+                });
+                if (custVal && slotNominal > 0) {
+                    custUsage[custVal] = (custUsage[custVal] || 0) + slotNominal;
+                }
+            });
+
+            // Tandai slot jika kontak person terpilih melebihi sisa kuotanya
+            $('.slot-column').each(function() {
+                var $slotCol = $(this);
+                var slotIdx = $slotCol.data('slot-idx');
+                var custVal = $slotCol.find('.select-customer').val();
+                var $totalBadge = $('#slotTotalNominal_' + slotIdx);
+
+                if (custVal) {
+                    var custObj = null;
+                    for (var i = 0; i < availableCustomers.length; i++) {
+                        if (availableCustomers[i].kd_customer === custVal) {
+                            custObj = availableCustomers[i];
+                            break;
+                        }
+                    }
+                    if (custObj) {
+                        var riwayat = parseFloat(custObj.total_nominal_pecah) || 0;
+                        var sisa = Math.max(0, 250000000 - riwayat);
+                        var totalAlokasiCust = custUsage[custVal] || 0;
+
+                        if (totalAlokasiCust > (sisa + 0.01)) {
+                            hasQuotaViolation = true;
+                            $totalBadge.removeClass('badge-success badge-light').addClass('badge-danger text-white border-danger')
+                                .attr('title', 'Peringatan: Alokasi total untuk ' + custObj.kontak_person + ' (Rp ' + Math.round(totalAlokasiCust).toLocaleString('id-ID') + ') melebihi sisa kuota (Rp ' + Math.round(sisa).toLocaleString('id-ID') + ')!');
+                        } else {
+                            $totalBadge.removeAttr('title');
+                        }
+                    }
+                }
+            });
+        }
+
+        if (hasOverAllocation || hasQuotaViolation) {
             $('#btnSubmitBatch').prop('disabled', true).addClass('btn-danger').removeClass('btn-success');
         } else {
             $('#btnSubmitBatch').prop('disabled', false).addClass('btn-success').removeClass('btn-danger');

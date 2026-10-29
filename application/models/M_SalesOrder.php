@@ -3291,6 +3291,9 @@ class M_SalesOrder extends CI_Model
         if (!empty($all_contacts)) {
             foreach ($all_contacts as $c) {
                 if (empty($c['is_limit_reached']) && (float)($c['total_nominal_pecah'] ?? 0) < self::LIMIT_KONTAK_PERSON_FAKTUR_H) {
+                    $c['_running_sisa'] = isset($c['sisa_limit_h'])
+                        ? (float)$c['sisa_limit_h']
+                        : max(0.0, self::LIMIT_KONTAK_PERSON_FAKTUR_H - (float)($c['total_nominal_pecah'] ?? 0));
                     $contacts[] = $c;
                 }
             }
@@ -3448,12 +3451,33 @@ class M_SalesOrder extends CI_Model
                     continue;
                 }
 
-                // Tentukan kontak acak penerima
+                // Tentukan kontak acak penerima yang sisa kuota limit 250 jutanya mencukupi nominal bucket ini
                 if (!empty($contacts)) {
-                    $selected_contact = $contacts[$contact_idx % count($contacts)];
-                    $contact_idx++;
-                    $kd_cust_h       = $selected_contact['kd_customer'];
-                    $customer_name_h = $selected_contact['kontak_person'] . ' (' . $selected_contact['nama_toko'] . ')';
+                    $bucket_nom = (float)($bucket['total_nominal'] ?? 0);
+                    $n_contacts = count($contacts);
+                    $chosen_idx = null;
+
+                    for ($step = 0; $step < $n_contacts; $step++) {
+                        $try_idx = ($contact_idx + $step) % $n_contacts;
+                        if (($contacts[$try_idx]['_running_sisa'] ?? 0) + 0.01 >= $bucket_nom) {
+                            $chosen_idx  = $try_idx;
+                            $contact_idx = ($try_idx + 1) % $n_contacts;
+                            break;
+                        }
+                    }
+
+                    if ($chosen_idx === null) {
+                        $this->db->trans_rollback();
+                        return [
+                            'success' => false,
+                            'message' => 'Tidak ada kontak person pada kios <b>' . htmlspecialchars($nama_kios) . '</b> yang memiliki sisa kuota limit cukup untuk pecahan Faktur H sebesar Rp ' . number_format($bucket_nom, 0, ',', '.') . '. Silakan gunakan plafon maksimal yang lebih kecil atau tambahkan kontak person baru.'
+                        ];
+                    }
+
+                    $contacts[$chosen_idx]['_running_sisa'] = max(0.0, $contacts[$chosen_idx]['_running_sisa'] - $bucket_nom);
+                    $selected_contact = $contacts[$chosen_idx];
+                    $kd_cust_h        = $selected_contact['kd_customer'];
+                    $customer_name_h  = $selected_contact['kontak_person'] . ' (' . $selected_contact['nama_toko'] . ')';
                 } else {
                     $kd_cust_h       = $parent_faktur['kd_customer'];
                     $customer_name_h = !empty($customer['nama_customer']) ? $customer['nama_customer'] : ($parent_faktur['nama_customer'] ?? 'Customer Induk');
@@ -3801,9 +3825,9 @@ class M_SalesOrder extends CI_Model
 
         $this->db->select("ca.*, 
             COALESCE(COUNT(DISTINCT p.id_pecah), 0) AS total_faktur_pecah,
-            COALESCE(SUM(pd.total_harga), 0) AS total_nominal_pecah,
-            CASE WHEN COALESCE(SUM(pd.total_harga), 0) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
-            GREATEST(0, {$limit_nominal} - COALESCE(SUM(pd.total_harga), 0)) AS sisa_limit_h");
+            (COALESCE(SUM(pd.total_harga), 0) + MAX(COALESCE(ca.nominal_terpakai_awal, 0))) AS total_nominal_pecah,
+            CASE WHEN (COALESCE(SUM(pd.total_harga), 0) + MAX(COALESCE(ca.nominal_terpakai_awal, 0))) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
+            GREATEST(0, {$limit_nominal} - (COALESCE(SUM(pd.total_harga), 0) + MAX(COALESCE(ca.nominal_terpakai_awal, 0)))) AS sisa_limit_h");
         $this->db->from('tb_customer_acak ca');
         $this->db->join('tbso_faktur_z_pecah p', "p.kd_customer = ca.kd_customer AND p.status != 'cancelled'", 'left');
         $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
@@ -3872,10 +3896,10 @@ class M_SalesOrder extends CI_Model
         $this->db->select("ca.*, 
             c.nama_customer as induk_nama_customer, 
             c.nama_kios as induk_nama_kios,
-            COALESCE(sub.total_nominal_h, 0) AS total_nominal_h,
+            (COALESCE(sub.total_nominal_h, 0) + COALESCE(ca.nominal_terpakai_awal, 0)) AS total_nominal_h,
             COALESCE(sub.total_faktur_h, 0) AS total_faktur_h,
-            CASE WHEN COALESCE(sub.total_nominal_h, 0) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
-            GREATEST(0, {$limit_nominal} - COALESCE(sub.total_nominal_h, 0)) AS sisa_limit_h");
+            CASE WHEN (COALESCE(sub.total_nominal_h, 0) + COALESCE(ca.nominal_terpakai_awal, 0)) >= {$limit_nominal} THEN 1 ELSE 0 END AS is_limit_reached,
+            GREATEST(0, {$limit_nominal} - (COALESCE(sub.total_nominal_h, 0) + COALESCE(ca.nominal_terpakai_awal, 0))) AS sisa_limit_h");
         $this->db->from('tb_customer_acak ca');
         $this->db->join('tb_customer c', 'c.kd_customer = ca.kd_customer_induk', 'left');
         $this->db->join($subquery, 'sub.kd_customer = ca.kd_customer', 'left');
@@ -3937,7 +3961,8 @@ class M_SalesOrder extends CI_Model
             ->get()
             ->row_array();
 
-        $current_total = (float)($row['total'] ?? 0);
+        // Total = transaksi Faktur H di sistem + nominal terpakai awal (hasil import Excel)
+        $current_total = (float)($row['total'] ?? 0) + (float)($cust['nominal_terpakai_awal'] ?? 0);
         $limit         = (float)self::LIMIT_KONTAK_PERSON_FAKTUR_H;
         $new_total     = $current_total + (float)$nominal_tambahan;
         $sisa          = max(0.0, $limit - $current_total);

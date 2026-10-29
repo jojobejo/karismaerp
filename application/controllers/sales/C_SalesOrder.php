@@ -26,6 +26,7 @@ class C_SalesOrder extends CI_Controller
                 'pecah_faktur',
                 'import_faktur_z',
                 'template_import_faktur_z',
+                'export_customer_acak', // Export master customer acak
                 'import_master_barang',
                 'template_import_master_barang',
                 'pecah_faktur_kios',
@@ -4257,11 +4258,48 @@ class C_SalesOrder extends CI_Controller
                     $available_customers = $customers;
                 }
 
+                // Lacak sisa kuota berjalan tiap kontak selama alokasi
+                $cust_sisa_map = [];
+                foreach ($available_customers as $c) {
+                    $cust_sisa_map[$c['kd_customer']] = isset($c['sisa_limit_h'])
+                        ? (float)$c['sisa_limit_h']
+                        : max(0.0, M_SalesOrder::LIMIT_KONTAK_PERSON_FAKTUR_H - (float)($c['total_nominal_pecah'] ?? 0));
+                }
+
                 foreach ($pre_allocated_splits as $b_idx => &$bkt) {
                     if (!empty($available_customers)) {
-                        $cust_obj = $available_customers[$contact_idx % count($available_customers)];
-                        $contact_idx++;
-                        $bkt['kd_customer'] = $cust_obj['kd_customer'];
+                        $bucket_nom = (float)($bkt['total_nominal'] ?? 0);
+                        $n_avail = count($available_customers);
+                        $chosen_cust = null;
+
+                        // Cari kontak person (mulai dari posisi rotasi) yang sisa kuotanya cukup untuk nominal bucket ini
+                        for ($step = 0; $step < $n_avail; $step++) {
+                            $cand = $available_customers[($contact_idx + $step) % $n_avail];
+                            $kd_cand = $cand['kd_customer'];
+                            if (($cust_sisa_map[$kd_cand] ?? 0) + 0.01 >= $bucket_nom) {
+                                $chosen_cust = $cand;
+                                $contact_idx = ($contact_idx + $step + 1) % $n_avail;
+                                break;
+                            }
+                        }
+
+                        // Fallback: jika tidak ada yang cukup, pilih yang sisa kuotanya paling besar
+                        if (!$chosen_cust) {
+                            $best_sisa = -1;
+                            foreach ($available_customers as $cand) {
+                                $sisa_c = $cust_sisa_map[$cand['kd_customer']] ?? 0;
+                                if ($sisa_c > $best_sisa) {
+                                    $best_sisa = $sisa_c;
+                                    $chosen_cust = $cand;
+                                }
+                            }
+                        }
+
+                        if ($chosen_cust) {
+                            $kd_chosen = $chosen_cust['kd_customer'];
+                            $bkt['kd_customer'] = $kd_chosen;
+                            $cust_sisa_map[$kd_chosen] = max(0.0, ($cust_sisa_map[$kd_chosen] ?? 0) - $bucket_nom);
+                        }
                     }
                 }
                 unset($bkt);
@@ -5560,6 +5598,73 @@ class C_SalesOrder extends CI_Controller
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Export master customer acak ke Excel (mengikuti filter nama_toko & q di halaman)
+     */
+    public function export_customer_acak()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $filter = [];
+        $toko   = trim((string)($this->input->get('nama_toko') ?? ''));
+        $search = trim((string)($this->input->get('q') ?? ''));
+        if ($toko !== '')   $filter['nama_toko'] = $toko;
+        if ($search !== '') $filter['search'] = $search;
+
+        $rows = $this->M_SalesOrder->get_all_customers_acak($filter);
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Customer Acak');
+
+        $headers = ['No', 'Kode', 'Nama Toko', 'Kode Induk', 'Kontak Person', 'Alamat', 'Kota', 'NIK', 'NPWP',
+            'Nominal Terpakai Awal', 'Jml Faktur H', 'Total Terpakai', 'Sisa Limit', 'Status'];
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:N1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F7A4D']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        $r = 2;
+        foreach ($rows as $i => $ca) {
+            $sheet->setCellValue('A' . $r, $i + 1);
+            $sheet->setCellValue('B' . $r, $ca['kd_customer']);
+            $sheet->setCellValue('C' . $r, $ca['nama_toko']);
+            $sheet->setCellValue('D' . $r, $ca['kd_customer_induk']);
+            $sheet->setCellValue('E' . $r, $ca['kontak_person']);
+            $sheet->setCellValue('F' . $r, $ca['alamat']);
+            $sheet->setCellValue('G' . $r, $ca['kota']);
+            // NIK/NPWP sebagai teks agar angka 0 di depan tidak hilang
+            $sheet->setCellValueExplicit('H' . $r, (string)$ca['nik'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('I' . $r, (string)$ca['npwp'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('J' . $r, (float)($ca['nominal_terpakai_awal'] ?? 0));
+            $sheet->setCellValue('K' . $r, (int)$ca['total_faktur_h']);
+            $sheet->setCellValue('L' . $r, (float)$ca['total_nominal_h']);
+            $sheet->setCellValue('M' . $r, (float)$ca['sisa_limit_h']);
+            $sheet->setCellValue('N' . $r, $ca['is_limit_reached'] ? 'LIMIT' : 'TERSEDIA');
+            $r++;
+        }
+        if ($r > 2) {
+            $sheet->getStyle('J2:M' . ($r - 1))->getNumberFormat()->setFormatCode('#,##0');
+        }
+        foreach (range('A', 'N') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->freezePane('A2');
+
+        $filename = 'Master_Customer_Acak_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
         exit;
     }
 

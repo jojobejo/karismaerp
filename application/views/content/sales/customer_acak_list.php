@@ -9,21 +9,23 @@
     <section class="content-header">
         <div class="container-fluid">
             <div class="row mb-2">
-                <div class="col-sm-6">
+                <div class="col-lg-5">
                     <h1 class="font-weight-bold text-dark">
                         <i class="fas fa-users text-primary mr-2"></i> Master Customer Acak (Pecah Faktur)
                     </h1>
                     <small class="text-muted">Master kontak person penerima turunan per kios untuk keperluan pemecahan Faktur Z</small>
                 </div>
-                <div class="col-sm-6 text-right">
-                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-outline-secondary mr-2">
+                <div class="col-lg-7 d-flex flex-wrap justify-content-lg-end align-items-start" style="gap:.5rem;">
+                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke Pecah Faktur
                     </a>
-                    <button type="button" class="btn btn-primary mr-2 shadow-sm font-weight-bold" data-toggle="modal" data-target="#modalTambahCustomerAcak">
+                    <button type="button" class="btn btn-primary shadow-sm font-weight-bold" data-toggle="modal" data-target="#modalTambahCustomerAcak">
                         <i class="fas fa-plus-circle mr-1"></i> Tambah Customer Acak
                     </button>
-                    <a href="<?= base_url('sales_order/sync_customer_acak') ?>" class="btn btn-outline-success font-weight-bold" onclick="return confirm('Apakah Anda yakin ingin menyinkronkan data kontak person dari file cust acak.xlsx?');">
-                        <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi Excel
+                    <!-- Tombol Sinkronisasi Excel dihapus: import data awal cukup sekali via db/import_customer_acak.php -->
+                    <!-- Export master customer acak sesuai filter aktif -->
+                    <a href="<?= base_url('sales_order/export_customer_acak') . (!empty($_SERVER['QUERY_STRING']) ? '?' . htmlspecialchars($_SERVER['QUERY_STRING']) : '') ?>" class="btn btn-success font-weight-bold shadow-sm">
+                        <i class="fas fa-file-excel mr-1"></i> Export Master Cust Acak
                     </a>
                 </div>
             </div>

@@ -910,7 +910,9 @@ $route['pecah_faktur/cetak/(:any)']                      = 'sales/C_SalesOrder/c
 $route['sales_order/cetak_semua_faktur_pecah']           = 'sales/C_SalesOrder/cetak_semua_faktur_pecah';
 $route['pecah_faktur/cetak_semua']                       = 'sales/C_SalesOrder/cetak_semua_faktur_pecah';
 $route['sales_order/customer_acak']                  = 'sales/C_SalesOrder/customer_acak';
-$route['sales_order/sync_customer_acak']             = 'sales/C_SalesOrder/sync_customer_acak';
+// Dinonaktifkan: sinkronisasi dari file cust acak.xlsx tidak dipakai lagi (import awal hanya sekali)
+// $route['sales_order/sync_customer_acak']             = 'sales/C_SalesOrder/sync_customer_acak';
+$route['sales_order/export_customer_acak']           = 'sales/C_SalesOrder/export_customer_acak';
 $route['sales_order/simpan_customer_acak']           = 'sales/C_SalesOrder/simpan_customer_acak';
 $route['sales_order/update_customer_acak']           = 'sales/C_SalesOrder/update_customer_acak';
 $route['sales_order/hapus_customer_acak/(:any)']      = 'sales/C_SalesOrder/hapus_customer_acak/$1';
