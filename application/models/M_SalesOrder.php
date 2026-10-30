@@ -3271,7 +3271,7 @@ class M_SalesOrder extends CI_Model
      * @param string $username Username pemroses
      * @return array Hasil pemrosesan
      */
-    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system')
+    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system', $pakai_potongan_20 = true)
     {
         $this->ensure_customer_acak_table();
         $this->ensure_faktur_z_pecah_tables();
@@ -3280,6 +3280,8 @@ class M_SalesOrder extends CI_Model
         if ($max_nominal_per_faktur <= 0) {
             $max_nominal_per_faktur = 25000000;
         }
+
+        $disc_factor = $pakai_potongan_20 ? 0.8 : 1.0;
 
         // 1. Ambil data customer induk
         $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
@@ -3358,8 +3360,8 @@ class M_SalesOrder extends CI_Model
                     continue;
                 }
 
-                // Harga satuan pada faktur pecahan H terpotong 20% dari harga Faktur Z induk
-                $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                // Harga satuan pada faktur pecahan H
+                $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * $disc_factor, 2);
                 $disc                 = (float)($pd['disc'] ?? 0);
                 $effective_unit_price = round($hrg_satuan_pecah * (1 - ($disc / 100)), 2);
 

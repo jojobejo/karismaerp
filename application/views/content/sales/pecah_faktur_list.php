@@ -533,32 +533,47 @@
                             <!-- TAB 2: FAKTUR PECAHAN KODE H -->
                             <div class="tab-pane fade" id="content-faktur-h" role="tabpanel" aria-labelledby="tab-faktur-h">
                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
-                                    <div>
-                                        <span class="font-weight-bold text-dark" style="font-size: 15px;">
-                                            <i class="fas fa-tag text-info mr-1"></i> Daftar Faktur Pecahan (Kode H)
-                                        </span>
+                                    <div class="d-flex align-items-center flex-wrap mr-auto mb-2 mb-md-0">
+                                        <button type="button" 
+                                                id="btnToggleSelectAllFakturH" 
+                                                class="btn btn-outline-secondary btn-sm font-weight-bold mr-2 shadow-sm" 
+                                                title="Pilih / Batalkan pilihan semua faktur pecahan yang tampil di halaman ini">
+                                            <i class="far fa-check-square mr-1"></i> Pilih Semua
+                                        </button>
+                                        <button type="button" 
+                                                id="btnUnpostBatchFakturH" 
+                                                class="btn btn-danger btn-sm font-weight-bold shadow-sm mr-2" 
+                                                style="display:none;" 
+                                                title="Unpost seluruh faktur pecahan yang sedang dicentang">
+                                            <i class="fas fa-undo mr-1"></i> Unpost Terpilih (<span id="countSelectedFakturH">0</span>)
+                                        </button>
                                     </div>
-                                    <div class="d-flex align-items-center mt-2 mt-md-0">
+                                    <div class="d-flex align-items-center flex-wrap">
                                         <span class="badge badge-warning p-2 mr-2">
                                             Total: <strong><?= count($fakturs_h) ?></strong> Faktur Pecahan H
                                         </span>
                                         <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?' . http_build_query(array_filter($filter ?? []))) ?>" 
                                            target="_blank"
                                            class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2"
+                                           id="btnCetakSemuaFakturH"
                                            title="Cetak Semua Faktur Pecahan Kode H Sekaligus ke Printer Dot-Matrix Epson LX-310">
                                             <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
                                         </a>
-                                        <a href="<?= base_url('sales_order/export_faktur_pecah?' . http_build_query(array_filter($filter ?? []))) ?>" 
+                                        <button type="button" 
                                            class="btn btn-success btn-sm font-weight-bold shadow-sm"
-                                           title="Export Faktur Pecahan Kode H ke Excel (.xlsx)">
+                                           id="btnExportFakturH"
+                                           title="Export Faktur Pecahan Kode H sesuai baris yang tampil di tabel ke Excel (.xlsx)">
                                             <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturH">
                                         <thead class="thead-light">
                                             <tr>
+                                                <th width="35" class="text-center no-sort">
+                                                    <input type="checkbox" id="checkAllFakturH" title="Centang / Hilangkan centang semua pada halaman ini" style="cursor:pointer; width:16px; height:16px;">
+                                                </th>
                                                 <th width="40" class="text-center">No</th>
                                                 <th>No. Faktur Pecahan</th>
                                                 <th>Faktur Induk Z</th>
@@ -568,20 +583,23 @@
                                                 <th class="text-center">Total Item</th>
                                                 <th class="text-right">Total Nilai</th>
                                                 <th>Dibuat Oleh</th>
-                                                <th width="100" class="text-center">Aksi</th>
+                                                <th width="100" class="text-center no-sort">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php if (empty($fakturs_h)): ?>
                                                 <tr>
-                                                    <td colspan="10" class="text-center py-5 text-muted">
+                                                    <td colspan="11" class="text-center py-5 text-muted">
                                                         <i class="fas fa-inbox fa-2x mb-2 text-warning"></i><br>
                                                         Belum ada faktur pecahan (kode H) yang dibuat.
                                                     </td>
                                                 </tr>
                                             <?php else: ?>
                                                 <?php $no = 1; foreach ($fakturs_h as $fh): ?>
-                                                    <tr>
+                                                    <tr data-id-pecah="<?= (int)$fh['id_pecah'] ?>">
+                                                        <td class="text-center align-middle">
+                                                            <input type="checkbox" class="check-item-faktur-h" value="<?= (int)$fh['id_pecah'] ?>" data-no-faktur="<?= htmlspecialchars($fh['no_faktur']) ?>" style="cursor:pointer; width:16px; height:16px;">
+                                                        </td>
                                                         <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
                                                         <td class="align-middle">
                                                             <a href="<?= base_url('sales_order/detail_faktur_pecah/' . $fh['id_pecah']) ?>" 
@@ -1148,6 +1166,7 @@ function setupDataTablesFaktur() {
             "autoWidth": false,
             "responsive": false,
             "pageLength": 25,
+            "lengthMenu": [[10, 25, 50, 100, 250, 500, -1], [10, 25, 50, 100, 250, 500, "Semua"]],
             "columnDefs": [
                 { "orderable": false, "targets": "no-sort" }
             ],
@@ -1177,10 +1196,271 @@ function setupDataTablesFaktur() {
         }
 
         if (!$.fn.DataTable.isDataTable('#tableFakturH')) {
-            $('#tableFakturH').DataTable(dataTableConfig);
+            var dataTableConfigH = $.extend({}, dataTableConfig, {
+                "order": [[1, "asc"]],
+                "columnDefs": [
+                    { "orderable": false, "targets": "no-sort" }
+                ]
+            });
+            $('#tableFakturH').DataTable(dataTableConfigH);
         }
     }
 }
+
+// Fungsi update status tombol aksi unpost terpilih & checkbox master
+function updateSelectedFakturHState() {
+    if (!window.jQuery) return;
+    var $ = window.jQuery;
+    var totalSelected = 0;
+
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
+        var dt = $('#tableFakturH').DataTable();
+        totalSelected = dt.$('.check-item-faktur-h:checked').length;
+
+        // Cek apakah seluruh baris di halaman aktif saat ini tercentang
+        var currentPageCheckboxes = $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h');
+        var currentPageChecked = currentPageCheckboxes.filter(':checked');
+        var allCurrentChecked = currentPageCheckboxes.length > 0 && currentPageCheckboxes.length === currentPageChecked.length;
+        $('#checkAllFakturH').prop('checked', allCurrentChecked);
+    } else {
+        totalSelected = $('.check-item-faktur-h:checked').length;
+        var totalCurrent = $('.check-item-faktur-h:visible').length;
+        var checkedCurrent = $('.check-item-faktur-h:visible:checked').length;
+        $('#checkAllFakturH').prop('checked', totalCurrent > 0 && totalCurrent === checkedCurrent);
+    }
+
+    if (totalSelected > 0) {
+        $('#countSelectedFakturH').text(totalSelected);
+        $('#btnUnpostBatchFakturH').fadeIn(150);
+    } else {
+        $('#countSelectedFakturH').text(0);
+        $('#btnUnpostBatchFakturH').fadeOut(150);
+    }
+}
+
+// Fungsi mengambil ID Faktur Pecahan H yang sedang tampil di halaman DataTables saat ini
+function getVisibleFakturHIds() {
+    var ids = [];
+    if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#tableFakturH')) {
+        var dt = window.jQuery('#tableFakturH').DataTable();
+        // Mengambil DOM nodes dari baris yang berada pada halaman aktif / sedang ditampilkan saat ini
+        var rows = dt.rows({ page: 'current' }).nodes();
+        for (var i = 0; i < rows.length; i++) {
+            var id = window.jQuery(rows[i]).attr('data-id-pecah');
+            if (id) {
+                ids.push(id);
+            }
+        }
+    } else {
+        // Fallback jika DataTable belum terpasang
+        window.jQuery('#tableFakturH tbody tr:visible').each(function() {
+            var id = window.jQuery(this).attr('data-id-pecah');
+            if (id) {
+                ids.push(id);
+            }
+        });
+    }
+    return ids;
+}
+
+// Event handler Export Excel Faktur Pecahan H sesuai baris yang tampil di layar
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.jQuery) {
+        var $ = window.jQuery;
+
+        // Auto-switch tab berdasarkan hash URL (misal: #content-faktur-h)
+        if (window.location.hash) {
+            var targetTab = $('.nav-tabs a[href="' + window.location.hash + '"]');
+            if (targetTab.length) {
+                targetTab.tab('show');
+            }
+        }
+        $('.nav-tabs a[data-toggle="pill"], .nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, null, e.target.getAttribute('href'));
+            }
+        });
+
+        // Handler klik tombol Export Excel Faktur Pecahan H
+        $(document).on('click', '#btnExportFakturH', function(e) {
+            e.preventDefault();
+            var ids = getVisibleFakturHIds();
+
+            if (ids.length === 0) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Data Tidak Ditemukan',
+                        text: 'Tidak ada data Faktur Pecahan Kode H yang sedang ditampilkan pada tabel saat ini untuk diexport.'
+                    });
+                } else {
+                    alert('Tidak ada data Faktur Pecahan Kode H yang sedang ditampilkan pada tabel saat ini untuk diexport.');
+                }
+                return false;
+            }
+
+            var $btn = $(this);
+            var oriHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Mengekspor ' + ids.length + ' faktur...');
+
+            var form = $('<form>', {
+                'action': '<?= base_url("sales_order/export_faktur_pecah") ?>',
+                'method': 'POST',
+                'style': 'display:none;'
+            });
+
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'id_pecah_list',
+                'value': ids.join(',')
+            }));
+
+            $('body').append(form);
+            form.submit();
+
+            setTimeout(function() {
+                form.remove();
+                $btn.prop('disabled', false).html(oriHtml);
+            }, 2500);
+        });
+
+        // Handler klik tombol Cetak Semua Faktur H (LX-310) sesuai baris yang tampil
+        $(document).on('click', '#btnCetakSemuaFakturH', function(e) {
+            var ids = getVisibleFakturHIds();
+            if (ids.length > 0) {
+                e.preventDefault();
+                var form = $('<form>', {
+                    'action': '<?= base_url("sales_order/cetak_semua_faktur_pecah") ?>',
+                    'method': 'POST',
+                    'target': '_blank',
+                    'style': 'display:none;'
+                });
+
+                form.append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'id_pecah',
+                    'value': ids.join(',')
+                }));
+
+                $('body').append(form);
+                form.submit();
+                setTimeout(function() {
+                    form.remove();
+                }, 2000);
+            }
+        });
+
+        // Checkbox Master: Centang / Batalkan semua pada halaman saat ini
+        $(document).on('change', '#checkAllFakturH', function() {
+            var isChecked = $(this).is(':checked');
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
+                var dt = $('#tableFakturH').DataTable();
+                var currentNodes = dt.rows({ page: 'current' }).nodes();
+                $(currentNodes).find('.check-item-faktur-h').prop('checked', isChecked);
+            } else {
+                $('.check-item-faktur-h:visible').prop('checked', isChecked);
+            }
+            updateSelectedFakturHState();
+        });
+
+        // Tombol Toggle "Pilih Semua" pada halaman saat ini
+        $(document).on('click', '#btnToggleSelectAllFakturH', function(e) {
+            e.preventDefault();
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH') ? $('#tableFakturH').DataTable() : null;
+            var currentCheckboxes = dt ? $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h') : $('.check-item-faktur-h:visible');
+            var isAllChecked = currentCheckboxes.length > 0 && currentCheckboxes.length === currentCheckboxes.filter(':checked').length;
+            currentCheckboxes.prop('checked', !isAllChecked);
+            updateSelectedFakturHState();
+        });
+
+        // Perubahan centang pada checkbox baris per faktur
+        $(document).on('change', '.check-item-faktur-h', function() {
+            updateSelectedFakturHState();
+        });
+
+        // Sinkronisasi saat DataTables berpindah halaman atau difilter/search
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
+            $('#tableFakturH').on('draw.dt', function() {
+                updateSelectedFakturHState();
+            });
+        }
+
+        // Handler klik Unpost Batch (Beberapa / Seluruh faktur pecahan yang dipilih)
+        $(document).on('click', '#btnUnpostBatchFakturH', function(e) {
+            e.preventDefault();
+            var selectedIds = [];
+            var selectedNames = [];
+
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
+                var dt = $('#tableFakturH').DataTable();
+                dt.$('.check-item-faktur-h:checked').each(function() {
+                    selectedIds.push($(this).val());
+                    var name = $(this).attr('data-no-faktur');
+                    if (name) selectedNames.push(name);
+                });
+            } else {
+                $('.check-item-faktur-h:checked').each(function() {
+                    selectedIds.push($(this).val());
+                    var name = $(this).attr('data-no-faktur');
+                    if (name) selectedNames.push(name);
+                });
+            }
+
+            if (selectedIds.length === 0) {
+                var noDataMsg = 'Pilih minimal 1 faktur pecahan yang ingin di-unpost.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Belum Ada Faktur Dipilih', text: noDataMsg });
+                } else {
+                    alert(noDataMsg);
+                }
+                return;
+            }
+
+            var confirmPrompt = function() {
+                var $btn = $('#btnUnpostBatchFakturH');
+                var oriHtml = $btn.html();
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Unpost...');
+
+                var form = $('<form>', {
+                    'action': '<?= base_url("sales_order/unpost_faktur_pecah_batch") ?>',
+                    'method': 'POST',
+                    'style': 'display:none;'
+                });
+
+                form.append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'id_pecah_list',
+                    'value': selectedIds.join(',')
+                }));
+
+                $('body').append(form);
+                form.submit();
+            };
+
+            var confirmText = 'Apakah Anda yakin ingin meng-unpost / membatalkan ' + selectedIds.length + ' faktur pecahan yang dipilih?\n\nKuantitas barang akan otomatis dikembalikan ke Faktur Z Induk terkait.';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Unpost ' + selectedIds.length + ' Faktur Pecahan?',
+                    text: 'Kuantitas barang dari seluruh faktur pecahan yang dipilih akan otomatis dikembalikan ke Faktur Z Induk masing-masing.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-undo mr-1"></i> Ya, Unpost Sekarang',
+                    cancelButtonText: 'Batal'
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        confirmPrompt();
+                    }
+                });
+            } else {
+                if (confirm(confirmText)) {
+                    confirmPrompt();
+                }
+            }
+        });
+    }
+});
 
 // Jalankan setup setelah seluruh window dan footer script ter-load sempurna
 if (document.readyState === 'complete') {

@@ -202,10 +202,16 @@
                                     </a>
                                 </li>
                             </ul>
-                            <div class="pb-2">
+                            <div class="pb-2 d-flex flex-wrap align-items-center">
                                 <?php if (!empty($stat['belum_dipecah']) && $stat['belum_dipecah'] > 0): ?>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm font-weight-bold mr-2 shadow-sm" id="btnToggleSelectAllFakturZ" title="Pilih / Batalkan semua faktur Z pada halaman ini">
+                                        <i class="far fa-check-square mr-1"></i> Pilih Semua
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm mr-2" id="btnPecahSelectedFakturZ" style="display:none;" title="Pecah beberapa faktur Z yang dicentang sekaligus">
+                                        <i class="fas fa-cut mr-1"></i> Pecah Terpilih (<span id="countSelectedFakturZ">0</span>)
+                                    </button>
                                     <a href="<?= base_url('sales_order/export_faktur_z_belum?kd_customer=' . rawurlencode($kd_customer)) ?>" 
-                                       class="btn btn-success btn-sm font-weight-bold shadow-sm mr-1"
+                                       class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"
                                        title="Export Daftar Faktur Z Belum Dipecah milik kios ini ke Excel (.xlsx)">
                                         <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
                                     </a>
@@ -224,6 +230,9 @@
                                     <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturZKiosBelum">
                                         <thead class="thead-light">
                                             <tr>
+                                                <th width="35" class="text-center no-sort">
+                                                    <input type="checkbox" id="checkAllFakturZKios" title="Pilih Semua Faktur Z pada halaman ini" style="cursor:pointer; width:16px; height:16px;">
+                                                </th>
                                                 <th width="40" class="text-center">No</th>
                                                 <th>No. Faktur Z</th>
                                                 <th>Tanggal</th>
@@ -238,7 +247,7 @@
                                         <tbody>
                                             <?php if (empty($kios_fakturs_belum)): ?>
                                                 <tr>
-                                                    <td colspan="9" class="text-center py-5 text-muted">
+                                                    <td colspan="10" class="text-center py-5 text-muted">
                                                         <i class="fas fa-check-circle fa-3x mb-3 text-success"></i><br>
                                                         <h5 class="font-weight-bold text-success">Seluruh Faktur Z Kios Ini Telah Selesai Dipecah</h5>
                                                         <span class="text-muted">Tidak ada Faktur Z yang belum dipecah. Silakan buka tab <strong>Faktur Z Selesai Dipecah</strong>.</span>
@@ -254,6 +263,15 @@
                                                     $tot_qty          = (float)($f['total_qty'] ?? 0);
                                                     ?>
                                                     <tr>
+                                                        <td class="text-center align-middle">
+                                                            <input type="checkbox" class="check-item-faktur-z" 
+                                                                   value="<?= (int)$f['id_faktur'] ?>" 
+                                                                   data-no-faktur="<?= htmlspecialchars($f['no_faktur']) ?>" 
+                                                                   data-nominal-awal="<?= $grand_total_asli ?>" 
+                                                                   data-total-qty="<?= $tot_qty ?>" 
+                                                                   <?= $can_split ? '' : 'disabled' ?> 
+                                                                   style="cursor:pointer; width:16px; height:16px;">
+                                                        </td>
                                                         <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
                                                         <td class="align-middle">
                                                             <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>" 
@@ -522,6 +540,29 @@
                             </div>
                         </div>
 
+                        <!-- Opsi Pilihan Potongan 20% vs Tanpa Potongan -->
+                        <div class="card border-0 mb-3" style="background-color: #fff9e6; border-left: 4px solid #ffc107 !important;">
+                            <div class="card-body p-3">
+                                <label class="font-weight-bold text-dark d-block mb-2">
+                                    <i class="fas fa-percentage text-warning mr-1"></i> Skema Potongan Harga:
+                                </label>
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="autoPotongan20" name="pakai_potongan_20" class="custom-control-input" value="1" checked>
+                                    <label class="custom-control-label font-weight-bold text-dark" for="autoPotongan20" style="cursor:pointer;">
+                                        Pakai Potongan 20% <span class="badge badge-success ml-1">Standar Netto (80%)</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang dipotong 20% untuk faktur pecahan H.</small>
+                                </div>
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="autoPotongan0" name="pakai_potongan_20" class="custom-control-input" value="0">
+                                    <label class="custom-control-label font-weight-bold text-dark" for="autoPotongan0" style="cursor:pointer;">
+                                        Tanpa Potongan (100% Penuh) <span class="badge badge-secondary ml-1">Harga Utuh</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang tetap 100% sama dengan Faktur Z asli tanpa pemotongan margin/pajak 20%.</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Rangkuman Aturan Sistem -->
                         <div class="alert alert-light border small text-dark mb-0">
                             <h6 class="font-weight-bold mb-2 text-primary" style="font-size: 12.5px;">
@@ -577,6 +618,29 @@
                         <div class="alert alert-info py-2 px-3 mb-3 small">
                             <i class="fas fa-info-circle mr-1"></i>
                             Faktur pecahan baru berawalan <strong>kode H</strong> akan dibuat di tabel terpisah tanpa memotong stok dan tanpa menjurnal ulang.
+                        </div>
+
+                        <!-- Card Pilihan Skema Potongan -->
+                        <div class="card border-0 mb-3" style="background-color: #fff9e6; border-left: 4px solid #ffc107 !important;">
+                            <div class="card-body p-3">
+                                <label class="font-weight-bold text-dark d-block mb-2">
+                                    <i class="fas fa-percentage text-warning mr-1"></i> Skema Potongan Harga:
+                                </label>
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="batchPotongan20" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="1" checked>
+                                    <label class="custom-control-label font-weight-bold text-dark" for="batchPotongan20" style="cursor:pointer;">
+                                        Pakai Potongan 20% <span class="badge badge-success ml-1">Standar Netto (80%)</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang dipotong 20% pada faktur pecahan H.</small>
+                                </div>
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="batchPotongan0" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="0">
+                                    <label class="custom-control-label font-weight-bold text-dark" for="batchPotongan0" style="cursor:pointer;">
+                                        Tanpa Potongan (100% Penuh) <span class="badge badge-secondary ml-1">Harga Utuh</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang tetap 100% utuh tanpa pemotongan margin/pajak 20%.</small>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Card Detail Potongan 20% Netto H -->
@@ -661,6 +725,44 @@ function formatRupiahJs(num) {
     return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+function isPakaiPotongan20() {
+    var radio0 = document.getElementById('batchPotongan0');
+    if (radio0 && radio0.checked) {
+        return false;
+    }
+    return true;
+}
+
+function recalculateModalValues() {
+    var pakaiPotongan = isPakaiPotongan20();
+    var nominalAwal   = window.currentModalTotalNominalAwal || 0;
+    var factor        = pakaiPotongan ? 0.8 : 1.0;
+    var totalNilai    = Math.round(nominalAwal * factor);
+    var potongan      = pakaiPotongan ? Math.round(nominalAwal * 0.2) : 0;
+
+    window.currentModalTotalNilai = totalNilai;
+
+    var nomAwalEl     = document.getElementById('modalNominalAwal');
+    var nomPotonganEl = document.getElementById('modalNominalPotongan');
+    var nomNettoEl    = document.getElementById('modalNominalNetto');
+    var headerQtyEl   = document.getElementById('modalHeaderQtyBadge');
+
+    if (nomAwalEl) nomAwalEl.innerText = formatRupiahJs(nominalAwal);
+    if (nomPotonganEl) {
+        if (pakaiPotongan) {
+            nomPotonganEl.innerText = '- ' + formatRupiahJs(potongan) + ' (20%)';
+            nomPotonganEl.className = 'col-6 text-right font-weight-bold text-danger';
+        } else {
+            nomPotonganEl.innerText = 'Rp 0 (0% - Tanpa Potongan)';
+            nomPotonganEl.className = 'col-6 text-right font-weight-bold text-muted';
+        }
+    }
+    if (nomNettoEl) nomNettoEl.innerText = formatRupiahJs(totalNilai);
+    if (headerQtyEl) headerQtyEl.innerText = (window.currentModalTotalQty || 0).toLocaleString('id-ID') + ' pcs';
+
+    updateModalEstimasi();
+}
+
 function updateModalEstimasi() {
     var inputPecah = document.getElementById('inputJumlahPecah');
     var estQtyEl   = document.getElementById('modalEstQty');
@@ -696,13 +798,14 @@ window.closeBatchSplitModal = function() {
 
 window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, totalQty) {
     nominalAwal = parseFloat(nominalAwal) || 0;
-    totalNilai = parseFloat(totalNilai) || (nominalAwal * 0.8);
-    totalQty = parseFloat(totalQty) || 0;
-    var potongan = Math.max(0, nominalAwal - totalNilai);
+    totalQty    = parseFloat(totalQty) || 0;
 
-    window.currentModalTotalNilai       = totalNilai;
     window.currentModalTotalNominalAwal = nominalAwal;
     window.currentModalTotalQty         = totalQty;
+
+    // Reset pilihan potongan ke default (20%)
+    var radio20 = document.getElementById('batchPotongan20');
+    if (radio20) radio20.checked = true;
 
     var titleEl = document.getElementById('modalBatchSplitLabel');
     if (titleEl) {
@@ -719,15 +822,7 @@ window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, t
         hiddenContainer.innerHTML = '<input type="hidden" name="id_faktur[]" value="' + fid + '">';
     }
 
-    var nomAwalEl = document.getElementById('modalNominalAwal');
-    var nomPotonganEl = document.getElementById('modalNominalPotongan');
-    var nomNettoEl = document.getElementById('modalNominalNetto');
-    var headerQtyEl = document.getElementById('modalHeaderQtyBadge');
-
-    if (nomAwalEl) nomAwalEl.innerText = formatRupiahJs(nominalAwal);
-    if (nomPotonganEl) nomPotonganEl.innerText = '- ' + formatRupiahJs(potongan) + ' (20%)';
-    if (nomNettoEl) nomNettoEl.innerText = formatRupiahJs(totalNilai);
-    if (headerQtyEl) headerQtyEl.innerText = totalQty.toLocaleString('id-ID') + ' pcs';
+    recalculateModalValues();
 
     var inputPecah = document.getElementById('inputJumlahPecah');
     if (inputPecah) {
@@ -737,8 +832,6 @@ window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, t
             inputPecah.addEventListener('input', updateModalEstimasi);
         }
     }
-
-    updateModalEstimasi();
 
     if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
         window.jQuery('#modalBatchSplit').modal('show');
@@ -752,6 +845,160 @@ window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, t
         }
     }
 };
+
+// Fungsi update status checkbox pilihan faktur Z
+function updateSelectedFakturZState() {
+    var checkItems = document.querySelectorAll('.check-item-faktur-z:not(:disabled)');
+    var checkedItems = document.querySelectorAll('.check-item-faktur-z:checked');
+    var count = checkedItems.length;
+
+    var countBadge = document.getElementById('countSelectedFakturZ');
+    if (countBadge) countBadge.innerText = count;
+
+    var btnPecah = document.getElementById('btnPecahSelectedFakturZ');
+    if (btnPecah) {
+        btnPecah.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+
+    var masterCheck = document.getElementById('checkAllFakturZKios');
+    if (masterCheck) {
+        if (checkItems.length > 0 && count === checkItems.length) {
+            masterCheck.checked = true;
+            masterCheck.indeterminate = false;
+        } else if (count > 0) {
+            masterCheck.checked = false;
+            masterCheck.indeterminate = true;
+        } else {
+            masterCheck.checked = false;
+            masterCheck.indeterminate = false;
+        }
+    }
+}
+
+// Buka modal batch split untuk faktur-faktur yang dicentang
+function openBatchSplitModalSelected() {
+    var checkedItems = document.querySelectorAll('.check-item-faktur-z:checked');
+    if (checkedItems.length === 0) {
+        alert('Silakan pilih minimal 1 Faktur Z terlebih dahulu.');
+        return;
+    }
+
+    var totalNominalAwal = 0;
+    var totalQty = 0;
+    var badgesHtml = '';
+    var hiddenInputsHtml = '';
+
+    checkedItems.forEach(function(item) {
+        var fid = item.value;
+        var noFaktur = item.getAttribute('data-no-faktur') || ('#' + fid);
+        var nomAwal = parseFloat(item.getAttribute('data-nominal-awal')) || 0;
+        var qty = parseFloat(item.getAttribute('data-total-qty')) || 0;
+
+        totalNominalAwal += nomAwal;
+        totalQty += qty;
+
+        badgesHtml += '<span class="badge badge-primary mr-1 mb-1" style="font-size:12px; padding:4px 7px;"><i class="fas fa-file-invoice mr-1"></i>' + noFaktur + '</span>';
+        hiddenInputsHtml += '<input type="hidden" name="id_faktur[]" value="' + fid + '">';
+    });
+
+    window.currentModalTotalNominalAwal = totalNominalAwal;
+    window.currentModalTotalQty         = totalQty;
+
+    // Reset pilihan potongan ke default (20%)
+    var radio20 = document.getElementById('batchPotongan20');
+    if (radio20) radio20.checked = true;
+
+    var titleEl = document.getElementById('modalBatchSplitLabel');
+    if (titleEl) {
+        titleEl.innerHTML = '<i class="fas fa-cut mr-1"></i> Pemecahan Batch: <strong>' + checkedItems.length + ' Faktur Z Terpilih</strong>';
+    }
+
+    var listEl = document.getElementById('modalListSelectedFaktur');
+    if (listEl) {
+        listEl.innerHTML = badgesHtml;
+    }
+
+    var hiddenContainer = document.getElementById('modalHiddenFakturInputs');
+    if (hiddenContainer) {
+        hiddenContainer.innerHTML = hiddenInputsHtml;
+    }
+
+    recalculateModalValues();
+
+    var inputPecah = document.getElementById('inputJumlahPecah');
+    if (inputPecah) {
+        inputPecah.value = 2;
+        if (!inputPecah.hasAttribute('data-has-calc-listener')) {
+            inputPecah.setAttribute('data-has-calc-listener', '1');
+            inputPecah.addEventListener('input', updateModalEstimasi);
+        }
+    }
+
+    if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+        window.jQuery('#modalBatchSplit').modal('show');
+    } else {
+        var modal = document.getElementById('modalBatchSplit');
+        if (modal) {
+            modal.style.display = 'block';
+            modal.classList.add('show');
+            modal.removeAttribute('aria-hidden');
+            document.body.classList.add('modal-open');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener radio pilihan potongan pada modal batch
+    var radiosPotongan = document.querySelectorAll('.radio-potongan-batch');
+    radiosPotongan.forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            recalculateModalValues();
+        });
+    });
+
+    // Checkbox Master
+    var masterCheck = document.getElementById('checkAllFakturZKios');
+    if (masterCheck) {
+        masterCheck.addEventListener('change', function() {
+            var checkItems = document.querySelectorAll('.check-item-faktur-z:not(:disabled)');
+            checkItems.forEach(function(item) {
+                item.checked = masterCheck.checked;
+            });
+            updateSelectedFakturZState();
+        });
+    }
+
+    // Tombol Toggle Pilih Semua di Toolbar
+    var btnToggle = document.getElementById('btnToggleSelectAllFakturZ');
+    if (btnToggle) {
+        btnToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            var checkItems = document.querySelectorAll('.check-item-faktur-z:not(:disabled)');
+            var checkedItems = document.querySelectorAll('.check-item-faktur-z:checked');
+            var shouldCheck = checkedItems.length !== checkItems.length;
+
+            checkItems.forEach(function(item) {
+                item.checked = shouldCheck;
+            });
+            updateSelectedFakturZState();
+        });
+    }
+
+    // Tombol Pecah Terpilih
+    var btnPecahSelected = document.getElementById('btnPecahSelectedFakturZ');
+    if (btnPecahSelected) {
+        btnPecahSelected.addEventListener('click', function(e) {
+            e.preventDefault();
+            openBatchSplitModalSelected();
+        });
+    }
+});
+
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('check-item-faktur-z')) {
+        updateSelectedFakturZState();
+    }
+});
 
 document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-pecah-faktur');
@@ -774,7 +1021,7 @@ document.addEventListener('click', function(e) {
 // Setup DataTables
 if (window.jQuery) {
     $(function() {
-        var dtConfig = {
+        var baseDtConfig = {
             "paging": true,
             "lengthChange": true,
             "searching": true,
@@ -799,16 +1046,26 @@ if (window.jQuery) {
                     "next": "Lanjut",
                     "previous": "Sebelum"
                 }
-            },
-            "order": [[0, "asc"]]
+            }
         };
 
         if (!$.fn.DataTable.isDataTable('#tableFakturZKiosBelum')) {
-            $('#tableFakturZKiosBelum').DataTable(dtConfig);
+            var configBelum = $.extend({}, baseDtConfig, {
+                "order": [[1, "asc"]] // Urut berdasarkan No (kolom ke-1), karena kolom ke-0 adalah checkbox
+            });
+            var tableBelum = $('#tableFakturZKiosBelum').DataTable(configBelum);
+
+            // Re-sync status checkbox saat ganti halaman / pencarian DataTables
+            tableBelum.on('draw', function() {
+                updateSelectedFakturZState();
+            });
         }
 
         if (!$.fn.DataTable.isDataTable('#tableFakturZKiosSudah')) {
-            $('#tableFakturZKiosSudah').DataTable(dtConfig);
+            var configSudah = $.extend({}, baseDtConfig, {
+                "order": [[0, "asc"]]
+            });
+            $('#tableFakturZKiosSudah').DataTable(configSudah);
         }
     });
 }
