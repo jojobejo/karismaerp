@@ -262,6 +262,11 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                 <a href="<?= base_url('sales_order/detail_faktur/' . $faktur['id_faktur'] . '?print=1') ?>" target="_blank" class="btn btn-info btn-sm">
                     <i class="fas fa-print"></i> Cetak Faktur
                 </a>
+                <?php if (!empty($so['is_faktur_z']) && empty($faktur['is_split_parent'])): ?>
+                    <button type="button" class="btn btn-warning btn-sm font-weight-bold ml-1" data-toggle="modal" data-target="#modalUbahCustomerDetail" title="Ubah Kios / Pindahkan Faktur Z ini ke Customer/Kios lain (koreksi salah import)">
+                        <i class="fas fa-exchange-alt mr-1"></i> Ubah Kios / Customer
+                    </button>
+                <?php endif; ?>
                 <?php if (!empty($faktur['is_split_parent'])): ?>
                     <a href="<?= base_url('sales_order/cetak_semua_faktur_pecah?parent_id_faktur=' . $faktur['id_faktur']) ?>" target="_blank" class="btn btn-primary btn-sm ml-1" title="Cetak Seluruh Faktur Pecahan Kode H ke Printer Dot-Matrix LX-310">
                         <i class="fas fa-print mr-1"></i> Cetak Semua Faktur H (LX-310)
@@ -348,7 +353,15 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                 <?php endif; ?>
                                 <tr>
                                     <td class="text-muted">Customer</td>
-                                    <td><strong><?= htmlspecialchars($faktur['customer_name']) ?></strong></td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($faktur['customer_name']) ?></strong>
+                                        <span class="badge badge-light border ml-1">[<?= htmlspecialchars($faktur['kd_customer']) ?>]</span>
+                                        <?php if (!empty($so['is_faktur_z']) && empty($faktur['is_split_parent'])): ?>
+                                            <a href="javascript:void(0)" class="btn btn-outline-info btn-xs ml-1 no-print font-weight-bold" data-toggle="modal" data-target="#modalUbahCustomerDetail" title="Ubah Kios / Pindahkan Faktur Z ini">
+                                                <i class="fas fa-edit mr-1"></i> Ubah Kios
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Rute / Regional</td>
@@ -537,6 +550,80 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
         </div>
     </section>
 </div>
+
+<?php if (!empty($so['is_faktur_z']) && empty($faktur['is_split_parent'])): ?>
+<!-- MODAL UBAH KIOS / CUSTOMER FAKTUR Z -->
+<div class="modal fade no-print" id="modalUbahCustomerDetail" tabindex="-1" role="dialog" aria-labelledby="modalUbahCustDetailLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-info text-white py-2">
+                <h5 class="modal-title font-weight-bold" id="modalUbahCustDetailLabel">
+                    <i class="fas fa-exchange-alt mr-1"></i> Pindahkan Kios / Customer Faktur Z
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="<?= base_url('sales_order/ubah_customer_faktur_z') ?>" method="post">
+                <input type="hidden" name="id_faktur[]" value="<?= (int)$faktur['id_faktur'] ?>">
+                <div class="modal-body p-3">
+                    <div class="alert alert-light border small text-dark mb-3">
+                        <i class="fas fa-info-circle text-info mr-1"></i>
+                        Gunakan fitur ini jika terjadi <strong>salah input kode customer saat import template Faktur Z</strong>. Faktur akan dialihkan ke kios baru tanpa perlu di-import ulang.
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold small text-muted text-uppercase mb-1">Nomor Faktur Z:</label>
+                        <div>
+                            <span class="badge badge-primary px-2 py-1 font-weight-bold" style="font-size: 13px;">
+                                <i class="fas fa-file-invoice mr-1"></i> <?= htmlspecialchars($faktur['no_faktur']) ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold small text-muted text-uppercase mb-1">Kios / Customer Saat Ini:</label>
+                        <input type="text" class="form-control form-control-sm bg-light font-weight-bold text-dark" readonly value="<?= htmlspecialchars($faktur['customer_name'] . ' (' . $faktur['kd_customer'] . ')') ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold text-dark mb-1">
+                            <i class="fas fa-store text-info mr-1"></i> Pilih Kios / Customer Tujuan (Baru): <span class="text-danger">*</span>
+                        </label>
+                        <select name="kd_customer_baru" class="form-control select2" style="width: 100%;" required>
+                            <option value="">-- Cari & Pilih Kios / Customer Tujuan --</option>
+                            <?php if (!empty($all_customers)): ?>
+                                <?php foreach ($all_customers as $ac): ?>
+                                    <?php 
+                                    $display_label = (!empty($ac['nama_kios']) && $ac['nama_kios'] !== $ac['nama_customer'])
+                                        ? $ac['nama_kios'] . ' (' . $ac['nama_customer'] . ')'
+                                        : $ac['nama_customer'];
+                                    $is_curr = ($ac['kd_customer'] === $faktur['kd_customer']);
+                                    ?>
+                                    <option value="<?= htmlspecialchars($ac['kd_customer']) ?>" <?= $is_curr ? 'disabled' : '' ?>>
+                                        [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                        <small class="form-text text-muted mt-1">
+                            Ketik kode customer atau nama toko/kios untuk mencari.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i> Batal
+                    </button>
+                    <button type="submit" class="btn btn-info btn-sm font-weight-bold shadow-sm">
+                        <i class="fas fa-check mr-1"></i> Simpan & Pindahkan Faktur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if ($this->input->get('print', true) === '1'): ?>
 <script>

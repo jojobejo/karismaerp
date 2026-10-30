@@ -42,6 +42,7 @@ class C_SalesOrder extends CI_Controller
                 'cetak_faktur',
                 'hapus_faktur_pecah',
                 'unpost_faktur_pecah_batch',
+                'ubah_customer_faktur_z',
                 'reset_pecah_faktur_induk',
                 'export_faktur_pecah',
                 'export_faktur_z_belum',
@@ -2303,6 +2304,7 @@ class C_SalesOrder extends CI_Controller
         $data['child_fakturs'] = $child_fakturs;
         $data['parent_faktur'] = $parent_faktur;
         $data['has_remaining_split_qty'] = $has_remaining_split_qty;
+        $data['all_customers'] = $this->M_SalesOrder->get_customers();
 
         if ($this->input->get('print') == '1') {
             $this->load->model('M_pembayaran');
@@ -3681,6 +3683,7 @@ class C_SalesOrder extends CI_Controller
         $data['kios_fakturs_sudah'] = $kios_fakturs_sudah;
         $data['stat']               = $stat;
         $data['filter']             = $filter;
+        $data['all_customers']      = $this->M_SalesOrder->get_customers();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/pecah_faktur_kios_detail.php', $data);
@@ -4847,6 +4850,172 @@ class C_SalesOrder extends CI_Controller
 
         $this->session->set_flashdata('success', $successMsg);
         redirect('sales_order/pecah_faktur#content-faktur-h');
+    }
+
+    /**
+     * Mengubah kios / customer pada Faktur Z (koreksi salah input kd_customer saat import).
+     * Dapat digunakan untuk 1 faktur maupun beberapa faktur sekaligus (batch).
+     */
+    public function ubah_customer_faktur_z()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir.']);
+                return;
+            }
+            redirect('Auth');
+            return;
+        }
+
+        $id_faktur_raw = $this->input->post('id_faktur') ?: $this->input->post('id_faktur_list');
+        $kd_customer_baru = trim((string)$this->input->post('kd_customer_baru'));
+
+        $ids = [];
+        if (is_array($id_faktur_raw)) {
+            $ids = array_filter(array_map('intval', $id_faktur_raw), function($v) { return $v > 0; });
+        } elseif (is_string($id_faktur_raw) && trim($id_faktur_raw) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', trim($id_faktur_raw))), function($v) { return $v > 0; });
+        }
+
+        if (empty($ids)) {
+            $msg = 'Pilih minimal 1 Faktur Z yang ingin diubah customernya.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        if (empty($kd_customer_baru)) {
+            $msg = 'Silakan pilih Kios / Customer tujuan yang baru.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        // Cek customer baru di tb_customer
+        $cust_baru = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer_baru])->row_array();
+        if (!$cust_baru) {
+            $msg = 'Customer tujuan dengan kode ' . htmlspecialchars($kd_customer_baru) . ' tidak ditemukan di sistem.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        // Ambil data faktur yang dituju
+        $fakturs = $this->db->select('f.id_faktur, f.no_faktur, f.id_so, f.no_so, f.kd_customer, f.customer_name, f.is_split_parent')
+            ->from('tbso_faktur_penjualan f')
+            ->where_in('f.id_faktur', $ids)
+            ->get()
+            ->result_array();
+
+        if (empty($fakturs)) {
+            $msg = 'Data faktur tidak ditemukan.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        // Validasi: pastikan belum dipecah
+        $already_split = [];
+        foreach ($fakturs as $f) {
+            if (!empty($f['is_split_parent'])) {
+                $already_split[] = $f['no_faktur'];
+            }
+        }
+        if (!empty($already_split)) {
+            $msg = 'Faktur Z berikut sudah pernah dipecah: ' . implode(', ', $already_split) . '. Harap unpost faktur pecahannya terlebih dahulu sebelum memindahkan customer.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        $username = $this->_getUsername();
+        $this->load->model('M_ActivityLog');
+
+        $this->db->trans_start();
+
+        $faktur_numbers = [];
+        foreach ($fakturs as $f) {
+            $old_kd = $f['kd_customer'];
+            $old_name = $f['customer_name'];
+
+            $this->db->where('id_faktur', $f['id_faktur'])->update('tbso_faktur_penjualan', [
+                'kd_customer'   => $cust_baru['kd_customer'],
+                'customer_name' => $cust_baru['nama_customer']
+            ]);
+
+            if (!empty($f['id_so'])) {
+                $this->db->where('id_so', $f['id_so'])->update('tbso_sales_order', [
+                    'kd_customer'   => $cust_baru['kd_customer'],
+                    'customer_name' => $cust_baru['nama_customer'],
+                    'kd_rute'       => $cust_baru['kd_rute'] ?? null
+                ]);
+            }
+
+            $this->M_ActivityLog->log(
+                $f['no_so'] ?? '-',
+                $f['no_faktur'],
+                'UBAH_CUSTOMER_FAKTUR_Z',
+                'Faktur Z ' . $f['no_faktur'] . ' dipindahkan dari kios ' . $old_kd . ' (' . $old_name . ') ke kios ' . $cust_baru['kd_customer'] . ' (' . $cust_baru['nama_customer'] . ') oleh ' . $username,
+                $username,
+                'Koreksi salah input kd_customer saat import'
+            );
+
+            $faktur_numbers[] = $f['no_faktur'];
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            $msg = 'Gagal menyimpan perubahan customer faktur Z.';
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => false, 'message' => $msg]);
+                return;
+            }
+            $this->session->set_flashdata('error', $msg);
+            redirect($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur');
+            return;
+        }
+
+        $nama_kios_tujuan = !empty($cust_baru['nama_kios']) ? $cust_baru['nama_kios'] : $cust_baru['nama_customer'];
+        $success_msg = '<strong>Berhasil Memindahkan Customer / Kios!</strong><br>' .
+            count($faktur_numbers) . ' Faktur Z (' . implode(', ', $faktur_numbers) . ') berhasil dialihkan ke kios <strong>' . 
+            htmlspecialchars($nama_kios_tujuan) . ' (' . htmlspecialchars($cust_baru['kd_customer']) . ')</strong>.';
+
+        if ($this->input->is_ajax_request()) {
+            echo json_encode([
+                'status' => true,
+                'message' => $success_msg,
+                'target_kd_customer' => $cust_baru['kd_customer'],
+                'redirect' => base_url('sales_order/pecah_faktur_kios/' . rawurlencode($cust_baru['kd_customer']))
+            ]);
+            return;
+        }
+
+        $this->session->set_flashdata('success', $success_msg);
+
+        // Redirect ke kios tujuan agar pengguna langsung melihat fakturnya di tempat yang benar
+        $redirect_to = base_url('sales_order/pecah_faktur_kios/' . rawurlencode($cust_baru['kd_customer']));
+        redirect($redirect_to);
     }
 
     /**

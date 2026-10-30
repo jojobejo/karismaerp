@@ -210,6 +210,9 @@
                                     <button type="button" class="btn btn-warning btn-sm font-weight-bold shadow-sm mr-2" id="btnPecahSelectedFakturZ" style="display:none;" title="Pecah beberapa faktur Z yang dicentang sekaligus">
                                         <i class="fas fa-cut mr-1"></i> Pecah Terpilih (<span id="countSelectedFakturZ">0</span>)
                                     </button>
+                                    <button type="button" class="btn btn-info btn-sm font-weight-bold shadow-sm mr-2" id="btnPindahKiosSelectedFakturZ" style="display:none;" title="Pindahkan faktur-faktur Z yang dicentang ke kios/toko lain (koreksi salah import)">
+                                        <i class="fas fa-exchange-alt mr-1"></i> Pindah Kios Terpilih (<span id="countSelectedPindahKios">0</span>)
+                                    </button>
                                     <a href="<?= base_url('sales_order/export_faktur_z_belum?kd_customer=' . rawurlencode($kd_customer)) ?>" 
                                        class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"
                                        title="Export Daftar Faktur Z Belum Dipecah milik kios ini ke Excel (.xlsx)">
@@ -241,7 +244,7 @@
                                                 <th class="text-right">Grand Total (Awal)</th>
                                                 <th class="text-right bg-light">Setelah Potong 20%</th>
                                                 <th class="text-center">Status Faktur</th>
-                                                <th width="140" class="text-center no-sort">Aksi</th>
+                                                <th width="155" class="text-center no-sort">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -304,13 +307,13 @@
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <?php 
-                                                            $st = strtolower((string)$f['status']);
-                                                            $stClass = 'secondary';
-                                                            if ($st === 'confirmed') $stClass = 'primary';
-                                                            elseif ($st === 'selesai' || $st === 'selesai_do') $stClass = 'success';
-                                                            elseif ($st === 'proses_do') $stClass = 'warning';
-                                                            elseif ($st === 'cancelled') $stClass = 'danger';
-                                                            ?>
+                                                             $st = strtolower((string)$f['status']);
+                                                             $stClass = 'secondary';
+                                                             if ($st === 'confirmed') $stClass = 'primary';
+                                                             elseif ($st === 'selesai' || $st === 'selesai_do') $stClass = 'success';
+                                                             elseif ($st === 'proses_do') $stClass = 'warning';
+                                                             elseif ($st === 'cancelled') $stClass = 'danger';
+                                                             ?>
                                                             <span class="badge badge-<?= $stClass ?> text-uppercase" style="font-size: 11px;">
                                                                 <?= htmlspecialchars($f['status']) ?>
                                                             </span>
@@ -327,6 +330,14 @@
                                                                             data-total-qty="<?= $tot_qty ?>"
                                                                             title="Pecah Faktur Z ini">
                                                                         <i class="fas fa-cut mr-1"></i> Pecah
+                                                                    </button>
+                                                                    <button type="button"
+                                                                            class="btn btn-info btn-sm font-weight-bold shadow-sm btn-ubah-kios-faktur"
+                                                                            data-id="<?= (int)$f['id_faktur'] ?>"
+                                                                            data-no-faktur="<?= htmlspecialchars($f['no_faktur']) ?>"
+                                                                            data-kd-customer="<?= htmlspecialchars($f['kd_customer']) ?>"
+                                                                            title="Ubah Kios / Pindahkan Faktur Z ini ke Toko Lain (Koreksi Salah Import)">
+                                                                        <i class="fas fa-exchange-alt"></i>
                                                                     </button>
                                                                 <?php endif; ?>
                                                                 <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>"
@@ -712,6 +723,74 @@
         </div>
     </div>
 
+    <!-- MODAL UBAH KIOS / CUSTOMER FAKTUR Z -->
+    <div class="modal fade" id="modalUbahCustomerFakturZ" tabindex="-1" role="dialog" aria-labelledby="modalUbahCustomerLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white py-2">
+                    <h5 class="modal-title font-weight-bold" id="modalUbahCustomerLabel">
+                        <i class="fas fa-exchange-alt mr-1"></i> Pindahkan Kios / Customer Faktur Z
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="<?= base_url('sales_order/ubah_customer_faktur_z') ?>" method="post" id="formUbahCustomerFakturZ">
+                    <div class="modal-body p-3">
+                        <div class="alert alert-light border small text-dark mb-3">
+                            <i class="fas fa-info-circle text-info mr-1"></i>
+                            Gunakan fitur ini jika terjadi <strong>salah mengisi kode customer saat import Faktur Z</strong>. Faktur yang dipindahkan akan langsung dialihkan ke kios tujuan tanpa perlu di-import ulang.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="font-weight-bold small text-muted text-uppercase mb-1">Faktur Z yang Akan Dipindahkan:</label>
+                            <div id="modalUbahCustListFaktur" class="d-flex flex-wrap p-2 border rounded bg-white" style="max-height: 85px; overflow-y: auto;"></div>
+                            <div id="modalUbahCustHiddenInputs"></div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small text-muted text-uppercase mb-1">Kios / Customer Saat Ini:</label>
+                            <input type="text" class="form-control form-control-sm bg-light font-weight-bold text-dark" id="modalUbahCustCurrent" readonly value="<?= htmlspecialchars(($customer['nama_kios'] ?? $customer['nama_customer']) . ' (' . $kd_customer . ')') ?>">
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold text-dark mb-1">
+                                <i class="fas fa-store text-info mr-1"></i> Pilih Kios / Customer Tujuan (Baru): <span class="text-danger">*</span>
+                            </label>
+                            <select name="kd_customer_baru" id="selectKdCustomerBaru" class="form-control select2" style="width: 100%;" required>
+                                <option value="">-- Cari & Pilih Kios / Customer Tujuan --</option>
+                                <?php if (!empty($all_customers)): ?>
+                                    <?php foreach ($all_customers as $ac): ?>
+                                        <?php 
+                                        $display_label = (!empty($ac['nama_kios']) && $ac['nama_kios'] !== $ac['nama_customer'])
+                                            ? $ac['nama_kios'] . ' (' . $ac['nama_customer'] . ')'
+                                            : $ac['nama_customer'];
+                                        $is_curr = ($ac['kd_customer'] === $kd_customer);
+                                        ?>
+                                        <option value="<?= htmlspecialchars($ac['kd_customer']) ?>" <?= $is_curr ? 'disabled' : '' ?>>
+                                            [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <small class="form-text text-muted mt-1">
+                                Ketik kode customer atau nama toko/kios untuk mencari.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i> Batal
+                        </button>
+                        <button type="submit" class="btn btn-info btn-sm font-weight-bold shadow-sm" id="btnSubmitUbahCustomer">
+                            <i class="fas fa-check mr-1"></i> Simpan & Pindahkan Faktur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <?php $this->load->view('partial/main/footer') ?>
 </div>
 
@@ -846,6 +925,68 @@ window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, t
     }
 };
 
+// Buka modal Ubah Customer untuk 1 faktur
+window.openUbahCustomerSingle = function(fid, noFaktur, kdCustomer) {
+    var titleEl = document.getElementById('modalUbahCustomerLabel');
+    if (titleEl) {
+        titleEl.innerHTML = '<i class="fas fa-exchange-alt mr-1"></i> Pindahkan Faktur Z: <u>' + noFaktur + '</u>';
+    }
+
+    var listEl = document.getElementById('modalUbahCustListFaktur');
+    if (listEl) {
+        listEl.innerHTML = '<span class="badge badge-primary mr-1 mb-1" style="font-size:12px; padding:4px 7px;"><i class="fas fa-file-invoice mr-1"></i>' + noFaktur + '</span>';
+    }
+
+    var hiddenContainer = document.getElementById('modalUbahCustHiddenInputs');
+    if (hiddenContainer) {
+        hiddenContainer.innerHTML = '<input type="hidden" name="id_faktur[]" value="' + fid + '">';
+    }
+
+    if (window.jQuery) {
+        $('#selectKdCustomerBaru').val('').trigger('change');
+        $('#modalUbahCustomerFakturZ').modal('show');
+    }
+};
+
+// Buka modal Ubah Customer untuk faktur-faktur yang dicentang
+function openUbahCustomerModalSelected() {
+    var checkedItems = document.querySelectorAll('.check-item-faktur-z:checked');
+    if (checkedItems.length === 0) {
+        alert('Silakan pilih minimal 1 Faktur Z yang ingin dipindahkan.');
+        return;
+    }
+
+    var badgesHtml = '';
+    var hiddenInputsHtml = '';
+
+    checkedItems.forEach(function(item) {
+        var fid = item.value;
+        var noFaktur = item.getAttribute('data-no-faktur') || ('#' + fid);
+        badgesHtml += '<span class="badge badge-primary mr-1 mb-1" style="font-size:12px; padding:4px 7px;"><i class="fas fa-file-invoice mr-1"></i>' + noFaktur + '</span>';
+        hiddenInputsHtml += '<input type="hidden" name="id_faktur[]" value="' + fid + '">';
+    });
+
+    var titleEl = document.getElementById('modalUbahCustomerLabel');
+    if (titleEl) {
+        titleEl.innerHTML = '<i class="fas fa-exchange-alt mr-1"></i> Pindahkan <strong>' + checkedItems.length + ' Faktur Z Terpilih</strong>';
+    }
+
+    var listEl = document.getElementById('modalUbahCustListFaktur');
+    if (listEl) {
+        listEl.innerHTML = badgesHtml;
+    }
+
+    var hiddenContainer = document.getElementById('modalUbahCustHiddenInputs');
+    if (hiddenContainer) {
+        hiddenContainer.innerHTML = hiddenInputsHtml;
+    }
+
+    if (window.jQuery) {
+        $('#selectKdCustomerBaru').val('').trigger('change');
+        $('#modalUbahCustomerFakturZ').modal('show');
+    }
+}
+
 // Fungsi update status checkbox pilihan faktur Z
 function updateSelectedFakturZState() {
     var checkItems = document.querySelectorAll('.check-item-faktur-z:not(:disabled)');
@@ -855,9 +996,17 @@ function updateSelectedFakturZState() {
     var countBadge = document.getElementById('countSelectedFakturZ');
     if (countBadge) countBadge.innerText = count;
 
+    var countPindahBadge = document.getElementById('countSelectedPindahKios');
+    if (countPindahBadge) countPindahBadge.innerText = count;
+
     var btnPecah = document.getElementById('btnPecahSelectedFakturZ');
     if (btnPecah) {
         btnPecah.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+
+    var btnPindah = document.getElementById('btnPindahKiosSelectedFakturZ');
+    if (btnPindah) {
+        btnPindah.style.display = count > 0 ? 'inline-block' : 'none';
     }
 
     var masterCheck = document.getElementById('checkAllFakturZKios');
@@ -992,6 +1141,24 @@ document.addEventListener('DOMContentLoaded', function() {
             openBatchSplitModalSelected();
         });
     }
+
+    // Tombol Pindah Kios Terpilih
+    var btnPindahSelected = document.getElementById('btnPindahKiosSelectedFakturZ');
+    if (btnPindahSelected) {
+        btnPindahSelected.addEventListener('click', function(e) {
+            e.preventDefault();
+            openUbahCustomerModalSelected();
+        });
+    }
+
+    // Inisialisasi select2 modal ubah customer jika tersedia
+    if (window.jQuery && typeof $.fn.select2 === 'function') {
+        $('#selectKdCustomerBaru').select2({
+            dropdownParent: $('#modalUbahCustomerFakturZ'),
+            placeholder: '-- Cari & Pilih Kios / Customer Tujuan --',
+            allowClear: true
+        });
+    }
 });
 
 document.addEventListener('change', function(e) {
@@ -1011,6 +1178,15 @@ document.addEventListener('click', function(e) {
         var totalQty = parseFloat(btn.getAttribute('data-total-qty')) || 0;
 
         window.openSplitModalSingle(fid, noFaktur, totalNilai, nominalAwal, totalQty);
+    }
+
+    var btnUbah = e.target.closest('.btn-ubah-kios-faktur');
+    if (btnUbah) {
+        e.preventDefault();
+        var fid = btnUbah.getAttribute('data-id');
+        var noFaktur = btnUbah.getAttribute('data-no-faktur') || ('#' + fid);
+        var kdCust = btnUbah.getAttribute('data-kd-customer') || '';
+        window.openUbahCustomerSingle(fid, noFaktur, kdCust);
     }
 
     if (e.target.closest && e.target.closest('[data-dismiss="modal"]')) {
