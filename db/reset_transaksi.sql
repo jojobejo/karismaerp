@@ -5,6 +5,8 @@
 -- Master Data (User, Customer, Supplier, Barang, COA, Gudang, dll) TETAP AMAN.
 -- ========================================================
 
+USE kiucoid_karismaerp_local;
+
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- 1. TRANSAKSI PURCHASE ORDER (PO) & PEMBELIAN
@@ -54,6 +56,9 @@ TRUNCATE TABLE tb_lpb_log;
 TRUNCATE TABLE tb_lpb_manual_log;
 TRUNCATE TABLE tb_lpb_price_adjustment;
 TRUNCATE TABLE tb_lpb_price_adjustment_detail;
+TRUNCATE TABLE tb_lpb_revision_request_log;
+TRUNCATE TABLE tb_lpb_revision_request_detail;
+TRUNCATE TABLE tb_lpb_revision_request;
 TRUNCATE TABLE tblpb_faktur_pajak;
 TRUNCATE TABLE tb_retur_pembelian;
 TRUNCATE TABLE tb_retur_pembelian_detail;
@@ -63,7 +68,6 @@ TRUNCATE TABLE tb_retur_pembelian_log;
 TRUNCATE TABLE tbso_sales_order;
 TRUNCATE TABLE tbso_sales_order_detail;
 TRUNCATE TABLE tbso_so_approval;
-TRUNCATE TABLE tbso_stock_reservation;
 TRUNCATE TABLE tbso_cancel_partial_request;
 TRUNCATE TABLE tbso_approval_harga;
 TRUNCATE TABLE tbso_activity_log;
@@ -73,6 +77,8 @@ TRUNCATE TABLE tbso_faktur_penjualan;
 TRUNCATE TABLE tbso_faktur_detail;
 TRUNCATE TABLE tbso_faktur_jurnal;
 TRUNCATE TABLE tbso_faktur_log;
+TRUNCATE TABLE tbso_faktur_z_pecah_detail;
+TRUNCATE TABLE tbso_faktur_z_pecah;
 TRUNCATE TABLE tb_editlog_faktur;
 TRUNCATE TABLE tb_do;
 TRUNCATE TABLE tb_detail_do;
@@ -105,6 +111,17 @@ TRUNCATE TABLE tb_det_tracking_driver;
 TRUNCATE TABLE tb_order_tracking_driver;
 TRUNCATE TABLE tb_bongkaran;
 TRUNCATE TABLE tb_bongkaran_checker;
+TRUNCATE TABLE tb_delivery_trip;
+
+-- 4A. TRANSAKSI KONSINYASI DAN TEST MARKET
+TRUNCATE TABLE tb_konsinyasi_cogs_allocation;
+TRUNCATE TABLE tb_konsinyasi_faktur;
+TRUNCATE TABLE tb_konsinyasi_settlement;
+TRUNCATE TABLE tb_konsinyasi_lpb_batch_stock;
+TRUNCATE TABLE tb_konsinyasi_masuk_detail;
+TRUNCATE TABLE tb_konsinyasi_masuk;
+TRUNCATE TABLE tb_test_market_realisasi;
+TRUNCATE TABLE tb_test_market_position;
 
 -- 5. TRANSAKSI KEUANGAN, PEMBAYARAN, KAS & BANK
 TRUNCATE TABLE tbkeu_pembayaran;
@@ -125,6 +142,15 @@ TRUNCATE TABLE tbkeu_jurnal_detail;
 TRUNCATE TABLE tbkeu_jurnal_log;
 TRUNCATE TABLE tbkeu_karismaerp_import_batch;
 TRUNCATE TABLE tbkeu_posting_exception;
+TRUNCATE TABLE tbkeu_closing_validation_detail;
+TRUNCATE TABLE tbkeu_closing_validation_run;
+TRUNCATE TABLE tbkeu_closing_balance_account;
+TRUNCATE TABLE tbkeu_reopen_approval_log;
+TRUNCATE TABLE tbkeu_reopen_request;
+TRUNCATE TABLE tbkeu_closing_period;
+TRUNCATE TABLE tbkeu_periode_fiskal_log;
+TRUNCATE TABLE tbkeu_periode_fiskal;
+TRUNCATE TABLE tbkeu_saldo_awal_akun;
 
 -- 7. TRANSAKSI MUTASI & KARTU STOK
 TRUNCATE TABLE tb_mutasi;
@@ -140,6 +166,11 @@ TRUNCATE TABLE tbkeu_penyesuaian_barang_detail;
 TRUNCATE TABLE tb_stock_hold;
 TRUNCATE TABLE tb_ics;
 TRUNCATE TABLE tb_log_ics;
+TRUNCATE TABLE tb_ics_opname;
+TRUNCATE TABLE tb_ics_supp;
+TRUNCATE TABLE tb_saldo_awal;
+TRUNCATE TABLE tb_stock_status;
+TRUNCATE TABLE tb_kd_system_stock;
 TRUNCATE TABLE stockopname_master;
 TRUNCATE TABLE stockopname_master_box;
 TRUNCATE TABLE stockopname_master_item;
@@ -151,5 +182,14 @@ TRUNCATE TABLE stockopname_pending;
 TRUNCATE TABLE stockopname_recyclebin_input;
 TRUNCATE TABLE tb_req_opname;
 TRUNCATE TABLE tb_qty_lot;
+
+-- 8. TRANSAKSI PERAKITAN DAN PEMBONGKARAN BUNDLING
+-- Formula bundling dipertahankan sebagai data master.
+TRUNCATE TABLE tberp_bundling_assembly_detail;
+TRUNCATE TABLE tberp_bundling_assembly;
+TRUNCATE TABLE tberp_bundling_disassembly_detail;
+TRUNCATE TABLE tberp_bundling_disassembly;
+TRUNCATE TABLE tberp_bundling_request_detail;
+TRUNCATE TABLE tberp_bundling_request;
 
 SET FOREIGN_KEY_CHECKS = 1;
