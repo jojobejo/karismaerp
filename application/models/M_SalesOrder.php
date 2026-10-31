@@ -2867,10 +2867,30 @@ class M_SalesOrder extends CI_Model
         $this->ensure_faktur_z_pecah_tables();
         $this->db->trans_start();
 
-        // 1. Update parent faktur: tandai telah dipecah
+        // 1. Update parent faktur: tandai telah dipecah jika seluruh kuantitasnya telah teralokasi
+        $parent_items_check = $this->db->get_where('tbso_faktur_detail', ['id_faktur' => $parent_faktur['id_faktur']])->result_array();
+        $child_alloc_check  = $this->db->select('id_so_detail, kd_barang, no_lot, expired_date, SUM(qty) as allocated')
+            ->from('tbso_faktur_z_pecah_detail')
+            ->where('parent_id_faktur', $parent_faktur['id_faktur'])
+            ->group_by('id_so_detail, kd_barang, no_lot, expired_date')
+            ->get()->result_array();
+        $alloc_map_single = [];
+        foreach ($child_alloc_check as $ca) {
+            $k = implode('|', [$ca['id_so_detail'], $ca['kd_barang'], (string)$ca['no_lot'], $ca['expired_date']]);
+            $alloc_map_single[$k] = (float)$ca['allocated'];
+        }
+        $is_fully_split_single = true;
+        foreach ($parent_items_check as $pi) {
+            $k = implode('|', [$pi['id_so_detail'], $pi['kd_barang'], (string)$pi['no_lot'], $pi['expired_date']]);
+            if (((float)$pi['qty'] - ($alloc_map_single[$k] ?? 0.0)) > 0.0001) {
+                $is_fully_split_single = false;
+                break;
+            }
+        }
+
         $this->db->where('id_faktur', $parent_faktur['id_faktur']);
         $this->db->update('tbso_faktur_penjualan', [
-            'is_split_parent' => 1,
+            'is_split_parent' => $is_fully_split_single ? 1 : 0,
             'update_by'       => $username,
             'update_at'       => date('Y-m-d H:i:s')
         ]);
@@ -3238,14 +3258,34 @@ class M_SalesOrder extends CI_Model
             $created_fakturs[] = $no_faktur_child;
         }
 
-        // Tandai parent faktur yang terpengaruh sebagai telah dipecah
+        // Tandai parent faktur yang terpengaruh sebagai telah dipecah jika seluruh kuantitasnya telah teralokasi
         if (!empty($affected_parent_ids)) {
-            $this->db->where_in('id_faktur', array_keys($affected_parent_ids));
-            $this->db->update('tbso_faktur_penjualan', [
-                'is_split_parent' => 1,
-                'update_by'       => $username,
-                'update_at'       => date('Y-m-d H:i:s')
-            ]);
+            foreach (array_keys($affected_parent_ids) as $pid) {
+                $parent_items_b = $this->db->get_where('tbso_faktur_detail', ['id_faktur' => $pid])->result_array();
+                $child_alloc_b  = $this->db->select('id_so_detail, kd_barang, no_lot, expired_date, SUM(qty) as allocated')
+                    ->from('tbso_faktur_z_pecah_detail')
+                    ->where('parent_id_faktur', $pid)
+                    ->group_by('id_so_detail, kd_barang, no_lot, expired_date')
+                    ->get()->result_array();
+                $alloc_map_b = [];
+                foreach ($child_alloc_b as $ca) {
+                    $k = implode('|', [$ca['id_so_detail'], $ca['kd_barang'], (string)$ca['no_lot'], $ca['expired_date']]);
+                    $alloc_map_b[$k] = (float)$ca['allocated'];
+                }
+                $is_fully_b = true;
+                foreach ($parent_items_b as $pi) {
+                    $k = implode('|', [$pi['id_so_detail'], $pi['kd_barang'], (string)$pi['no_lot'], $pi['expired_date']]);
+                    if (((float)$pi['qty'] - ($alloc_map_b[$k] ?? 0.0)) > 0.0001) {
+                        $is_fully_b = false;
+                        break;
+                    }
+                }
+                $this->db->where('id_faktur', $pid)->update('tbso_faktur_penjualan', [
+                    'is_split_parent' => $is_fully_b ? 1 : 0,
+                    'update_by'       => $username,
+                    'update_at'       => date('Y-m-d H:i:s')
+                ]);
+            }
         }
 
         $this->db->trans_complete();
