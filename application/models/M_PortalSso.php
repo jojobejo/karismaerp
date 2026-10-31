@@ -3,6 +3,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class M_PortalSso extends CI_Model
 {
+    public function portal_user_active($authSource, $userId)
+    {
+        if (!in_array($authSource, ['tb_karyawan', 'tb_users'], true) || (int)$userId < 1
+            || !$this->db->table_exists($authSource)) return false;
+        $account = $this->db->get_where($authSource, ['id' => (int)$userId])->row_array();
+        return $account && (!isset($account['status']) || (int)$account['status'] === 1);
+    }
     public function clients()
     {
         if (!$this->db->table_exists('tb_portal_sso_client')) return [];
@@ -21,6 +28,13 @@ class M_PortalSso extends CI_Model
         return $this->db->get_where('tb_portal_sso_client', ['app_code' => $appCode])->row_array();
     }
 
+    public function authenticate_client_secret($appCode, $clientSecret)
+    {
+        $client = $this->client($appCode);
+        return $client && !empty($client['client_secret_hash'])
+            && hash_equals((string)$client['client_secret_hash'], hash('sha256', (string)$clientSecret));
+    }
+
     public function update_client_uris($appCode, $redirectUri, $launchUri, $updatedBy)
     {
         if (!$this->db->table_exists('tb_portal_sso_client') || !$this->client_by_code($appCode)) return false;
@@ -31,12 +45,55 @@ class M_PortalSso extends CI_Model
         ]);
     }
 
+    public function rename_client_code($oldCode, $newCode, $redirectUri, $launchUri, $updatedBy)
+    {
+        if (!$this->db->table_exists('tb_portal_sso_client') || !$this->client_by_code($oldCode)) return false;
+        if ($this->client_by_code($newCode)) return false;
+        $this->db->trans_begin();
+        if ($this->db->table_exists('tb_portal_app_access')) {
+            $conflicts = $this->db->where('app_code', $newCode)->count_all_results('tb_portal_app_access');
+            if ($conflicts > 0) {
+                $this->db->trans_rollback();
+                return false;
+            }
+            $this->db->where('app_code', $oldCode)->update('tb_portal_app_access', ['app_code' => $newCode, 'updated_by' => (int)$updatedBy]);
+        }
+        if ($this->db->table_exists('tb_portal_sso_code')) {
+            $this->db->where('app_code', $oldCode)->update('tb_portal_sso_code', ['app_code' => $newCode]);
+        }
+        if ($this->db->table_exists('tb_portal_sso_client_account')) {
+            $this->db->where('app_code', $oldCode)->update('tb_portal_sso_client_account', ['app_code' => $newCode]);
+        }
+        if ($this->db->table_exists('tb_portal_sso_client_account_assignment')) {
+            $this->db->where('app_code', $oldCode)->update('tb_portal_sso_client_account_assignment', ['app_code' => $newCode]);
+        }
+        if ($this->db->table_exists('tb_portal_sso_login_history')) {
+            $this->db->where('app_code', $oldCode)->update('tb_portal_sso_login_history', ['app_code' => $newCode]);
+        }
+        $this->db->where('app_code', $oldCode)->update('tb_portal_sso_client', [
+            'app_code' => $newCode, 'redirect_uri' => $redirectUri, 'launch_uri' => $launchUri,
+            'updated_by' => (int)$updatedBy,
+        ]);
+        if ($this->db->trans_status()) {
+            $this->db->trans_commit();
+            return true;
+        }
+        $this->db->trans_rollback();
+        return false;
+    }
+
     public function delete_client($appCode)
     {
         if (!$this->db->table_exists('tb_portal_sso_client') || !$this->client_by_code($appCode)) return false;
         $this->db->trans_begin();
         if ($this->db->table_exists('tb_portal_sso_code')) {
             $this->db->where('app_code', $appCode)->delete('tb_portal_sso_code');
+        }
+        if ($this->db->table_exists('tb_portal_sso_client_account_assignment')) {
+            $this->db->where('app_code', $appCode)->delete('tb_portal_sso_client_account_assignment');
+        }
+        if ($this->db->table_exists('tb_portal_sso_client_account')) {
+            $this->db->where('app_code', $appCode)->delete('tb_portal_sso_client_account');
         }
         $this->db->where('app_code', $appCode)->delete('tb_portal_sso_client');
         if ($this->db->trans_status() && $this->db->affected_rows() === 1) {
@@ -151,8 +208,20 @@ class M_PortalSso extends CI_Model
             $this->db->trans_rollback();
             return false;
         }
+        $this->load->model('M_PortalAccess', 'portalAccess');
+        $this->load->model('M_PortalSsoClientAccounts', 'clientAccounts');
+        $clientAccount = $this->clientAccounts->assignment_for_user($appCode, $row['auth_source'], (int)$row['user_id']);
+        if (!$this->portalAccess->user_can_access_app($row['auth_source'], (int)$row['user_id'], $appCode) || !$clientAccount) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $clientAccountUsername = (string)$clientAccount['username'];
+        if (!$this->db->trans_status()) {
+            $this->db->trans_rollback();
+            return false;
+        }
         $this->db->trans_commit();
-        return [
+        $claims = [
             'sub' => $row['auth_source'] . ':' . (int)$row['user_id'],
             'user_id' => (int)$row['user_id'],
             'auth_source' => $row['auth_source'],
@@ -161,5 +230,7 @@ class M_PortalSso extends CI_Model
             'state' => (string)$row['state'],
             'app_code' => $appCode,
         ];
+        if ($clientAccountUsername !== null && $clientAccountUsername !== '') $claims['client_account_username'] = $clientAccountUsername;
+        return $claims;
     }
 }

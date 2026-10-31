@@ -34,6 +34,18 @@ class M_PortalAccess extends CI_Model
             }
         }
 
+        // Klien SSO di luar katalog bawaan tetap dapat dikelola melalui halaman akses Portal.
+        if ($this->db->table_exists('tb_portal_sso_client')) {
+            $fields = $this->db->list_fields('tb_portal_sso_client');
+            if (in_array('app_code', $fields, true) && in_array('launch_uri', $fields, true)) {
+                foreach ($this->db->select('app_code, launch_uri')->get('tb_portal_sso_client')->result_array() as $client) {
+                    $code = (string)$client['app_code'];
+                    if ($code === '' || isset($apps[$code])) continue;
+                    $apps[$code] = ['name' => $code, 'url' => (string)$client['launch_uri'], 'icon' => 'fa-plug', 'description' => 'Aplikasi klien SSO.', 'accent' => '#2563eb'];
+                }
+            }
+        }
+
         return $apps;
     }
 
@@ -99,6 +111,23 @@ class M_PortalAccess extends CI_Model
         return $users;
     }
 
+    public function accounts_for_app($appCode)
+    {
+        if (!$this->db->table_exists('tb_portal_app_access')) return [];
+        $allowedAccounts = $this->db->select('auth_source, user_id')
+            ->where(['app_code' => $appCode, 'is_allowed' => 1])
+            ->get('tb_portal_app_access')->result_array();
+        if (empty($allowedAccounts)) return [];
+
+        $allowedKeys = [];
+        foreach ($allowedAccounts as $account) {
+            $allowedKeys[$account['auth_source'] . ':' . (int)$account['user_id']] = true;
+        }
+        return array_values(array_filter($this->users(), function ($user) use ($allowedKeys) {
+            return isset($allowedKeys[$user['auth_source'] . ':' . (int)$user['id']]);
+        }));
+    }
+
     public function denied_apps($authSource, $userId)
     {
         if (!$this->db->table_exists('tb_portal_app_access')) return [];
@@ -109,6 +138,7 @@ class M_PortalAccess extends CI_Model
     public function apps_for_user($authSource, $userId)
     {
         $apps = $this->apps();
+        $launchUrls = $this->registered_launch_urls();
         if ($this->db->table_exists('tb_portal_app_access')) {
             $select = ['app_code', 'is_allowed'];
             $rows = $this->db->select(implode(',', $select))->where([
@@ -126,7 +156,8 @@ class M_PortalAccess extends CI_Model
                     unset($apps[$code]);
                     continue;
                 }
-                $app['redirect_url'] = $app['url'];
+                $app['redirect_url'] = !empty($launchUrls[$code]) ? $launchUrls[$code] : $app['url'];
+                $app['client_configured'] = !empty($launchUrls[$code]);
             }
             unset($app);
         } else {
@@ -135,10 +166,19 @@ class M_PortalAccess extends CI_Model
                     unset($apps[$code]);
                     continue;
                 }
-                $app['redirect_url'] = $app['url'];
+                $app['redirect_url'] = !empty($launchUrls[$code]) ? $launchUrls[$code] : $app['url'];
+                $app['client_configured'] = !empty($launchUrls[$code]);
             }
             unset($app);
         }
+        foreach ($apps as $code => &$app) {
+            if (empty($launchUrls[$code]) || !$this->user_can_access_app($authSource, $userId, $code)) {
+                unset($apps[$code]);
+                continue;
+            }
+            $app['app_code'] = $code;
+        }
+        unset($app);
         return array_values($apps);
     }
 
@@ -153,7 +193,7 @@ class M_PortalAccess extends CI_Model
             'user_id' => (int)$userId,
             'app_code' => $appCode,
         ])->get('tb_portal_app_access')->row_array();
-        if (!$assignment) return true;
+        if (!$assignment) return false;
         return (int)$assignment['is_allowed'] === 1;
     }
 

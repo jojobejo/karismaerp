@@ -507,6 +507,70 @@
 
         .portal-card:hover .arrow-button { color: #fff; background: var(--accent); transform: translateX(3px); }
 
+        .card-action-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 22px; }
+        .card-action-links .card-action { flex: 1 1 150px; margin-top: 0; padding-top: 0; text-decoration: none; }
+
+        .portal-card-not-configured {
+            --accent: #94a3b8 !important;
+            color: #64748b;
+            border-color: #d8dee8;
+            background: rgba(241, 245, 249, .88);
+            box-shadow: 0 12px 30px rgba(51, 65, 85, .06);
+        }
+
+        .portal-card-not-configured::before { opacity: .04; }
+        .portal-card-not-configured::after { background: #a8b1bf; opacity: .35; }
+        .portal-card-not-configured .portal-icon-wrap::after { background: #a8b1bf; opacity: .08; }
+        .portal-card-not-configured .portal-icon {
+            color: #64748b;
+            background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+            box-shadow: inset 0 1px rgba(255,255,255,.7);
+        }
+        .portal-card-not-configured h3,
+        .portal-card-not-configured .card-action { color: #475569; }
+        .portal-card-not-configured p { color: #778397; }
+        .portal-card-not-configured .arrow-button { color: #7b8797; background: #eef2f6; border-color: #d7dee7; }
+        .portal-card-not-configured:hover,
+        .portal-card-not-configured:focus-visible {
+            border-color: #cbd5e1;
+            box-shadow: 0 18px 38px rgba(51, 65, 85, .1);
+        }
+        .portal-card-not-configured:hover::before { opacity: .06; }
+        .portal-card-not-configured:hover .arrow-button { color: #fff; background: #8793a3; }
+
+        .app-setup-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 5px 9px;
+            color: #64748b;
+            border: 1px solid #dbe2ea;
+            border-radius: 999px;
+            background: rgba(255,255,255,.74);
+            font-size: .68rem;
+            font-weight: 800;
+        }
+        .app-setup-status-waiting {
+            color: #9a4b12 !important;
+            border-color: rgba(217, 119, 6, .24) !important;
+            background: #fff7ed !important;
+        }
+        .app-user-instruction {
+            margin: 10px 0 0;
+            color: #17634f;
+            font-size: .82rem;
+            font-weight: 650;
+            line-height: 1.5;
+        }
+        .app-user-instruction-waiting { color: #9a4b12; }
+        .work-account-credentials { margin-top: 12px; padding: 12px; color: #1e3a8a; border: 1px solid #dbeafe; border-radius: 10px; background: #eff6ff; overflow-wrap: anywhere; }
+        .portal-card:not(.portal-card-not-configured) .app-setup-status {
+            color: #127252;
+            border-color: rgba(24, 179, 127, .2);
+            background: rgba(236, 253, 245, .82);
+        }
+
         .portal-footer {
             display: flex;
             justify-content: space-between;
@@ -615,6 +679,7 @@
                     <a href="<?= base_url('sso/panduan-klien') ?>"><i class="fas fa-book-reader" aria-hidden="true"></i><span>Panduan Integrasi SSO</span></a>
                     <a href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-link" aria-hidden="true"></i><span>Integrasi SSO</span></a>
                     <a href="<?= base_url('admin/api-documentation') ?>"><i class="fas fa-book-open" aria-hidden="true"></i><span>Dokumentasi API</span></a>
+                    <a href="<?= base_url('admin/portal-sso-check') ?>"><i class="fas fa-vial" aria-hidden="true"></i><span>Cek API Klien SSO</span></a>
                     <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>
                     <a href="<?= base_url('master/menu') ?>"><i class="fas fa-cubes" aria-hidden="true"></i><span>Module Management</span></a>
                 </nav>
@@ -626,7 +691,7 @@
         <div class="hero-copy">
             <div class="eyebrow"><i class="fas fa-layer-group"></i> Digital Ecosystem</div>
             <h1 class="portal-title" id="portal-title">KarismaERP<br><span>Portal Apps.</span></h1>
-            <p class="portal-subtitle">Satu gerbang menuju seluruh ekosistem digital Karisma. Pilih aplikasi untuk memulai pekerjaan dengan lebih cepat dan terhubung.</p>
+            <p class="portal-subtitle">Pilih aplikasi yang tersedia untuk melanjutkan pekerjaan Anda. Jika akun kerja belum ditetapkan, hubungi admin.</p>
         </div>
         <div class="hero-visual" aria-hidden="true">
             <div class="visual-core"><img src="<?= $portal_asset_base ?>assets/images/Karisma.png" alt=""></div>
@@ -648,11 +713,27 @@
 
         <div class="portal-grid">
             <?php foreach ($apps as $index => $app): ?>
-                <a class="portal-card<?= !$app['redirect_url'] ? ' portal-card-no-redirect' : '' ?>"
-                   style="--accent: <?= html_escape($app['accent']) ?>; --index: <?= (int)$index ?>;"
-                   href="<?= html_escape($app['redirect_url'] ?: '#') ?>"
-                   <?= $app['redirect_url'] ? 'target="_blank" rel="noopener noreferrer"' : 'data-app-name="' . html_escape($app['name']) . '"' ?>
-                   aria-label="Buka <?= html_escape($app['name']) ?> di tab baru">
+                <?php
+                $clientConfigured = !empty($app['client_configured']);
+                $assignmentRequired = !empty($app['account_assignment_required']);
+                $accountAssigned = !empty($app['account_assigned_by_admin']);
+                $blockedByAssignment = $assignmentRequired && !$accountAssigned;
+                $applicationReady = !empty($app['client_configured']) || (!$assignmentRequired && !empty($app['redirect_url']));
+                $canLaunch = !empty($app['redirect_url']) && !$blockedByAssignment && (!$assignmentRequired || $applicationReady);
+                $blockReason = $blockedByAssignment
+                    ? 'Akses aplikasi Anda sudah diberikan, tetapi akun kerja belum ditetapkan. Hubungi admin agar akun ditentukan sebelum Anda mulai bekerja.'
+                    : 'Aplikasi belum siap dibuka. Hubungi admin untuk menyiapkan akses aplikasi.';
+                $userInstruction = $blockedByAssignment
+                    ? 'Akses aplikasi sudah diberikan. Hubungi admin untuk menetapkan akun kerja sebelum membuka aplikasi.'
+                    : (!$applicationReady
+                        ? 'Aplikasi belum siap dibuka. Hubungi admin untuk menyiapkan aplikasi.'
+                        : ($assignmentRequired && $accountAssigned
+                            ? 'Akun kerja tersedia.'
+                            : 'Aplikasi siap digunakan. Pilih untuk melanjutkan pekerjaan.'));
+                ?>
+                <article class="portal-card<?= !$app['redirect_url'] ? ' portal-card-not-configured' : '' ?>"
+                   style="--accent: <?= html_escape($clientConfigured ? $app['accent'] : '#94a3b8') ?>; --index: <?= (int)$index ?>;"
+                   aria-label="Aplikasi <?= html_escape($app['name']) ?>. <?= html_escape($userInstruction) ?>">
                     <div class="card-top">
                         <div class="portal-icon-wrap">
                             <div class="portal-icon"><i class="fas <?= html_escape($app['icon']) ?>"></i></div>
@@ -662,12 +743,24 @@
                     <div>
                         <h3><?= html_escape($app['name']) ?></h3>
                         <p><?= html_escape($app['description']) ?></p>
+                        <span class="app-setup-status<?= $blockedByAssignment || !$applicationReady ? ' app-setup-status-waiting' : '' ?>"><i class="fas <?= $blockedByAssignment ? 'fa-user-clock' : (!$applicationReady ? 'fa-exclamation-circle' : 'fa-check-circle') ?>" aria-hidden="true"></i><?= $blockedByAssignment ? 'Akun belum tersedia · hubungi admin' : (!$applicationReady ? 'Menunggu penyiapan admin' : ($assignmentRequired ? 'Akun kerja tersedia' : 'Aplikasi siap digunakan')) ?></span>
+                        <?php if ($assignmentRequired && $accountAssigned && !empty($app['work_account_credentials'])): ?>
+                            <div class="work-account-credentials">
+                                <strong>Akun kerja</strong><br>
+                                <span>Username: <code><?= html_escape($app['work_account_credentials']['username']) ?></code></span><br>
+                                <span>Masuk otomatis melalui SSO tanpa password akun lokal.</span>
+                            </div>
+                        <?php elseif ($assignmentRequired && $accountAssigned): ?>
+                            <p class="app-user-instruction app-user-instruction-waiting">Hubungi admin untuk memeriksa penetapan akun kerja.</p>
+                        <?php endif ?>
+                        <?php if (!$assignmentRequired || !$accountAssigned): ?><p class="app-user-instruction<?= $blockedByAssignment || !$applicationReady ? ' app-user-instruction-waiting' : '' ?>"><?= html_escape($userInstruction) ?></p><?php endif ?>
                     </div>
-                    <div class="card-action">
-                        <span>Buka Aplikasi</span>
-                        <span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
+                    <div class="card-action-links">
+                        <a class="card-action<?= $canLaunch ? '' : ' portal-card-no-redirect' ?>" href="<?= html_escape($canLaunch ? $app['redirect_url'] : '#') ?>" <?= $canLaunch ? 'target="_blank" rel="noopener noreferrer"' : 'data-block-reason="' . html_escape($blockReason) . '"' ?> aria-label="<?= $assignmentRequired && $accountAssigned && $canLaunch ? 'Mulai bekerja di ' : 'Buka ' ?><?= html_escape($app['name']) ?> di tab baru">
+                            <span><?= $assignmentRequired && $accountAssigned && $canLaunch ? 'Mulai Bekerja' : 'Buka Aplikasi' ?></span><span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
+                        </a>
                     </div>
-                </a>
+                </article>
             <?php endforeach; ?>
         </div>
     </section>
@@ -681,7 +774,7 @@
 document.querySelectorAll('.portal-card-no-redirect').forEach(function (card) {
     card.addEventListener('click', function (event) {
         event.preventDefault();
-        alert('Redirect untuk aplikasi ' + card.dataset.appName + ' belum diatur. Hubungi admin untuk mengganti redirect apps ini.');
+        alert(card.dataset.blockReason || 'Aplikasi belum dapat dibuka. Hubungi admin.');
     });
 });
 </script>
