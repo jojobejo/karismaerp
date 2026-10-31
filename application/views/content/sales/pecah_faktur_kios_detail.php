@@ -679,43 +679,59 @@
                             <div id="modalHiddenFakturInputs"></div>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label class="font-weight-bold text-dark mb-1">
-                                <i class="fas fa-layer-group text-warning mr-1"></i> Mau Dipecah Menjadi Berapa Faktur?
-                            </label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text bg-light font-weight-bold"><i class="fas fa-hashtag"></i></span>
-                                </div>
-                                <input type="number" name="jumlah_pecah" id="inputJumlahPecah" class="form-control font-weight-bold text-center" 
-                                       value="2" min="2" max="50" required style="font-size: 18px;">
-                                <div class="input-group-append">
-                                    <span class="input-group-text bg-light font-weight-bold">Faktur Baru (Kode H)</span>
+                        <!-- Parameter Auto Split & Plafon Maksimal Rp 25 Juta -->
+                        <input type="hidden" name="auto_split" value="1">
+                        <input type="hidden" name="max_nominal" id="inputMaxNominal" value="25000000">
+
+                        <div class="card border-0 mb-3" style="background-color: #f0f7ff; border-left: 4px solid #007bff !important;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small font-weight-bold text-uppercase">
+                                            <i class="fas fa-shield-alt text-primary mr-1"></i> Maksimal Nilai per Faktur Pecahan (Kode H)
+                                        </div>
+                                        <div class="font-weight-bold text-primary mt-1" style="font-size: 17px;">
+                                            Rp 25.000.000 <span class="badge badge-primary font-weight-normal ml-1" style="font-size: 11px;">Tetap / Otomatis</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="badge badge-light border text-muted px-2 py-1">Plafon Maksimal</span>
+                                    </div>
                                 </div>
                             </div>
-                            <small class="form-text text-muted mt-1">
-                                <i class="fas fa-calculator mr-1"></i> Kuantitas total <strong><span id="modalHeaderQtyBadge">0 pcs</span></strong> akan didistribusikan secara rata.
-                            </small>
                         </div>
 
-                        <!-- Card Estimasi Per Faktur -->
-                        <div class="card bg-light border-0 rounded p-2 mb-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="small text-muted font-weight-bold text-uppercase">Estimasi Kuantitas / Faktur:</span>
-                                <span class="font-weight-bold text-dark" id="modalEstQty">0 pcs / faktur</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <span class="small text-muted font-weight-bold text-uppercase">Estimasi Nilai Netto / Faktur:</span>
-                                <span class="font-weight-bold text-success" id="modalEstNilai">Rp 0 / faktur</span>
-                            </div>
+                        <!-- Rangkuman Aturan Sistem -->
+                        <div class="alert alert-light border small text-dark mb-0">
+                            <h6 class="font-weight-bold mb-2 text-primary" style="font-size: 12.5px;">
+                                <i class="fas fa-info-circle mr-1"></i> Alur Pemeriksaan Sebelum Diterbitkan:
+                            </h6>
+                            <ul class="pl-3 mb-0" style="line-height: 1.6;">
+                                <li>
+                                    Data <strong>tidak langsung disimpan</strong>, melainkan akan membuka halaman <strong>Pemeriksaan Batch Split</strong> terlebih dahulu.
+                                </li>
+                                <li>
+                                    <strong>Isolasi Terjaga:</strong> Barang dipecah per faktur induk. Barang antar Faktur Z <u>tidak akan tercampur</u>.
+                                </li>
+                                <li>
+                                    <strong>Batas Rp 25 Juta:</strong>
+                                    <ul class="pl-3">
+                                        <li>Faktur Z &le; Rp 25 Juta otomatis menjadi <strong>1 Faktur H</strong>.</li>
+                                        <li>Faktur Z &gt; Rp 25 Juta otomatis dipecah proporsional menjadi <strong>multiple Faktur H</strong> (&le; Rp 25 Juta).</li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <strong>Customer Acak:</strong> Kontak penerima otomatis dialokasikan bergantian dari master customer acak kios ini.
+                                </li>
+                            </ul>
                         </div>
                     </div>
                     <div class="modal-footer bg-light py-2">
                         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal" onclick="closeBatchSplitModal()">
                             <i class="fas fa-times mr-1"></i> Batal
                         </button>
-                        <button type="submit" class="btn btn-warning btn-sm font-weight-bold shadow-sm">
-                            <i class="fas fa-arrow-right mr-1"></i> Lanjut Distribusi Penerima
+                        <button type="submit" class="btn btn-warning btn-sm font-weight-bold shadow-sm px-3">
+                            <i class="fas fa-arrow-right mr-1"></i> Lanjut Pemeriksaan Pemecahan
                         </button>
                     </div>
                 </form>
@@ -764,17 +780,18 @@
                                         <?php 
                                         $display_label = (!empty($ac['nama_kios']) && $ac['nama_kios'] !== $ac['nama_customer'])
                                             ? $ac['nama_kios'] . ' (' . $ac['nama_customer'] . ')'
-                                            : $ac['nama_customer'];
+                                            : (!empty($ac['nama_kios']) ? $ac['nama_kios'] : $ac['nama_customer']);
+                                        $kontak_info = isset($ac['total_kontak_acak']) ? ' (' . (int)$ac['total_kontak_acak'] . ' Kontak Acak)' : '';
                                         $is_curr = ($ac['kd_customer'] === $kd_customer);
                                         ?>
                                         <option value="<?= htmlspecialchars($ac['kd_customer']) ?>" <?= $is_curr ? 'disabled' : '' ?>>
-                                            [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
+                                            [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?><?= $kontak_info ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
                                         </option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
                             <small class="form-text text-muted mt-1">
-                                Ketik kode customer atau nama toko/kios untuk mencari.
+                                Hanya menampilkan Kios / Customer Induk yang terdaftar di Master Customer Acak (Faktur Z).
                             </small>
                         </div>
                     </div>
@@ -847,8 +864,8 @@ function updateModalEstimasi() {
     var estQtyEl   = document.getElementById('modalEstQty');
     var estNilaiEl = document.getElementById('modalEstNilai');
 
-    var num = parseInt(inputPecah ? inputPecah.value : 2, 10);
-    if (isNaN(num) || num < 2) num = 2;
+    var num = parseInt(inputPecah ? inputPecah.value : 1, 10);
+    if (isNaN(num) || num < 1) num = 1;
 
     var estQty   = window.currentModalTotalQty / num;
     var estNilai = window.currentModalTotalNilai / num;
@@ -905,7 +922,9 @@ window.openSplitModalSingle = function(fid, noFaktur, totalNilai, nominalAwal, t
 
     var inputPecah = document.getElementById('inputJumlahPecah');
     if (inputPecah) {
-        inputPecah.value = 2;
+        var defaultPecah = Math.max(1, Math.ceil(window.currentModalTotalNilai / 25000000));
+        inputPecah.min = 1;
+        inputPecah.value = defaultPecah;
         if (!inputPecah.hasAttribute('data-has-calc-listener')) {
             inputPecah.setAttribute('data-has-calc-listener', '1');
             inputPecah.addEventListener('input', updateModalEstimasi);
@@ -1076,7 +1095,9 @@ function openBatchSplitModalSelected() {
 
     var inputPecah = document.getElementById('inputJumlahPecah');
     if (inputPecah) {
-        inputPecah.value = 2;
+        var defaultPecah = Math.max(1, Math.ceil(window.currentModalTotalNilai / 25000000));
+        inputPecah.min = 1;
+        inputPecah.value = defaultPecah;
         if (!inputPecah.hasAttribute('data-has-calc-listener')) {
             inputPecah.setAttribute('data-has-calc-listener', '1');
             inputPecah.addEventListener('input', updateModalEstimasi);

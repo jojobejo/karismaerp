@@ -2304,7 +2304,7 @@ class C_SalesOrder extends CI_Controller
         $data['child_fakturs'] = $child_fakturs;
         $data['parent_faktur'] = $parent_faktur;
         $data['has_remaining_split_qty'] = $has_remaining_split_qty;
-        $data['all_customers'] = $this->M_SalesOrder->get_customers();
+        $data['all_customers'] = (!empty($so['is_faktur_z'])) ? $this->M_SalesOrder->get_customer_induk_faktur_z() : $this->M_SalesOrder->get_customers();
 
         if ($this->input->get('print') == '1') {
             $this->load->model('M_pembayaran');
@@ -3683,7 +3683,7 @@ class C_SalesOrder extends CI_Controller
         $data['kios_fakturs_sudah'] = $kios_fakturs_sudah;
         $data['stat']               = $stat;
         $data['filter']             = $filter;
-        $data['all_customers']      = $this->M_SalesOrder->get_customers();
+        $data['all_customers']      = $this->M_SalesOrder->get_customer_induk_faktur_z();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/pecah_faktur_kios_detail.php', $data);
@@ -4024,8 +4024,8 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $jumlah_pecah = (int)($this->input->post('jumlah_pecah') ?: $this->input->get('jumlah_pecah') ?: 2);
-        if ($jumlah_pecah < 1) $jumlah_pecah = 1;
+        $jumlah_pecah_raw = $this->input->post('jumlah_pecah') ?: $this->input->get('jumlah_pecah');
+        $jumlah_pecah = ($jumlah_pecah_raw !== null && $jumlah_pecah_raw !== '') ? (int)$jumlah_pecah_raw : 0;
         if ($jumlah_pecah > 50) $jumlah_pecah = 50;
 
         // Ambil data Faktur Z
@@ -4106,6 +4106,20 @@ class C_SalesOrder extends CI_Controller
             $this->session->set_flashdata('warning', 'Semua barang pada Faktur Z yang dipilih sudah sepenuhnya dipecah.');
             redirect('sales_order/pecah_faktur');
             return;
+        }
+
+        // Hitung estimasi total nilai netto pool untuk menentukan rekomendasi jumlah pecahan (plafon 25jt)
+        $total_pool_netto = 0.0;
+        foreach ($pool_items as $pit) {
+            $p_hrg = round((float)$pit['hrg_satuan'] * 0.8, 2);
+            $p_disc = (float)($pit['disc'] ?? 0);
+            if ($p_disc < 100) {
+                $p_disc_rate = ($p_disc > 1) ? ($p_disc / 100) : $p_disc;
+                $total_pool_netto += ((float)$pit['remaining_qty'] * $p_hrg) * (1 - $p_disc_rate);
+            }
+        }
+        if ($jumlah_pecah <= 0) {
+            $jumlah_pecah = max(1, (int)ceil($total_pool_netto / 25000000));
         }
 
         // Kumpulkan data kios induk dari Faktur Z yang dipilih
@@ -4899,8 +4913,19 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Cek customer baru di tb_customer
+        // Cek customer baru di tb_customer atau tb_customer_acak
         $cust_baru = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer_baru])->row_array();
+        if (!$cust_baru) {
+            $ca_row = $this->db->get_where('tb_customer_acak', ['kd_customer_induk' => $kd_customer_baru])->row_array();
+            if ($ca_row) {
+                $cust_baru = [
+                    'kd_customer'   => $kd_customer_baru,
+                    'nama_customer' => $ca_row['nama_toko'],
+                    'nama_kios'     => $ca_row['nama_toko'],
+                    'kd_rute'       => null
+                ];
+            }
+        }
         if (!$cust_baru) {
             $msg = 'Customer tujuan dengan kode ' . htmlspecialchars($kd_customer_baru) . ' tidak ditemukan di sistem.';
             if ($this->input->is_ajax_request()) {
@@ -5297,12 +5322,20 @@ class C_SalesOrder extends CI_Controller
 
         foreach ($fakturGrouped as $noFakturH => $items) {
             // Hitung total include PPN untuk faktur pecahan ini
+            // Catatan: Barang diskon 100% adalah barang bonus sehingga bernilai 0 (tidak menambah/mengurangi total faktur)
             $fakturTotalNetto = 0;
             foreach ($items as $it) {
                 $q = (float)$it['qty'];
                 $h = (float)$it['hrg_satuan'];
                 $d = (float)$it['disc'];
-                $fakturTotalNetto += ($q * $h) - ($q * $h * $d);
+                $dRate = ($d > 1) ? ($d / 100) : $d;
+
+                if ($d >= 100 || $dRate >= 1.0) {
+                    $itemNetto = 0.0;
+                } else {
+                    $itemNetto = ($q * $h) * (1 - $dRate);
+                }
+                $fakturTotalNetto += $itemNetto;
             }
 
             foreach ($items as $item) {
@@ -5322,6 +5355,8 @@ class C_SalesOrder extends CI_Controller
                 $qty       = (float)$item['qty'];
                 $hrgNormal = ((float)$item['hrg_satuan_asli'] > 0) ? (float)$item['hrg_satuan_asli'] : round((float)$item['hrg_satuan'] / 0.8, 2);
                 $disc      = (float)$item['disc'];
+                // Normalisasi diskon desimal sesuai template acuan format export.xlsx (1.00 untuk diskon 100%)
+                $discRate  = ($disc >= 100 || $disc == 1) ? 1.0 : (($disc > 1) ? round($disc / 100, 4) : (float)$disc);
                 $pajakPct  = (float)$item['pajak'];
 
                 // Isi Cell Data
@@ -5342,18 +5377,20 @@ class C_SalesOrder extends CI_Controller
                 $sheet->setCellValue('O' . $r, $item['nama_barang']);
                 $sheet->setCellValue('P' . $r, $qty);
 
-                // Rumus Formula Persis Template format export.xlsx
+                // Rumus Formula Persis Template format export.xlsx yang aman dari nilai minus pada diskon 100% (bonus)
                 $sheet->setCellValue('Q' . $r, "=IF(W{$r}=0,R{$r},R{$r}/1.11)");
                 $sheet->setCellValue('R' . $r, "=+S{$r}*0.8");
                 $sheet->setCellValue('S' . $r, $hrgNormal);
-                $sheet->setCellValue('T' . $r, $disc);
-                $sheet->setCellValue('U' . $r, "=(P{$r}*Q{$r})-(P{$r}*Q{$r}*T{$r})");
-                $sheet->setCellValue('V' . $r, "=+U{$r}*0.916666666666667");
+                $sheet->setCellValue('T' . $r, $discRate);
+                $sheet->setCellValue('U' . $r, "=IF(T{$r}>=1,0,(P{$r}*Q{$r})-(P{$r}*Q{$r}*IF(T{$r}>1,T{$r}/100,T{$r})))");
+                $sheet->setCellValue('V' . $r, "=IF(U{$r}<=0,0,+U{$r}*0.916666666666667)");
                 $sheet->setCellValue('W' . $r, $pajakPct);
-                $sheet->setCellValue('X' . $r, "=+V{$r}*W{$r}/100");
-                $sheet->setCellValue('Y' . $r, "=(P{$r}*R{$r})-(P{$r}*R{$r}*T{$r})");
-                $sheet->setCellValue('Z' . $r, $fakturTotalNetto);
-                $sheet->setCellValue('AA' . $r, "=Y{$r}/0.8");
+                $sheet->setCellValue('X' . $r, "=IF(V{$r}<=0,0,+V{$r}*W{$r}/100)");
+                $sheet->setCellValue('Y' . $r, "=IF(T{$r}>=1,0,(P{$r}*R{$r})-(P{$r}*R{$r}*IF(T{$r}>1,T{$r}/100,T{$r})))");
+                // Kolom Z (Per Faktur): untuk barang bonus diskon 100%, nilai per faktur adalah 0.00 (tidak menampilkan total faktur)
+                $perFakturVal = ($disc >= 100 || $discRate >= 1.0) ? 0.0 : $fakturTotalNetto;
+                $sheet->setCellValue('Z' . $r, $perFakturVal);
+                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}<=0,0,Y{$r}/0.8)");
                 $sheet->setCellValue('AB' . $r, $item['ket_faktur'] ?? '');
 
                 // Alignment Data
@@ -5372,7 +5409,7 @@ class C_SalesOrder extends CI_Controller
                 $sheet->getStyle('Q' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle('R' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle('S' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
-                $sheet->getStyle('T' . $r)->getNumberFormat()->setFormatCode('0.00');
+                $sheet->getStyle('T' . $r)->getNumberFormat()->setFormatCode('_(* #,##0.00_);_(* \(#,##0.00\);_(* "-"??_);_(@_)');
                 $sheet->getStyle('U' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle('V' . $r)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle('W' . $r)->getNumberFormat()->setFormatCode('0');

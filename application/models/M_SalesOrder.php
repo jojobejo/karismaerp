@@ -3993,6 +3993,31 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
+     * Ambil daftar Kios / Customer Induk yang terdaftar di Master Customer Acak (Faktur Z)
+     * Hanya kios yang memiliki kontak acak yang dapat menjadi tujuan pemindahan Faktur Z
+     */
+    public function get_customer_induk_faktur_z()
+    {
+        $this->ensure_customer_acak_table();
+        return $this->db->select("
+                ca.kd_customer_induk as kd_customer,
+                ca.nama_toko,
+                COALESCE(NULLIF(c.nama_kios, ''), ca.nama_toko) as nama_kios,
+                COALESCE(NULLIF(c.nama_customer, ''), ca.nama_toko) as nama_customer,
+                c.kd_rute,
+                COUNT(ca.id) as total_kontak_acak
+            ")
+            ->from('tb_customer_acak ca')
+            ->join('tb_customer c', 'c.kd_customer = ca.kd_customer_induk', 'left')
+            ->where('ca.kd_customer_induk IS NOT NULL', null, false)
+            ->where("ca.kd_customer_induk != ''", null, false)
+            ->group_by('ca.kd_customer_induk, ca.nama_toko')
+            ->order_by('ca.nama_toko', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    /**
      * Ambil daftar nama toko unik di master customer acak
      */
     public function get_unique_tokos_customer_acak()

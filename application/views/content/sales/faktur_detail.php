@@ -597,17 +597,18 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                     <?php 
                                     $display_label = (!empty($ac['nama_kios']) && $ac['nama_kios'] !== $ac['nama_customer'])
                                         ? $ac['nama_kios'] . ' (' . $ac['nama_customer'] . ')'
-                                        : $ac['nama_customer'];
+                                        : (!empty($ac['nama_kios']) ? $ac['nama_kios'] : $ac['nama_customer']);
+                                    $kontak_info = isset($ac['total_kontak_acak']) ? ' (' . (int)$ac['total_kontak_acak'] . ' Kontak Acak)' : '';
                                     $is_curr = ($ac['kd_customer'] === $faktur['kd_customer']);
                                     ?>
                                     <option value="<?= htmlspecialchars($ac['kd_customer']) ?>" <?= $is_curr ? 'disabled' : '' ?>>
-                                        [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
+                                        [<?= htmlspecialchars($ac['kd_customer']) ?>] <?= htmlspecialchars($display_label) ?><?= $kontak_info ?> <?= $is_curr ? '(Kios Saat Ini)' : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </select>
                         <small class="form-text text-muted mt-1">
-                            Ketik kode customer atau nama toko/kios untuk mencari.
+                            Hanya menampilkan Kios / Customer Induk yang terdaftar di Master Customer Acak (Faktur Z).
                         </small>
                     </div>
                 </div>
