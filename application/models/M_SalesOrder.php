@@ -3311,7 +3311,7 @@ class M_SalesOrder extends CI_Model
      * @param string $username Username pemroses
      * @return array Hasil pemrosesan
      */
-    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system')
+    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system', $pakai_potongan_20 = true)
     {
         $this->ensure_customer_acak_table();
         $this->ensure_faktur_z_pecah_tables();
@@ -3320,6 +3320,8 @@ class M_SalesOrder extends CI_Model
         if ($max_nominal_per_faktur <= 0) {
             $max_nominal_per_faktur = 25000000;
         }
+
+        $disc_factor = $pakai_potongan_20 ? 0.8 : 1.0;
 
         // 1. Ambil data customer induk
         $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
@@ -3398,8 +3400,8 @@ class M_SalesOrder extends CI_Model
                     continue;
                 }
 
-                // Harga satuan pada faktur pecahan H terpotong 20% dari harga Faktur Z induk
-                $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                // Harga satuan pada faktur pecahan H
+                $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * $disc_factor, 2);
                 $disc                 = (float)($pd['disc'] ?? 0);
                 $effective_unit_price = round($hrg_satuan_pecah * (1 - ($disc / 100)), 2);
 
@@ -4028,6 +4030,31 @@ class M_SalesOrder extends CI_Model
             'nama_toko'     => $cust['nama_toko'],
             'message'       => $msg
         ];
+    }
+
+    /**
+     * Ambil daftar Kios / Customer Induk yang terdaftar di Master Customer Acak (Faktur Z)
+     * Hanya kios yang memiliki kontak acak yang dapat menjadi tujuan pemindahan Faktur Z
+     */
+    public function get_customer_induk_faktur_z()
+    {
+        $this->ensure_customer_acak_table();
+        return $this->db->select("
+                ca.kd_customer_induk as kd_customer,
+                ca.nama_toko,
+                COALESCE(NULLIF(c.nama_kios, ''), ca.nama_toko) as nama_kios,
+                COALESCE(NULLIF(c.nama_customer, ''), ca.nama_toko) as nama_customer,
+                c.kd_rute,
+                COUNT(ca.id) as total_kontak_acak
+            ")
+            ->from('tb_customer_acak ca')
+            ->join('tb_customer c', 'c.kd_customer = ca.kd_customer_induk', 'left')
+            ->where('ca.kd_customer_induk IS NOT NULL', null, false)
+            ->where("ca.kd_customer_induk != ''", null, false)
+            ->group_by('ca.kd_customer_induk, ca.nama_toko')
+            ->order_by('ca.nama_toko', 'ASC')
+            ->get()
+            ->result_array();
     }
 
     /**

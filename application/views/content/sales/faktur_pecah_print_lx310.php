@@ -432,12 +432,11 @@
         }
 
         /* frxDBFakturPenjualanTGLDIANTAR: [frxDBFakturPenjualan."TGLDIANTAR"]
-         * Left="11.34" (3.00mm), Top="52.24" (13.82mm), Width="75.59" (20.00mm), Height="22.68" (6.00mm)
-         * Font: Arial, -13 (9.75pt), Frame.Typ="15" (Kotak penuh), HAlign=haCenter, VAlign=vaCenter
+         * Digeser ke kanan dari 3.00mm menjadi 4.50mm agar pas di dalam batas kotak kertas cetak fisik dan tidak terpotong tepi kiri.
          */
         .frx-tgldiantar-box {
             position: absolute;
-            left: 3.00mm;
+            left: 4.50mm;
             top: 13.82mm;
             width: 20.00mm;
             height: 6.00mm;
@@ -449,13 +448,12 @@
             white-space: nowrap;
         }
 
-        /* frxDBFakturPenjualanPELANGGAN: [frxDBFakturPenjualan."JABATAN"]
-         * Left="196.54" (52.00mm), Top="52.24" (13.82mm), Width="75.59" (20.00mm), Height="22.68" (6.00mm)
-         * Font: Arial, -13 (9.75pt), Frame.Typ="15" (Kotak penuh), HAlign=haCenter, VAlign=vaCenter
+        /* frxDBFakturPenjualanPELANGGAN: [frxDBFakturPenjualan."JABATAN"] (Kode Rute / Rayon)
+         * Digeser ke kanan dari 52.00mm menjadi 54.00mm agar pas presisi di dalam kotak form kertas.
          */
         .frx-jabatan-box {
             position: absolute;
-            left: 52.00mm;
+            left: 54.00mm;
             top: 13.82mm;
             width: 20.00mm;
             height: 6.00mm;
@@ -508,10 +506,18 @@
             white-space: nowrap;
         }
 
-        /* PENGATURAN CETAK KHUSUS EPSON LX-310 (CONTINUOUS FORM 21 cm x 14 cm) */
+        /* PENGATURAN CETAK KHUSUS EPSON LX-310 (CONTINUOUS FORM 21 cm x 14 cm / 8.5 x 5.5 inch)
+         * Menggunakan orientasi landscape eksplisit agar driver printer dot-matrix
+         * tidak memutar teks 90 derajat secara vertikal (portrait).
+         */
+        @page {
+            size: 210mm 140mm landscape;
+            margin: 7mm 1mm 0mm 0mm;
+        }
+
         @media print {
             @page {
-                size: 210mm 140mm;
+                size: 210mm 140mm landscape;
                 margin: 7mm 1mm 0mm 0mm;
             }
 
@@ -604,11 +610,14 @@
         <div>
             <strong>Format Cetak Epson LX-310 (TTB_2022_Q_LOT_PAJAK_1.11.fr3)</strong>
             <span style="color: #64748b; margin-left: 8px;">
-                Ukuran: 21 cm x 14 cm &bull; Total: <strong><?= $total_sheets ?></strong> Faktur
+                Ukuran: 21 cm x 14 cm (Landscape) &bull; Total: <strong><?= $total_sheets ?></strong> Faktur
                 <?php if ($total_sheets > 1 && isset($total_all_grand)): ?>
                     (Total Nilai: <strong>Rp <?= number_format($total_all_grand, 0, ',', '.') ?></strong>)
                 <?php endif; ?>
             </span>
+            <div style="font-size: 11px; color: #0284c7; margin-top: 3px;">
+                <i class="fas fa-info-circle"></i> Tips Cetak: Di dialog Print browser, pastikan <strong>Layout: Landscape</strong> dan Paper Size: <strong>Custom (21x14 cm / 8.5x5.5")</strong>.
+            </div>
         </div>
         <div style="display: flex; gap: 8px;">
             <button type="button" onclick="window.print()" class="btn-action btn-print">
