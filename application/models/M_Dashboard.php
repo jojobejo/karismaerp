@@ -128,8 +128,10 @@ class M_Dashboard extends CI_Model
                 'description' => 'Akses penjualan, katalog, order, dan laporan sales.',
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
+                    $this->menu('Admin SC', 'sales_order/admin_sc', 'fas fa-file-invoice-dollar', 'purple', 'Kelola verifikasi SO, proses faktur, pecah faktur, dan rute pengiriman Admin SC.'),
                     $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
                     $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.'),
+                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'teal', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.'),
                     $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.'),
                     $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market yang dititipkan, dibeli, dan masih tersisa di kios.'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
@@ -185,6 +187,8 @@ class M_Dashboard extends CI_Model
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
             'SC' => 'sales',
+            'ADMINSC' => 'sales',
+            'ADMSC' => 'sales',
             'LOBY' => 'sales',
             'SALESLOBY' => 'sales',
             'ADMINLOBY' => 'sales',
@@ -219,17 +223,35 @@ class M_Dashboard extends CI_Model
             || strtolower((string)($context['username'] ?? '')) === 'admlpb'
             || !empty($context['is_admin']);
 
+        $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
+        $username = strtolower((string)($context['username'] ?? ''));
+        $allowed_admin_sc = array('ADMINSC', 'ADMSC', 'SC', 'SALESCOUNTER', 'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC');
+        $has_admin_sc = in_array($jobdesk, $allowed_admin_sc, true)
+            || in_array($username, array('admsc', 'admin'), true)
+            || !empty($context['is_admin']);
+        $is_admin_sc_only = in_array($jobdesk, array('ADMINSC', 'ADMSC', 'SALESCOUNTER'), true) || $username === 'admsc';
+
         foreach ($sections as $key => $section) {
             if (empty($section['menus']) || !is_array($section['menus'])) {
                 continue;
             }
 
-            $sections[$key]['menus'] = array_values(array_filter($section['menus'], function ($menu) use ($context, $has_retur_pj) {
-                if (($menu['route'] ?? '') === 'ics/retur' || strpos(($menu['route'] ?? ''), 'ics/retur/pembelian/monitoring') === 0) {
+            $sections[$key]['menus'] = array_values(array_filter($section['menus'], function ($menu) use ($context, $has_retur_pj, $has_admin_sc, $is_admin_sc_only) {
+                $route = (string)($menu['route'] ?? '');
+
+                if ($route === 'sales_order/admin_sc') {
+                    return $has_admin_sc;
+                }
+
+                if ($route === 'sales_order' && $is_admin_sc_only) {
+                    return false;
+                }
+
+                if ($route === 'ics/retur' || strpos($route, 'ics/retur/pembelian/monitoring') === 0) {
                     return $this->has_retur_access($context);
                 }
 
-                if (strpos(($menu['route'] ?? ''), 'retur_penjualan') === 0) {
+                if (strpos($route, 'retur_penjualan') === 0) {
                     return $has_retur_pj;
                 }
 

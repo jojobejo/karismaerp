@@ -1,0 +1,83 @@
+No,Departemen,Nama Modul,Rute URL / Path,Deskripsi Singkat,Detail Fitur & Fungsionalitas
+1,SALES,Sales Order (SO),sales_order,Kelola pesanan pelanggan dan approval,"1. Monitoring antrean SO dengan filter tanggal, rute, status, dan customer.
+2. Input SO baru oleh salesmen/admin lengkap dengan harga dan diskon.
+3. Detail SO, verifikasi kesiapan stok gudang, dan approval pembatalan (full/partial).
+4. Fitur pengembalian sisa kuantitas SO partial ke antrean sales."
+2,SALES,Admin SC,sales_order/admin_sc,Pusat verifikasi SO dan penerbitan faktur,"1. Monitoring SO tervalidasi yang siap diproses.
+2. Pemilihan item barang gudang untuk faktur.
+3. Pengajuan approval limit plafon dan harga diskon.
+4. Monitoring faktur selesai dan cetak massal rute pengiriman.
+5. Activity log jejak audit verifikasi faktur."
+3,SALES,Sales Order Loby,sales_order_loby,Penjualan langsung di loby kantor,"1. Transaksi langsung (walk-in customer).
+2. Cetak nota kontan instan dan potong stok otomatis."
+4,SALES,Pecah Faktur,sales_order/pecah_faktur,Pemecahan Faktur Z konsolidasi,"1. Memecah Faktur Z gabungan menjadi faktur turunan per kios.
+2. Pengaturan alokasi kuantitas dan nomor faktur toko."
+5,SALES,Faktur Penjualan,admin/transaksi,Audit dan kontrol transaksi faktur,"1. Audit data transaksi penjualan komersial.
+2. Koreksi kuantitas/harga khusus dengan sinkronisasi jurnal GL."
+6,SALES,Test Market,test-market,Uji pasar / konsinyasi keluar di kios,"1. Manajemen barang promosi titip uji pasar di kios.
+2. Monitoring unit terjual dan sisa titipan."
+7,SALES,Katalog Sales,kiu_katalog,Katalog produk digital salesman,"1. Tampilan foto, spesifikasi, harga resmi, dan stok realtime.
+2. Navigasi dan pencarian produk untuk presentasi ke customer."
+8,SALES,Sales Report,sales_report,Laporan performa penjualan harian/bulanan,"1. Rekapitulasi omset per salesman, wilayah, dan periode.
+2. Evaluasi target penjualan sales counter."
+9,SALES,Stok Online,stock,Stok khusus penjualan kanal online,"1. Monitoring kuantitas stok yang dialokasikan ke e-commerce."
+10,SALES,Data Customers,data_customers,Master database toko dan pelanggan,"1. Profil kios/toko, pemilik, alamat, rute, dan koordinat GPS.
+2. Pengaturan batas plafon kredit dan jangka waktu tempo."
+11,SALES,Retur Penjualan,retur_penjualan,Klaim pengembalian produk dari kios,"1. Penerimaan dan verifikasi fisik barang retur.
+2. Pemotongan piutang pelanggan atau ganti barang."
+12,SALES,Pengajuan Overdue (OD),sales/C_PengajuanOD,Pengajuan perpanjangan tempo faktur,"1. Alur permohonan dispensasi tempo faktur jatuh tempo.
+2. Approval berjenjang dari Manajer Sales hingga Direktur."
+13,LOGISTIK,Activity Warehouse / Checker,checker,Verifikasi muatan armada truk,"1. Checklist loading barang ke armada truk per nomor lambung & supir.
+2. Perhitungan akurat kuantitas box dan pcs.
+3. Kontrol urutan trip armada dan muatan tambahan."
+14,LOGISTIK,Data All Barang,ics/by_allbarang,Inventori ICS terpadu multi-gudang,"1. Monitoring kuantitas stok lintas seluruh gudang fisik.
+2. Informasi stok on-hand, booked, dan free stock."
+15,LOGISTIK,Data By Expired Date,ics/by_expdate,Kontrol kedaluwarsa sistem FEFO,"1. Pemantauan masa aktif barang dengan filter tanggal ED.
+2. Peringatan dini barang mendekati kedaluwarsa (30/60/90 hari)."
+16,LOGISTIK,Delivery Order (DO),ics/icsdo,Surat jalan pengiriman barang,"1. Penerbitan DO resmi pengawalan barang di jalan.
+2. Tracking status pengiriman armada."
+17,LOGISTIK,Master Gudang,ics/gudang,Konfigurasi gudang dan zonasi rak,"1. Pemeliharaan data master gudang fisik dan sub-lokasi penyimpanan."
+18,LOGISTIK,Data PO Logistik,ics/icspo,Monitoring PO masuk untuk penerimaan,"1. Pemantauan rencana kedatangan barang dari Purchasing."
+19,LOGISTIK,Data LPB (Penerimaan Barang),ics/data_lpb,Penerimaan fisik barang berbasis PO,"1. Pencatatan fisik barang masuk dari supplier (Belum/Partial/Done).
+2. Validasi nomor lot, expired date fisik, dan kuantitas vs PO."
+20,LOGISTIK,Input LPB Manual,ics/lpb_manual,Penerimaan darurat barang non-PO,"1. Input fisik barang masuk tanpa PO dengan lot & ED manual.
+2. Integrasi workflow pengisian harga oleh Purchasing."
+21,LOGISTIK,Laporan LPB,ics/lpb_report,Historis dan audit penerimaan barang,"1. Rekapitulasi seluruh dokumen LPB reguler dan manual."
+22,LOGISTIK,Retur Pembelian (Logistik),ics/retur,Pengeluaran fisik retur ke supplier,"1. Pengeluaran barang reject/rusak dari gudang ke prinsipal."
+23,LOGISTIK,Master Barang PIC,ics/barangpic,Penugasan staf penanggung jawab barang,"1. Pembagian wewenang kontrol stok barang per personil gudang."
+24,LOGISTIK,Barang Per Gudang,ics/barangpergudang,Komposisi stok per lokasi gudang,"1. Rincian stok detail pada masing-masing gedung gudang."
+25,LOGISTIK,Mutasi Barang Gudang,ics/mutasi_barang,Transfer internal antar gudang,"1. Pemindahan stok antar lokasi dengan bukti serah terima."
+26,LOGISTIK,Penyesuaian Barang,persediaan/penyesuaian_barang,Koreksi selisih stok (opname parsial),"1. Penyesuaian stok lebih/kurang dengan berita acara selisih."
+27,LOGISTIK,Show Different (ICS Diff),ics/ics_diffrent,Audit selisih fisik vs sistem,"1. Komparasi otomatis saldo fisik ICS terhadap saldo buku besar."
+28,LOGISTIK,Status Faktur Distribusi,logistik/distibusi/list_faktur_status,Kontrol status pengantaran faktur,"1. Monitoring faktur yang masih dibawa supir vs sudah diterima kios."
+29,LOGISTIK,Export Data Expired Date,export-stock,Unduh laporan masa kedaluwarsa,"1. Ekspor data lot dan expired date barang ke Excel/CSV."
+30,LOGISTIK,Stockopname Admin,admin/stockopname,Manajemen hitung fisik massal,"1. Penjadwalan periode opname, cetak count sheet, dan posting selisih."
+31,LOGISTIK,Realisasi Paket Bundling,logistik/bundling,Perakitan fisik paket hemat promo,"1. Eksekusi perakitan fisik: pengurangan bahan baku dan penambahan barang jadi."
+32,PURCHASING,Purchase Order (PO),ics/icspo,Penerbitan pesanan pengadaan supplier,"1. Pembuatan PO resmi, negosiasi harga, diskon bertingkat, dan lead time."
+33,PURCHASING,Pending PO,pendingpo,Monitoring sisa pesanan pengadaan,"1. Pelacakan PO yang belum dipenuhi supplier (back-order tracking)."
+34,PURCHASING,Verifikasi LPB & Harga,ics/data_lpb,Validasi faktur supplier terhadap fisik,"1. Pencocokan tagihan supplier dengan kuantitas LPB fisik.
+2. Otorisasi harga beli untuk LPB manual."
+35,PURCHASING,Barang Konsinyasi,purchasing/konsinyasi,Pengadaan barang titipan supplier,"1. Penerimaan barang titipan supplier tanpa bayar di muka.
+2. Laporan rekonsiliasi berkala atas unit yang terjual."
+36,PURCHASING,Request Paket Bundling,purchasing/bundling/request,Perencanaan paket bundling,"1. Perancangan komposisi bahan dan kuantitas paket yang diminta ke gudang."
+37,KEUANGAN,Kas Bon Karyawan,C_Kasbon,Pengajuan dana operasional sementara,"1. Form pengajuan kas bon, approval atasan, dan nota pertanggungjawaban (settlement)."
+38,KEUANGAN,Daily Stock Keuangan,keuangan,Monitoring nilai modal persediaan,"1. Dashboard ringkasan valuasi rupiah persediaan dan perputaran modal."
+39,KEUANGAN,Kas Masuk & Kas Keluar,keuangan/kas_masuk,Pencatatan kas operasional dan bank,"1. Pengeluaran dan penerimaan kas kecil (petty cash) dan rekening bank."
+40,KEUANGAN,Kasir Harian,keuangan/kasir,Operasional kasir penerimaan tunai,"1. Penerimaan setoran tunai hasil tagihan dan tutup kas harian."
+41,KEUANGAN,Piutang Customer & Pembayaran,keuangan/pembayaran,Pelunasan tagihan faktur penjualan,"1. Kartu piutang per pelanggan dan analisis umur piutang (Aging AR).
+2. Input pelunasan faktur (tunai, transfer, giro, nota retur)."
+42,KEUANGAN,Pembayaran Supplier (Hutang),keuangan/pembayaran-supplier,Pelunasan tagihan pembelian,"1. Rekapitulasi hutang jatuh tempo berdasarkan LPB.
+2. Penerbitan voucher pembayaran hutang supplier dengan potong nota retur."
+43,KEUANGAN,Jurnal Otomatis & Umum,buku_besar/jurnal_umum,Pencatatan akuntansi double entry,"1. Penjurnal otomatis faktur penjualan, LPB pembelian, dan pembayaran.
+2. Jurnal penyesuaian umum (penyusutan aset, biaya akrual, koreksi)."
+44,KEUANGAN,Buku Besar & COA,keuangan/buku_besar,Laporan mutasi per akun akuntansi,"1. Rincian mutasi debit/kredit per akun COA (General Ledger).
+2. Struktur Chart of Accounts (COA) neraca dan laba rugi."
+45,KEUANGAN,Semua Laporan Finansial,laporan,Laporan keuangan resmi perusahaan,"1. Neraca Saldo, Laba Rugi, Arus Kas, dan Neraca Finansial."
+46,HRD,Penilaian Lingkungan Kerja,penilaian_lingkungan,Evaluasi kerapian dan budaya kerja,"1. Formulir evaluasi kebersihan dan kepatuhan 5S area kerja."
+47,HRD,Admin Penilaian Lingkungan,hrd/penilaian_lingkungan/admin,Monitoring skor kepatuhan kerja,"1. Rekapitulasi skor rating per departemen untuk evaluasi direksi."
+48,HRD,Schedule Direktur,schedule_direktur,Pengelolaan jadwal direksi,"1. Pengelolaan agenda dinas, rapat bisnis, dan jadwal pimpinan."
+49,IT / ADMIN,User Management,master/user-management,Manajemen akun dan otorisasi,"1. Pengelolaan akun pengguna, password, status aktif/nonaktif, dan jobdesk."
+50,IT / ADMIN,Fasilitas Per User,master/user-facility,Matriks izin hak akses pengguna,"1. Izin granular tombol aksi (tambah/edit/hapus/unpost), cabang, dan gudang."
+51,IT / ADMIN,Master Jobdesk & Akses Level,master/jobdesk,Konfigurasi level jabatan sistem,"1. Pengaturan struktur jabatan dan matriks level akses aplikasi."
+52,IT / ADMIN,Audit Trail Transaksi,admin/transaksi,Pengawasan dan integritas transaksi,"1. Monitoring transaksi kritis, penguncian data, dan audit log sistem."
+

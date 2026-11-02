@@ -11,6 +11,11 @@ class Auth extends CI_Controller
 
     function index()
     {
+        if ($this->session->userdata('logged_in')) {
+            redirect('dashboard');
+            return;
+        }
+
         $this->load->view("partial/login/header");
         $this->load->view("content/login/body");
         $this->load->view("partial/login/footer");
@@ -90,58 +95,8 @@ class Auth extends CI_Controller
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        // Redirect based on jobdesk
-        if ($jobdesk_hrd === 'direksi_readonly') {
-            redirect('dashboard_penilaian');
-        } else if ($jobdesk == 'LOGISTIK') {
-            redirect('logistik');
-        } else if ($jobdesk == 'ADMINICS') {
-            redirect('ics/ics_diffrent');
-        } else if ($jobdesk == 'ADMINKEU') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'KIUKEU') {
-            redirect('keuangan/pembayaran');
-        } else if ($jobdesk == 'ADMINPURCHASING') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'DIREKTUR') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'ADMINGA') {
-            redirect('schedule_direktur');
-        } else if ($jobdesk == 'ADMINKEUTC') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'STOCKOPNAME') {
-            redirect('stockopname');
-        } else if ($jobdesk == 'ADMIN') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'SALESONLINE') {
-            redirect('stock');
-        } else if ($jobdesk == 'SALESCOUNTER') {
-            redirect('sales_report');
-        } else if ($jobdesk == 'SALES') {
-            redirect('kiu_katalog');
-        } else if ($jobdesk == 'DISTRIBUSI') {
-            redirect('logistik/distibusi');
-        } else if ($jobdesk == 'ADMINLOGLPB') {
-            redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMLOG') {
-            redirect('checker');
-        } else if ($jobdesk == 'CHECKER') {
-            redirect('checker');
-        } else if ($jobdesk == 'MANAGERWH') {
-            redirect('checker');
-        } else if ($jobdesk == 'SALESCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard');
-        } else if ($jobdesk == 'MANAGERCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'ADMINSC') {
-            redirect('sales_order/admin_sc');
-        } else if ($jobdesk == 'SC') {
-            redirect('sales_order');
-        } else {
-            redirect('dashboard');
-        }
+        // Semua user yang login diarahkan ke halaman dashboard
+        redirect('dashboard');
     }
 
     function logout()
