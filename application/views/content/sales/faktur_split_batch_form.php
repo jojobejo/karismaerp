@@ -426,14 +426,19 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                             // Default tanggal faktur & jatuh tempo mengikuti Faktur Z Induk
                             $first_parent = !empty($parent_fakturs) ? reset($parent_fakturs) : [];
-                            $slot_parent_row = ($slot_parent_id && isset($parent_fakturs[$slot_parent_id])) ? $parent_fakturs[$slot_parent_id] : $first_parent;
-                            if (empty($slot_parent_row['tanggal_faktur']) && !empty($slot_parent_no)) {
+                            $slot_parent_row = null;
+                            if (!empty($slot_parent_id) && isset($parent_fakturs[$slot_parent_id])) {
+                                $slot_parent_row = $parent_fakturs[$slot_parent_id];
+                            } elseif (!empty($slot_parent_no)) {
                                 foreach ($parent_fakturs as $pf_cand) {
                                     if (($pf_cand['no_faktur'] ?? '') === $slot_parent_no) {
                                         $slot_parent_row = $pf_cand;
                                         break;
                                     }
                                 }
+                            }
+                            if (!$slot_parent_row) {
+                                $slot_parent_row = $first_parent;
                             }
                             $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
                             $slot_parent_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : null;

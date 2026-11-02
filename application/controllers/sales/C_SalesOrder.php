@@ -4177,7 +4177,10 @@ class C_SalesOrder extends CI_Controller
                     'items'            => [],
                     'total_nominal'    => 0.0,
                     'total_qty'        => 0.0,
-                    'parent_no_faktur' => $pf['no_faktur']
+                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                 ];
 
                 foreach ($pf_items as $d_id => $it) {
@@ -4194,7 +4197,10 @@ class C_SalesOrder extends CI_Controller
                                 'items'            => [],
                                 'total_nominal'    => 0.0,
                                 'total_qty'        => 0.0,
-                                'parent_no_faktur' => $pf['no_faktur']
+                                'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                             ];
                             $remaining_budget = $max_plafon;
                         }
@@ -4229,7 +4235,10 @@ class C_SalesOrder extends CI_Controller
                                 'items'            => [],
                                 'total_nominal'    => 0.0,
                                 'total_qty'        => 0.0,
-                                'parent_no_faktur' => $pf['no_faktur']
+                                'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                             ];
                         } else {
                             if (!empty($current_bucket['items'])) {
@@ -4238,7 +4247,10 @@ class C_SalesOrder extends CI_Controller
                                     'items'            => [],
                                     'total_nominal'    => 0.0,
                                     'total_qty'        => 0.0,
-                                    'parent_no_faktur' => $pf['no_faktur']
+                                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                                 ];
                             } else {
                                 $alloc_qty = min(1.0, $qty_remaining);
@@ -4257,7 +4269,10 @@ class C_SalesOrder extends CI_Controller
                                     'items'            => [],
                                     'total_nominal'    => 0.0,
                                     'total_qty'        => 0.0,
-                                    'parent_no_faktur' => $pf['no_faktur']
+                                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                                 ];
                             }
                         }
@@ -5338,6 +5353,18 @@ class C_SalesOrder extends CI_Controller
                 $fakturTotalNetto += $itemNetto;
             }
 
+            // Jika dalam satu faktur pecahan hanya berisi barang bonus/diskon 100% (netto = 0),
+            // ambil nilai total dari Faktur Z induknya agar kolom Per Faktur tetap mengikuti nilai fakturnya
+            if ($fakturTotalNetto <= 0.001 && !empty($items[0]['parent_id_faktur'])) {
+                $pNet = $this->db->select('COALESCE(SUM(qty * hrg_satuan * (1 - (disc/100)) * 0.8), 0) AS tot')
+                    ->from('tbso_faktur_detail')
+                    ->where('id_faktur', (int)$items[0]['parent_id_faktur'])
+                    ->get()->row_array();
+                if (!empty($pNet['tot']) && (float)$pNet['tot'] > 0) {
+                    $fakturTotalNetto = (float)$pNet['tot'];
+                }
+            }
+
             foreach ($items as $item) {
                 $r = $rowNum;
 
@@ -5387,10 +5414,10 @@ class C_SalesOrder extends CI_Controller
                 $sheet->setCellValue('W' . $r, $pajakPct);
                 $sheet->setCellValue('X' . $r, "=IF(V{$r}<=0,0,+V{$r}*W{$r}/100)");
                 $sheet->setCellValue('Y' . $r, "=IF(T{$r}>=1,0,(P{$r}*R{$r})-(P{$r}*R{$r}*IF(T{$r}>1,T{$r}/100,T{$r})))");
-                // Kolom Z (Per Faktur): untuk barang bonus diskon 100%, nilai per faktur adalah 0.00 (tidak menampilkan total faktur)
-                $perFakturVal = ($disc >= 100 || $discRate >= 1.0) ? 0.0 : $fakturTotalNetto;
+                // Kolom Z (Per Faktur): tetap mengikuti total nilai faktur, termasuk untuk barang bonus (diskon 100%)
+                $perFakturVal = $fakturTotalNetto;
                 $sheet->setCellValue('Z' . $r, $perFakturVal);
-                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}<=0,0,Y{$r}/0.8)");
+                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}>0,Y{$r}/0.8,Z{$r}/0.8)");
                 $sheet->setCellValue('AB' . $r, $item['ket_faktur'] ?? '');
 
                 // Alignment Data
