@@ -4007,9 +4007,9 @@ class M_SalesOrder extends CI_Model
         return $this->db->select("
                 ca.kd_customer_induk as kd_customer,
                 ca.nama_toko,
-                COALESCE(NULLIF(c.nama_kios, ''), ca.nama_toko) as nama_kios,
-                COALESCE(NULLIF(c.nama_customer, ''), ca.nama_toko) as nama_customer,
-                c.kd_rute,
+                COALESCE(NULLIF(MAX(c.nama_kios), ''), ca.nama_toko) as nama_kios,
+                COALESCE(NULLIF(MAX(c.nama_customer), ''), ca.nama_toko) as nama_customer,
+                MAX(c.kd_rute) as kd_rute,
                 COUNT(ca.id) as total_kontak_acak
             ")
             ->from('tb_customer_acak ca')
