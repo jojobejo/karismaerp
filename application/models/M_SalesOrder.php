@@ -3118,8 +3118,9 @@ class M_SalesOrder extends CI_Model
             $parent_no_full   = !empty($slot_parent_nos) ? implode(', ', array_unique($slot_parent_nos)) : (string)($slot_parent['no_faktur'] ?? '');
             $parent_no_header = substr($parent_no_full, 0, 50);
 
-            $tgl_faktur = !empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : ($slot_parent['tanggal_faktur'] ?? date('Y-m-d'));
-            $tgl_tempo  = !empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : ($slot_parent['tanggal_jatuh_tempo'] ?? null);
+            // Tanggal faktur pecahan H harus mengikuti tanggal Faktur Z Induknya
+            $tgl_faktur = !empty($slot_parent['tanggal_faktur']) ? $slot_parent['tanggal_faktur'] : (!empty($s['tanggal_faktur']) ? $s['tanggal_faktur'] : date('Y-m-d'));
+            $tgl_tempo  = !empty($slot_parent['tanggal_jatuh_tempo']) ? $slot_parent['tanggal_jatuh_tempo'] : (!empty($s['tanggal_jatuh_tempo']) ? $s['tanggal_jatuh_tempo'] : null);
 
             $tempo_calc = (int)($slot_parent['tempo'] ?? ($slot_parent['jtempo'] ?? 0));
             if (!empty($tgl_faktur) && !empty($tgl_tempo)) {
@@ -3745,6 +3746,8 @@ class M_SalesOrder extends CI_Model
         $this->ensure_faktur_z_pecah_tables();
         $this->ensure_customer_acak_table();
         $this->db->select('p.*, 
+            COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+            COALESCE(fp.tanggal_jatuh_tempo, p.tanggal_jatuh_tempo) AS tanggal_jatuh_tempo,
             COALESCE(ca.kontak_person, c.nama_customer) AS full_customer_name, 
             ca.nama_toko, ca.alamat AS ca_alamat, ca.kota AS ca_kota, ca.nik AS ca_nik, ca.npwp AS ca_npwp,
             COALESCE(NULLIF(c.kd_rute, ""), cp.kd_rute) AS customer_kd_rute, 
@@ -3775,6 +3778,8 @@ class M_SalesOrder extends CI_Model
         $this->ensure_faktur_z_pecah_tables();
         $this->ensure_customer_acak_table();
         $this->db->select('p.*, 
+            COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+            COALESCE(fp.tanggal_jatuh_tempo, p.tanggal_jatuh_tempo) AS tanggal_jatuh_tempo,
             COALESCE(MAX(ca.kontak_person), MAX(c.nama_customer)) AS nama_customer, 
             MAX(ca.nama_toko) AS nama_toko, 
             MAX(ca.kota) AS customer_kota,
@@ -4042,9 +4047,9 @@ class M_SalesOrder extends CI_Model
         return $this->db->select("
                 ca.kd_customer_induk as kd_customer,
                 ca.nama_toko,
-                COALESCE(NULLIF(c.nama_kios, ''), ca.nama_toko) as nama_kios,
-                COALESCE(NULLIF(c.nama_customer, ''), ca.nama_toko) as nama_customer,
-                c.kd_rute,
+                COALESCE(NULLIF(MAX(c.nama_kios), ''), ca.nama_toko) as nama_kios,
+                COALESCE(NULLIF(MAX(c.nama_customer), ''), ca.nama_toko) as nama_customer,
+                MAX(c.kd_rute) as kd_rute,
                 COUNT(ca.id) as total_kontak_acak
             ")
             ->from('tb_customer_acak ca')

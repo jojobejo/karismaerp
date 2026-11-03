@@ -426,14 +426,19 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                             // Default tanggal faktur & jatuh tempo mengikuti Faktur Z Induk
                             $first_parent = !empty($parent_fakturs) ? reset($parent_fakturs) : [];
-                            $slot_parent_row = ($slot_parent_id && isset($parent_fakturs[$slot_parent_id])) ? $parent_fakturs[$slot_parent_id] : $first_parent;
-                            if (empty($slot_parent_row['tanggal_faktur']) && !empty($slot_parent_no)) {
+                            $slot_parent_row = null;
+                            if (!empty($slot_parent_id) && isset($parent_fakturs[$slot_parent_id])) {
+                                $slot_parent_row = $parent_fakturs[$slot_parent_id];
+                            } elseif (!empty($slot_parent_no)) {
                                 foreach ($parent_fakturs as $pf_cand) {
                                     if (($pf_cand['no_faktur'] ?? '') === $slot_parent_no) {
                                         $slot_parent_row = $pf_cand;
                                         break;
                                     }
                                 }
+                            }
+                            if (!$slot_parent_row) {
+                                $slot_parent_row = $first_parent;
                             }
                             $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
                             $slot_parent_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : null;
@@ -646,6 +651,17 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 </div>
                             </div>
                         <?php endfor; ?>
+                    </div>
+
+                    <!-- Alert Peringatan Validasi (Hanya muncul jika ada pelanggaran alokasi / kuota) -->
+                    <div id="alertBatchValidation" class="alert alert-danger shadow-sm mb-3" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x mr-3 text-warning"></i>
+                            <div>
+                                <h6 class="font-weight-bold mb-1" id="alertBatchValidationTitle">Peringatan Validasi Alokasi</h6>
+                                <div class="small" id="alertBatchValidationMsg"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tombol Aksi Simpan Semua -->
@@ -1068,6 +1084,7 @@ $(document).ready(function() {
         });
 
         var hasQuotaViolation = false;
+        var quotaViolations = [];
         if (isCustomerAcak) {
             // Hitung akumulasi per customer di seluruh slot
             var custUsage = {};
@@ -1106,6 +1123,9 @@ $(document).ready(function() {
 
                         if (totalAlokasiCust > (sisa + 0.01)) {
                             hasQuotaViolation = true;
+                            if (quotaViolations.indexOf(custObj.kontak_person) === -1) {
+                                quotaViolations.push(custObj.kontak_person + ' (Sisa Plafon: Rp ' + Math.round(sisa).toLocaleString('id-ID') + ', Dialokasikan: Rp ' + Math.round(totalAlokasiCust).toLocaleString('id-ID') + ')');
+                            }
                             $totalBadge.removeClass('badge-success badge-light').addClass('badge-danger text-white border-danger')
                                 .attr('title', 'Peringatan: Alokasi total untuk ' + custObj.kontak_person + ' (Rp ' + Math.round(totalAlokasiCust).toLocaleString('id-ID') + ') melebihi sisa kuota (Rp ' + Math.round(sisa).toLocaleString('id-ID') + ')!');
                         } else {
@@ -1118,8 +1138,18 @@ $(document).ready(function() {
 
         if (hasOverAllocation || hasQuotaViolation) {
             $('#btnSubmitBatch').prop('disabled', true).addClass('btn-danger').removeClass('btn-success');
+            var errorMsgs = [];
+            if (hasQuotaViolation) {
+                errorMsgs.push('<strong>Pelanggaran Batas Kuota Kontak Person (Plafon Rp 250 Juta):</strong><br>&bull; ' + quotaViolations.join('<br>&bull; '));
+            }
+            if (hasOverAllocation) {
+                errorMsgs.push('<strong>Alokasi Barang Melebihi Kuantitas Faktur Z:</strong> Silakan periksa tabel indikator stok di atas.');
+            }
+            $('#alertBatchValidationMsg').html(errorMsgs.join('<br><br>'));
+            $('#alertBatchValidation').slideDown(200);
         } else {
             $('#btnSubmitBatch').prop('disabled', false).addClass('btn-success').removeClass('btn-danger');
+            $('#alertBatchValidation').slideUp(200);
         }
     }
 

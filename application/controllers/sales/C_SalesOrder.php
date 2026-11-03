@@ -4177,7 +4177,10 @@ class C_SalesOrder extends CI_Controller
                     'items'            => [],
                     'total_nominal'    => 0.0,
                     'total_qty'        => 0.0,
-                    'parent_no_faktur' => $pf['no_faktur']
+                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                 ];
 
                 foreach ($pf_items as $d_id => $it) {
@@ -4194,7 +4197,10 @@ class C_SalesOrder extends CI_Controller
                                 'items'            => [],
                                 'total_nominal'    => 0.0,
                                 'total_qty'        => 0.0,
-                                'parent_no_faktur' => $pf['no_faktur']
+                                'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                             ];
                             $remaining_budget = $max_plafon;
                         }
@@ -4229,7 +4235,10 @@ class C_SalesOrder extends CI_Controller
                                 'items'            => [],
                                 'total_nominal'    => 0.0,
                                 'total_qty'        => 0.0,
-                                'parent_no_faktur' => $pf['no_faktur']
+                                'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                             ];
                         } else {
                             if (!empty($current_bucket['items'])) {
@@ -4238,7 +4247,10 @@ class C_SalesOrder extends CI_Controller
                                     'items'            => [],
                                     'total_nominal'    => 0.0,
                                     'total_qty'        => 0.0,
-                                    'parent_no_faktur' => $pf['no_faktur']
+                                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                                 ];
                             } else {
                                 $alloc_qty = min(1.0, $qty_remaining);
@@ -4257,7 +4269,10 @@ class C_SalesOrder extends CI_Controller
                                     'items'            => [],
                                     'total_nominal'    => 0.0,
                                     'total_qty'        => 0.0,
-                                    'parent_no_faktur' => $pf['no_faktur']
+                                    'parent_id_faktur'    => $pf['id_faktur'],
+                    'parent_no_faktur'    => $pf['no_faktur'],
+                    'tanggal_faktur'      => $pf['tanggal_faktur'] ?? null,
+                    'tanggal_jatuh_tempo' => $pf['tanggal_jatuh_tempo'] ?? null
                                 ];
                             }
                         }
@@ -4271,7 +4286,7 @@ class C_SalesOrder extends CI_Controller
 
             if (!empty($pre_allocated_splits)) {
                 $is_auto_prefilled = true;
-                $jumlah_pecah = count($pre_allocated_splits);
+
                 // Prioritaskan kontak person yang belum mencapai limit 250 juta untuk rotasi auto-fill
                 $available_customers = array_values(array_filter($customers, function($c) {
                     return empty($c['is_limit_reached']) && (float)($c['total_nominal_pecah'] ?? 0) < M_SalesOrder::LIMIT_KONTAK_PERSON_FAKTUR_H;
@@ -4281,50 +4296,137 @@ class C_SalesOrder extends CI_Controller
                 }
 
                 // Lacak sisa kuota berjalan tiap kontak selama alokasi
-                $cust_sisa_map = [];
+                $cust_sisa_pool = [];
                 foreach ($available_customers as $c) {
-                    $cust_sisa_map[$c['kd_customer']] = isset($c['sisa_limit_h'])
+                    $sisa_h = isset($c['sisa_limit_h'])
                         ? (float)$c['sisa_limit_h']
                         : max(0.0, M_SalesOrder::LIMIT_KONTAK_PERSON_FAKTUR_H - (float)($c['total_nominal_pecah'] ?? 0));
+                    $cust_sisa_pool[$c['kd_customer']] = [
+                        'customer' => $c,
+                        'sisa'     => $sisa_h
+                    ];
                 }
 
-                foreach ($pre_allocated_splits as $b_idx => &$bkt) {
-                    if (!empty($available_customers)) {
-                        $bucket_nom = (float)($bkt['total_nominal'] ?? 0);
-                        $n_avail = count($available_customers);
-                        $chosen_cust = null;
+                $buckets_queue = $pre_allocated_splits;
+                $final_allocated_splits = [];
 
-                        // Cari kontak person (mulai dari posisi rotasi) yang sisa kuotanya cukup untuk nominal bucket ini
-                        for ($step = 0; $step < $n_avail; $step++) {
-                            $cand = $available_customers[($contact_idx + $step) % $n_avail];
-                            $kd_cand = $cand['kd_customer'];
-                            if (($cust_sisa_map[$kd_cand] ?? 0) + 0.01 >= $bucket_nom) {
-                                $chosen_cust = $cand;
-                                $contact_idx = ($contact_idx + $step + 1) % $n_avail;
-                                break;
+                // Lakukan Best-Fit Decreasing Allocation dengan Adaptive Sub-Bucket Fitting
+                while (!empty($buckets_queue)) {
+                    // Urutkan bucket dari nominal terbesar
+                    usort($buckets_queue, function($a, $b) {
+                        return ($b['total_nominal'] <=> $a['total_nominal']);
+                    });
+
+                    $bkt = array_shift($buckets_queue);
+                    $nom = (float)($bkt['total_nominal'] ?? 0);
+
+                    // Cari customer yang sisa kuotanya mencukupi dan saat ini paling besar
+                    $best_kd = null;
+                    $max_sisa = -1;
+                    foreach ($cust_sisa_pool as $kd => $cp) {
+                        if (($cp['sisa'] + 0.01) >= $nom) {
+                            if ($cp['sisa'] > $max_sisa) {
+                                $max_sisa = $cp['sisa'];
+                                $best_kd = $kd;
+                            }
+                        }
+                    }
+
+                    if ($best_kd) {
+                        // Pasangkan ke customer ini
+                        $bkt['kd_customer'] = $best_kd;
+                        $cust_sisa_pool[$best_kd]['sisa'] = max(0.0, $cust_sisa_pool[$best_kd]['sisa'] - $nom);
+                        $final_allocated_splits[] = $bkt;
+                    } else {
+                        // Tidak ada customer yang sisa kuotanya cukup untuk nominal bucket ini utuh.
+                        // Cari customer yang masih memiliki sisa kuota terbesar (> 0)
+                        $avail_kd = null;
+                        $highest_sisa = -1;
+                        foreach ($cust_sisa_pool as $kd => $cp) {
+                            if ($cp['sisa'] > $highest_sisa) {
+                                $highest_sisa = $cp['sisa'];
+                                $avail_kd = $kd;
                             }
                         }
 
-                        // Fallback: jika tidak ada yang cukup, pilih yang sisa kuotanya paling besar
-                        if (!$chosen_cust) {
-                            $best_sisa = -1;
-                            foreach ($available_customers as $cand) {
-                                $sisa_c = $cust_sisa_map[$cand['kd_customer']] ?? 0;
-                                if ($sisa_c > $best_sisa) {
-                                    $best_sisa = $sisa_c;
-                                    $chosen_cust = $cand;
+                        // Jika masih ada customer dengan sisa kuota yang layak (minimal 500rb), pecah bucket ini menjadi 2
+                        if ($avail_kd && $highest_sisa >= 500000 && count($bkt['items']) > 0) {
+                            $sub_bkt1 = [
+                                'items'               => [],
+                                'total_nominal'       => 0.0,
+                                'total_qty'           => 0.0,
+                                'parent_id_faktur'    => $bkt['parent_id_faktur'] ?? null,
+                                'parent_no_faktur'    => $bkt['parent_no_faktur'] ?? null,
+                                'tanggal_faktur'      => $bkt['tanggal_faktur'] ?? null,
+                                'tanggal_jatuh_tempo' => $bkt['tanggal_jatuh_tempo'] ?? null
+                            ];
+                            $sub_bkt2 = [
+                                'items'               => [],
+                                'total_nominal'       => 0.0,
+                                'total_qty'           => 0.0,
+                                'parent_id_faktur'    => $bkt['parent_id_faktur'] ?? null,
+                                'parent_no_faktur'    => $bkt['parent_no_faktur'] ?? null,
+                                'tanggal_faktur'      => $bkt['tanggal_faktur'] ?? null,
+                                'tanggal_jatuh_tempo' => $bkt['tanggal_jatuh_tempo'] ?? null
+                            ];
+
+                            $budget1 = $highest_sisa;
+                            foreach ($bkt['items'] as $did => $it) {
+                                $q = (float)($it['qty'] ?? 0);
+                                if ($q <= 0.0001) continue;
+                                $u_price = (float)($it['total_harga'] ?? 0) / $q;
+                                $rem_b1 = $budget1 - $sub_bkt1['total_nominal'];
+                                $fit1 = ($u_price > 0.01) ? floor($rem_b1 / $u_price) : $q;
+
+                                if ($fit1 >= $q) {
+                                    $sub_bkt1['items'][$did] = $it;
+                                    $sub_bkt1['total_nominal'] += (float)$it['total_harga'];
+                                    $sub_bkt1['total_qty']     += $q;
+                                } elseif ($fit1 > 0) {
+                                    $sub1 = round($fit1 * $u_price, 2);
+                                    $sub_bkt1['items'][$did] = [
+                                        'qty'         => $fit1,
+                                        'hrg_satuan'  => $it['hrg_satuan'],
+                                        'total_harga' => $sub1
+                                    ];
+                                    $sub_bkt1['total_nominal'] += $sub1;
+                                    $sub_bkt1['total_qty']     += $fit1;
+
+                                    $rem_q = $q - $fit1;
+                                    $sub2 = round($rem_q * $u_price, 2);
+                                    $sub_bkt2['items'][$did] = [
+                                        'qty'         => $rem_q,
+                                        'hrg_satuan'  => $it['hrg_satuan'],
+                                        'total_harga' => $sub2
+                                    ];
+                                    $sub_bkt2['total_nominal'] += $sub2;
+                                    $sub_bkt2['total_qty']     += $rem_q;
+                                } else {
+                                    $sub_bkt2['items'][$did] = $it;
+                                    $sub_bkt2['total_nominal'] += (float)$it['total_harga'];
+                                    $sub_bkt2['total_qty']     += $q;
                                 }
                             }
-                        }
 
-                        if ($chosen_cust) {
-                            $kd_chosen = $chosen_cust['kd_customer'];
-                            $bkt['kd_customer'] = $kd_chosen;
-                            $cust_sisa_map[$kd_chosen] = max(0.0, ($cust_sisa_map[$kd_chosen] ?? 0) - $bucket_nom);
+                            if (!empty($sub_bkt1['items'])) {
+                                $sub_bkt1['kd_customer'] = $avail_kd;
+                                $cust_sisa_pool[$avail_kd]['sisa'] = max(0.0, $cust_sisa_pool[$avail_kd]['sisa'] - $sub_bkt1['total_nominal']);
+                                $final_allocated_splits[] = $sub_bkt1;
+                            }
+                            if (!empty($sub_bkt2['items'])) {
+                                $buckets_queue[] = $sub_bkt2;
+                            }
+                        } else {
+                            // Jika kuota seluruh customer sudah habis, tetap masukkan bucket ini dengan customer fallback
+                            $fallback_cand = !empty($available_customers[0]['kd_customer']) ? $available_customers[0]['kd_customer'] : '';
+                            $bkt['kd_customer'] = $fallback_cand;
+                            $final_allocated_splits[] = $bkt;
                         }
                     }
                 }
-                unset($bkt);
+
+                $pre_allocated_splits = $final_allocated_splits;
+                $jumlah_pecah = count($pre_allocated_splits);
             }
         }
 
@@ -5338,6 +5440,18 @@ class C_SalesOrder extends CI_Controller
                 $fakturTotalNetto += $itemNetto;
             }
 
+            // Jika dalam satu faktur pecahan hanya berisi barang bonus/diskon 100% (netto = 0),
+            // ambil nilai total dari Faktur Z induknya agar kolom Per Faktur tetap mengikuti nilai fakturnya
+            if ($fakturTotalNetto <= 0.001 && !empty($items[0]['parent_id_faktur'])) {
+                $pNet = $this->db->select('COALESCE(SUM(qty * hrg_satuan * (1 - (disc/100)) * 0.8), 0) AS tot')
+                    ->from('tbso_faktur_detail')
+                    ->where('id_faktur', (int)$items[0]['parent_id_faktur'])
+                    ->get()->row_array();
+                if (!empty($pNet['tot']) && (float)$pNet['tot'] > 0) {
+                    $fakturTotalNetto = (float)$pNet['tot'];
+                }
+            }
+
             foreach ($items as $item) {
                 $r = $rowNum;
 
@@ -5387,10 +5501,10 @@ class C_SalesOrder extends CI_Controller
                 $sheet->setCellValue('W' . $r, $pajakPct);
                 $sheet->setCellValue('X' . $r, "=IF(V{$r}<=0,0,+V{$r}*W{$r}/100)");
                 $sheet->setCellValue('Y' . $r, "=IF(T{$r}>=1,0,(P{$r}*R{$r})-(P{$r}*R{$r}*IF(T{$r}>1,T{$r}/100,T{$r})))");
-                // Kolom Z (Per Faktur): untuk barang bonus diskon 100%, nilai per faktur adalah 0.00 (tidak menampilkan total faktur)
-                $perFakturVal = ($disc >= 100 || $discRate >= 1.0) ? 0.0 : $fakturTotalNetto;
+                // Kolom Z (Per Faktur): tetap mengikuti total nilai faktur, termasuk untuk barang bonus (diskon 100%)
+                $perFakturVal = $fakturTotalNetto;
                 $sheet->setCellValue('Z' . $r, $perFakturVal);
-                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}<=0,0,Y{$r}/0.8)");
+                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}>0,Y{$r}/0.8,Z{$r}/0.8)");
                 $sheet->setCellValue('AB' . $r, $item['ket_faktur'] ?? '');
 
                 // Alignment Data
