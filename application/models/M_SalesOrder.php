@@ -2934,7 +2934,7 @@ class M_SalesOrder extends CI_Model
             if ($tempo_calc <= 0) {
                 $tempo_calc = 30; // Default tempo distribusi Karisma ERP
             }
-            if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+            if (empty($tgl_tempo)) {
                 $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
             }
 
@@ -3132,7 +3132,7 @@ class M_SalesOrder extends CI_Model
             if ($tempo_calc <= 0) {
                 $tempo_calc = 30; // Default tempo distribusi Karisma ERP
             }
-            if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+            if (empty($tgl_tempo)) {
                 $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
             }
 
@@ -3540,7 +3540,7 @@ class M_SalesOrder extends CI_Model
                 if ($tempo_calc <= 0) {
                     $tempo_calc = 30; // Default tempo distribusi Karisma ERP
                 }
-                if (empty($tgl_tempo) || $tgl_tempo <= $tgl_faktur) {
+                if (empty($tgl_tempo)) {
                     $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
                 }
 

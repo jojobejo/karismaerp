@@ -442,7 +442,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                             }
                             $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
                             $slot_parent_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : null;
-                            if (!empty($slot_parent_jtempo) && $slot_parent_jtempo > $slot_tgl_faktur) {
+                            if (!empty($slot_parent_jtempo)) {
                                 $slot_tgl_jtempo = $slot_parent_jtempo;
                             } else {
                                 $slot_tgl_jtempo = date('Y-m-d', strtotime($slot_tgl_faktur . ' +30 days'));
