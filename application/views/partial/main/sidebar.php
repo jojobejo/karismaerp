@@ -96,8 +96,12 @@
       <?php
       $admkeuUri1 = strtolower((string)$this->uri->segment(1));
       $admkeuUri2 = strtolower((string)$this->uri->segment(2));
-      $isAdmkeuMasterBarang = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
-      $isAdmkeuPecahFaktur = !$isAdmkeuMasterBarang;
+      $admkeuUri3 = strtolower((string)$this->uri->segment(3));
+
+      $isAdmkeuMasterBarang      = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
+      $isAdmkeuPiutangCollection = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'pembayaran' && $admkeuUri3 === 'collection');
+      $isAdmkeuPembayaranFaktur  = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'pembayaran' && $admkeuUri3 !== 'collection');
+      $isAdmkeuPecahFaktur       = !$isAdmkeuMasterBarang && !$isAdmkeuPiutangCollection && !$isAdmkeuPembayaranFaktur;
       ?>
       <div class="sidebar">
         <nav class="mt-2">
@@ -112,6 +116,18 @@
               <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= $isAdmkeuMasterBarang ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-boxes"></i>
                 <p>Master Barang</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran/collection') ?>" class="nav-link <?= $isAdmkeuPiutangCollection ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>Piutang Customer</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link <?= $isAdmkeuPembayaranFaktur ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-cash-register"></i>
+                <p>Pembayaran Faktur</p>
               </a>
             </li>
             <li class="nav-item">
@@ -177,6 +193,26 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Pembayaran Supplier
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran/collection') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>
+                  Piutang Customer
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cash-register"></i>
+                <p>
+                  Pembayaran Faktur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('keuangan/buku_besar') ?>" class="nav-link">
                 <i class="nav-icon fas fa-book"></i>
                 <p>
