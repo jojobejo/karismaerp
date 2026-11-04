@@ -6,7 +6,7 @@ Tanggal: 2026-07-13
 
 SQL migration tahap awal berada di:
 
-`docs/database/accounting_jurnal_accounts_20260713.sql`
+`docs/database/accounting/accounting_jurnal_accounts_20260713.sql`
 
 ## Tabel
 

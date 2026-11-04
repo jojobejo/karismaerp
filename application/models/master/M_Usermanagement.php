@@ -172,4 +172,108 @@ class M_Usermanagement extends CI_Model
             ->where($field . ' IS NOT NULL', null, false)->where($field . ' !=', '')
             ->order_by($field, 'ASC')->get($this->table)->result_array();
     }
+
+    public function import_sql_rows($rows, $apply = false)
+    {
+        $summary = ['total' => count($rows), 'baru' => 0, 'dilewati' => 0, 'diimpor' => 0,
+            'nik_duplikat' => 0, 'departemen_kosong' => 0];
+        $seenUsernames = [];
+        $seenNiks = [];
+        $seenIds = [];
+        $prepared = [];
+        foreach ($rows as $index => $row) {
+            $number = $index + 1;
+            $username = trim((string)($row['username'] ?? ''));
+            $nik = trim((string)($row['nik'] ?? ''));
+            if ($username === '' || $nik === '') throw new RuntimeException('Baris ' . $number . ': username dan NIK wajib diisi.');
+            $usernameKey = mb_strtolower($username, 'UTF-8');
+            $nikKey = mb_strtolower($nik, 'UTF-8');
+            if (isset($seenNiks[$nikKey])) $summary['nik_duplikat']++;
+            $seenNiks[$nikKey] = true;
+            if (isset($seenUsernames[$usernameKey])) {
+                $summary['dilewati']++;
+                continue;
+            }
+            $seenUsernames[$usernameKey] = true;
+            if (!$this->unique('username', $username)) {
+                $summary['dilewati']++;
+                continue;
+            }
+            $sourceId = (string)($row['id'] ?? '');
+            if ($sourceId !== '') {
+                if (!ctype_digit($sourceId) || (int)$sourceId < 1 || isset($seenIds[$sourceId])) {
+                    throw new RuntimeException('Baris ' . $number . ': ID sumber tidak valid atau berulang.');
+                }
+                $seenIds[$sourceId] = true;
+                if ($this->db->where('id', (int)$sourceId)->count_all_results($this->table) > 0) {
+                    throw new RuntimeException('Baris ' . $number . ': ID sumber sudah dipakai akun berbeda.');
+                }
+            }
+            foreach (['nama_lngkp' => 'nama lengkap', 'bagian' => 'bagian', 'jabatan' => 'jabatan'] as $field => $label) {
+                if (trim((string)($row[$field] ?? '')) === '') throw new RuntimeException('Baris ' . $number . ': ' . $label . ' wajib diisi.');
+            }
+            $departemen = trim((string)($row['departement'] ?? $row['departemen'] ?? ''));
+            if ($departemen === '') $summary['departemen_kosong']++;
+            $level = (string)($row['level'] ?? '');
+            if (!ctype_digit($level) || (int)$level < 1) throw new RuntimeException('Baris ' . $number . ': level tidak valid.');
+            $status = (string)($row['status'] ?? '1');
+            if (!in_array($status, ['0', '1'], true)) throw new RuntimeException('Baris ' . $number . ': status tidak valid.');
+            $password = (string)($row['password'] ?? '');
+            if ($password === '') throw new RuntimeException('Baris ' . $number . ': password wajib diisi.');
+            $passwordInfo = password_get_info($password);
+            if (empty($passwordInfo['algo']) && preg_match('/^[a-f0-9]{32,128}$/i', $password)) {
+                throw new RuntimeException('Baris ' . $number . ': format hash password tidak didukung.');
+            }
+            if (empty($passwordInfo['algo']) && strlen($password) < 6) {
+                throw new RuntimeException('Baris ' . $number . ': password teks biasa minimal 6 karakter.');
+            }
+            $statusKaryawan = (string)($row['status_karyawan'] ?? 'AKTIF');
+            if (!in_array($statusKaryawan, ['AKTIF', 'NONAKTIF'], true)) {
+                throw new RuntimeException('Baris ' . $number . ': status karyawan tidak valid.');
+            }
+            $data = [
+                'username' => $username,
+                'password' => empty($passwordInfo['algo']) ? password_hash($password, PASSWORD_DEFAULT) : $password,
+                'level' => (int)$level,
+                'nama_lngkp' => trim((string)$row['nama_lngkp']),
+                'nik' => $nik,
+                'bagian' => trim((string)$row['bagian']),
+                'departement' => $departemen,
+                'jabatan' => trim((string)$row['jabatan']),
+                'atasan' => trim((string)($row['atasan'] ?? '-')) ?: '-',
+                'penilai' => trim((string)($row['penilai'] ?? '-')) ?: '-',
+                'status_karyawan' => $statusKaryawan,
+                'status' => (int)$status,
+            ];
+            if ($sourceId !== '') $data['id'] = (int)$sourceId;
+            foreach (['jobdesk_hrd', 'default_redirect'] as $field) {
+                if (isset($row[$field])) $data[$field] = trim((string)$row[$field]);
+            }
+            foreach (['last_login', 'created_at', 'updated_at'] as $field) {
+                if (!array_key_exists($field, $row)) continue;
+                $value = $row[$field];
+                if ($value !== null && !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', (string)$value)) {
+                    throw new RuntimeException('Baris ' . $number . ': format ' . $field . ' tidak valid.');
+                }
+                $data[$field] = $value;
+            }
+            $prepared[] = array_intersect_key($data, array_flip($this->fields()));
+            $summary['baru']++;
+        }
+        if (!$apply) return $summary;
+        $this->db->trans_begin();
+        foreach ($prepared as $data) {
+            if (!$this->db->insert($this->table, $data)) {
+                $this->db->trans_rollback();
+                throw new RuntimeException('Penyimpanan user gagal; seluruh impor dibatalkan.');
+            }
+            $summary['diimpor']++;
+        }
+        if (!$this->db->trans_status()) {
+            $this->db->trans_rollback();
+            throw new RuntimeException('Transaksi impor gagal; seluruh impor dibatalkan.');
+        }
+        $this->db->trans_commit();
+        return $summary;
+    }
 }

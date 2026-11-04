@@ -8,7 +8,7 @@ Dokumen ini menjelaskan penggunaan module `Jurnal` tahap awal untuk mengelola ak
 
 Dokumen user lengkap tersedia di:
 
-`docs/penggunaan-jurnal-akun-keuangan-20260713.md`
+`docs/penggunaan/accounting/penggunaan-jurnal-akun-keuangan-20260713.md`
 
 ## Akses Module
 

@@ -20,9 +20,9 @@ Status: Chart of Accounts dan runtime transaksi accounting sudah tersedia untuk 
 ## Dokumen Analisis dan UAT
 
 - `application/libraries/Accounting/docs/database-analysis.md`
-- `docs/accounting/ALUR_PENGGUNAAN_ACCOUNTING.md`
-- `docs/accounting/UAT_ACCOUNTING_MODULE.md`
-- `docs/accounting/RUNTIME_TRANSAKSI_PENUH_20260713.md`
+- `docs/penggunaan/accounting/ALUR_PENGGUNAAN_ACCOUNTING.md`
+- `docs/development/accounting/UAT_ACCOUNTING_MODULE.md`
+- `docs/development/accounting/RUNTIME_TRANSAKSI_PENUH_20260713.md`
 
 ## Scope Tahap Ini
 
@@ -50,14 +50,14 @@ Runtime transaksi yang tersedia:
 
 ## Dokumen Penggunaan Produksi
 
-- `docs/accounting/PANDUAN_PENGGUNAAN_ACCOUNTING_PRODUKSI_20260714.md`
-- `docs/accounting/STRUKTUR_DATABASE_ACCOUNTING_PRODUKSI_20260714.md`
-- `docs/accounting/UAT_ACCOUNTING_PRODUKSI_20260714.md`
-- `docs/accounting/PANDUAN_OPERASIONAL_JURNAL_20260715.md`
-- `docs/accounting/UAT_FLOW_MODULE_DAN_DATABASE_20260715.md`
-- `docs/database/accounting_hardening_20260715.sql`
-- `docs/database/sales_logistics_compatibility_20260715.sql`
-- `docs/database/accounting_uat_database_20260715.sql`
+- `docs/penggunaan/accounting/PANDUAN_PENGGUNAAN_ACCOUNTING_PRODUKSI_20260714.md`
+- `docs/database/accounting/STRUKTUR_DATABASE_ACCOUNTING_PRODUKSI_20260714.md`
+- `docs/development/accounting/UAT_ACCOUNTING_PRODUKSI_20260714.md`
+- `docs/penggunaan/accounting/PANDUAN_OPERASIONAL_JURNAL_20260715.md`
+- `docs/development/accounting/UAT_FLOW_MODULE_DAN_DATABASE_20260715.md`
+- `docs/database/accounting/accounting_hardening_20260715.sql`
+- `docs/database/purchasing-lpb/sales_logistics_compatibility_20260715.sql`
+- `docs/database/accounting/accounting_uat_database_20260715.sql`
 
 ## Tabel Luar Scope
 

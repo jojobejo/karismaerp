@@ -33,6 +33,15 @@ class M_PortalSsoClientAccounts extends CI_Model
         return count($rows) === 1 && trim((string)$rows[0]['username']) !== '' ? $rows[0] : null;
     }
 
+    public function assigned_users_for_app($appCode)
+    {
+        if (!$this->assignment_table_ready() || !$this->table_ready()) return [];
+        return $this->db->select('a.auth_source, a.user_id, c.username AS account_username')
+            ->from('tb_portal_sso_client_account_assignment a')
+            ->join($this->table . ' c', 'c.id = a.account_id AND c.app_code = a.app_code', 'inner')
+            ->where('a.app_code', $appCode)->get()->result_array();
+    }
+
     public function credentials_for_user($appCode, $authSource, $userId)
     {
         if (!$this->assignment_table_ready() || !$this->table_ready()) return null;

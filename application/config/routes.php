@@ -238,6 +238,7 @@ $route['master_customer/delete']                    = 'keuangan/C_Keuangan/maste
 // MASTER - USER MANAGEMENT
 $route['master/user-management']                    = 'master/C_Usermanagement';
 $route['master/user-management/list']               = 'master/C_Usermanagement/list';
+$route['master/user-management/import-sql']         = 'master/C_Usermanagement/import_sql';
 $route['master/user-management/detail/(:num)']      = 'master/C_Usermanagement/detail/$1';
 $route['master/user-management/save']               = 'master/C_Usermanagement/save';
 $route['master/user-management/update/(:num)']      = 'master/C_Usermanagement/update/$1';

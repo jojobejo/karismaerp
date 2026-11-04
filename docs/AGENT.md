@@ -12,7 +12,7 @@ Aplikasi menggunakan:
 
 Spesifikasi utama accounting tersedia pada:
 
-`docs/accounting/MASTER_SPEC.md`
+`docs/development/accounting/MASTER_SPECS.md`
 
 Baca file tersebut sebelum merencanakan atau mengubah kode.
 
@@ -115,8 +115,8 @@ Gunakan bentuk konsisten:
 
 Perbarui dokumentasi setelah setiap fase:
 
-* docs/accounting/TASKS.md
-* docs/accounting/DECISIONS.md
+* docs/development/accounting/TASKS.md
+* docs/development/accounting/DECISIONS.md
 * application/libraries/Accounting/docs/
 
 ## Stop conditions

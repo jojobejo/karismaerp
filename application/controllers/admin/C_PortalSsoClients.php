@@ -128,9 +128,9 @@ class C_PortalSsoClients extends CI_Controller
 
     public function index()
     {
-        if (!$this->db->table_exists('tb_portal_sso_client')) show_error('Tabel integrasi SSO belum diterapkan. Lihat docs/database/portal_sso_20261022.sql.', 500);
-        if (!$this->db->field_exists('client_secret_encrypted', 'tb_portal_sso_client')) show_error('Migration tampilan ulang secret belum diterapkan. Jalankan docs/database/portal_sso_secret_reveal_20261022.sql.', 500);
-        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal_sso_launch_uri_20261024.sql.', 500);
+        if (!$this->db->table_exists('tb_portal_sso_client')) show_error('Tabel integrasi SSO belum diterapkan. Lihat docs/database/portal/portal_sso_20261022.sql.', 500);
+        if (!$this->db->field_exists('client_secret_encrypted', 'tb_portal_sso_client')) show_error('Migration tampilan ulang secret belum diterapkan. Jalankan docs/database/portal/portal_sso_secret_reveal_20261022.sql.', 500);
+        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal/portal_sso_launch_uri_20261024.sql.', 500);
         if (!$this->session->userdata('portal_sso_admin_csrf')) $this->session->set_userdata('portal_sso_admin_csrf', bin2hex(random_bytes(32)));
         $data = [
             'page_title' => 'Registrasi Klien SSO Portal',
@@ -140,6 +140,7 @@ class C_PortalSsoClients extends CI_Controller
             'notice' => $this->session->flashdata('portal_sso_notice'),
             'secret_once' => $this->session->flashdata('portal_sso_secret_once'),
             'sso_key_configured' => $this->secret_encryption_key() !== false,
+            'selected_app_code' => (string)$this->input->get('app_code', true),
         ];
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/portal_sso_clients.php', $data);
@@ -428,7 +429,7 @@ class C_PortalSsoClients extends CI_Controller
     {
         if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
         $this->verify_form_token();
-        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal_sso_launch_uri_20261024.sql.', 500);
+        if (!$this->db->field_exists('launch_uri', 'tb_portal_sso_client')) show_error('Kolom URL peluncuran belum diterapkan. Jalankan docs/database/portal/portal_sso_launch_uri_20261024.sql.', 500);
         $appCode = strtolower(trim((string)$this->input->post('app_code', true)));
         $redirectUri = trim((string)$this->input->post('redirect_uri', true));
         $launchUri = trim((string)$this->input->post('launch_uri', true));

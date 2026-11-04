@@ -12,7 +12,7 @@
         <a href="<?= base_url('portal') ?>" class="btn btn-outline-light font-weight-bold mt-3 mt-md-0"><i class="fas fa-arrow-left mr-1"></i> Kembali ke Portal</a>
     </div>
     <?php if (!$database_ready): ?>
-        <div class="alert alert-warning"><strong>Penyimpanan belum disiapkan.</strong> Jalankan <code>docs/database/portal_app_directory_20261029.sql</code> pada database aplikasi untuk mengaktifkan penyimpanan perubahan.</div>
+        <div class="alert alert-warning"><strong>Penyimpanan belum disiapkan.</strong> Jalankan <code>docs/database/portal/portal_app_directory_20261029.sql</code> pada database aplikasi untuk mengaktifkan penyimpanan perubahan.</div>
     <?php endif ?>
     <div class="pad-panel p-3">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">

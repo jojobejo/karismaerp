@@ -4,7 +4,7 @@
 </style>
 <section class="content p-3 p-md-4 psai-page">
     <div class="psai-hero mb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center"><div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Portal SSO</div><h2 class="font-weight-bold mb-1">Akun List</h2><div style="opacity:.82">Pilih klien untuk melihat dan mengelola akun serta PIC.</div></div><a href="<?= base_url('admin/portal-sso-clients') ?>" class="btn btn-outline-light font-weight-bold mt-3 mt-md-0"><i class="fas fa-arrow-left mr-1"></i> Integrasi SSO</a></div>
-    <?php if (!$account_table_ready): ?><div class="alert alert-warning">Tabel akun klien belum tersedia. Terapkan <code>docs/database/portal_sso_client_account_20261029.sql</code>.</div><?php endif ?>
+    <?php if (!$account_table_ready): ?><div class="alert alert-warning">Tabel akun klien belum tersedia. Terapkan <code>docs/database/portal/portal_sso_client_account_20261029.sql</code>.</div><?php endif ?>
     <div class="psai-panel">
         <?php if (empty($clients)): ?><div class="text-center py-5"><div class="psai-muted mb-2"><i class="fas fa-plug fa-2x"></i></div><h6 class="font-weight-bold">Belum ada klien SSO</h6><div class="psai-muted">Daftarkan integrasi terlebih dahulu pada halaman Integrasi SSO.</div></div>
         <?php else: ?><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Klien aplikasi</th><th>Kode</th><th>Status</th><th>Jumlah akun</th><th class="text-right">Aksi</th></tr></thead><tbody>

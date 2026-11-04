@@ -6,7 +6,7 @@
         <div><div class="small text-uppercase font-weight-bold mb-1" style="letter-spacing:.12em;opacity:.72">Katalog module klien</div><h2 class="font-weight-bold mb-1">Setting Module</h2><div><?= html_escape($app['name']) ?> <span class="pm-code ml-1">(<?= html_escape($app_code) ?>)</span></div></div>
         <div class="mt-3 mt-md-0"><a href="<?= base_url($back_url) ?>" class="btn btn-outline-light font-weight-bold"><i class="fas fa-arrow-left mr-1"></i> Kembali</a></div>
     </div>
-    <?php if (!$database_ready): ?><div class="alert alert-warning">Database katalog module belum diterapkan. Jalankan <code>docs/database/portal_app_module_20261024.sql</code> sebelum menyimpan data.</div><?php endif ?>
+    <?php if (!$database_ready): ?><div class="alert alert-warning">Database katalog module belum diterapkan. Jalankan <code>docs/database/portal/portal_app_module_20261024.sql</code> sebelum menyimpan data.</div><?php endif ?>
     <div class="row">
         <div class="col-lg-4 mb-3">
             <div class="pm-panel p-3">
@@ -33,7 +33,7 @@
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3"><div><h5 class="font-weight-bold mb-1">Daftar Module</h5><div class="small pm-muted">Kelola katalog module khusus untuk <?= html_escape($app['name']) ?>.</div></div><span class="badge badge-light mt-2 mt-md-0" id="pm-count">0 module</span></div>
                 <div class="table-responsive"><table class="table table-hover pm-table mb-0"><thead class="thead-light"><tr><th>Kode</th><th>Nama Module</th><th>Route / URL</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="pm-rows"><tr><td colspan="5" class="text-center pm-muted py-4">Memuat data module…</td></tr></tbody></table></div>
             </div>
-            <div class="alert alert-info mt-3 mb-0"><strong>Akses klien:</strong> klien dapat mengelola katalognya melalui API menggunakan Basic Authentication dengan <code>app_code</code> dan secret klien. Akses hanya berlaku untuk aplikasi milik kredensial tersebut. Lihat <code>docs/development/portal-app-module-catalog-20261024.md</code>.</div>
+            <div class="alert alert-info mt-3 mb-0"><strong>Akses klien:</strong> klien dapat mengelola katalognya melalui API menggunakan Basic Authentication dengan <code>app_code</code> dan secret klien. Akses hanya berlaku untuk aplikasi milik kredensial tersebut. Lihat <code>docs/development/portal/portal-app-module-catalog-20261024.md</code>.</div>
         </div>
     </div>
 </section>

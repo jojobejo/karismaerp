@@ -715,24 +715,16 @@
             <?php foreach ($apps as $index => $app): ?>
                 <?php
                 $clientConfigured = !empty($app['client_configured']);
-                $assignmentRequired = !empty($app['account_assignment_required']);
                 $accountAssigned = !empty($app['account_assigned_by_admin']);
-                $blockedByAssignment = $assignmentRequired && !$accountAssigned;
-                $applicationReady = !empty($app['client_configured']) || (!$assignmentRequired && !empty($app['redirect_url']));
-                $canLaunch = !empty($app['redirect_url']) && !$blockedByAssignment && (!$assignmentRequired || $applicationReady);
-                $blockReason = $blockedByAssignment
-                    ? 'Akses aplikasi Anda sudah diberikan, tetapi akun kerja belum ditetapkan. Hubungi admin agar akun ditentukan sebelum Anda mulai bekerja.'
-                    : 'Aplikasi belum siap dibuka. Hubungi admin untuk menyiapkan akses aplikasi.';
-                $userInstruction = $blockedByAssignment
-                    ? 'Akses aplikasi sudah diberikan. Hubungi admin untuk menetapkan akun kerja sebelum membuka aplikasi.'
-                    : (!$applicationReady
-                        ? 'Aplikasi belum siap dibuka. Hubungi admin untuk menyiapkan aplikasi.'
-                        : ($assignmentRequired && $accountAssigned
-                            ? 'Akun kerja tersedia.'
-                            : 'Aplikasi siap digunakan. Pilih untuk melanjutkan pekerjaan.'));
+                $hasAccess = !empty($app['has_access']);
+                $cardOnline = $clientConfigured && (!empty($is_admin_user) || ($hasAccess && $accountAssigned));
+                $canLaunch = $clientConfigured && $hasAccess && $accountAssigned;
+                $blockReason = !$clientConfigured ? 'Integrasi aplikasi belum aktif. Hubungi admin.'
+                    : (!$hasAccess ? 'Akses kerja belum diberikan. Hubungi admin.' : 'Akun kerja belum ditetapkan. Hubungi admin.');
+                $userInstruction = $cardOnline ? 'Akun kerja tersedia dan integrasi aktif.' : $blockReason;
                 ?>
-                <article class="portal-card<?= !$app['redirect_url'] ? ' portal-card-not-configured' : '' ?>"
-                   style="--accent: <?= html_escape($clientConfigured ? $app['accent'] : '#94a3b8') ?>; --index: <?= (int)$index ?>;"
+                <article class="portal-card<?= !$cardOnline ? ' portal-card-not-configured' : '' ?>"
+                   style="--accent: <?= html_escape($cardOnline ? $app['accent'] : '#94a3b8') ?>; --index: <?= (int)$index ?>;"
                    aria-label="Aplikasi <?= html_escape($app['name']) ?>. <?= html_escape($userInstruction) ?>">
                     <div class="card-top">
                         <div class="portal-icon-wrap">
@@ -743,22 +735,24 @@
                     <div>
                         <h3><?= html_escape($app['name']) ?></h3>
                         <p><?= html_escape($app['description']) ?></p>
-                        <span class="app-setup-status<?= $blockedByAssignment || !$applicationReady ? ' app-setup-status-waiting' : '' ?>"><i class="fas <?= $blockedByAssignment ? 'fa-user-clock' : (!$applicationReady ? 'fa-exclamation-circle' : 'fa-check-circle') ?>" aria-hidden="true"></i><?= $blockedByAssignment ? 'Akun belum tersedia · hubungi admin' : (!$applicationReady ? 'Menunggu penyiapan admin' : ($assignmentRequired ? 'Akun kerja tersedia' : 'Aplikasi siap digunakan')) ?></span>
-                        <?php if ($assignmentRequired && $accountAssigned && !empty($app['work_account_credentials'])): ?>
+                        <span class="app-setup-status<?= $cardOnline ? '' : ' app-setup-status-waiting' ?>"><i class="fas <?= $cardOnline ? 'fa-check-circle' : 'fa-power-off' ?>" aria-hidden="true"></i><?= $cardOnline ? 'Online' : 'Offline' ?></span>
+                        <?php if (!$is_admin_user): ?><p class="app-user-instruction<?= $accountAssigned ? '' : ' app-user-instruction-waiting' ?>"><?= $accountAssigned ? 'Status akun kerja: tersedia' : 'Status akun kerja: belum tersedia' ?></p><?php endif ?>
+                        <?php if ($accountAssigned && !empty($app['work_account_credentials'])): ?>
                             <div class="work-account-credentials">
                                 <strong>Akun kerja</strong><br>
                                 <span>Username: <code><?= html_escape($app['work_account_credentials']['username']) ?></code></span><br>
                                 <span>Masuk otomatis melalui SSO tanpa password akun lokal.</span>
                             </div>
-                        <?php elseif ($assignmentRequired && $accountAssigned): ?>
+                        <?php elseif ($accountAssigned): ?>
                             <p class="app-user-instruction app-user-instruction-waiting">Hubungi admin untuk memeriksa penetapan akun kerja.</p>
                         <?php endif ?>
-                        <?php if (!$assignmentRequired || !$accountAssigned): ?><p class="app-user-instruction<?= $blockedByAssignment || !$applicationReady ? ' app-user-instruction-waiting' : '' ?>"><?= html_escape($userInstruction) ?></p><?php endif ?>
+                        <p class="app-user-instruction<?= $cardOnline ? '' : ' app-user-instruction-waiting' ?>"><?= html_escape($userInstruction) ?></p>
                     </div>
                     <div class="card-action-links">
-                        <a class="card-action<?= $canLaunch ? '' : ' portal-card-no-redirect' ?>" href="<?= html_escape($canLaunch ? $app['redirect_url'] : '#') ?>" <?= $canLaunch ? 'target="_blank" rel="noopener noreferrer"' : 'data-block-reason="' . html_escape($blockReason) . '"' ?> aria-label="<?= $assignmentRequired && $accountAssigned && $canLaunch ? 'Mulai bekerja di ' : 'Buka ' ?><?= html_escape($app['name']) ?> di tab baru">
-                            <span><?= $assignmentRequired && $accountAssigned && $canLaunch ? 'Mulai Bekerja' : 'Buka Aplikasi' ?></span><span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
+                        <a class="card-action<?= $canLaunch ? '' : ' portal-card-no-redirect' ?>" href="<?= html_escape($canLaunch ? $app['redirect_url'] : '#') ?>" <?= $canLaunch ? 'target="_blank" rel="noopener noreferrer"' : 'data-block-reason="' . html_escape($blockReason) . '"' ?> aria-label="Buka <?= html_escape($app['name']) ?>">
+                            <span><?= $canLaunch ? 'Mulai Bekerja' : 'Belum tersedia' ?></span><span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
                         </a>
+                        <?php if ($is_admin_user): ?><a class="card-action" href="<?= base_url('admin/portal-sso-clients') ?>?app_code=<?= rawurlencode($app['app_code']) ?>" aria-label="Atur URL aplikasi dan callback <?= html_escape($app['name']) ?>"><span>Atur URL aplikasi &amp; callback</span><span class="arrow-button"><i class="fas fa-cog"></i></span></a><?php endif ?>
                     </div>
                 </article>
             <?php endforeach; ?>

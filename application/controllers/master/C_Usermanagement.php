@@ -40,6 +40,10 @@ class C_Usermanagement extends CI_Controller
         $data['page_title'] = 'KARISMA ERP - User Management';
         $data['departemen_options'] = $this->users->distinct_options('departemen');
         $data['level_options'] = $this->users->distinct_options('level');
+        if (!$this->session->userdata('user_sql_import_token')) {
+            $this->session->set_userdata('user_sql_import_token', bin2hex(random_bytes(32)));
+        }
+        $data['sql_import_token'] = $this->session->userdata('user_sql_import_token');
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/master/usermanagement/index.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -129,5 +133,64 @@ class C_Usermanagement extends CI_Controller
             'level' => $this->users->distinct_options('level'),
         ];
         $this->json(true, 'OK', $data);
+    }
+
+    public function import_sql()
+    {
+        if ($this->input->method(true) !== 'POST') show_error('Metode tidak diizinkan.', 405);
+        if (!$this->session->userdata('is_admin_dashboard')
+            || strtolower(trim((string)$this->session->userdata('username'))) !== 'admin') {
+            show_error('Impor SQL hanya untuk admin Portal.', 403);
+        }
+        $expected = (string)$this->session->userdata('user_sql_import_token');
+        $provided = (string)$this->input->post('form_token', true);
+        if ($expected === '' || $provided === '' || !hash_equals($expected, $provided)) {
+            show_error('Token formulir tidak valid. Muat ulang halaman.', 403);
+        }
+        $newToken = bin2hex(random_bytes(32));
+        $this->session->set_userdata('user_sql_import_token', $newToken);
+        $mode = (string)$this->input->post('mode', true);
+        $file = $_FILES['sql_file'] ?? null;
+        if (!in_array($mode, ['preview', 'apply'], true)) {
+            return $this->json(false, 'Mode impor tidak valid.', ['form_token' => $newToken]);
+        }
+        if (!$file || (int)$file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+            return $this->json(false, 'Unggah berkas SQL yang valid.', ['form_token' => $newToken]);
+        }
+        if (strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION)) !== 'sql'
+            || (int)$file['size'] < 1 || (int)$file['size'] > 2097152) {
+            return $this->json(false, 'Berkas harus .sql dan berukuran maksimal 2 MB.', ['form_token' => $newToken]);
+        }
+        $digest = hash_file('sha256', $file['tmp_name']);
+        if ($mode === 'apply') {
+            $preview = $this->session->userdata('user_sql_import_preview');
+            if (!is_array($preview) || (int)($preview['expires'] ?? 0) < time()
+                || !hash_equals((string)($preview['digest'] ?? ''), $digest)) {
+                return $this->json(false, 'Periksa ulang berkas SQL sebelum mengimpor.', ['form_token' => $newToken]);
+            }
+        } else {
+            $this->session->unset_userdata('user_sql_import_preview');
+        }
+        try {
+            $sql = file_get_contents($file['tmp_name']);
+            if ($sql === false) throw new RuntimeException('Berkas SQL tidak dapat dibaca.');
+            $this->load->library('Tb_users_sql_parser');
+            $rows = $this->tb_users_sql_parser->parse($sql, $this->db->list_fields('tb_users'));
+            $summary = $this->users->import_sql_rows($rows, $mode === 'apply');
+            if ($mode === 'preview') {
+                $this->session->set_userdata('user_sql_import_preview', [
+                    'digest' => $digest,
+                    'expires' => time() + 600,
+                ]);
+            } else {
+                $this->session->unset_userdata('user_sql_import_preview');
+            }
+            return $this->json(true, $mode === 'preview' ? 'Pemeriksaan SQL selesai.' : 'Impor user selesai.', [
+                'form_token' => $newToken,
+                'summary' => $summary,
+            ]);
+        } catch (RuntimeException $exception) {
+            return $this->json(false, $exception->getMessage(), ['form_token' => $newToken]);
+        }
     }
 }

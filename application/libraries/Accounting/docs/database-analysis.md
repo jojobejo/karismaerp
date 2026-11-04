@@ -1,7 +1,7 @@
 # Database and Source Code Analysis - Accounting
 
 Tanggal scan: 2026-07-13  
-Acuan: `docs/accounting/MASTER_SPECS.md`  
+Acuan: `docs/development/accounting/MASTER_SPECS.md`
 Project: KARISMA ERP, CodeIgniter 3, MariaDB 10.4
 
 ## Ringkasan Status

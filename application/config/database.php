@@ -76,7 +76,7 @@ $query_builder = TRUE;
 
 // Profil Portal memakai hanya tabel akun dan tabel Portal ber-prefix.
 $portalErpProfile = getenv('KARISMA_DB_PROFILE') === 'portalerp';
-$databaseName = $portalErpProfile ? 'portalerp' : 'kiucoid_karismaerp_local';
+$databaseName = $portalErpProfile ? 'portalerp' : 'kiucoid_karismaerp_dev';
 $databasePrefix = $portalErpProfile ? 'portalerp_' : '';
 
 $db['default'] = array(

@@ -24,6 +24,9 @@
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('portal') ?>"><i class="fas fa-arrow-left me-1"></i> Kembali ke Portal</a>
                             <a class="btn btn-outline-light fw-semibold" href="<?= base_url('master/organisasi') ?>"><i class="fas fa-building me-1"></i> Setting Master Kantor</a>
                             <button class="btn btn-light fw-semibold" id="btnAdd"><i class="fas fa-user-plus me-1"></i> Tambah User</button>
+                            <?php if (strtolower(trim((string)$this->session->userdata('username'))) === 'admin'): ?>
+                            <button class="btn btn-light fw-semibold" id="btnImportSql"><i class="fas fa-file-import me-1"></i> Import SQL User</button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -85,6 +88,29 @@
     </div>
 </div>
 
+<?php if (strtolower(trim((string)$this->session->userdata('username'))) === 'admin'): ?>
+<div class="modal fade" id="modalImportSql" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="formImportSql" enctype="multipart/form-data">
+            <div class="modal-header"><h5 class="modal-title">Import SQL User</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="text-muted">Unggah dump phpMyAdmin tb_users atau file INSERT tb_users maksimal 2 MB. Periksa dahulu sebelum mengimpor. Definisi tabel pada dump hanya dibaca, tidak dijalankan.</p>
+                <input type="hidden" name="form_token" id="sqlImportToken" value="<?= html_escape($sql_import_token) ?>">
+                <input type="hidden" name="mode" id="sqlImportMode" value="preview">
+                <label class="form-label" for="sqlImportFile">Berkas SQL</label>
+                <input class="form-control" type="file" name="sql_file" id="sqlImportFile" accept=".sql" required>
+                <div class="alert alert-info mt-3 mb-0 d-none" id="sqlImportSummary"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-outline-primary" id="btnPreviewSql">Periksa SQL</button>
+                <button type="button" class="btn btn-erp" id="btnApplySql" disabled>Import User</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
@@ -97,6 +123,8 @@ $(function(){
     const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const createModal = new bootstrap.Modal(document.getElementById('modalUserCreate'));
     const editModal = new bootstrap.Modal(document.getElementById('modalUserEdit'));
+    const importElement = document.getElementById('modalImportSql');
+    const importModal = importElement ? new bootstrap.Modal(importElement) : null;
     const table = $('#tableUsers').DataTable({
         processing:true, serverSide:true, responsive:true, searchDelay:350,
         ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.level=$('#filter_level').val();d.status=$('#filter_status').val();},dataSrc:function(json){$('#userTotal').text(json.recordsTotal??0);$('#userFiltered').text(json.recordsFiltered??0);$('#userActivePage').text((json.data||[]).filter(user=>parseInt(user.status)===1).length);return json.data||[];}},
@@ -134,6 +162,36 @@ $(function(){
     $('#tableUsers').on('click','.btn-delete',function(){ const id=$(this).data('id'); Swal.fire({title:'Hapus user?',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/delete/') ?>'+id,function(res){res.status?toastr.success(res.message):toastr.error(res.message); table.ajax.reload(null,false);},'json'); }); });
     $('#tableUsers').on('click','.btn-toggle',function(){ $.post('<?= base_url('master/user-management/toggle-status/') ?>'+$(this).data('id'),function(res){res.status?toastr.success(res.message):toastr.warning(res.message); table.ajax.reload(null,false);},'json'); });
     $('#tableUsers').on('click','.btn-reset',function(){ const id=$(this).data('id'); Swal.fire({title:'Reset Password',input:'password',inputPlaceholder:'Password baru minimal 6 karakter',showCancelButton:true,confirmButtonText:'Reset'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/reset-password/') ?>'+id,{password:r.value},function(res){res.status?toastr.success(res.message):toastr.error(res.message);},'json'); }); });
+    if (importModal) {
+        const $importForm = $('#formImportSql');
+        const $importSummary = $('#sqlImportSummary');
+        function resetImportPreview(){ $('#btnApplySql').prop('disabled',true); $importSummary.addClass('d-none').text(''); }
+        $('#btnImportSql').on('click',function(){ $importForm[0].reset(); resetImportPreview(); importModal.show(); });
+        $('#sqlImportFile').on('change',resetImportPreview);
+        function sendImport(mode){
+            if (!$importForm[0].reportValidity()) return;
+            $('#sqlImportMode').val(mode);
+            const $buttons = $('#btnPreviewSql,#btnApplySql').prop('disabled',true);
+            $.ajax({
+                url:'<?= base_url('master/user-management/import-sql') ?>', type:'POST',
+                data:new FormData($importForm[0]), processData:false, contentType:false, dataType:'json',
+                success:function(res){
+                    if (res.data && res.data.form_token) $('#sqlImportToken').val(res.data.form_token);
+                    if (!res.status){toastr.error(res.message);resetImportPreview();return;}
+                    const s=res.data.summary;
+                    $importSummary.removeClass('d-none').text('Baris: '+s.total+' | Baru: '+s.baru+' | Dilewati: '+s.dilewati+' | NIK ganda: '+s.nik_duplikat+' | Departemen kosong: '+s.departemen_kosong+(mode==='apply'?' | Diimpor: '+s.diimpor:''));
+                    if(mode==='preview') $('#btnApplySql').prop('disabled',s.baru<1);
+                    else {toastr.success(res.message);table.ajax.reload(null,false);$('#btnApplySql').prop('disabled',true);}
+                },
+                error:function(){toastr.error('Impor SQL gagal diproses. Muat ulang halaman bila token telah kedaluwarsa.');resetImportPreview();},
+                complete:function(){ $('#btnPreviewSql').prop('disabled',false); }
+            });
+        }
+        $importForm.on('submit',function(e){e.preventDefault();sendImport('preview');});
+        $('#btnApplySql').on('click',function(){
+            Swal.fire({title:'Import user baru?',text:'Akun yang sudah ada tidak akan diubah.',icon:'question',showCancelButton:true,confirmButtonText:'Import'}).then(r=>{if(r.isConfirmed)sendImport('apply');});
+        });
+    }
 });
 </script>
 </body>

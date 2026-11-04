@@ -9,7 +9,7 @@
         <div class="mt-3 mt-md-0"><a href="<?= base_url('admin/portal-sso-clients/login-history') ?>" class="btn btn-outline-light font-weight-bold mr-1"><i class="fas fa-history mr-1"></i> Histori login</a><a href="<?= base_url('admin/portal-sso-clients') ?>" class="btn btn-outline-light font-weight-bold"><i class="fas fa-arrow-left mr-1"></i> Integrasi SSO</a></div>
     </div>
     <?php if ($notice): ?><div class="alert alert-info alert-dismissible fade show"><?= html_escape($notice) ?><button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div><?php endif ?>
-    <?php if (!$account_table_ready): ?><div class="alert alert-warning">Tabel akun klien belum tersedia. Terapkan <code>docs/database/portal_sso_client_account_20261029.sql</code>.</div><?php endif ?>
+    <?php if (!$account_table_ready): ?><div class="alert alert-warning">Tabel akun klien belum tersedia. Terapkan <code>docs/database/portal/portal_sso_client_account_20261029.sql</code>.</div><?php endif ?>
     <?php if (!$encryption_key_configured): ?><div class="alert alert-warning">Kunci enkripsi belum aktif. Aktifkan kunci pada halaman Integrasi SSO sebelum mengimpor atau membuka password.</div><?php endif ?>
 
     <?php if ($account_table_ready): ?>

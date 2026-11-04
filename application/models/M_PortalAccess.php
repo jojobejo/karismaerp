@@ -24,7 +24,8 @@ class M_PortalAccess extends CI_Model
         if ($this->db->table_exists('tb_portal_app_directory')) {
             foreach ($this->db->get('tb_portal_app_directory')->result_array() as $directoryApp) {
                 $code = (string)($directoryApp['app_code'] ?? '');
-                if (!isset($apps[$code])) continue;
+                if ($code === '') continue;
+                if (!isset($apps[$code])) $apps[$code] = [];
                 $apps[$code]['name'] = (string)$directoryApp['app_name'];
                 $apps[$code]['url'] = (string)$directoryApp['app_url'];
                 $apps[$code]['icon'] = (string)$directoryApp['icon'];
@@ -139,44 +140,16 @@ class M_PortalAccess extends CI_Model
     {
         $apps = $this->apps();
         $launchUrls = $this->registered_launch_urls();
-        if ($this->db->table_exists('tb_portal_app_access')) {
-            $select = ['app_code', 'is_allowed'];
-            $rows = $this->db->select(implode(',', $select))->where([
-                'auth_source' => $authSource,
-                'user_id' => (int)$userId,
-            ])->get('tb_portal_app_access')->result_array();
-            $settings = [];
-            foreach ($rows as $row) $settings[$row['app_code']] = $row;
-            foreach ($apps as $code => &$app) {
-                if (!empty($app['hidden'])) {
-                    unset($apps[$code]);
-                    continue;
-                }
-                if (isset($settings[$code]) && (int)$settings[$code]['is_allowed'] !== 1) {
-                    unset($apps[$code]);
-                    continue;
-                }
-                $app['redirect_url'] = !empty($launchUrls[$code]) ? $launchUrls[$code] : $app['url'];
-                $app['client_configured'] = !empty($launchUrls[$code]);
-            }
-            unset($app);
-        } else {
-            foreach ($apps as $code => &$app) {
-                if (!empty($app['hidden'])) {
-                    unset($apps[$code]);
-                    continue;
-                }
-                $app['redirect_url'] = !empty($launchUrls[$code]) ? $launchUrls[$code] : $app['url'];
-                $app['client_configured'] = !empty($launchUrls[$code]);
-            }
-            unset($app);
-        }
+        $isAdmin = (bool)$this->session->userdata('is_admin_dashboard');
         foreach ($apps as $code => &$app) {
-            if (empty($launchUrls[$code]) || !$this->user_can_access_app($authSource, $userId, $code)) {
+            if (!$isAdmin && (!empty($app['hidden']) || $code === 'karisma_online')) {
                 unset($apps[$code]);
                 continue;
             }
             $app['app_code'] = $code;
+            $app['redirect_url'] = !empty($launchUrls[$code]) ? $launchUrls[$code] : $app['url'];
+            $app['client_configured'] = !empty($launchUrls[$code]);
+            $app['has_access'] = $this->user_can_access_app($authSource, $userId, $code);
         }
         unset($app);
         return array_values($apps);

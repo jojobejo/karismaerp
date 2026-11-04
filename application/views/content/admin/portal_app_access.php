@@ -19,7 +19,7 @@
     </div>
     <?php if ($save_success): ?><div class="alert alert-success"><?= html_escape($save_success) ?></div><?php endif ?>
     <?php if ($save_error): ?><div class="alert alert-danger"><?= html_escape($save_error) ?></div><?php endif ?>
-    <?php if (!$this->db->table_exists('tb_portal_app_access')): ?><div class="alert alert-warning">Tabel akses belum tersedia. Terapkan <code>docs/database/portal_app_access_20261021.sql</code>.</div><?php endif ?>
+    <?php if (!$this->db->table_exists('tb_portal_app_access')): ?><div class="alert alert-warning">Tabel akses belum tersedia. Terapkan <code>docs/database/portal/portal_app_access_20261021.sql</code>.</div><?php endif ?>
     <div class="row mb-3">
         <div class="col-md-4 mb-2"><div class="pa-widget d-flex justify-content-between align-items-center"><div><div class="pa-widget-label">Aplikasi tersedia</div><div class="pa-widget-value" id="pa-total">0</div></div><div class="pa-widget-icon"><i class="fas fa-th-large"></i></div></div></div>
         <div class="col-md-4 mb-2"><div class="pa-widget d-flex justify-content-between align-items-center"><div><div class="pa-widget-label">Akses diberikan</div><div class="pa-widget-value text-success" id="pa-allowed">0</div></div><div class="pa-widget-icon" style="background:#e9f7ef;color:#21864a"><i class="fas fa-check"></i></div></div></div>

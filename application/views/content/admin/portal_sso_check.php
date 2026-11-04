@@ -14,13 +14,10 @@
                     <option value="<?= html_escape($client['app_code']) ?>" <?= $app_code === $client['app_code'] ? 'selected' : '' ?>><?= html_escape($client['app_code']) ?> — <?= (int)$client['is_enabled'] === 1 ? 'Aktif' : 'Nonaktif' ?></option>
                     <?php endforeach ?>
                 </select></div>
-                <div class="form-group"><label for="sso-check-user">Identitas Portal yang diuji</label><select class="form-control" name="subject" id="sso-check-user" required>
-                    <option value="">Pilih user</option>
-                    <?php foreach ($users as $user): $key = $user['auth_source'] . ':' . $user['id']; ?>
-                    <option value="<?= html_escape($key) ?>" <?= $subject === $key ? 'selected' : '' ?>><?= html_escape($user['display_name'] . ' / ' . $user['username'] . ' (' . $key . ')') ?></option>
-                    <?php endforeach ?>
-                </select></div>
-                <div class="form-group"><label for="sso-check-callback">Callback dari konfigurasi backend klien</label><input id="sso-check-callback" class="form-control" type="url" name="redirect_uri" maxlength="2048" value="<?= html_escape($redirect_uri) ?>" placeholder="https://klien.example/auth/sso/callback" required><small class="text-muted">Salin nilai efektif dari konfigurasi klien agar perbedaan callback dapat terdeteksi. Jangan masukkan secret.</small></div>
+                <div class="form-group"><label for="sso-check-user">Identitas Portal yang diuji</label><select class="form-control" name="subject" id="sso-check-user" required><option value="">Pilih aplikasi klien dahulu</option></select></div>
+                <div id="sso-check-warning" class="alert alert-warning" role="alert" style="display:none">Belum ada identitas Portal dengan akses dan akun kerja yang dikaitkan ke aplikasi klien ini.</div>
+                <?php if ($warning): ?><div class="alert alert-warning" role="alert"><?= html_escape($warning) ?></div><?php endif ?>
+                <div class="form-group"><label for="sso-check-callback">Callback terdaftar pada aplikasi klien</label><input id="sso-check-callback" class="form-control" type="url" value="<?= html_escape($redirect_uri) ?>" readonly><small class="text-muted">Diambil otomatis dari konfigurasi SSO aplikasi yang dipilih.</small></div>
                 <button class="btn btn-primary" type="submit">Jalankan pemeriksaan</button>
             </form>
         </div>
@@ -46,6 +43,29 @@
             <li>Pastikan dashboard terbuka tanpa password lokal, session lama diganti, menu dan data sesuai role. Cocokkan histori login klien; histori merupakan laporan klien, bukan bukti pemeriksaan semua izin modul.</li>
             <li>Uji penolakan: izin dicabut, assignment kosong, akun lokal hilang/ganda/nonaktif, role tidak sah, state salah, verifier salah, secret salah, callback berbeda, code kedaluwarsa dan code dipakai ulang. Tidak boleh terbentuk session baru.</li>
         </ol>
-        <p class="mb-0">Panduan pencatatan hasil: <code>docs/penggunaan/cek-api-klien-sso.md</code>. Portal tidak membaca database atau memeriksa implementasi modul internal klien.</p>
+        <p class="mb-0">Panduan pencatatan hasil: <code>docs/penggunaan/portal/cek-api-klien-sso.md</code>. Portal tidak membaca database atau memeriksa implementasi modul internal klien.</p>
     </div></div>
 </section>
+<script>
+(function () {
+    const clients = <?= json_encode(array_column($clients, null, 'app_code'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    const linkedUsers = <?= json_encode($linked_users, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    const selectedSubject = <?= json_encode($subject, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    const app = document.getElementById('sso-check-app');
+    const user = document.getElementById('sso-check-user');
+    const callback = document.getElementById('sso-check-callback');
+    const warning = document.getElementById('sso-check-warning');
+    function refresh() {
+        const code = app.value;
+        const options = linkedUsers[code] || [];
+        user.replaceChildren(new Option(options.length ? 'Pilih identitas Portal' : 'Belum ada identitas terkait', ''));
+        options.forEach(function (entry) { user.add(new Option(entry.label, entry.subject)); });
+        if (options.some(function (entry) { return entry.subject === selectedSubject; })) user.value = selectedSubject;
+        callback.value = clients[code] ? clients[code].redirect_uri || '' : '';
+        warning.style.display = code && !options.length ? '' : 'none';
+        user.disabled = !options.length;
+    }
+    app.addEventListener('change', refresh);
+    refresh();
+})();
+</script>

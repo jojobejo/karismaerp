@@ -17,7 +17,7 @@
     <div class="sso-panel mb-3"><div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center"><div class="mb-2 mb-md-0"><h5 class="font-weight-bold mb-1">Kunci enkripsi SSO</h5><div class="small text-muted" id="sso-encryption-status"><?= $sso_key_configured ? 'Kunci aktif. Secret klien dienkripsi menggunakan kunci server yang tersimpan.' : 'Kunci belum tersedia. Buat kunci sebelum mendaftarkan atau merotasi secret.' ?></div></div><button type="button" class="btn btn-<?= $sso_key_configured ? 'outline-secondary' : 'primary' ?>" id="sso-generate-encryption-key" data-url="<?= base_url('admin/portal-sso-clients/generate-encryption-key') ?>" <?= $sso_key_configured ? 'disabled' : '' ?>><i class="fas fa-key mr-1"></i><?= $sso_key_configured ? 'Kunci sudah aktif' : 'Buat kunci otomatis' ?></button></div><div class="small text-muted mt-2">Kunci disimpan di konfigurasi lokal server dan tidak ditampilkan. Jangan hapus atau ganti berkas kunci setelah secret dibuat.</div></div>
     <div class="sso-panel mb-3"><div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="font-weight-bold mb-1">Daftarkan klien</h5><div class="small text-muted">URL peluncuran membuka aplikasi. Callback HTTPS hanya digunakan untuk respons SSO.</div></div><i class="fas fa-shield-alt text-info fa-lg"></i></div>
         <form id="sso-client-form" method="post" action="<?= base_url('admin/portal-sso-clients/save') ?>"><input type="hidden" name="form_token" value="<?= html_escape($form_token) ?>"><div class="form-row align-items-end">
-            <div class="form-group col-md-3"><label for="app-code" class="font-weight-bold">app_code</label><input class="form-control sso-form-control" id="app-code" name="app_code" type="text" minlength="2" maxlength="50" pattern="[A-Za-z0-9][A-Za-z0-9_-]{1,49}" placeholder="contoh: kiu_po" required><small class="text-muted">2–50 karakter huruf kecil: huruf, angka, _ atau -.</small></div>
+            <div class="form-group col-md-3"><label for="app-code" class="font-weight-bold">Aplikasi / app_code</label><select class="form-control sso-form-control" id="app-code" name="app_code" required><option value="">Pilih aplikasi</option><?php foreach ($apps as $code => $app): ?><option value="<?= html_escape($code) ?>"><?= html_escape($app['name']) ?> (<?= html_escape($code) ?>)</option><?php endforeach ?></select><small class="text-muted">Kode mengikuti daftar aplikasi.</small></div>
             <div class="form-group col-md-4"><label for="launch-uri" class="font-weight-bold">URL peluncuran</label><input class="form-control sso-form-control" id="launch-uri" name="launch_uri" type="url" placeholder="https://aplikasi.example/" required></div>
             <div class="form-group col-md-3"><label for="redirect-uri" class="font-weight-bold">URL callback</label><input class="form-control sso-form-control" id="redirect-uri" name="redirect_uri" type="url" placeholder="https://aplikasi.example/sso/callback" required></div>
             <div class="form-group col-md-2"><button class="btn btn-primary btn-block" type="submit" id="sso-save"><i class="fas fa-save mr-1"></i> Simpan</button><button class="btn btn-light btn-block mt-1" type="button" id="sso-cancel-edit" style="display:none">Batal edit</button></div>
@@ -44,6 +44,7 @@
 $(function(){
     const apps=<?= json_encode($apps, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     const base=<?= json_encode(base_url('admin/portal-sso-clients')) ?>;
+    const selectedAppCode=<?= json_encode($selected_app_code, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     const esc=value=>$('<div>').text(String(value??'')).html();
     function updateStats(){const rows=$('#sso-table tbody tr.sso-client-row'),active=rows.filter('[data-status="1"]').length;$('#sso-total').text(rows.length);$('#sso-active').text(active);$('#sso-disabled').text(rows.length-active);}
     function refreshFilter(){const query=$('#sso-search').val().toLowerCase(),status=$('#sso-filter').val();$('#sso-table tbody tr.sso-client-row').each(function(){const matchesText=$(this).text().toLowerCase().includes(query),matchesStatus=status==='all'||String($(this).attr('data-status'))===status;$(this).toggle(matchesText&&matchesStatus);});}
@@ -68,5 +69,10 @@ $(function(){
     $('#sso-key-copy').on('click',function(){const secret=$('#sso-key-result').text();if(navigator.clipboard)navigator.clipboard.writeText(secret).then(()=>toastr.success('Secret disalin.')).catch(()=>toastr.error('Gagal menyalin secret.'));else toastr.error('Clipboard tidak tersedia pada browser ini.');});
     $('#sso-key-modal').on('hidden.bs.modal',function(){$('#sso-key-result').text('').hide();$('#sso-key-pin').val('');});
     updateStats();
+    if(selectedAppCode && Object.prototype.hasOwnProperty.call(apps,selectedAppCode)){
+        const row=$('#sso-table tbody tr.sso-client-row').filter(function(){return $(this).attr('data-app-code')===selectedAppCode;});
+        if(row.length)row.find('.sso-edit').trigger('click');
+        else $('#app-code').val(selectedAppCode);
+    }
 });
 </script>

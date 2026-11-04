@@ -78,7 +78,7 @@ class C_PortalAppDirectory extends CI_Controller
             && !isset($urlParts['user'])
             && !isset($urlParts['pass']);
 
-        if (!$this->directory->available()) return $this->respond(false, 'Tabel katalog belum tersedia. Terapkan docs/database/portal_app_directory_20261029.sql.', ['form_token' => $newToken]);
+        if (!$this->directory->available()) return $this->respond(false, 'Tabel katalog belum tersedia. Terapkan docs/database/portal/portal_app_directory_20261029.sql.', ['form_token' => $newToken]);
         if ($name === '' || mb_strlen($name, 'UTF-8') > 150) return $this->respond(false, 'Judul wajib diisi dan maksimal 150 karakter.', ['form_token' => $newToken]);
         if (!$validHttpsUrl || mb_strlen($url, 'UTF-8') > 500) return $this->respond(false, 'URL wajib berupa alamat HTTPS yang valid, maksimal 500 karakter.', ['form_token' => $newToken]);
         if (mb_strlen($description, 'UTF-8') > 2000) return $this->respond(false, 'Deskripsi maksimal 2.000 karakter.', ['form_token' => $newToken]);

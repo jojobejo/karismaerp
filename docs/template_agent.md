@@ -1,10 +1,10 @@
 Baca:
 
 * `AGENTS.md`
-* `docs/accounting/MASTER_SPEC.md`
-* `docs/accounting/AUDIT_RESULT.md`
-* `docs/accounting/TASKS.md`
-* `docs/accounting/DECISIONS.md`
+* `docs/development/accounting/MASTER_SPECS.md`
+* `docs/development/accounting/AUDIT_RESULT.md`
+* `docs/development/accounting/TASKS.md`
+* `docs/development/accounting/DECISIONS.md`
 
 Kerjakan hanya:
 

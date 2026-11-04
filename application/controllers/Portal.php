@@ -23,13 +23,9 @@ class Portal extends CI_Controller
         $apps = $this->portalAccess->apps_for_user($authSource, $userId);
         foreach ($apps as &$app) {
             $appCode = (string)$app['app_code'];
-            $app['account_assignment_required'] = $this->clientAccounts->requires_assignment($appCode);
-            $app['account_assigned_by_admin'] = $app['account_assignment_required']
-                && $this->clientAccounts->assignment_table_ready()
-                && (bool)$this->clientAccounts->assignment_for_user($appCode, $authSource, $userId);
-            $app['work_account_credentials'] = $app['account_assigned_by_admin']
-                ? $this->clientAccounts->assignment_for_user($appCode, $authSource, $userId)
-                : null;
+            $assignment = $this->clientAccounts->assignment_for_user($appCode, $authSource, $userId);
+            $app['account_assigned_by_admin'] = (bool)$assignment;
+            $app['work_account_credentials'] = $assignment;
         }
         unset($app);
 
@@ -37,7 +33,7 @@ class Portal extends CI_Controller
             'apps' => $apps,
             'app_count' => count($apps),
             'user_name' => trim((string)($this->session->userdata('nama_user') ?: $this->session->userdata('nama') ?: $this->session->userdata('username'))),
-            'is_admin_user' => strtolower(trim((string)$this->session->userdata('username'))) === 'admin',
+            'is_admin_user' => (bool)$this->session->userdata('is_admin_dashboard'),
         ];
 
         $this->load->view('portal/index', $data);
