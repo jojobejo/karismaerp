@@ -203,6 +203,12 @@ $route['keuangan/pembayaran/simpan/(:any)']         = 'keuangan/C_pembayaran/sim
 $route['keuangan/pembayaran/cair/(:any)']           = 'keuangan/C_pembayaran/cair/$1';
 $route['keuangan/pembayaran/ajax_unpost_pembayaran'] = 'keuangan/C_pembayaran/ajax_unpost_pembayaran';
 $route['keuangan/pembayaran/ajax_post_pembayaran']   = 'keuangan/C_pembayaran/ajax_post_pembayaran';
+
+// REPORT JURNAL TRANSAKSI
+$route['keuangan/report_jurnal']              = 'keuangan/C_ReportJurnal/index';
+$route['keuangan/report_jurnal/data']         = 'keuangan/C_ReportJurnal/get_data_json';
+$route['keuangan/report_jurnal/export_excel'] = 'keuangan/C_ReportJurnal/export_excel';
+$route['keuangan/report_jurnal/export_csv']   = 'keuangan/C_ReportJurnal/export_csv';
 $route['keuangan/pembayaran/ajax_delete_pembayaran'] = 'keuangan/C_pembayaran/ajax_delete_pembayaran';
 $route['keuangan/pembayaran/print_bukti/(:any)']     = 'keuangan/C_pembayaran/print_bukti/$1';
 $route['keuangan/pembayaran/print_bukti']            = 'keuangan/C_pembayaran/print_bukti';

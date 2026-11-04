@@ -190,7 +190,7 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
 
                 <form action="<?= base_url('sales_order/simpan_split_faktur_batch') ?>" method="post" id="formBatchSplit">
                     <!-- Hidden Parent IDs -->
-                    <input type="hidden" name="pakai_potongan_20" value="<?= !empty($pakai_potongan_20) ? 1 : 0 ?>">
+                    <input type="hidden" name="pakai_potongan_20" value="<?= htmlspecialchars((string)($pakai_potongan_20 ?? '20')) ?>">
                     <?php foreach ($parent_fakturs as $pid => $pf): ?>
                         <input type="hidden" name="parent_ids[]" value="<?= (int)$pid ?>">
                     <?php endforeach; ?>
@@ -370,22 +370,28 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                             <div class="d-flex justify-content-between align-items-center flex-wrap w-100">
                                 <div class="my-1">
                                     <?php 
-                                    $use_potongan = (!isset($pakai_potongan_20) || !empty($pakai_potongan_20));
-                                    $disc_factor = $use_potongan ? 0.8 : 1.0;
+                                    $pot_val = isset($pakai_potongan_20) ? (string)$pakai_potongan_20 : '20';
+                                    if ($pot_val === '40') {
+                                        $disc_factor = 0.6;
+                                        $pot_badge_class = 'badge-danger text-white';
+                                        $pot_badge_label = '<i class="fas fa-tag mr-1"></i> Potongan Faktur H: 40% (Netto Rp ' . number_format($total_induk_nilai * 0.6, 0, ',', '.') . ')';
+                                    } elseif ($pot_val === '0') {
+                                        $disc_factor = 1.0;
+                                        $pot_badge_class = 'badge-primary text-white';
+                                        $pot_badge_label = '<i class="fas fa-check-circle mr-1"></i> Tanpa Potongan (Harga Normal 100% - Rp ' . number_format($total_induk_nilai, 0, ',', '.') . ')';
+                                    } else {
+                                        $disc_factor = 0.8;
+                                        $pot_badge_class = 'badge-warning text-dark';
+                                        $pot_badge_label = '<i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp ' . number_format($total_induk_nilai * 0.8, 0, ',', '.') . ')';
+                                    }
                                     $total_netto_display = $total_induk_nilai * $disc_factor;
                                     ?>
                                     <span class="text-muted small">Total Nilai Faktur Induk:</span>
                                     <strong class="text-primary ml-1" style="font-size: 15px;">Rp <?= number_format($total_induk_nilai, 0, ',', '.') ?></strong>
                                     <span class="mx-2 text-muted">&bull;</span>
-                                    <?php if ($use_potongan): ?>
-                                        <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11.5px;" title="Harga barang pada Faktur H terdiskon 20%">
-                                            <i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp <?= number_format($total_netto_display, 0, ',', '.') ?>)
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge badge-primary text-white font-weight-bold" style="font-size: 11.5px;" title="Harga barang pada Faktur H tanpa potongan (100%)">
-                                            <i class="fas fa-check-circle mr-1"></i> Tanpa Potongan (Harga Normal 100% - Rp <?= number_format($total_netto_display, 0, ',', '.') ?>)
-                                        </span>
-                                    <?php endif; ?>
+                                    <span class="badge <?= $pot_badge_class ?> font-weight-bold" style="font-size: 11.5px;">
+                                        <?= $pot_badge_label ?>
+                                    </span>
                                     <span class="mx-2 text-muted">&bull;</span>
                                     <span class="badge badge-info font-weight-bold" style="font-size: 11.5px;">
                                         <i class="fas fa-boxes mr-1"></i> Total Kuantitas: <?= number_format($total_pool_qty) ?> pcs
@@ -570,7 +576,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         <tr>
                                                             <th>Barang & Sumber</th>
                                                             <th width="80" class="text-right">Qty (Pcs)</th>
-                                                            <th width="115" class="text-right">Harga (Disc 20%)</th>
+                                                            <th width="115" class="text-right">Harga (<?= ($pot_val === '40') ? 'Disc 40%' : (($pot_val === '0') ? 'Normal' : 'Disc 20%') ?>)</th>
                                                             <th width="90" class="text-right">Subtotal</th>
                                                         </tr>
                                                     </thead>
@@ -623,11 +629,14 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                                 <td class="text-right align-middle p-1 text-muted font-weight-bold" style="font-size: 11px;">
                                                                     <span class="text-success font-weight-bold">Rp <?= number_format($default_hrg, 0, ',', '.') ?></span>
                                                                     <br>
-                                                                    <?php if ($use_potongan): ?>
+                                                                    <?php if ($pot_val === '40'): ?>
                                                                         <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
-                                                                        <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-20%</span>
-                                                                    <?php else: ?>
+                                                                        <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-40%</span>
+                                                                    <?php elseif ($pot_val === '0'): ?>
                                                                         <span class="badge badge-primary px-1 py-0" style="font-size: 8.5px;">100%</span>
+                                                                    <?php else: ?>
+                                                                        <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                                        <span class="badge badge-warning text-dark px-1 py-0" style="font-size: 8.5px;">-20%</span>
                                                                     <?php endif; ?>
                                                                     <input type="hidden" 
                                                                            name="splits[<?= $slot_idx ?>][items][<?= $d_id ?>][hrg_satuan]" 
@@ -786,7 +795,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <tr>
                                     <th>Barang & Sumber</th>
                                     <th width="80" class="text-right">Qty (Pcs)</th>
-                                    <th width="115" class="text-right">Harga (Disc 20%)</th>
+                                    <th width="115" class="text-right">Harga (<?= ($pot_val === '40') ? 'Disc 40%' : (($pot_val === '0') ? 'Normal' : 'Disc 20%') ?>)</th>
                                     <th width="90" class="text-right">Subtotal</th>
                                 </tr>
                             </thead>
@@ -794,7 +803,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <?php foreach ($pool_items as $d_id => $it): ?>
                                     <?php 
                                     $hrg_asli = (float)$it['hrg_satuan'];
-                                    $default_hrg = round($hrg_asli * 0.8, 2);
+                                    $default_hrg = round($hrg_asli * $disc_factor, 2);
                                     $default_disc = (float)($it['disc'] ?? 0);
                                     $default_pajak = (float)($it['pajak'] ?? 0);
                                     ?>
@@ -821,8 +830,15 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                         <td class="text-right align-middle p-1 text-muted font-weight-bold" style="font-size: 11px;">
                                             <span class="text-success font-weight-bold">Rp <?= number_format($default_hrg, 0, ',', '.') ?></span>
                                             <br>
-                                            <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
-                                            <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                            <?php if ($pot_val === '40'): ?>
+                                                <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-40%</span>
+                                            <?php elseif ($pot_val === '0'): ?>
+                                                <span class="badge badge-primary px-1 py-0" style="font-size: 8.5px;">100%</span>
+                                            <?php else: ?>
+                                                <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                <span class="badge badge-warning text-dark px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                            <?php endif; ?>
                                             <input type="hidden" 
                                                    name="splits[{{IDX}}][items][<?= $d_id ?>][hrg_satuan]" 
                                                    class="input-hrg-split input-calc" 

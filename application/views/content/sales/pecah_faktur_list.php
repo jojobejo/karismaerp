@@ -744,13 +744,19 @@
                                     <i class="fas fa-percentage text-warning mr-1"></i> Skema Potongan Harga:
                                 </label>
                                 <div class="custom-control custom-radio mb-1">
-                                    <input type="radio" id="listPotongan20" name="pakai_potongan_20" class="custom-control-input" value="1" checked>
+                                    <input type="radio" id="listPotongan20" name="pakai_potongan_20" class="custom-control-input radio-potongan-list" value="20" checked>
                                     <label class="custom-control-label font-weight-bold text-dark small" for="listPotongan20" style="cursor:pointer;">
                                         Pakai Potongan 20% <span class="badge badge-success ml-1">Standar Netto (80%)</span>
                                     </label>
                                 </div>
+                                <div class="custom-control custom-radio mb-1">
+                                    <input type="radio" id="listPotongan40" name="pakai_potongan_20" class="custom-control-input radio-potongan-list" value="40">
+                                    <label class="custom-control-label font-weight-bold text-dark small" for="listPotongan40" style="cursor:pointer;">
+                                        Pakai Potongan 40% <span class="badge badge-warning text-dark ml-1">Netto (60%) - Tax & Fee</span>
+                                    </label>
+                                </div>
                                 <div class="custom-control custom-radio">
-                                    <input type="radio" id="listPotongan0" name="pakai_potongan_20" class="custom-control-input" value="0">
+                                    <input type="radio" id="listPotongan0" name="pakai_potongan_20" class="custom-control-input radio-potongan-list" value="0">
                                     <label class="custom-control-label font-weight-bold text-dark small" for="listPotongan0" style="cursor:pointer;">
                                         Tanpa Potongan (100% Penuh) <span class="badge badge-secondary ml-1">Harga Utuh</span>
                                     </label>
@@ -1028,6 +1034,58 @@ window.currentModalTotalNilai       = 0;
 window.currentModalTotalNominalAwal = 0;
 window.currentModalTotalQty         = 0;
 
+function getListSkemaPotonganVal() {
+    var r40 = document.getElementById("listPotongan40");
+    if (r40 && r40.checked) return 40;
+    var r0 = document.getElementById("listPotongan0");
+    if (r0 && r0.checked) return 0;
+    return 20;
+}
+
+function recalculateListModalValues() {
+    var skema = getListSkemaPotonganVal();
+    var nominalAwal = window.currentModalTotalNominalAwal || 0;
+    var factor = (skema === 40) ? 0.6 : ((skema === 0) ? 1.0 : 0.8);
+    var totalNilai = Math.round(nominalAwal * factor);
+    var potongan = nominalAwal - totalNilai;
+
+    window.currentModalTotalNilai = totalNilai;
+
+    var totalBadgeEl = document.getElementById("modalTotalNilaiBadge");
+    var nomPotonganEl = document.getElementById("modalNominalPotongan");
+    var nomNettoEl = document.getElementById("modalNominalNetto");
+    var recTextEl = document.getElementById("modalRecommendationText");
+
+    if (totalBadgeEl) totalBadgeEl.innerText = "Netto: " + formatRupiahJs(totalNilai);
+    if (nomNettoEl) nomNettoEl.innerText = formatRupiahJs(totalNilai);
+
+    if (nomPotonganEl) {
+        if (skema === 40) {
+            nomPotonganEl.innerText = "- " + formatRupiahJs(potongan) + " (40% - Tax & Fee)";
+            nomPotonganEl.className = "font-weight-bold text-danger";
+        } else if (skema === 20) {
+            nomPotonganEl.innerText = "- " + formatRupiahJs(potongan) + " (20%)";
+            nomPotonganEl.className = "font-weight-bold text-danger";
+        } else {
+            nomPotonganEl.innerText = "Rp 0 (0% - Tanpa Potongan)";
+            nomPotonganEl.className = "font-weight-bold text-muted";
+        }
+    }
+
+    if (recTextEl) {
+        var labelPot = (skema === 40) ? "potongan 40% (Tax & Fee)" : ((skema === 20) ? "potongan 20%" : "tanpa potongan");
+        recTextEl.innerHTML = "Faktur awal senilai <strong>" + formatRupiahJs(nominalAwal) + "</strong> menggunakan " + labelPot + " (-" + formatRupiahJs(potongan) + ") menjadi <strong>" + formatRupiahJs(totalNilai) + "</strong>. Kuantitas total <strong>" + (window.currentModalTotalQty || 0).toLocaleString("id-ID") + " pcs</strong> akan didistribusikan ke faktur pecahan (Kode Awalan H).";
+    }
+
+    var inputPecah = document.getElementById("inputJumlahPecah");
+    if (inputPecah) {
+        var defaultPecah = Math.max(1, Math.ceil(totalNilai / 25000000));
+        inputPecah.value = defaultPecah;
+    }
+
+    updateModalEstimasi();
+}
+
 function updateModalEstimasi() {
     var inputEl = document.getElementById('inputJumlahPecah');
     var estQtyEl = document.getElementById('modalEstimasiQty');
@@ -1164,6 +1222,16 @@ document.addEventListener('click', function(e) {
 });
 
 // Setup DataTables secara aman
+// Listener radio potongan pada modal daftar faktur
+document.addEventListener("DOMContentLoaded", function() {
+    var radios = document.querySelectorAll(".radio-potongan-list");
+    radios.forEach(function(r) {
+        r.addEventListener("change", function() {
+            recalculateListModalValues();
+        });
+    });
+});
+
 function setupDataTablesFaktur() {
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
         var $ = window.jQuery;

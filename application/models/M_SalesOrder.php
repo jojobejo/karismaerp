@@ -2862,9 +2862,11 @@ class M_SalesOrder extends CI_Model
         return $rows;
     }
 
-    public function proses_split_faktur($parent_faktur, $parent_details, $splits, $username)
+    public function proses_split_faktur($parent_faktur, $parent_details, $splits, $username, $skema_potongan = 20)
     {
         $this->ensure_faktur_z_pecah_tables();
+        $skema_potongan = ((int)$skema_potongan === 40) ? 40 : (((int)$skema_potongan === 0) ? 0 : 20);
+        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
         $this->db->trans_start();
 
         // 1. Update parent faktur: tandai telah dipecah jika seluruh kuantitasnya telah teralokasi
@@ -2955,6 +2957,7 @@ class M_SalesOrder extends CI_Model
                 'tempo'               => $tempo_calc,
                 'catatan'             => 'Pecahan dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
                 'status'              => 'confirmed',
+                'skema_potongan'      => $skema_potongan,
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
                 'total_tonase'        => 0,
@@ -2976,8 +2979,8 @@ class M_SalesOrder extends CI_Model
                     $qty_box = floor($qty_allocated / $isi);
                     $qty_satuan = fmod($qty_allocated, $isi);
 
-                    // Harga satuan pada Faktur Pecahan H terpotong 20% dari harga Faktur Z induk
-                    $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * 0.8, 2);
+                    // Harga satuan pada Faktur Pecahan H sesuai skema potongan yang dipilih
+                    $hrg_satuan_pecah     = round((float)$pd['hrg_satuan'] * $disc_factor, 2);
                     $subtotal_before_disc = $qty_allocated * $hrg_satuan_pecah;
                     $subtotal_after_disc  = $subtotal_before_disc * (1 - ((float)($pd['disc'] ?? 0) / 100));
                     $tax_rate             = (float)($pd['pajak'] ?? 0);
@@ -3052,9 +3055,11 @@ class M_SalesOrder extends CI_Model
      * @param string $username Username pemroses
      * @return array Status proses [success => bool, total_created => int, message => string]
      */
-    public function proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username)
+    public function proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username, $skema_potongan = 20)
     {
         $this->ensure_faktur_z_pecah_tables();
+        $skema_potongan = ((int)$skema_potongan === 40) ? 40 : (((int)$skema_potongan === 0) ? 0 : 20);
+        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
         $this->db->trans_start();
 
         $this->load->model('M_ActivityLog');
@@ -3153,6 +3158,7 @@ class M_SalesOrder extends CI_Model
                 'tempo'               => $tempo_calc,
                 'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_full . "\n" . trim((string)($s['catatan'] ?? '')),
                 'status'              => 'confirmed',
+                'skema_potongan'      => $skema_potongan,
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
                 'total_tonase'        => 0,
@@ -3182,10 +3188,10 @@ class M_SalesOrder extends CI_Model
                 $qty_box = floor($qty_allocated / $isi);
                 $qty_satuan = fmod($qty_allocated, $isi);
 
-                // Harga satuan pada faktur pecahan H terpotong 20% dari harga Faktur Z induk
+                // Harga satuan pada faktur pecahan H sesuai skema potongan yang dipilih
                 $hrg_satuan = isset($it['hrg_satuan']) && is_numeric($it['hrg_satuan'])
                     ? (float)$it['hrg_satuan']
-                    : round((float)$pd['hrg_satuan'] * 0.8, 2);
+                    : round((float)$pd['hrg_satuan'] * $disc_factor, 2);
 
                 $disc = isset($it['disc']) && is_numeric($it['disc'])
                     ? (float)$it['disc']
@@ -3312,7 +3318,7 @@ class M_SalesOrder extends CI_Model
      * @param string $username Username pemroses
      * @return array Hasil pemrosesan
      */
-    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system', $pakai_potongan_20 = true)
+    public function auto_split_faktur_kios($kd_customer, $max_nominal_per_faktur = 25000000, $username = 'system', $pakai_potongan_20 = 20)
     {
         $this->ensure_customer_acak_table();
         $this->ensure_faktur_z_pecah_tables();
@@ -3322,7 +3328,16 @@ class M_SalesOrder extends CI_Model
             $max_nominal_per_faktur = 25000000;
         }
 
-        $disc_factor = $pakai_potongan_20 ? 0.8 : 1.0;
+        if ((string)$pakai_potongan_20 === '40' || (int)$pakai_potongan_20 === 40) {
+            $skema_potongan = 40;
+            $disc_factor = 0.6;
+        } elseif ((string)$pakai_potongan_20 === '0' || $pakai_potongan_20 === false || (int)$pakai_potongan_20 === 0) {
+            $skema_potongan = 0;
+            $disc_factor = 1.0;
+        } else {
+            $skema_potongan = 20;
+            $disc_factor = 0.8;
+        }
 
         // 1. Ambil data customer induk
         $customer = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
@@ -3561,6 +3576,7 @@ class M_SalesOrder extends CI_Model
                     'tempo'               => $tempo_calc,
                     'catatan'             => 'Pecahan Otomatis dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
                     'status'              => 'confirmed',
+                    'skema_potongan'      => $skema_potongan,
                     'create_by'           => $username,
                     'create_at'           => date('Y-m-d H:i:s'),
                     'total_tonase'        => 0,

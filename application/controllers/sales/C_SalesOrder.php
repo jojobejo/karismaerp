@@ -3717,8 +3717,9 @@ class C_SalesOrder extends CI_Controller
         }
 
         $username = $this->_getUsername();
-        $pakai_potongan_20 = ($this->input->post('pakai_potongan_20') !== '0');
-        $result = $this->M_SalesOrder->auto_split_faktur_kios($kd_customer, $max_nominal, $username, $pakai_potongan_20);
+        $raw_pot = $this->input->post('pakai_potongan_20');
+        $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
+        $result = $this->M_SalesOrder->auto_split_faktur_kios($kd_customer, $max_nominal, $username, $skema_potongan);
 
         if (!empty($result['success'])) {
             $this->session->set_flashdata('success', 
@@ -4157,8 +4158,9 @@ class C_SalesOrder extends CI_Controller
         $max_plafon = (float)($this->input->post('max_nominal') ?: $this->input->get('max_nominal') ?: 25000000);
         if ($max_plafon <= 0) $max_plafon = 25000000;
 
-        $pakai_potongan_20 = ($this->input->post('pakai_potongan_20') !== '0' && $this->input->get('pakai_potongan_20') !== '0');
-        $disc_factor = $pakai_potongan_20 ? 0.8 : 1.0;
+        $raw_pot = $this->input->post('pakai_potongan_20') ?: $this->input->get('pakai_potongan_20');
+        $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
+        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
 
         if ($should_auto_prefill) {
             $contact_idx = 0;
@@ -4445,7 +4447,7 @@ class C_SalesOrder extends CI_Controller
         $data['pre_allocated_splits'] = $pre_allocated_splits;
         $data['is_auto_prefilled']     = $is_auto_prefilled;
         $data['max_plafon']           = $max_plafon;
-        $data['pakai_potongan_20']    = $pakai_potongan_20 ? 1 : 0;
+        $data['pakai_potongan_20']    = $skema_potongan;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_split_batch_form.php', $data);
@@ -4544,8 +4546,9 @@ class C_SalesOrder extends CI_Controller
             }
         }
 
-        $pakai_potongan_20 = ($this->input->post('pakai_potongan_20') !== '0');
-        $disc_factor = $pakai_potongan_20 ? 0.8 : 1.0;
+        $raw_pot = $this->input->post('pakai_potongan_20');
+        $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
+        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
 
         foreach ($splits as $s_idx => $s) {
             $kd_cust = trim((string)($s['kd_customer'] ?? ''));
@@ -4613,7 +4616,7 @@ class C_SalesOrder extends CI_Controller
 
         $username = $this->_getUsername();
         try {
-            $result = $this->M_SalesOrder->proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username);
+            $result = $this->M_SalesOrder->proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username, $skema_potongan);
         } catch (\Throwable $e) {
             $this->session->set_flashdata('error', 'Terjadi kesalahan saat memproses pemecahan faktur: ' . htmlspecialchars($e->getMessage()));
             redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));

@@ -558,11 +558,18 @@
                                     <i class="fas fa-percentage text-warning mr-1"></i> Skema Potongan Harga:
                                 </label>
                                 <div class="custom-control custom-radio mb-2">
-                                    <input type="radio" id="autoPotongan20" name="pakai_potongan_20" class="custom-control-input" value="1" checked>
+                                    <input type="radio" id="autoPotongan20" name="pakai_potongan_20" class="custom-control-input" value="20" checked>
                                     <label class="custom-control-label font-weight-bold text-dark" for="autoPotongan20" style="cursor:pointer;">
                                         Pakai Potongan 20% <span class="badge badge-success ml-1">Standar Netto (80%)</span>
                                     </label>
                                     <small class="form-text text-muted pl-4">Harga satuan barang dipotong 20% untuk faktur pecahan H.</small>
+                                </div>
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="autoPotongan40" name="pakai_potongan_20" class="custom-control-input" value="40">
+                                    <label class="custom-control-label font-weight-bold text-dark" for="autoPotongan40" style="cursor:pointer;">
+                                        Pakai Potongan 40% <span class="badge badge-warning text-dark ml-1">Netto (60%) - Tax & Fee</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang dipotong 40% (20% Tax + 20% Fee Petugas) untuk faktur pecahan H.</small>
                                 </div>
                                 <div class="custom-control custom-radio">
                                     <input type="radio" id="autoPotongan0" name="pakai_potongan_20" class="custom-control-input" value="0">
@@ -638,11 +645,18 @@
                                     <i class="fas fa-percentage text-warning mr-1"></i> Skema Potongan Harga:
                                 </label>
                                 <div class="custom-control custom-radio mb-2">
-                                    <input type="radio" id="batchPotongan20" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="1" checked>
+                                    <input type="radio" id="batchPotongan20" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="20" checked>
                                     <label class="custom-control-label font-weight-bold text-dark" for="batchPotongan20" style="cursor:pointer;">
                                         Pakai Potongan 20% <span class="badge badge-success ml-1">Standar Netto (80%)</span>
                                     </label>
                                     <small class="form-text text-muted pl-4">Harga satuan barang dipotong 20% pada faktur pecahan H.</small>
+                                </div>
+                                <div class="custom-control custom-radio mb-2">
+                                    <input type="radio" id="batchPotongan40" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="40">
+                                    <label class="custom-control-label font-weight-bold text-dark" for="batchPotongan40" style="cursor:pointer;">
+                                        Pakai Potongan 40% <span class="badge badge-warning text-dark ml-1">Netto (60%) - Tax & Fee</span>
+                                    </label>
+                                    <small class="form-text text-muted pl-4">Harga satuan barang dipotong 40% (20% Tax + 20% Fee Petugas) pada faktur pecahan H.</small>
                                 </div>
                                 <div class="custom-control custom-radio">
                                     <input type="radio" id="batchPotongan0" name="pakai_potongan_20" class="custom-control-input radio-potongan-batch" value="0">
@@ -821,20 +835,20 @@ function formatRupiahJs(num) {
     return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function isPakaiPotongan20() {
-    var radio0 = document.getElementById('batchPotongan0');
-    if (radio0 && radio0.checked) {
-        return false;
-    }
-    return true;
+function getBatchSkemaPotonganVal() {
+    var r40 = document.getElementById('batchPotongan40');
+    if (r40 && r40.checked) return 40;
+    var r0 = document.getElementById('batchPotongan0');
+    if (r0 && r0.checked) return 0;
+    return 20;
 }
 
 function recalculateModalValues() {
-    var pakaiPotongan = isPakaiPotongan20();
-    var nominalAwal   = window.currentModalTotalNominalAwal || 0;
-    var factor        = pakaiPotongan ? 0.8 : 1.0;
-    var totalNilai    = Math.round(nominalAwal * factor);
-    var potongan      = pakaiPotongan ? Math.round(nominalAwal * 0.2) : 0;
+    var skema       = getBatchSkemaPotonganVal();
+    var nominalAwal = window.currentModalTotalNominalAwal || 0;
+    var factor      = (skema === 40) ? 0.6 : ((skema === 0) ? 1.0 : 0.8);
+    var totalNilai  = Math.round(nominalAwal * factor);
+    var potongan    = nominalAwal - totalNilai;
 
     window.currentModalTotalNilai = totalNilai;
 
@@ -845,7 +859,10 @@ function recalculateModalValues() {
 
     if (nomAwalEl) nomAwalEl.innerText = formatRupiahJs(nominalAwal);
     if (nomPotonganEl) {
-        if (pakaiPotongan) {
+        if (skema === 40) {
+            nomPotonganEl.innerText = '- ' + formatRupiahJs(potongan) + ' (40% - Tax & Fee)';
+            nomPotonganEl.className = 'col-6 text-right font-weight-bold text-danger';
+        } else if (skema === 20) {
             nomPotonganEl.innerText = '- ' + formatRupiahJs(potongan) + ' (20%)';
             nomPotonganEl.className = 'col-6 text-right font-weight-bold text-danger';
         } else {
