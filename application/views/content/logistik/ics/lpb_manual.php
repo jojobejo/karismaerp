@@ -319,7 +319,7 @@
                     '<tr>' +
                     '<td>' +
                         '<div class="input-group manual-barang-group">' +
-                            '<input type="hidden" class="manual-kd-barang" name="kd_barang[]" required>' +
+                            '<input type="hidden" class="manual-kd-barang" name="kd_barang[]">' +
                             '<input type="text" class="form-control manual-display-barang bg-white" placeholder="Klik untuk cari barang..." readonly style="cursor: pointer;" required title="Klik untuk memilih barang">' +
                             '<div class="input-group-append">' +
                                 '<button type="button" class="btn btn-outline-primary btn-browse-barang" title="Cari Barang">' +
@@ -494,7 +494,16 @@
                         showAlert('danger', response.message || 'LPB Manual gagal disimpan.');
                     },
                     error: function(xhr) {
-                        var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'LPB Manual gagal disimpan.';
+                        var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : null;
+                        if (!message && xhr.responseText) {
+                            var matches = xhr.responseText.match(/<p>(.*?)<\/p>/i);
+                            if (matches && matches[1]) {
+                                message = matches[1].replace(/<[^>]*>?/gm, '');
+                            }
+                        }
+                        if (!message) {
+                            message = 'LPB Manual gagal disimpan.';
+                        }
                         showAlert('danger', message);
                     },
                     complete: function() {
