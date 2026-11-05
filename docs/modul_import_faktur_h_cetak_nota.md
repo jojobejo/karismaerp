@@ -1,114 +1,86 @@
-# Dokumentasi Modul Import Faktur H (Khusus Kebutuhan Cetak Nota LX-310)
+# Dokumentasi Modul Import Faktur H (Cetak Nota LX-310 & Import Pelunasan Jurnal Q + A)
 
-## 1. Latar Belakang & Tujuan
-Pada sistem Karisma ERP, pengguna memiliki arsip data Faktur H historis (misalnya dari bulan Januari sampai September) dalam bentuk file Excel yang perlu dicetak ulang ke nota fisik printer continuous form / dot-matrix Epson LX-310 (ukuran kertas 21 cm x 14 cm) secara cepat.
-
-Agar proses ini **100% aman dan tidak menimbulkan efek samping** pada operasional ERP yang sedang berjalan, modul ini mengimplementasikan konsep **Isolasi Data Penuh**:
-- Menggunakan 2 tabel khusus baru: `tbso_faktur_h_import` dan `tbso_faktur_h_import_detail`.
-- **TIDAK mempengaruhi** master customer acak (`tb_customer_acak`), customer master (`tb_customer`), stok gudang (`tb_stock`), piutang pelanggan, maupun jurnal akuntansi (`tb_jurnal`).
-- Data terpisah secara fisik dari Faktur H pecahan yang dihasilkan melalui sistem pemecahan reguler (`tbso_faktur_z_pecah`).
-- **Memiliki halaman khusus (dedicated page)** yang dapat diakses langsung dari **Sidebar**.
+## 1. Gambaran Umum
+Modul **Faktur H Import** (`sales_order/faktur_h_import`) melayani dua kebutuhan utama secara terintegrasi:
+1. **Import & Cetak Nota Faktur H (Epson LX-310)**: Mengimpor daftar pecahan faktur (Kode H) beserta rincian barangnya dari Excel untuk dicetak pada printer dot-matrix Epson LX-310.
+2. **Import Pelunasan Faktur H & Pembentukan Jurnal Otomatis (Jurnal Acak Q & Jurnal A)**: Melunasi daftar Faktur H hasil import secara massal melalui unggah file Excel (maupun secara batch checkbox / satuan), sehingga setiap Faktur H yang lunas otomatis memiliki **Jurnal Pembayaran Acak (Q)** dan **Jurnal Kas Masuk (A)** di modul Keuangan & Buku Besar.
 
 ---
 
-## 2. Navigasi Sidebar & Halaman Khusus Baru
+## 2. Struktur Tabel Database
+Tabel-tabel berikut dibuat dan diperbarui secara otomatis (auto-migration) melalui [`M_SalesOrder::ensure_faktur_h_import_tables()`](file:///c:/laragon/www/karismaerp/application/models/M_SalesOrder.php#L4404-L4530):
 
-1. **Akses Sidebar**:
-   - Menu **Faktur H Import** telah ditambahkan di sidebar menu navigasi utama (di bawah menu *Pecah Faktur*).
-   - Ditampilkan untuk seluruh role pengguna terkait (`admkeu`, `KIUKEU`, level admin, dan sales management).
-2. **URL Halaman Khusus**:
-   - `https://karismaerp.test/sales_order/faktur_h_import`
-   - `https://karismaerp.test/faktur_h_import`
-3. **Fitur di Halaman Khusus**:
-   - Ringkasan 4 Kartu Info Box: Total Faktur Terimport, Total Kuantitas Barang (pcs), Total Jenis Item, dan Total Nilai Penjualan (Rp).
-   - Panel Filter Periode Tanggal Faktur & Kotak Pencarian Instan.
-   - Tombol **Import Excel Faktur H** (upload file Excel `.xlsx` / `.xls`).
-   - Tombol **Download Template Excel (.xlsx)**.
-   - Tombol **Pilih Semua** & **Hapus Terpilih**.
-   - Tombol **Cetak Faktur (LX-310)** untuk cetak satuan maupun cetak massal (batch continuous form).
-   - Modal AJAX Rincian Barang Faktur untuk pratinjau cepat tanpa reload halaman.
+1. **`tbso_faktur_h_import` (Header Faktur H & Status Pelunasan)**
+   - Kolom utama faktur: `id_import_h`, `no_faktur`, `parent_no_faktur`, `no_so`, `kd_customer`, `customer_name`, `kontak_person`, `nama_toko`, `alamat`, `kota`, `kd_rute`, `tanggal_faktur`, `tanggal_jatuh_tempo`, `tempo`, `salesman`, `catatan`, `total_item`, `total_qty`, `grand_total`.
+   - Kolom pelunasan & jurnal:
+     - `total_bayar` (`DECIMAL(18,2)`) — Nominal Netto Faktur H yang telah dilunasi.
+     - `sisa_tagihan` (`DECIMAL(18,2)`) — Sisa tagihan Faktur H.
+     - `status_bayar` (`VARCHAR(20)`) — `'belum_lunas'`, `'sebagian'`, atau `'lunas'`.
+     - `tanggal_bayar` (`DATE`) — Tanggal pelunasan.
+     - `metode_pembayaran` (`VARCHAR(100)`) — Akun Kas/Bank penerima (contoh: `Q Mandiri`, `Q Kas Ayat Silang`, `Q Kas`).
+     - `skema_potongan` (`INT`) — `20` (Potongan 20% Tax), `40` (Potongan 20% Tax + 20% Fee Petugas), atau `0` (Tanpa Potongan).
+     - `nominal_bruto` (`DECIMAL(18,2)`) — Nominal bruto sebelum potongan.
+     - `nominal_potongan` (`DECIMAL(18,2)`) — Nominal potongan penjualan.
+     - `id_jurnal_q` & `nomor_jurnal_q` — Referensi ke header **Jurnal Pembayaran Acak (Q)** di `tbkeu_jurnal`.
+     - `id_jurnal_a` & `nomor_jurnal_a` — Referensi ke header **Jurnal Kas Masuk (A)** di `tbkeu_jurnal`.
 
----
+2. **`tbso_faktur_h_import_detail` (Rincian Item Barang)**
+   - Menyimpan daftar barang per Faktur H (`kd_barang`, `nama_barang`, `no_lot`, `expired_date`, `qty`, `satuan`, `hrg_satuan`, `disc`, `total_harga`).
 
-## 3. Struktur Tabel Database Baru
-
-### A. Tabel Header: `tbso_faktur_h_import`
-| Kolom | Tipe Data | Keterangan |
-| :--- | :--- | :--- |
-| `id_import_h` | INT (PK, Auto Increment) | ID unik faktur import |
-| `no_faktur` | VARCHAR(50) | Nomor Faktur H (contoh: `H2601001`) |
-| `parent_no_faktur` | VARCHAR(50) | Nomor Faktur Z Induk jika ada |
-| `no_so` | VARCHAR(50) | Nomor SO jika ada |
-| `kd_customer` | VARCHAR(50) | Kode customer jika ada |
-| `customer_name` | VARCHAR(255) | Nama customer / toko |
-| `kontak_person` | VARCHAR(255) | Nama pemilik / penerima |
-| `nama_toko` | VARCHAR(255) | Nama toko |
-| `alamat` | TEXT | Alamat pengantaran |
-| `kota` | VARCHAR(100) | Kota / regional pengiriman |
-| `kd_rute` | VARCHAR(50) | Kode rute pengantaran (default: `SBY`) |
-| `tanggal_faktur` | DATE | Tanggal terbit faktur |
-| `tanggal_jatuh_tempo`| DATE | Tanggal jatuh tempo |
-| `tempo` | INT | Tempo pembayaran (default: 30 hari) |
-| `salesman` | VARCHAR(100) | Nama salesman |
-| `catatan` | TEXT | Catatan / keterangan faktur |
-| `total_item` | INT | Total jenis item barang |
-| `total_qty` | DECIMAL(15,3) | Total kuantitas barang |
-| `total_tonase` | DECIMAL(12,4) | Estimasi berat faktur (ton) |
-| `total_kubikasi` | DECIMAL(12,6) | Estimasi kubikasi faktur |
-| `grand_total` | DECIMAL(18,2) | Total nilai faktur (Rp) |
-| `status` | VARCHAR(20) | Status data (`imported`) |
-| `import_batch` | VARCHAR(50) | Kode batch import |
-| `create_by` | VARCHAR(100) | Pengguna pembuat / pengimpor |
-| `create_at` | DATETIME | Waktu import dilakukan |
-
-### B. Tabel Detail Barang: `tbso_faktur_h_import_detail`
-| Kolom | Tipe Data | Keterangan |
-| :--- | :--- | :--- |
-| `id` | INT (PK, Auto Increment) | ID unik baris rincian |
-| `id_import_h` | INT (FK) | Relasi ke `tbso_faktur_h_import.id_import_h` |
-| `no_faktur` | VARCHAR(50) | Nomor Faktur H |
-| `kd_barang` | VARCHAR(50) | Kode barang jika ada |
-| `nama_barang` | VARCHAR(255) | Nama barang |
-| `no_lot` | VARCHAR(50) | Nomor lot / batch produksi |
-| `expired_date` | DATE | Tanggal kadaluarsa barang |
-| `qty` | DECIMAL(15,3) | Total qty barang |
-| `qty_box` | DECIMAL(15,3) | Qty dalam dus / karton |
-| `qty_pcs` | DECIMAL(15,3) | Qty sisa dalam pcs |
-| `isi_per_box` | INT | Isi barang per box |
-| `satuan` | VARCHAR(20) | Satuan barang (e.g. `BTL`, `PCS`, `DRUM`) |
-| `hrg_satuan` | DECIMAL(18,2) | Harga jual satuan |
-| `disc` | DECIMAL(5,2) | Diskon persentase (%) |
-| `pajak` | DECIMAL(5,2) | Pajak persentase (%) |
-| `subtotal_before_disc` | DECIMAL(15,2) | Subtotal kotor |
-| `subtotal_after_disc` | DECIMAL(15,2) | Subtotal setelah diskon |
-| `total_harga` | DECIMAL(18,2) | Total harga baris barang |
-| `berat_gram` | DECIMAL(12,4) | Berat barang (gram) |
+3. **`tbso_faktur_h_import_pembayaran` (Riwayat Pelunasan Faktur H Import)**
+   - Menyimpan log transaksi pelunasan (`id_pembayaran_h`, `id_import_h`, `no_faktur`, `tanggal_pembayaran`, `jumlah_bayar`, `nominal_bruto`, `nominal_potongan`, `skema_potongan`, `metode_pembayaran`, `id_jurnal_q`, `nomor_jurnal_q`, `id_jurnal_a`, `nomor_jurnal_a`, `import_batch`).
 
 ---
 
-## 4. Panduan Penggunaan
+## 3. Skema Akuntansi Jurnal Pembayaran Acak (Q) & Jurnal (A)
+Logika penjurnalan diimplementasikan pada [`M_Journal::post_jurnal_pelunasan_faktur_h_import()`](file:///c:/laragon/www/karismaerp/application/models/M_Journal.php#L1970-L2270) mengikuti standar akuntansi Faktur H / Pecah Faktur Z:
 
-1. **Buka Halaman dari Sidebar**:
-   - Klik menu **Faktur H Import** pada sidebar sebelah kiri, atau buka URL:  
-     `https://karismaerp.test/sales_order/faktur_h_import`.
-2. **Unduh Template**:
-   - Klik tombol **Download Template Excel (.xlsx)**.
-3. **Isi Data Excel**:
-   - Masukkan daftar faktur H historis Anda (bulan Januari - September atau periode lainnya).
-   - Satu nomor faktur dapat memiliki lebih dari satu baris item barang (multi-item).
-4. **Unggah File**:
-   - Klik tombol **Import Excel Faktur H**, pilih file template yang telah diisi, lalu klik **Proses Import**.
-5. **Cetak Nota Dot-Matrix Epson LX-310 (21 cm x 14 cm)**:
-   - **Cetak 1 Faktur**: Klik tombol **Cetak** pada baris faktur.
-   - **Cetak Banyak Faktur Sekaligus (Batch)**: Centang kotak pada faktur yang ingin dicetak, lalu klik tombol **Cetak Terpilih (x Faktur)**.
-   - Pada jendela print browser:
-     - Printer: **Epson LX-310** (atau driver dot-matrix sejenis).
-     - Layout: **Landscape**.
-     - Paper Size: **Custom (21x14 cm / 8.5x5.5")**.
+### Contoh Perhitungan (Skema Default Potongan 20%):
+Misalkan Faktur H bernominal **Rp 1.000.000** (Netto 80%) dan dilunasi **Rp 1.000.000**:
+- **Nominal Netto (Faktur H)** = `Rp 1.000.000`
+- **Nominal Bruto (100%)** = `Rp 1.000.000 / 0.8` = `Rp 1.250.000`
+- **Nominal Potongan (20%)** = `Rp 1.250.000 - Rp 1.000.000` = `Rp 250.000`
+
+#### 1. Jurnal Pembayaran Acak (Q) (`source_module = 'KEUANGAN'`, `source_type = 'PEMBAYARAN_FAKTUR'`)
+| Baris | Kode Akun | Nama Akun | Keterangan | Debit | Kredit |
+| :--- | :--- | :--- | :--- | ---: | ---: |
+| 1 | `12014` / Sesuai Metode | `Q Mandiri` / `Q Kas Ayat Silang` / `Q Kas` | Penerimaan dari [Nama Customer H] | Rp 1.250.000 | Rp 0 |
+| 2 | `13099` | `Piutang Usaha` | Penerimaan dari [Nama Customer H] | Rp 0 | Rp 1.000.000 |
+| 3 | `11010` | `Q Kas` | Penerimaan dari [Nama Customer H] | Rp 0 | Rp 250.000 |
+
+#### 2. Jurnal Kas Masuk (A) — Kode `KM` (`source_module = 'KEUANGAN'`, `source_type = 'PEMBAYARAN_FAKTUR'`)
+- **Jika Skema Potongan 20% (Tax):**
+  | Baris | Kode Akun | Nama Akun | Keterangan | Debit | Kredit |
+  | :--- | :--- | :--- | :--- | ---: | ---: |
+  | 1 | `11030` | `A Kas` | PND u/Pot [Customer] F.[No Faktur] (Tax) | Rp 250.000 | Rp 0 |
+  | 2 | `13036` | `A PND atas Pendapatan Pot Penj KIU (Tax)` | PND u/Pot [Customer] F.[No Faktur] (Tax) | Rp 0 | Rp 250.000 |
+
+- **Jika Skema Potongan 40% (20% Tax + 20% Fee Petugas):**
+  - Debit `11030` (`A Kas`) sebesar total potongan (40%).
+  - Kredit Baris 1: `13036` (`A PND atas Pendapatan Pot Penj KIU (Tax)`) sebesar 50% dari potongan (20%).
+  - Kredit Baris 2: `13041` (`A PND atas Pendapatan Pot Penj KIU (Fee Petugas)`) sebesar 50% dari potongan (20%).
 
 ---
 
-## 5. Catatan Pemeliharaan Layout UI
+## 4. Panduan Penggunaan Fitur Pelunasan Faktur H Import
 
-- **Sidebar Default State**: Halaman menggunakan kelas layout `<body class="hold-transition sidebar-mini sidebar-collapse">` agar sidebar dalam posisi tertutup / collapse secara default saat dibuka, memaksimalkan lebar area kerja tabel data faktur.
-- **PushMenu Toggle Handler**: Dilengkapi delegated event listener responsif pada tombol `[data-widget="pushmenu"]` dan `.karisma-topbar-toggle` untuk memastikan sidebar dapat dibuka dan ditutup (toggle) secara mulus di seluruh resolusi layar (desktop maupun tablet/mobile).
+### Cara 1: Import Excel Pelunasan (Direkomendasikan untuk Banyak Faktur)
+1. Buka menu **Faktur H Import** (`sales_order/faktur_h_import`).
+2. Klik tombol **Template Pelunasan (.xlsx)** (atau pilih **Terisi Otomatis: Faktur H Belum Lunas**).
+   - Sistem akan mengunduh file Excel yang **sudah berisi seluruh daftar nomor Faktur H yang belum lunas** beserta nominal tagihannya, sehingga Anda tidak perlu mengetik nomor faktur satu per satu.
+3. Periksa/sesuaikan kolom pada Excel:
+   - `no_faktur` *(Wajib)*: Nomor Faktur H yang akan dilunasi.
+   - `tanggal_pembayaran`: Tanggal pelunasan (`YYYY-MM-DD`).
+   - `jumlah_pembayaran`: Nominal Faktur H yang dibayar (jika dikosongkan, otomatis lunas penuh sesuai nominal tagihan faktur).
+   - `metode_pembayaran`: Contoh `Q Mandiri`, `Q Kas Ayat Silang`, `Q Kas`.
+   - `skema_potongan`: `20`, `40`, atau `0`.
+   - `parent_no_faktur` *(Opsional)*: Nomor Faktur Z induk untuk referensi keterangan pada Jurnal A.
+4. Klik tombol hijau **Import Pelunasan Faktur H (Jurnal Q & A)**, pilih file Excel tersebut, lalu klik **Proses Import Pelunasan & Buat Jurnal**.
+
+### Cara 2: Pelunasan Batch via Checkbox di Tabel
+1. Centang beberapa (atau klik **Pilih Semua**) Faktur H pada tabel.
+2. Klik tombol **Lunasi Terpilih**, pilih Tanggal Pelunasan, Metode Pembayaran, dan Skema Potongan, lalu klik **Proses Lunasi Semua Terpilih**.
+
+### Cara 3: Melihat & Membatalkan (Unpost) Jurnal Pelunasan
+- Pada kolom **Jurnal Acak (Q) & Jurnal (A)** di tabel, klik badge nomor jurnal **`Q: MR-...`** atau **`A: KM-...`** untuk membuka pop-up rincian akun Debit & Kredit dari kedua jurnal tersebut.
+- Jika ingin membatalkan atau mengoreksi pelunasan, klik tombol **Unpost** (ikon panah putar balik kuning) pada baris faktur atau gunakan tombol **Unpost Pelunasan Terpilih**.

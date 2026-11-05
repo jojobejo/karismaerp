@@ -4471,10 +4471,63 @@ class M_SalesOrder extends CI_Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             ");
         }
+
+        // Pastikan kolom-kolom status pelunasan dan jurnal tersedia di tbso_faktur_h_import
+        $paymentCols = [
+            'total_bayar'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `total_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `grand_total`",
+            'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `total_bayar`",
+            'status_bayar'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `status_bayar` VARCHAR(20) NOT NULL DEFAULT 'belum_lunas' COMMENT 'belum_lunas, sebagian, lunas' AFTER `sisa_tagihan`",
+            'tanggal_bayar'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `tanggal_bayar` DATE DEFAULT NULL AFTER `status_bayar`",
+            'metode_pembayaran' => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `metode_pembayaran` VARCHAR(100) DEFAULT NULL AFTER `tanggal_bayar`",
+            'skema_potongan'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `skema_potongan` INT NOT NULL DEFAULT 20 COMMENT '0, 20, 40' AFTER `metode_pembayaran`",
+            'nominal_bruto'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `skema_potongan`",
+            'nominal_potongan'  => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_potongan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `nominal_bruto`",
+            'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
+            'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
+            'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
+            'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+        ];
+        foreach ($paymentCols as $col => $sql) {
+            if (!$this->db->field_exists($col, 'tbso_faktur_h_import')) {
+                $this->db->query($sql);
+            }
+        }
+
+        // Tabel riwayat pelunasan Faktur H Import
+        if (!$this->db->table_exists('tbso_faktur_h_import_pembayaran')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbso_faktur_h_import_pembayaran` (
+                    `id_pembayaran_h` INT AUTO_INCREMENT PRIMARY KEY,
+                    `id_import_h` INT NOT NULL COMMENT 'Relasi ke tbso_faktur_h_import.id_import_h',
+                    `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Nomor Faktur H',
+                    `parent_no_faktur` VARCHAR(50) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
+                    `tanggal_pembayaran` DATE NOT NULL COMMENT 'Tanggal Pelunasan',
+                    `jumlah_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT 'Nominal Netto Faktur H yang dilunasi',
+                    `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT 'Nominal Bruto sebelum potongan',
+                    `nominal_potongan` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT 'Nominal Potongan (Tax / Fee)',
+                    `skema_potongan` INT NOT NULL DEFAULT 20 COMMENT '0, 20, atau 40',
+                    `metode_pembayaran` VARCHAR(100) NOT NULL DEFAULT 'Q Mandiri' COMMENT 'Nama akun Kas/Bank (Q Mandiri, Q Kas Ayat Silang, Q Kas, dll)',
+                    `keterangan` TEXT DEFAULT NULL,
+                    `id_jurnal_q` INT DEFAULT NULL COMMENT 'ID Jurnal Pembayaran Acak (Q)',
+                    `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor Jurnal Pembayaran Acak (Q)',
+                    `id_jurnal_a` INT DEFAULT NULL COMMENT 'ID Jurnal Kas Masuk (A)',
+                    `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor Jurnal Kas Masuk (A)',
+                    `import_batch` VARCHAR(50) DEFAULT NULL,
+                    `status` VARCHAR(20) NOT NULL DEFAULT 'POSTED',
+                    `create_by` VARCHAR(100) NOT NULL,
+                    `create_at` DATETIME NOT NULL,
+                    INDEX `idx_id_import_h` (`id_import_h`),
+                    INDEX `idx_no_faktur` (`no_faktur`),
+                    INDEX `idx_tanggal_pembayaran` (`tanggal_pembayaran`),
+                    INDEX `idx_id_jurnal_q` (`id_jurnal_q`),
+                    INDEX `idx_id_jurnal_a` (`id_jurnal_a`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
     }
 
     /**
-     * Mengambil daftar Faktur H hasil import dengan filter tanggal & pencarian
+     * Mengambil daftar Faktur H hasil import dengan filter tanggal, status pelunasan & pencarian
      */
     public function get_all_faktur_h_import($filter = [])
     {
@@ -4491,6 +4544,16 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['create_by'])) {
             $this->db->where('create_by', $filter['create_by']);
         }
+        if (!empty($filter['status_bayar'])) {
+            $stBayar = strtolower(trim((string)$filter['status_bayar']));
+            if ($stBayar === 'lunas') {
+                $this->db->where('status_bayar', 'lunas');
+            } elseif ($stBayar === 'belum_lunas') {
+                $this->db->where("(status_bayar IS NULL OR status_bayar = '' OR status_bayar != 'lunas')", null, false);
+            } elseif ($stBayar === 'sebagian') {
+                $this->db->where('status_bayar', 'sebagian');
+            }
+        }
         if (!empty($filter['search'])) {
             $q = trim((string)$filter['search']);
             $this->db->group_start();
@@ -4502,12 +4565,27 @@ class M_SalesOrder extends CI_Model
             $this->db->or_like('alamat', $q);
             $this->db->or_like('kota', $q);
             $this->db->or_like('salesman', $q);
+            $this->db->or_like('nomor_jurnal_q', $q);
+            $this->db->or_like('nomor_jurnal_a', $q);
             $this->db->group_end();
         }
 
         $this->db->order_by('tanggal_faktur', 'DESC');
         $this->db->order_by('id_import_h', 'DESC');
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Mengambil riwayat pembayaran/pelunasan dari satu Faktur H Import
+     */
+    public function get_faktur_h_import_pembayaran($id_import_h)
+    {
+        $this->ensure_faktur_h_import_tables();
+        return $this->db
+            ->where('id_import_h', (int)$id_import_h)
+            ->order_by('id_pembayaran_h', 'DESC')
+            ->get('tbso_faktur_h_import_pembayaran')
+            ->result_array();
     }
 
     /**
@@ -4540,12 +4618,13 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Menghapus 1 faktur H import beserta detail barangnya
+     * Menghapus 1 faktur H import beserta detail barang dan jurnal pelunasannya
      */
     public function delete_faktur_h_import($id_import_h)
     {
         $this->ensure_faktur_h_import_tables();
         $this->db->trans_start();
+        $this->unpost_pelunasan_faktur_h_import((int)$id_import_h);
         $this->db->delete('tbso_faktur_h_import_detail', ['id_import_h' => (int)$id_import_h]);
         $this->db->delete('tbso_faktur_h_import', ['id_import_h' => (int)$id_import_h]);
         $this->db->trans_complete();
@@ -4553,7 +4632,7 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Menghapus batch faktur H import sekaligus
+     * Menghapus batch faktur H import sekaligus beserta jurnal pelunasannya
      */
     public function delete_faktur_h_import_batch($ids = [])
     {
@@ -4563,9 +4642,273 @@ class M_SalesOrder extends CI_Model
         if (empty($ids)) return false;
 
         $this->db->trans_start();
+        foreach ($ids as $id) {
+            $this->unpost_pelunasan_faktur_h_import((int)$id);
+        }
         $this->db->where_in('id_import_h', $ids)->delete('tbso_faktur_h_import_detail');
         $this->db->where_in('id_import_h', $ids)->delete('tbso_faktur_h_import');
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    /**
+     * Membatalkan (Unpost) pelunasan Faktur H Import beserta Jurnal Acak (Q) dan Jurnal (A)
+     */
+    public function unpost_pelunasan_faktur_h_import($id_import_h)
+    {
+        $this->ensure_faktur_h_import_tables();
+        $id_import_h = (int)$id_import_h;
+        if ($id_import_h <= 0) {
+            return false;
+        }
+
+        $faktur = $this->get_faktur_h_import($id_import_h);
+        if (!$faktur) {
+            return false;
+        }
+
+        $this->load->model('M_Journal');
+        $this->db->trans_start();
+
+        // Hapus jurnal melalui M_Journal
+        $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
+            $id_import_h,
+            $faktur['no_faktur'] ?? '',
+            (int)($faktur['id_jurnal_q'] ?? 0),
+            (int)($faktur['id_jurnal_a'] ?? 0)
+        );
+
+        // Hapus juga jurnal dari riwayat pembayaran bila ada
+        $pembayarans = $this->get_faktur_h_import_pembayaran($id_import_h);
+        foreach ($pembayarans as $p) {
+            $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
+                $id_import_h,
+                $p['no_faktur'] ?? '',
+                (int)($p['id_jurnal_q'] ?? 0),
+                (int)($p['id_jurnal_a'] ?? 0)
+            );
+        }
+
+        $this->db->delete('tbso_faktur_h_import_pembayaran', ['id_import_h' => $id_import_h]);
+
+        $grand_total = (float)($faktur['grand_total'] ?? 0);
+        $this->db->where('id_import_h', $id_import_h)->update('tbso_faktur_h_import', [
+            'total_bayar'       => 0,
+            'sisa_tagihan'      => $grand_total,
+            'status_bayar'      => 'belum_lunas',
+            'tanggal_bayar'     => null,
+            'metode_pembayaran' => null,
+            'nominal_bruto'     => 0,
+            'nominal_potongan'  => 0,
+            'id_jurnal_q'       => null,
+            'nomor_jurnal_q'    => null,
+            'id_jurnal_a'       => null,
+            'nomor_jurnal_a'    => null,
+            'update_by'         => (string)($this->session->userdata('username') ?: 'system'),
+            'update_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    /**
+     * Memproses pelunasan 1 Faktur H Import beserta pembuatan Jurnal Pembayaran Acak (Q) & Jurnal Kas Masuk (A).
+     *
+     * @param int|string $id_or_no ID Import H atau Nomor Faktur H
+     * @param array $params Parameter pelunasan:
+     *   - tanggal_pembayaran (Y-m-d)
+     *   - jumlah_bayar (nominal netto Faktur H yang dilunasi; jika <= 0 otomatis grand_total)
+     *   - metode_pembayaran (contoh: 'Q Mandiri', 'Q Kas Ayat Silang', 'Q Kas')
+     *   - skema_potongan (0, 20, atau 40)
+     *   - nominal_bruto (opsional: jika diisi manual di Excel)
+     *   - nominal_potongan (opsional: jika diisi manual di Excel)
+     *   - parent_no_faktur (opsional: no Faktur Z induk untuk keterangan Jurnal A)
+     *   - keterangan (opsional)
+     *   - import_batch (opsional)
+     *   - create_by (username)
+     * @return array [success => bool, message => string, data => array]
+     */
+    public function proses_pelunasan_faktur_h_import($id_or_no, $params = [])
+    {
+        $this->ensure_faktur_h_import_tables();
+        $faktur = $this->get_faktur_h_import($id_or_no);
+        if (!$faktur) {
+            return [
+                'success' => false,
+                'message' => 'Faktur H Import (' . $id_or_no . ') tidak ditemukan di database.'
+            ];
+        }
+
+        $id_import_h = (int)$faktur['id_import_h'];
+        $no_faktur   = trim((string)$faktur['no_faktur']);
+        $grand_total = (float)($faktur['grand_total'] ?? 0);
+
+        // Jika grand_total di header masih 0, hitung dari detail barang
+        if ($grand_total <= 0) {
+            $details = $this->get_faktur_h_import_detail($id_import_h);
+            foreach ($details as $d) {
+                $grand_total += (float)($d['total_harga'] ?? 0);
+            }
+        }
+
+        $jumlah_bayar = isset($params['jumlah_bayar']) && (float)$params['jumlah_bayar'] > 0
+            ? round((float)$params['jumlah_bayar'], 2)
+            : round($grand_total, 2);
+
+        if ($jumlah_bayar <= 0) {
+            return [
+                'success' => false,
+                'message' => "Nominal pelunasan untuk Faktur {$no_faktur} harus lebih dari 0."
+            ];
+        }
+
+        $tanggal_pembayaran = !empty($params['tanggal_pembayaran']) ? $params['tanggal_pembayaran'] : ($faktur['tanggal_faktur'] ?: date('Y-m-d'));
+        $metode_pembayaran  = !empty($params['metode_pembayaran']) ? trim((string)$params['metode_pembayaran']) : 'Q Mandiri';
+        $skema_raw          = isset($params['skema_potongan']) && $params['skema_potongan'] !== '' ? (int)$params['skema_potongan'] : 20;
+        $skema_potongan     = ($skema_raw === 40) ? 40 : (($skema_raw === 0) ? 0 : 20);
+        $parent_no_faktur   = !empty($params['parent_no_faktur']) ? trim((string)$params['parent_no_faktur']) : trim((string)($faktur['parent_no_faktur'] ?? ''));
+        $keterangan         = !empty($params['keterangan']) ? trim((string)$params['keterangan']) : ('Pelunasan Faktur H Import ' . $no_faktur);
+        $import_batch       = !empty($params['import_batch']) ? $params['import_batch'] : null;
+        $username           = !empty($params['create_by']) ? $params['create_by'] : ((string)$this->session->userdata('username') ?: 'system');
+
+        // Hitung Bruto & Potongan sesuai skema potongan (atau gunakan angka eksplisit jika disuplai)
+        $pembagi_bruto = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
+        $nominal_bruto_input    = isset($params['nominal_bruto']) ? (float)$params['nominal_bruto'] : 0;
+        $nominal_potongan_input = isset($params['nominal_potongan']) ? (float)$params['nominal_potongan'] : -1;
+
+        if ($nominal_bruto_input > 0 && $nominal_potongan_input >= 0) {
+            $nominal_bruto    = round($nominal_bruto_input, 2);
+            $nominal_potongan = round($nominal_potongan_input, 2);
+        } elseif ($nominal_bruto_input > 0) {
+            $nominal_bruto    = round($nominal_bruto_input, 2);
+            $nominal_potongan = max(0, round($nominal_bruto - $jumlah_bayar, 2));
+        } else {
+            $nominal_bruto    = ($pembagi_bruto > 0 && $pembagi_bruto < 1.0)
+                ? round($jumlah_bayar / $pembagi_bruto, 2)
+                : round($jumlah_bayar, 2);
+            $nominal_potongan = max(0, round($nominal_bruto - $jumlah_bayar, 2));
+        }
+
+        $this->load->model('M_Journal');
+        $this->db->trans_start();
+
+        // Bersihkan pelunasan dan jurnal lama untuk faktur H ini agar idempoten (tidak pernah ganda)
+        $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
+            $id_import_h,
+            $no_faktur,
+            (int)($faktur['id_jurnal_q'] ?? 0),
+            (int)($faktur['id_jurnal_a'] ?? 0)
+        );
+        $old_payments = $this->get_faktur_h_import_pembayaran($id_import_h);
+        foreach ($old_payments as $op) {
+            $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
+                $id_import_h,
+                $op['no_faktur'] ?? '',
+                (int)($op['id_jurnal_q'] ?? 0),
+                (int)($op['id_jurnal_a'] ?? 0)
+            );
+        }
+        $this->db->delete('tbso_faktur_h_import_pembayaran', ['id_import_h' => $id_import_h]);
+
+        // Update parent_no_faktur jika disuplai baru dari import pelunasan
+        if (!empty($parent_no_faktur) && empty($faktur['parent_no_faktur'])) {
+            $faktur['parent_no_faktur'] = $parent_no_faktur;
+        }
+
+        // Posting Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A)
+        $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_h_import($faktur, [
+            'tanggal_pembayaran' => $tanggal_pembayaran,
+            'jumlah_bayar'       => $jumlah_bayar,
+            'nominal_bruto'      => $nominal_bruto,
+            'nominal_potongan'   => $nominal_potongan,
+            'skema_potongan'     => $skema_potongan,
+            'metode_pembayaran'  => $metode_pembayaran,
+            'parent_no_faktur'   => $parent_no_faktur,
+            'keterangan'         => $keterangan,
+            'create_by'          => $username,
+        ]);
+
+        $id_jurnal_q    = $jurnalRes['id_jurnal_q'] ?? null;
+        $nomor_jurnal_q = $jurnalRes['nomor_jurnal_q'] ?? null;
+        $id_jurnal_a    = $jurnalRes['id_jurnal_a'] ?? null;
+        $nomor_jurnal_a = $jurnalRes['nomor_jurnal_a'] ?? null;
+
+        // Simpan record ke tbso_faktur_h_import_pembayaran
+        $this->db->insert('tbso_faktur_h_import_pembayaran', [
+            'id_import_h'        => $id_import_h,
+            'no_faktur'          => $no_faktur,
+            'parent_no_faktur'   => $parent_no_faktur ?: null,
+            'tanggal_pembayaran' => $tanggal_pembayaran,
+            'jumlah_bayar'       => $jumlah_bayar,
+            'nominal_bruto'      => $nominal_bruto,
+            'nominal_potongan'   => $nominal_potongan,
+            'skema_potongan'     => $skema_potongan,
+            'metode_pembayaran'  => $metode_pembayaran,
+            'keterangan'         => $keterangan,
+            'id_jurnal_q'        => $id_jurnal_q,
+            'nomor_jurnal_q'     => $nomor_jurnal_q,
+            'id_jurnal_a'        => $id_jurnal_a,
+            'nomor_jurnal_a'     => $nomor_jurnal_a,
+            'import_batch'       => $import_batch,
+            'status'             => 'POSTED',
+            'create_by'          => $username,
+            'create_at'          => date('Y-m-d H:i:s'),
+        ]);
+        $id_pembayaran_h = $this->db->insert_id();
+
+        // Hitung sisa tagihan dan status bayar
+        $sisa_tagihan = max(0, round($grand_total - $jumlah_bayar, 2));
+        $status_bayar = ($sisa_tagihan <= 0.01) ? 'lunas' : (($jumlah_bayar > 0) ? 'sebagian' : 'belum_lunas');
+
+        $updateHeader = [
+            'grand_total'       => $grand_total,
+            'total_bayar'       => $jumlah_bayar,
+            'sisa_tagihan'      => $sisa_tagihan,
+            'status_bayar'      => $status_bayar,
+            'tanggal_bayar'     => $tanggal_pembayaran,
+            'metode_pembayaran' => $metode_pembayaran,
+            'skema_potongan'    => $skema_potongan,
+            'nominal_bruto'     => $nominal_bruto,
+            'nominal_potongan'  => $nominal_potongan,
+            'id_jurnal_q'       => $id_jurnal_q,
+            'nomor_jurnal_q'    => $nomor_jurnal_q,
+            'id_jurnal_a'       => $id_jurnal_a,
+            'nomor_jurnal_a'    => $nomor_jurnal_a,
+            'update_by'         => $username,
+            'update_at'         => date('Y-m-d H:i:s'),
+        ];
+        if (!empty($parent_no_faktur)) {
+            $updateHeader['parent_no_faktur'] = $parent_no_faktur;
+        }
+
+        $this->db->where('id_import_h', $id_import_h)->update('tbso_faktur_h_import', $updateHeader);
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return [
+                'success' => false,
+                'message' => "Gagal menyimpan pelunasan Faktur {$no_faktur} ke database."
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => "Faktur {$no_faktur} berhasil dilunasi.",
+            'data'    => [
+                'id_pembayaran_h' => $id_pembayaran_h,
+                'id_import_h'     => $id_import_h,
+                'no_faktur'       => $no_faktur,
+                'jumlah_bayar'    => $jumlah_bayar,
+                'nominal_bruto'   => $nominal_bruto,
+                'nominal_potongan'=> $nominal_potongan,
+                'status_bayar'    => $status_bayar,
+                'id_jurnal_q'     => $id_jurnal_q,
+                'nomor_jurnal_q'  => $nomor_jurnal_q,
+                'id_jurnal_a'     => $id_jurnal_a,
+                'nomor_jurnal_a'  => $nomor_jurnal_a,
+            ]
+        ];
     }
 }

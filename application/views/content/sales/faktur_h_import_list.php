@@ -11,9 +11,9 @@
             <div class="row mb-2">
                 <div class="col-sm-6">
                     <h1 class="m-0 text-dark font-weight-bold">
-                        <i class="fas fa-file-invoice text-purple mr-2" style="color: #6f42c1;"></i> Faktur H Import (Cetak Nota)
+                        <i class="fas fa-file-invoice text-purple mr-2" style="color: #6f42c1;"></i> Faktur H Import (Cetak Nota & Pelunasan)
                     </h1>
-                    <small class="text-muted">Modul khusus import data pecahan faktur (Kode H) dari file Excel untuk kebutuhan cetak nota fisik ke printer dot-matrix Epson LX-310.</small>
+                    <small class="text-muted">Modul import data pecahan faktur (Kode H) dari Excel untuk cetak nota fisik Epson LX-310 sekaligus import pelunasan otomatis beserta Jurnal Pembayaran Acak (Q) & Jurnal Kas Masuk (A).</small>
                 </div>
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
@@ -47,84 +47,107 @@
             <!-- Toolbar Aksi Atas -->
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
                 <div class="d-flex align-items-center flex-wrap mb-2 mb-md-0">
-                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-default btn-sm shadow-sm mr-2 font-weight-bold">
-                        <i class="fas fa-cut mr-1 text-warning"></i> Modul Pecah Faktur Z
-                    </a>
-                    <button type="button" class="btn btn-purple text-white btn-sm shadow-sm font-weight-bold mr-2" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportFakturH">
+                    <button type="button" class="btn btn-purple text-white btn-sm shadow-sm font-weight-bold mr-2 mb-1" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportFakturH">
                         <i class="fas fa-file-excel mr-1"></i> Import Excel Faktur H
                     </button>
-                    <a href="<?= base_url('sales_order/template_import_faktur_h') ?>" class="btn btn-outline-primary btn-sm shadow-sm font-weight-bold">
-                        <i class="fas fa-download mr-1"></i> Download Template Excel (.xlsx)
-                    </a>
+                    <button type="button" class="btn btn-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" data-toggle="modal" data-target="#modalImportPelunasanFakturH">
+                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Jurnal Q & A)
+                    </button>
                 </div>
                 <div>
-                    <span class="badge badge-light border p-2 text-muted">
-                        <i class="fas fa-shield-alt text-success mr-1"></i> Data Terisolasi &bull; Tidak Merubah Stok & Jurnal
-                    </span>
+                    <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-outline-info btn-sm shadow-sm font-weight-bold">
+                        <i class="fas fa-book mr-1"></i> Lihat Jurnal Pembayaran
+                    </a>
                 </div>
             </div>
 
-            <!-- Ringkasan Statistik Widget 4 Kartu -->
+            <!-- Ringkasan Statistik Widget 6 Kartu -->
             <div class="row mb-2">
-                <div class="col-6 col-md-3">
-                    <div class="info-box bg-white shadow-sm border">
-                        <span class="info-box-icon text-white elevation-1" style="background-color: #6f42c1;">
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon text-white elevation-1" style="background-color: #6f42c1; width: 50px; font-size: 20px;">
                             <i class="fas fa-file-invoice"></i>
                         </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text text-muted">Total Faktur H Import</span>
-                            <span class="info-box-number font-weight-bold" style="font-size: 20px; color: #6f42c1;">
-                                <?= number_format($stat['total_faktur']) ?>
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Total Faktur H</span>
+                            <span class="info-box-number font-weight-bold" style="font-size: 17px; color: #6f42c1;">
+                                <?= number_format($stat['total_faktur']) ?> Faktur
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="info-box bg-white shadow-sm border">
-                        <span class="info-box-icon bg-info text-white elevation-1">
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon bg-info text-white elevation-1" style="width: 50px; font-size: 20px;">
                             <i class="fas fa-boxes"></i>
                         </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text text-muted">Total Kuantitas Barang</span>
-                            <span class="info-box-number text-info font-weight-bold" style="font-size: 20px;">
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Total Kuantitas</span>
+                            <span class="info-box-number text-info font-weight-bold" style="font-size: 17px;">
                                 <?= number_format($stat['total_qty']) ?> pcs
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="info-box bg-white shadow-sm border">
-                        <span class="info-box-icon bg-warning text-white elevation-1">
-                            <i class="fas fa-tags"></i>
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon bg-primary text-white elevation-1" style="width: 50px; font-size: 20px;">
+                            <i class="fas fa-money-bill-wave"></i>
                         </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text text-muted">Total Jenis Item</span>
-                            <span class="info-box-number text-warning font-weight-bold" style="font-size: 20px;">
-                                <?= number_format($stat['total_item']) ?> item
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Total Tagihan (Netto)</span>
+                            <span class="info-box-number text-primary font-weight-bold" style="font-size: 15px;">
+                                Rp <?= number_format($stat['grand_total'], 0, ',', '.') ?>
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="info-box bg-white shadow-sm border">
-                        <span class="info-box-icon bg-success text-white elevation-1">
-                            <i class="fas fa-money-bill-wave"></i>
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon bg-success text-white elevation-1" style="width: 50px; font-size: 20px;">
+                            <i class="fas fa-check-circle"></i>
                         </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text text-muted">Total Nilai Penjualan</span>
-                            <span class="info-box-number text-success font-weight-bold" style="font-size: 19px;">
-                                Rp <?= number_format($stat['grand_total'], 0, ',', '.') ?>
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Sudah Lunas (<?= number_format($stat['total_lunas'] ?? 0) ?>)</span>
+                            <span class="info-box-number text-success font-weight-bold" style="font-size: 15px;">
+                                Rp <?= number_format($stat['nominal_lunas'] ?? 0, 0, ',', '.') ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon bg-danger text-white elevation-1" style="width: 50px; font-size: 20px;">
+                            <i class="fas fa-hourglass-half"></i>
+                        </span>
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Belum Lunas (<?= number_format($stat['total_belum'] ?? 0) ?>)</span>
+                            <span class="info-box-number text-danger font-weight-bold" style="font-size: 15px;">
+                                Rp <?= number_format($stat['nominal_sisa'] ?? 0, 0, ',', '.') ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-2">
+                    <div class="info-box bg-white shadow-sm border mb-2">
+                        <span class="info-box-icon bg-warning text-white elevation-1" style="width: 50px; font-size: 20px;">
+                            <i class="fas fa-tags"></i>
+                        </span>
+                        <div class="info-box-content p-1 pl-2">
+                            <span class="info-box-text text-muted small">Total Jenis Item</span>
+                            <span class="info-box-number text-warning font-weight-bold" style="font-size: 17px;">
+                                <?= number_format($stat['total_item']) ?> item
                             </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Panel Filter Tanggal & Pencarian -->
+            <!-- Panel Filter Tanggal, Status Pelunasan & Pencarian -->
             <div class="card card-outline card-secondary shadow-sm mb-3">
                 <div class="card-header py-2">
                     <h3 class="card-title font-weight-bold text-muted small text-uppercase">
-                        <i class="fas fa-filter mr-1"></i> Filter Periode Faktur H Import
+                        <i class="fas fa-filter mr-1"></i> Filter Periode & Status Pelunasan Faktur H Import
                     </h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="collapse">
@@ -135,19 +158,28 @@
                 <div class="card-body py-2">
                     <form action="<?= base_url('sales_order/faktur_h_import') ?>" method="get" id="formFilterFakturHImport">
                         <div class="row align-items-end">
-                            <div class="col-md-3 col-sm-6 mb-2">
+                            <div class="col-md-2 col-sm-6 mb-2">
                                 <label class="small font-weight-bold mb-1">Dari Tanggal Faktur</label>
                                 <input type="date" name="date1" class="form-control form-control-sm"
                                        value="<?= htmlspecialchars($filter['date1'] ?? '') ?>">
                             </div>
-                            <div class="col-md-3 col-sm-6 mb-2">
+                            <div class="col-md-2 col-sm-6 mb-2">
                                 <label class="small font-weight-bold mb-1">Sampai Tanggal Faktur</label>
                                 <input type="date" name="date2" class="form-control form-control-sm"
                                        value="<?= htmlspecialchars($filter['date2'] ?? '') ?>">
                             </div>
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <label class="small font-weight-bold mb-1">Status Pelunasan</label>
+                                <?php $curStBayar = strtolower(trim((string)($filter['status_bayar'] ?? ''))); ?>
+                                <select name="status_bayar" class="form-control form-control-sm">
+                                    <option value="" <?= $curStBayar === '' ? 'selected' : '' ?>>-- Semua Status --</option>
+                                    <option value="lunas" <?= $curStBayar === 'lunas' ? 'selected' : '' ?>>Sudah Lunas (Ada Jurnal Q & A)</option>
+                                    <option value="belum_lunas" <?= $curStBayar === 'belum_lunas' ? 'selected' : '' ?>>Belum Lunas</option>
+                                </select>
+                            </div>
                             <div class="col-md-4 col-sm-6 mb-2">
-                                <label class="small font-weight-bold mb-1">Kata Kunci / No. Faktur / Customer</label>
-                                <input type="text" name="search" class="form-control form-control-sm" placeholder="Cari No. Faktur H, Customer, Toko, Sales..."
+                                <label class="small font-weight-bold mb-1">Kata Kunci / No. Faktur / Customer / No. Jurnal</label>
+                                <input type="text" name="search" class="form-control form-control-sm" placeholder="Cari No. Faktur H, Customer, Toko, No. Jurnal Q/A..."
                                        value="<?= htmlspecialchars($filter['search'] ?? '') ?>">
                             </div>
                             <div class="col-md-2 col-sm-6 mb-2">
@@ -169,28 +201,37 @@
                     <div class="d-flex align-items-center flex-wrap mr-auto mb-2 mb-md-0">
                         <button type="button" 
                                 id="btnToggleSelectAllFakturHImport" 
-                                class="btn btn-outline-secondary btn-sm font-weight-bold mr-2 shadow-sm" 
+                                class="btn btn-outline-secondary btn-sm font-weight-bold mr-2 mb-1 shadow-sm" 
                                 title="Pilih / Batalkan pilihan semua faktur H import di halaman ini">
                             <i class="far fa-check-square mr-1"></i> Pilih Semua
                         </button>
                         <button type="button" 
+                                id="btnLunasiBatchFakturHImport" 
+                                class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
+                                style="display:none;" 
+                                title="Lunasi seluruh faktur H import yang sedang dicentang sekaligus buat Jurnal Acak (Q) & Jurnal (A)">
+                            <i class="fas fa-check-double mr-1"></i> Lunasi Terpilih (<span class="countSelectedFakturHImport">0</span>)
+                        </button>
+                        <button type="button" 
+                                id="btnUnpostBatchPelunasanFakturHImport" 
+                                class="btn btn-warning btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
+                                style="display:none;" 
+                                title="Batalkan (Unpost) pelunasan & hapus Jurnal Q/A untuk faktur yang dicentang">
+                            <i class="fas fa-undo mr-1"></i> Unpost Pelunasan Terpilih (<span class="countSelectedFakturHImport">0</span>)
+                        </button>
+                        <button type="button" 
                                 id="btnHapusBatchFakturHImport" 
-                                class="btn btn-danger btn-sm font-weight-bold shadow-sm mr-2" 
+                                class="btn btn-danger btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
                                 style="display:none;" 
                                 title="Hapus seluruh faktur H import yang sedang dicentang">
                             <i class="fas fa-trash-alt mr-1"></i> Hapus Terpilih (<span id="countSelectedFakturHImport">0</span>)
                         </button>
                         <button type="button" 
-                                class="btn btn-purple text-white btn-sm font-weight-bold shadow-sm mr-2" 
-                                style="background-color: #6f42c1; border-color: #6f42c1;"
+                                class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
                                 data-toggle="modal" 
-                                data-target="#modalImportFakturH">
-                            <i class="fas fa-file-excel mr-1"></i> Import Excel Faktur H
+                                data-target="#modalImportPelunasanFakturH">
+                            <i class="fas fa-file-upload mr-1"></i> Import Pelunasan (Excel)
                         </button>
-                        <a href="<?= base_url('sales_order/template_import_faktur_h') ?>" 
-                           class="btn btn-outline-primary btn-sm font-weight-bold shadow-sm">
-                            <i class="fas fa-download mr-1"></i> Template Excel (.xlsx)
-                        </a>
                     </div>
                     <div class="d-flex align-items-center flex-wrap">
                         <span class="badge badge-warning p-2 mr-2" style="font-size: 12.5px;">
@@ -218,17 +259,18 @@
                                     <th>Faktur Z Induk</th>
                                     <th>Tanggal Faktur</th>
                                     <th>Customer / Kontak Person</th>
-                                    <th>Alamat & Kota (Rute)</th>
                                     <th class="text-center">Total Item</th>
-                                    <th class="text-right">Total Nilai</th>
+                                    <th class="text-right">Nominal Faktur</th>
+                                    <th class="text-center">Status Pelunasan</th>
+                                    <th>Jurnal Acak (Q) & Jurnal (A)</th>
                                     <th>Diimport Oleh</th>
-                                    <th width="120" class="text-center no-sort">Aksi</th>
+                                    <th width="160" class="text-center no-sort">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($fakturs_h_import)): ?>
                                     <tr>
-                                        <td colspan="11" class="text-center py-5 text-muted">
+                                        <td colspan="12" class="text-center py-5 text-muted">
                                             <i class="fas fa-file-invoice fa-3x mb-3 text-purple" style="color: #6f42c1;"></i><br>
                                             <span class="font-weight-bold" style="font-size: 15px;">Belum Ada Data Faktur H Hasil Import</span><br>
                                             <span class="small text-muted">Silakan unduh template Excel resmi dan unggah data faktur H Anda melalui tombol <strong>Import Excel Faktur H</strong> di atas.</span>
@@ -236,15 +278,21 @@
                                     </tr>
                                 <?php else: ?>
                                     <?php $no = 1; foreach ($fakturs_h_import as $fhi): ?>
+                                        <?php
+                                            $gt = (float)($fhi['grand_total'] ?? 0);
+                                            $bayar = (float)($fhi['total_bayar'] ?? 0);
+                                            $stBayar = strtolower(trim((string)($fhi['status_bayar'] ?? 'belum_lunas')));
+                                            $isLunas = ($stBayar === 'lunas');
+                                        ?>
                                         <tr data-id-import-h="<?= (int)$fhi['id_import_h'] ?>">
                                             <td class="text-center align-middle">
-                                                <input type="checkbox" class="check-item-faktur-h-import" value="<?= (int)$fhi['id_import_h'] ?>" data-no-faktur="<?= htmlspecialchars($fhi['no_faktur']) ?>" style="cursor:pointer; width:16px; height:16px;">
+                                                <input type="checkbox" class="check-item-faktur-h-import" value="<?= (int)$fhi['id_import_h'] ?>" data-no-faktur="<?= htmlspecialchars($fhi['no_faktur']) ?>" data-grand-total="<?= $gt ?>" style="cursor:pointer; width:16px; height:16px;">
                                             </td>
                                             <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
                                             <td class="align-middle">
                                                 <a href="javascript:void(0)" onclick="lihatDetailFakturHImport(<?= (int)$fhi['id_import_h'] ?>)"
                                                    class="badge badge-purple font-weight-bold text-white shadow-sm" style="background-color: #6f42c1; font-size: 12px; padding: 5px 9px;"
-                                                   title="Klik untuk melihat rincian barang faktur ini">
+                                                   title="Klik untuk melihat rincian barang & jurnal faktur ini">
                                                     <i class="fas fa-tag mr-1"></i> <?= htmlspecialchars($fhi['no_faktur']) ?>
                                                 </a>
                                             </td>
@@ -261,13 +309,10 @@
                                                     <?= htmlspecialchars($fhi['customer_name'] ?? '-') ?>
                                                 </span>
                                                 <?php if (!empty($fhi['kontak_person']) && $fhi['kontak_person'] !== $fhi['customer_name']): ?>
-                                                    <span class="text-muted small">
+                                                    <span class="text-muted small d-block">
                                                         Kontak: <?= htmlspecialchars($fhi['kontak_person']) ?>
                                                     </span>
                                                 <?php endif; ?>
-                                            </td>
-                                            <td class="align-middle">
-                                                <span class="d-block small text-dark"><?= htmlspecialchars($fhi['alamat'] ?? '-') ?></span>
                                                 <span class="badge badge-light border small text-muted"><?= htmlspecialchars($fhi['kota'] ?? '-') ?> (<?= htmlspecialchars($fhi['kd_rute'] ?? 'SBY') ?>)</span>
                                             </td>
                                             <td class="text-center align-middle">
@@ -275,8 +320,65 @@
                                                     <?= (int)$fhi['total_item'] ?> item (<?= number_format((float)$fhi['total_qty']) ?> pcs)
                                                 </span>
                                             </td>
-                                            <td class="text-right align-middle font-weight-bold text-success" style="font-size: 13px;">
-                                                Rp <?= number_format((float)$fhi['grand_total'], 0, ',', '.') ?>
+                                            <td class="text-right align-middle">
+                                                <span class="font-weight-bold text-dark d-block" style="font-size: 13px;">
+                                                    Rp <?= number_format($gt, 0, ',', '.') ?>
+                                                </span>
+                                                <?php if ($isLunas && !empty($fhi['nominal_bruto']) && (float)$fhi['nominal_bruto'] > $gt): ?>
+                                                    <span class="small text-muted" style="font-size: 10.5px;">
+                                                        Bruto: Rp <?= number_format((float)$fhi['nominal_bruto'], 0, ',', '.') ?> (Pot <?= (int)($fhi['skema_potongan'] ?? 20) ?>%)
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center align-middle">
+                                                <?php if ($isLunas): ?>
+                                                    <span class="badge badge-success px-2 py-1 shadow-sm" style="font-size: 11px;">
+                                                        <i class="fas fa-check-circle mr-1"></i> LUNAS
+                                                    </span>
+                                                    <div class="small text-success font-weight-bold mt-1" style="font-size: 11px;">
+                                                        Rp <?= number_format($bayar > 0 ? $bayar : $gt, 0, ',', '.') ?>
+                                                    </div>
+                                                    <?php if (!empty($fhi['tanggal_bayar'])): ?>
+                                                        <div class="small text-muted" style="font-size: 10px;">
+                                                            <?= date('d/m/Y', strtotime($fhi['tanggal_bayar'])) ?> &bull; <?= htmlspecialchars($fhi['metode_pembayaran'] ?? '') ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php elseif ($stBayar === 'sebagian'): ?>
+                                                    <span class="badge badge-warning px-2 py-1" style="font-size: 11px;">
+                                                        <i class="fas fa-adjust mr-1"></i> SEBAGIAN
+                                                    </span>
+                                                    <div class="small text-dark font-weight-bold mt-1" style="font-size: 11px;">
+                                                        Dibayar: Rp <?= number_format($bayar, 0, ',', '.') ?>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary px-2 py-1" style="font-size: 11px;">
+                                                        <i class="far fa-clock mr-1"></i> BELUM LUNAS
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="align-middle">
+                                                <?php if (!empty($fhi['nomor_jurnal_q']) || !empty($fhi['nomor_jurnal_a'])): ?>
+                                                    <?php if (!empty($fhi['nomor_jurnal_q'])): ?>
+                                                        <div class="mb-1">
+                                                            <a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)"
+                                                               class="badge badge-primary font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;"
+                                                               title="Klik untuk melihat rincian Jurnal Pembayaran Acak (Q)">
+                                                                <i class="fas fa-book mr-1"></i> Q: <?= htmlspecialchars($fhi['nomor_jurnal_q']) ?>
+                                                            </a>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($fhi['nomor_jurnal_a'])): ?>
+                                                        <div>
+                                                            <a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)"
+                                                               class="badge badge-info font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;"
+                                                               title="Klik untuk melihat rincian Jurnal Kas Masuk (A)">
+                                                                <i class="fas fa-file-invoice-dollar mr-1"></i> A: <?= htmlspecialchars($fhi['nomor_jurnal_a']) ?>
+                                                            </a>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted small"><i class="fas fa-minus-circle mr-1"></i> Belum ada jurnal</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="align-middle small text-muted">
                                                 <?= htmlspecialchars($fhi['create_by'] ?? '-') ?><br>
@@ -284,19 +386,42 @@
                                             </td>
                                             <td class="text-center align-middle">
                                                 <div class="btn-group btn-group-sm">
-                                                    <button type="button" class="btn btn-default btn-sm border" onclick="lihatDetailFakturHImport(<?= (int)$fhi['id_import_h'] ?>)" title="Lihat Rincian Barang">
+                                                    <button type="button" class="btn btn-default btn-sm border" onclick="lihatDetailFakturHImport(<?= (int)$fhi['id_import_h'] ?>)" title="Lihat Rincian Barang & Jurnal">
                                                         <i class="fas fa-eye text-primary"></i>
                                                     </button>
+                                                    <?php if ($isLunas): ?>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)" title="Lihat Jurnal Pembayaran Acak (Q) & Jurnal (A)">
+                                                            <i class="fas fa-book"></i>
+                                                        </button>
+                                                        <a href="<?= base_url('sales_order/unpost_pelunasan_faktur_h_import/' . $fhi['id_import_h'] . '?from=page') ?>"
+                                                           class="btn btn-outline-warning btn-sm"
+                                                           title="Batalkan (Unpost) Pelunasan & Hapus Jurnal Q/A"
+                                                           onclick="return confirm('Batalkan (Unpost) pelunasan Faktur <?= htmlspecialchars($fhi['no_faktur']) ?> beserta Jurnal Acak (Q) dan Jurnal (A)?')">
+                                                            <i class="fas fa-undo"></i>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <button type="button"
+                                                                class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-single"
+                                                                data-id="<?= (int)$fhi['id_import_h'] ?>"
+                                                                data-no-faktur="<?= htmlspecialchars($fhi['no_faktur']) ?>"
+                                                                data-parent-no="<?= htmlspecialchars($fhi['parent_no_faktur'] ?? '') ?>"
+                                                                data-customer="<?= htmlspecialchars($fhi['customer_name'] ?? '') ?>"
+                                                                data-tanggal="<?= htmlspecialchars($fhi['tanggal_faktur'] ?? date('Y-m-d')) ?>"
+                                                                data-nominal="<?= $gt ?>"
+                                                                title="Lunasi Faktur H ini & Buat Jurnal Q + A">
+                                                            <i class="fas fa-check mr-1"></i> Lunasi
+                                                        </button>
+                                                    <?php endif; ?>
                                                     <a href="<?= base_url('sales_order/cetak_faktur_h_import/' . $fhi['id_import_h']) ?>"
                                                        target="_blank"
                                                        class="btn btn-outline-info btn-sm"
                                                        title="Cetak Faktur (Printer Dot-Matrix LX-310)">
-                                                        <i class="fas fa-print mr-1"></i> Cetak
+                                                        <i class="fas fa-print"></i>
                                                     </a>
                                                     <a href="<?= base_url('sales_order/hapus_faktur_h_import/' . $fhi['id_import_h'] . '?from=page') ?>"
                                                        class="btn btn-outline-danger btn-sm"
                                                        title="Hapus Faktur H Import ini"
-                                                       onclick="return confirm('Apakah Anda yakin ingin menghapus Faktur H Import <?= htmlspecialchars($fhi['no_faktur']) ?>?\n\nData import ini akan dihapus secara permanen.')">
+                                                       onclick="return confirm('Apakah Anda yakin ingin menghapus Faktur H Import <?= htmlspecialchars($fhi['no_faktur']) ?>?\n\nData import beserta jurnal pelunasannya akan dihapus secara permanen.')">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </a>
                                                 </div>
@@ -323,21 +448,20 @@
                 <input type="hidden" name="redirect_to" value="sales_order/faktur_h_import">
                 <div class="modal-header text-white" style="background-color: #6f42c1;">
                     <h5 class="modal-title font-weight-bold" id="modalImportFakturHLabel">
-                        <i class="fas fa-file-import mr-1"></i> Import Faktur H (Khusus Cetak Nota LX-310)
+                        <i class="fas fa-file-import mr-1"></i> Import Faktur H (Cetak Nota LX-310)
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info py-2" style="font-size: 13px;">
-                        <i class="fas fa-shield-alt mr-1"></i> <strong>Aman & Terisolasi:</strong>
-                        Data faktur H yang diimpor melalui modul ini disimpan pada tabel terpisah khusus kebutuhan cetak nota.
-                        Proses ini <strong>sama sekali TIDAK mempengaruhi</strong> master customer acak, stok gudang, piutang, maupun jurnal akuntansi.
+                        <i class="fas fa-info-circle mr-1"></i> <strong>Import Daftar Faktur H:</strong>
+                        Unggah daftar Faktur H beserta item barangnya. Setelah terimpor, Anda dapat mencetak nota ke printer LX-310 atau mengimpor pelunasannya agar terbentuk Jurnal Pembayaran Acak (Q) dan Jurnal (A).
                     </div>
                     <div class="alert alert-light border py-2" style="font-size: 12.5px;">
                         <strong>Petunjuk:</strong>
                         <ol class="mb-0 pl-3">
                             <li>Unduh template Excel resmi melalui tombol <strong>Unduh Template Excel</strong> di bawah.</li>
-                            <li>Buka template dan salin data faktur H Anda (bulan Januari - September atau periode lainnya).</li>
+                            <li>Buka template dan salin data faktur H Anda.</li>
                             <li>Satu nomor faktur H dapat memuat beberapa baris barang (multi-item).</li>
                             <li>Simpan file dalam format <code>.xlsx</code> atau <code>.xls</code>, lalu pilih file pada kolom di bawah dan klik <strong>Proses Import</strong>.</li>
                         </ol>
@@ -365,6 +489,204 @@
     </div>
 </div>
 
+<!-- Modal Import Pelunasan Faktur H (Otomatis Buat Jurnal Acak Q & Jurnal A) -->
+<div class="modal fade" id="modalImportPelunasanFakturH" tabindex="-1" role="dialog" aria-labelledby="modalImportPelunasanFakturHLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <form action="<?= base_url('sales_order/import_pelunasan_faktur_h') ?>" method="post" enctype="multipart/form-data" id="formImportPelunasanFakturH">
+                <input type="hidden" name="redirect_to" value="sales_order/faktur_h_import">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold" id="modalImportPelunasanFakturHLabel">
+                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Otomatis Jurnal Acak Q & Jurnal A)
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success py-2" style="font-size: 13px;">
+                        <i class="fas fa-book mr-1"></i> <strong>Otomatis Terbentuk 2 Jurnal Akuntansi per Faktur H:</strong>
+                        <ul class="mb-0 pl-3 mt-1">
+                            <li><strong>Jurnal Pembayaran Acak (Q):</strong> Debit Kas/Bank (Bruto) &bull; Kredit Piutang Usaha <code>13099</code> (Netto Faktur H) &bull; Kredit Q Kas <code>11010</code> (Potongan).</li>
+                            <li><strong>Jurnal Kas Masuk (A):</strong> Debit A Kas <code>11030</code> (Potongan) &bull; Kredit A PND atas Pendapatan Pot Penj KIU <code>13036</code> (Tax 20%) / <code>13041</code> (Fee Petugas 20%).</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-light border py-2" style="font-size: 12.5px;">
+                        <strong>Petunjuk Pelunasan Faktur H (Metode Pembayaran per Faktur):</strong>
+                        <ol class="mb-0 pl-3">
+                            <li>Klik tombol hijau <strong>Unduh Template Terisi Faktur Belum Lunas (.xlsx)</strong> di bawah.</li>
+                            <li>Pada file Excel, Anda dapat mengisi atau mengubah kolom <strong><code>metode_pembayaran</code></strong> di setiap baris faktur (contoh: <code>Q Mandiri</code>, <code>Q Kas Ayat Silang</code>, <code>Q Kas</code>, <code>Q BCA</code>, <code>Q BRI</code>).</li>
+                            <li>Setiap nomor faktur dapat memiliki metode pembayaran, tanggal bayar, nominal bayar, dan skema potongan yang berbeda-beda sesuai realisasi.</li>
+                            <li>Unggah kembali file Excel tersebut di form bawah, lalu klik <strong>Proses Import Pelunasan & Buat Jurnal</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Excel Pelunasan Faktur H (.xlsx / .xls)</label>
+                        <div class="custom-file">
+                            <input type="file" name="file_pelunasan_h" id="fileImportPelunasanH" class="custom-file-input" accept=".xlsx,.xls" required>
+                            <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel Pelunasan Faktur H...</label>
+                        </div>
+                        <small class="form-text text-muted">Kolom Excel: <code>no_faktur</code> (wajib), <code>metode_pembayaran</code> (per faktur), <code>tanggal_pembayaran</code>, <code>jumlah_pembayaran</code>, <code>skema_potongan</code> (20/40/0), <code>parent_no_faktur</code>, <code>keterangan</code>.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between">
+                    <div>
+                        <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm mr-1">
+                            <i class="fas fa-download mr-1"></i> Unduh Template Terisi Faktur Belum Lunas (.xlsx)
+                        </a>
+                        <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=sample') ?>" class="btn btn-outline-secondary btn-sm font-weight-bold shadow-sm">
+                            <i class="far fa-file-excel mr-1"></i> Template Contoh
+                        </a>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success btn-sm font-weight-bold shadow-sm" id="btnSubmitImportPelunasanH">
+                            <i class="fas fa-check-double mr-1"></i> Proses Import Pelunasan & Buat Jurnal
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pelunasan 1 Faktur H Import (Single) -->
+<div class="modal fade" id="modalLunasiSingleFakturH" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <form action="<?= base_url('sales_order/lunasi_faktur_h_import') ?>" method="post" id="formLunasiSingleFakturH">
+                <input type="hidden" name="id_import_h" id="singleLunasiIdImportH">
+                <input type="hidden" name="redirect_to" value="sales_order/faktur_h_import">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fas fa-check-circle mr-1"></i> Lunasi Faktur H: <span id="singleLunasiNoFakturLabel"></span>
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2 small text-muted">
+                        Customer: <strong class="text-dark" id="singleLunasiCustomerLabel">-</strong>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Tanggal Pelunasan</label>
+                        <input type="date" name="tanggal_pembayaran" id="singleLunasiTanggal" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Nominal Pelunasan (Netto Faktur H)</label>
+                        <input type="number" step="0.01" name="jumlah_bayar" id="singleLunasiNominal" class="form-control form-control-sm font-weight-bold text-success" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Metode Pembayaran (Akun Kas/Bank Jurnal Q)</label>
+                        <select name="metode_pembayaran" id="singleLunasiMetode" class="form-control form-control-sm">
+                            <option value="Q Mandiri">Q Mandiri (12014)</option>
+                            <option value="Q Kas Ayat Silang">Q Kas Ayat Silang</option>
+                            <option value="Q Kas">Q Kas (11010)</option>
+                            <option value="Q BCA">Q BCA</option>
+                            <option value="Q BRI">Q BRI</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Skema Potongan (Untuk Jurnal A)</label>
+                        <select name="skema_potongan" id="singleLunasiSkema" class="form-control form-control-sm">
+                            <option value="20" selected>Potongan 20% (Tax) — Netto 80%</option>
+                            <option value="40">Potongan 40% (20% Tax + 20% Fee Petugas) — Netto 60%</option>
+                            <option value="0">Tanpa Potongan (0%) — Hanya Jurnal Q</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">No. Faktur Z Induk (Opsional - Referensi Jurnal A)</label>
+                        <input type="text" name="parent_no_faktur" id="singleLunasiParentNo" class="form-control form-control-sm" placeholder="Contoh: ZINV2601001">
+                    </div>
+                    <div class="alert alert-light border py-2 mb-0 small" id="singleLunasiPreviewBox">
+                        <!-- Preview perhitungan Bruto & Potongan -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm font-weight-bold shadow-sm">
+                        <i class="fas fa-check mr-1"></i> Simpan Pelunasan & Buat Jurnal Q + A
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pelunasan Batch (Terpilih via Checkbox) -->
+<div class="modal fade" id="modalLunasiBatchFakturH" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <form action="<?= base_url('sales_order/lunasi_faktur_h_import_batch') ?>" method="post" id="formLunasiBatchFakturH">
+                <input type="hidden" name="ids" id="batchLunasiIdsInput">
+                <input type="hidden" name="redirect_to" value="sales_order/faktur_h_import">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fas fa-check-double mr-1"></i> Lunasi Batch (<span id="batchLunasiCountLabel">0</span> Faktur H Terpilih)
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small">
+                        Seluruh Faktur H yang dicentang akan dilunasi penuh (100% sesuai nominal tagihan masing-masing faktur) dan otomatis dibuatkan <strong>Jurnal Pembayaran Acak (Q)</strong> serta <strong>Jurnal Kas Masuk (A)</strong>.
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Tanggal Pelunasan</label>
+                        <input type="date" name="tanggal_pembayaran" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
+                        <small class="text-muted">Jika dikosongkan, otomatis mengikuti tanggal faktur masing-masing.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Metode Pembayaran (Akun Kas/Bank Jurnal Q)</label>
+                        <select name="metode_pembayaran" class="form-control form-control-sm">
+                            <option value="Q Mandiri" selected>Q Mandiri (12014)</option>
+                            <option value="Q Kas Ayat Silang">Q Kas Ayat Silang</option>
+                            <option value="Q Kas">Q Kas (11010)</option>
+                            <option value="Q BCA">Q BCA</option>
+                            <option value="Q BRI">Q BRI</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="small font-weight-bold">Skema Potongan (Untuk Jurnal A)</label>
+                        <select name="skema_potongan" class="form-control form-control-sm">
+                            <option value="20" selected>Potongan 20% (Tax) — Netto 80%</option>
+                            <option value="40">Potongan 40% (20% Tax + 20% Fee Petugas) — Netto 60%</option>
+                            <option value="0">Tanpa Potongan (0%) — Hanya Jurnal Q</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success btn-sm font-weight-bold shadow-sm">
+                        <i class="fas fa-check-double mr-1"></i> Proses Lunasi Semua Terpilih
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lihat Rincian Jurnal Pembayaran Acak (Q) & Jurnal Kas Masuk (A) -->
+<div class="modal fade" id="modalJurnalPelunasanFakturH" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-book mr-1"></i> Jurnal Pelunasan Faktur H: <span id="jurnalModalNoFaktur"></span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-3" id="jurnalModalBodyContent">
+                <!-- Di-inject via AJAX -->
+            </div>
+            <div class="modal-footer bg-light">
+                <a href="<?= base_url('jurnal/pembayaran') ?>" target="_blank" class="btn btn-outline-primary btn-sm mr-auto font-weight-bold">
+                    <i class="fas fa-external-link-alt mr-1"></i> Buka Menu Jurnal Pembayaran
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Detail Rincian Barang Faktur H Import -->
 <div class="modal fade" id="modalDetailFakturHImport" tabindex="-1" role="dialog" aria-labelledby="modalDetailFakturHImportLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
@@ -382,7 +704,7 @@
                 <h6 class="font-weight-bold text-dark mb-2">
                     <i class="fas fa-boxes mr-1 text-secondary"></i> Daftar Rincian Barang
                 </h6>
-                <div class="table-responsive">
+                <div class="table-responsive mb-3">
                     <table class="table table-bordered table-sm table-striped mb-0 text-nowrap" id="tableDetailItemsFakturH">
                         <thead class="thead-light">
                             <tr>
@@ -409,6 +731,9 @@
                         </tfoot>
                     </table>
                 </div>
+
+                <!-- Bagian Rincian Jurnal Pelunasan di dalam Modal Detail -->
+                <div id="detailJurnalSectionFakturH"></div>
             </div>
             <div class="modal-footer bg-light">
                 <a href="#" target="_blank" class="btn btn-primary btn-sm font-weight-bold shadow-sm" id="btnCetakModalDetailFakturH">
@@ -431,8 +756,50 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#labelFileImportFakturH').text(fileName || 'Pilih file Excel Faktur H...');
         });
 
+        $('#fileImportPelunasanH').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            $('#labelFileImportPelunasanH').text(fileName || 'Pilih file Excel Pelunasan Faktur H...');
+        });
+
         $('#formImportFakturH').on('submit', function() {
             $('#btnSubmitImportFakturH').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Import...');
+        });
+
+        $('#formImportPelunasanFakturH').on('submit', function() {
+            $('#btnSubmitImportPelunasanH').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Pelunasan & Jurnal...');
+        });
+
+        // Preview perhitungan Bruto & Potongan di Modal Single Pelunasan
+        function updateSingleLunasiPreview() {
+            var netto = parseFloat($('#singleLunasiNominal').val() || 0);
+            var skema = parseInt($('#singleLunasiSkema').val() || 20, 10);
+            var pembagi = (skema === 40) ? 0.6 : ((skema === 20) ? 0.8 : 1.0);
+            var bruto = (pembagi > 0 && pembagi < 1.0) ? Math.round(netto / pembagi) : netto;
+            var potongan = Math.max(0, bruto - netto);
+
+            var html = '<strong>Simulasi Jurnal yang Akan Dibuat:</strong><br>' +
+                '&bull; <strong>Jurnal Acak (Q):</strong> Debit Kas/Bank = <strong>Rp ' + bruto.toLocaleString('id-ID') + '</strong> | Kredit Piutang (13099) = <strong>Rp ' + netto.toLocaleString('id-ID') + '</strong>';
+            if (potongan > 0) {
+                html += ' | Kredit Q Kas (11010) = <strong>Rp ' + potongan.toLocaleString('id-ID') + '</strong><br>' +
+                    '&bull; <strong>Jurnal Kas Masuk (A):</strong> Debit A Kas (11030) = <strong>Rp ' + potongan.toLocaleString('id-ID') + '</strong> | Kredit PND Pot Penj KIU = <strong>Rp ' + potongan.toLocaleString('id-ID') + '</strong>';
+            } else {
+                html += '<br>&bull; <strong>Jurnal Kas Masuk (A):</strong> <em>Tidak dibuat (Skema Tanpa Potongan 0%)</em>';
+            }
+            $('#singleLunasiPreviewBox').html(html);
+        }
+
+        $('#singleLunasiNominal, #singleLunasiSkema').on('input change', updateSingleLunasiPreview);
+
+        $(document).on('click', '.btn-open-lunasi-single', function() {
+            var btn = $(this);
+            $('#singleLunasiIdImportH').val(btn.data('id'));
+            $('#singleLunasiNoFakturLabel').text(btn.data('no-faktur'));
+            $('#singleLunasiCustomerLabel').text(btn.data('customer'));
+            $('#singleLunasiTanggal').val(btn.data('tanggal') || '<?= date("Y-m-d") ?>');
+            $('#singleLunasiNominal').val(btn.data('nominal'));
+            $('#singleLunasiParentNo').val(btn.data('parent-no') || '');
+            updateSingleLunasiPreview();
+            $('#modalLunasiSingleFakturH').modal('show');
         });
 
         // Handler toggle pushmenu (buka/tutup sidebar)
@@ -495,11 +862,16 @@ document.addEventListener('DOMContentLoaded', function() {
             var totalCheckedAll = allChecked.length;
 
             $('#countSelectedFakturHImport').text(totalCheckedAll);
+            $('.countSelectedFakturHImport').text(totalCheckedAll);
             if (totalCheckedAll > 0) {
                 $('#btnHapusBatchFakturHImport').show();
+                $('#btnLunasiBatchFakturHImport').show();
+                $('#btnUnpostBatchPelunasanFakturHImport').show();
                 $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Terpilih (' + totalCheckedAll + ' Faktur)');
             } else {
                 $('#btnHapusBatchFakturHImport').hide();
+                $('#btnLunasiBatchFakturHImport').hide();
+                $('#btnUnpostBatchPelunasanFakturHImport').hide();
                 $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Semua (LX-310)');
             }
         }
@@ -535,12 +907,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Tombol Cetak Semua / Terpilih
-        $(document).on('click', '#btnCetakSemuaFakturHImport', function(e) {
-            e.preventDefault();
+        function getSelectedIds() {
             var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
             var selectedIds = [];
-
             if (dt) {
                 $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked').each(function() {
                     selectedIds.push($(this).val());
@@ -550,6 +919,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedIds.push($(this).val());
                 });
             }
+            return selectedIds;
+        }
+
+        // Tombol Lunasi Batch
+        $(document).on('click', '#btnLunasiBatchFakturHImport', function(e) {
+            e.preventDefault();
+            var ids = getSelectedIds();
+            if (ids.length === 0) return;
+            $('#batchLunasiIdsInput').val(ids.join(','));
+            $('#batchLunasiCountLabel').text(ids.length);
+            $('#modalLunasiBatchFakturH').modal('show');
+        });
+
+        // Tombol Unpost Pelunasan Batch
+        $(document).on('click', '#btnUnpostBatchPelunasanFakturHImport', function(e) {
+            e.preventDefault();
+            var ids = getSelectedIds();
+            if (ids.length === 0) return;
+            if (confirm('Apakah Anda yakin ingin membatalkan (Unpost) pelunasan beserta Jurnal Acak (Q) & Jurnal (A) pada ' + ids.length + ' Faktur H terpilih?')) {
+                var form = $('<form>', {
+                    'action': '<?= base_url("sales_order/unpost_pelunasan_faktur_h_import_batch") ?>',
+                    'method': 'POST',
+                    'style': 'display:none;'
+                });
+                form.append($('<input>', { 'type': 'hidden', 'name': 'ids', 'value': ids.join(',') }));
+                form.append($('<input>', { 'type': 'hidden', 'name': 'redirect_to', 'value': 'sales_order/faktur_h_import' }));
+                $('body').append(form);
+                form.submit();
+            }
+        });
+
+        // Tombol Cetak Semua / Terpilih
+        $(document).on('click', '#btnCetakSemuaFakturHImport', function(e) {
+            e.preventDefault();
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
+            var selectedIds = getSelectedIds();
 
             var form = $('<form>', {
                 'action': '<?= base_url("sales_order/cetak_semua_faktur_h_import") ?>',
@@ -588,22 +993,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Tombol Hapus Batch
         $(document).on('click', '#btnHapusBatchFakturHImport', function(e) {
             e.preventDefault();
-            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
-            var selectedIds = [];
-
-            if (dt) {
-                $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-            } else {
-                $('.check-item-faktur-h-import:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-            }
-
+            var selectedIds = getSelectedIds();
             if (selectedIds.length === 0) return;
 
-            if (confirm('Apakah Anda yakin ingin menghapus ' + selectedIds.length + ' Faktur H Import terpilih?\n\nData import ini akan dihapus secara permanen.')) {
+            if (confirm('Apakah Anda yakin ingin menghapus ' + selectedIds.length + ' Faktur H Import terpilih?\n\nData import beserta jurnal pelunasannya akan dihapus secara permanen.')) {
                 var form = $('<form>', {
                     'action': '<?= base_url("sales_order/hapus_faktur_h_import_batch") ?>',
                     'method': 'POST',
@@ -624,11 +1017,86 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Helper untuk me-render tabel Jurnal Q dan Jurnal A
+        function renderJournalCardHtml(title, badgeCls, jData) {
+            if (!jData || !jData.journal) {
+                return '<div class="alert alert-secondary py-2 small mb-2"><strong>' + title + ':</strong> Tidak ada / belum terbentuk jurnal.</div>';
+            }
+            var j = jData.journal;
+            var rowsHtml = '';
+            var totD = 0, totK = 0;
+            if (jData.details && jData.details.length > 0) {
+                $.each(jData.details, function(i, d) {
+                    var deb = parseFloat(d.debit || 0);
+                    var kre = parseFloat(d.kredit || 0);
+                    totD += deb;
+                    totK += kre;
+                    rowsHtml += '<tr>' +
+                        '<td class="text-center">' + (i + 1) + '</td>' +
+                        '<td class="font-weight-bold text-primary">' + (d.kode_akun || '-') + '</td>' +
+                        '<td class="font-weight-bold">' + (d.nama_akun || '-') + '</td>' +
+                        '<td>' + (d.keterangan || '-') + '</td>' +
+                        '<td class="text-right font-weight-bold text-success">' + (deb > 0 ? 'Rp ' + deb.toLocaleString('id-ID') : '-') + '</td>' +
+                        '<td class="text-right font-weight-bold text-info">' + (kre > 0 ? 'Rp ' + kre.toLocaleString('id-ID') : '-') + '</td>' +
+                    '</tr>';
+                });
+            }
+            return '<div class="card card-outline card-' + badgeCls + ' mb-3 shadow-sm">' +
+                '<div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">' +
+                    '<div><strong>' + title + '</strong> &mdash; <span class="badge badge-' + badgeCls + '" style="font-size:12px;">' + j.nomor_jurnal + '</span></div>' +
+                    '<div class="small text-muted">Tanggal: <strong>' + j.tanggal_transaksi + '</strong> | Ref: <strong>' + (j.source_no || '-') + '</strong> | Status: <span class="badge badge-success">' + j.status + '</span></div>' +
+                '</div>' +
+                '<div class="card-body p-0">' +
+                    '<div class="table-responsive">' +
+                        '<table class="table table-sm table-bordered table-striped mb-0">' +
+                            '<thead class="thead-light"><tr><th width="35" class="text-center">#</th><th width="100">Kode Akun</th><th>Nama Akun</th><th>Keterangan</th><th width="150" class="text-right">Debit</th><th width="150" class="text-right">Kredit</th></tr></thead>' +
+                            '<tbody>' + rowsHtml + '</tbody>' +
+                            '<tfoot class="bg-light font-weight-bold"><tr><td colspan="4" class="text-right">Total Balance:</td><td class="text-right text-success">Rp ' + totD.toLocaleString('id-ID') + '</td><td class="text-right text-info">Rp ' + totK.toLocaleString('id-ID') + '</td></tr></tfoot>' +
+                        '</table>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        // Modal khusus melihat Jurnal Q & A
+        window.lihatJurnalPelunasanFakturH = function(id) {
+            $('#jurnalModalNoFaktur').text('Memuat...');
+            $('#jurnalModalBodyContent').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>');
+            $('#modalJurnalPelunasanFakturH').modal('show');
+
+            $.getJSON('<?= base_url("sales_order/jurnal_pelunasan_faktur_h_import_json/") ?>' + id, function(res) {
+                if (res.status === 'success') {
+                    var f = res.faktur;
+                    $('#jurnalModalNoFaktur').text(f.no_faktur + ' (' + (f.customer_name || '-') + ')');
+                    var html = '<div class="row mb-2">' +
+                        '<div class="col-md-12">' +
+                            '<div class="alert alert-light border py-2 mb-3 small">' +
+                                '<strong>Ringkasan Pelunasan:</strong> ' +
+                                'No. Faktur H: <strong class="text-primary">' + f.no_faktur + '</strong> &bull; ' +
+                                'Nominal Netto (Faktur H): <strong class="text-success">Rp ' + parseFloat(f.total_bayar || f.grand_total || 0).toLocaleString('id-ID') + '</strong> &bull; ' +
+                                'Nominal Bruto: <strong>Rp ' + parseFloat(f.nominal_bruto || 0).toLocaleString('id-ID') + '</strong> &bull; ' +
+                                'Nominal Potongan (' + (f.skema_potongan || 20) + '%): <strong class="text-danger">Rp ' + parseFloat(f.nominal_potongan || 0).toLocaleString('id-ID') + '</strong> &bull; ' +
+                                'Metode: <strong>' + (f.metode_pembayaran || '-') + '</strong>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                    html += renderJournalCardHtml('1. Jurnal Pembayaran Acak (Q)', 'primary', res.jurnal_q);
+                    html += renderJournalCardHtml('2. Jurnal Kas Masuk (A) — Potongan Penjualan', 'info', res.jurnal_a);
+                    $('#jurnalModalBodyContent').html(html);
+                } else {
+                    $('#jurnalModalBodyContent').html('<div class="alert alert-danger">' + (res.message || 'Gagal memuat jurnal.') + '</div>');
+                }
+            }).fail(function() {
+                $('#jurnalModalBodyContent').html('<div class="alert alert-danger">Gagal menghubungi server.</div>');
+            });
+        };
+
         // Modal Detail AJAX
         window.lihatDetailFakturHImport = function(id) {
             $('#detailNoFakturH').text('Memuat...');
             $('#detailHeaderFakturH').html('<div class="col-12 text-center py-3"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>');
             $('#tbodyDetailItemsFakturH').empty();
+            $('#detailJurnalSectionFakturH').empty();
             $('#modalDetailFakturHImport').modal('show');
 
             $.getJSON('<?= base_url("sales_order/detail_faktur_h_import_json/") ?>' + id, function(res) {
@@ -636,6 +1104,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     var f = res.faktur;
                     $('#detailNoFakturH').text(f.no_faktur);
                     $('#btnCetakModalDetailFakturH').attr('href', '<?= base_url("sales_order/cetak_faktur_h_import/") ?>' + f.id_import_h);
+
+                    var stBayarBadge = (f.status_bayar === 'lunas')
+                        ? '<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i> LUNAS (Rp ' + parseFloat(f.total_bayar || f.grand_total || 0).toLocaleString('id-ID') + ')</span>'
+                        : '<span class="badge badge-secondary">BELUM LUNAS</span>';
 
                     var headerHtml = '' +
                         '<div class="col-md-4 mb-2">' +
@@ -656,9 +1128,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         '</div>' +
                         '<div class="col-md-4 mb-2">' +
                             '<table class="table table-sm table-borderless mb-0">' +
-                                '<tr><td class="text-muted" width="120">Salesman:</td><td>' + (f.salesman || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted" width="120">Status Bayar:</td><td>' + stBayarBadge + '</td></tr>' +
+                                '<tr><td class="text-muted">Jurnal Q / A:</td><td>' + (f.nomor_jurnal_q || '-') + ' / ' + (f.nomor_jurnal_a || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted">Salesman:</td><td>' + (f.salesman || '-') + '</td></tr>' +
                                 '<tr><td class="text-muted">Diimport Oleh:</td><td>' + f.create_by + ' (' + f.create_at + ')</td></tr>' +
-                                '<tr><td class="text-muted">Catatan:</td><td>' + (f.catatan || '-') + '</td></tr>' +
                             '</table>' +
                         '</div>';
                     $('#detailHeaderFakturH').html(headerHtml);
@@ -688,6 +1161,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     $('#tbodyDetailItemsFakturH').html(itemsHtml);
                     $('#detailGrandTotalFakturH').text('Rp ' + totalGrand.toLocaleString('id-ID'));
+
+                    if (res.jurnal_q || res.jurnal_a) {
+                        var jHtml = '<h6 class="font-weight-bold text-dark mb-2 mt-3"><i class="fas fa-book mr-1 text-primary"></i> Rincian Jurnal Pelunasan (Jurnal Acak Q & Jurnal A)</h6>';
+                        jHtml += renderJournalCardHtml('1. Jurnal Pembayaran Acak (Q)', 'primary', res.jurnal_q);
+                        jHtml += renderJournalCardHtml('2. Jurnal Kas Masuk (A)', 'info', res.jurnal_a);
+                        $('#detailJurnalSectionFakturH').html(jHtml);
+                    }
                 } else {
                     $('#detailHeaderFakturH').html('<div class="col-12 text-danger p-3"><i class="fas fa-exclamation-triangle mr-1"></i> ' + res.message + '</div>');
                 }
@@ -698,4 +1178,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-

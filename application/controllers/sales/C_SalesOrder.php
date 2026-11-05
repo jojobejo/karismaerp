@@ -56,7 +56,7 @@ class C_SalesOrder extends CI_Controller
                 'ajax_search_kios',
                 'admin_sc_activity_log',
                 'get_faktur_activity_log_json',
-                // Modul Faktur H Import (Cetak Nota)
+                // Modul Faktur H Import (Cetak Nota & Pelunasan)
                 'faktur_h_import',
                 'import_faktur_h',
                 'template_import_faktur_h',
@@ -65,6 +65,13 @@ class C_SalesOrder extends CI_Controller
                 'detail_faktur_h_import_json',
                 'hapus_faktur_h_import',
                 'hapus_faktur_h_import_batch',
+                'template_import_pelunasan_faktur_h',
+                'import_pelunasan_faktur_h',
+                'lunasi_faktur_h_import',
+                'lunasi_faktur_h_import_batch',
+                'unpost_pelunasan_faktur_h_import',
+                'unpost_pelunasan_faktur_h_import_batch',
+                'jurnal_pelunasan_faktur_h_import_json',
             ];
             $currentMethod = strtolower((string)$this->router->fetch_method());
             if (!in_array($currentMethod, $allowedAdmkeuMethods, true)) {
@@ -7958,9 +7965,10 @@ class C_SalesOrder extends CI_Controller
         }
 
         $filter = [
-            'date1'  => $this->input->post('date1') ?: $this->input->get('date1', true),
-            'date2'  => $this->input->post('date2') ?: $this->input->get('date2', true),
-            'search' => $this->input->post('search') ?: $this->input->get('search', true),
+            'date1'        => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'        => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'search'       => $this->input->post('search') ?: $this->input->get('search', true),
+            'status_bayar' => $this->input->post('status_bayar') ?: $this->input->get('status_bayar', true),
         ];
 
         if ($this->_isRestrictedSalesUser()) {
@@ -7971,19 +7979,36 @@ class C_SalesOrder extends CI_Controller
 
         // Ringkasan statistik untuk kartu widget
         $stat = [
-            'total_faktur' => count($fakturs_h_import),
-            'total_qty'    => 0,
-            'total_item'   => 0,
-            'grand_total'  => 0,
+            'total_faktur'  => count($fakturs_h_import),
+            'total_qty'     => 0,
+            'total_item'    => 0,
+            'grand_total'   => 0,
+            'total_lunas'   => 0,
+            'total_belum'   => 0,
+            'nominal_lunas' => 0,
+            'nominal_sisa'  => 0,
         ];
 
         foreach ($fakturs_h_import as $fh) {
+            $gt    = (float)($fh['grand_total'] ?? 0);
+            $bayar = (float)($fh['total_bayar'] ?? 0);
+            $stByr = strtolower(trim((string)($fh['status_bayar'] ?? 'belum_lunas')));
+
             $stat['total_qty']   += (float)($fh['total_qty'] ?? 0);
             $stat['total_item']  += (int)($fh['total_item'] ?? 0);
-            $stat['grand_total'] += (float)($fh['grand_total'] ?? 0);
+            $stat['grand_total'] += $gt;
+
+            if ($stByr === 'lunas') {
+                $stat['total_lunas']++;
+                $stat['nominal_lunas'] += ($bayar > 0 ? $bayar : $gt);
+            } else {
+                $stat['total_belum']++;
+                $stat['nominal_lunas'] += $bayar;
+                $stat['nominal_sisa']  += max(0, $gt - $bayar);
+            }
         }
 
-        $data['page_title']       = 'KARISMA - Faktur H Import (Cetak Nota)';
+        $data['page_title']       = 'KARISMA - Faktur H Import (Cetak Nota & Pelunasan)';
         $data['fakturs_h_import'] = $fakturs_h_import;
         $data['stat']             = $stat;
         $data['filter']           = $filter;
@@ -8017,7 +8042,8 @@ class C_SalesOrder extends CI_Controller
             'alamat', 'kota', 'salesman', 'kd_rute', 'kd_customer',
             'parent_no_faktur', 'no_so', 'tempo', 'tanggal_jatuh_tempo', 'catatan',
             'kd_barang', 'nama_barang', 'qty', 'satuan', 'qty_box', 'qty_pcs',
-            'isi_per_box', 'hrg_satuan', 'disc', 'pajak', 'no_lot', 'expired_date', 'berat_gram'
+            'isi_per_box', 'hrg_satuan', 'disc', 'pajak', 'no_lot', 'expired_date', 'berat_gram',
+            'metode_pembayaran', 'skema_potongan', 'status_bayar', 'tanggal_bayar'
         ];
         $sheet->fromArray($headers, null, 'A1');
 
@@ -8028,21 +8054,24 @@ class C_SalesOrder extends CI_Controller
                 'Jl. Raya Sukorejo No. 45', 'PASURUAN', 'AGUS', 'SBY', 'CUST001',
                 'ZINV2601001', 'SO2601001', 30, '2026-02-14', 'Pengiriman via truk Karisma',
                 'BRG001', 'ROUNDUP 486 SL 1 LITER', 10, 'BTL', 1, 0,
-                10, 85000, 0, 11, 'LOT-2601', '2027-12-31', 1000
+                10, 85000, 0, 11, 'LOT-2601', '2027-12-31', 1000,
+                'Q Mandiri', 20, 'lunas', '2026-01-15'
             ],
             [
                 'H2601001', '2026-01-15', 'TOKO MAKMUR JAYA', 'BAPAK BUDI',
                 'Jl. Raya Sukorejo No. 45', 'PASURUAN', 'AGUS', 'SBY', 'CUST001',
                 'ZINV2601001', 'SO2601001', 30, '2026-02-14', 'Pengiriman via truk Karisma',
                 'BRG002', 'GRAMOXONE 276 SL 1 LITER', 5, 'BTL', 0, 5,
-                10, 75000, 0, 11, 'LOT-2602', '2027-10-31', 1000
+                10, 75000, 0, 11, 'LOT-2602', '2027-10-31', 1000,
+                'Q Mandiri', 20, 'lunas', '2026-01-15'
             ],
             [
                 'H2601002', '2026-01-16', 'UD TANI SEJAHTERA', 'H. AHMAD',
                 'Jl. Raya Gempol No. 12', 'PASURUAN', 'HERI', 'PSR', 'CUST002',
                 'ZINV2601002', 'SO2601002', 30, '2026-02-15', 'Pengiriman ekspedisi',
                 'BRG003', 'DECIS 25 EC 500 ML', 20, 'BTL', 1, 0,
-                20, 65000, 2.5, 11, 'LOT-2603', '2028-01-31', 600
+                20, 65000, 2.5, 11, 'LOT-2603', '2028-01-31', 600,
+                'Q Kas Ayat Silang', 20, 'belum_lunas', ''
             ]
         ];
         $sheet->fromArray($sampleData, null, 'A2');
@@ -8056,7 +8085,7 @@ class C_SalesOrder extends CI_Controller
             ],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
         ];
-        $sheet->getStyle('A1:AA1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:AE1')->applyFromArray($headerStyle);
         $sheet->freezePane('A2');
 
         // Atur lebar kolom yang nyaman dibaca
@@ -8065,7 +8094,8 @@ class C_SalesOrder extends CI_Controller
             'E' => 30, 'F' => 16, 'G' => 16, 'H' => 12, 'I' => 14,
             'J' => 18, 'K' => 16, 'L' => 10, 'M' => 18, 'N' => 28,
             'O' => 14, 'P' => 32, 'Q' => 10, 'R' => 12, 'S' => 10, 'T' => 10,
-            'U' => 12, 'V' => 16, 'W' => 10, 'X' => 10, 'Y' => 14, 'Z' => 14, 'AA' => 12
+            'U' => 12, 'V' => 16, 'W' => 10, 'X' => 10, 'Y' => 14, 'Z' => 14, 'AA' => 12,
+            'AB' => 20, 'AC' => 16, 'AD' => 14, 'AE' => 16
         ];
         foreach ($columnWidths as $col => $w) {
             $sheet->getColumnDimension($col)->setWidth($w);
@@ -8235,7 +8265,21 @@ class C_SalesOrder extends CI_Controller
                 'kedaluwarsa' => 'expired_date',
                 'tgl_exp' => 'expired_date',
                 'berat' => 'berat_gram',
-                'berat_barang' => 'berat_gram'
+                'berat_barang' => 'berat_gram',
+                'metode_pembayaran' => 'metode_pembayaran',
+                'metode_bayar' => 'metode_pembayaran',
+                'metode' => 'metode_pembayaran',
+                'akun_kas' => 'metode_pembayaran',
+                'kas_bank' => 'metode_pembayaran',
+                'skema_potongan' => 'skema_potongan',
+                'skema' => 'skema_potongan',
+                'status_bayar' => 'status_bayar',
+                'status_pelunasan' => 'status_bayar',
+                'status_lunas' => 'status_bayar',
+                'tanggal_bayar' => 'tanggal_bayar',
+                'tgl_bayar' => 'tanggal_bayar',
+                'tanggal_pelunasan' => 'tanggal_bayar',
+                'tgl_pelunasan' => 'tanggal_bayar'
             ];
 
             $headerMap = [];
@@ -8369,6 +8413,10 @@ class C_SalesOrder extends CI_Controller
                 $qtyBox = (float)$getVal('qty_box', '0');
                 $qtyPcs = (float)$getVal('qty_pcs', '0');
                 $beratGram = (float)$getVal('berat_gram', '0');
+                $metodePembayaran = $getVal('metode_pembayaran', '');
+                $skemaPotonganVal = $getVal('skema_potongan', '');
+                $statusBayarVal   = strtolower(trim($getVal('status_bayar', '')));
+                $tglBayarVal      = $getVal('tanggal_bayar', '');
 
                 if (!isset($groupedFakturs[$noFaktur])) {
                     $groupedFakturs[$noFaktur] = [
@@ -8388,6 +8436,10 @@ class C_SalesOrder extends CI_Controller
                             'tempo'               => $tempoHari,
                             'salesman'            => $salesman,
                             'catatan'             => $catatan,
+                            'metode_pembayaran'   => $metodePembayaran ?: null,
+                            'skema_potongan'      => ($skemaPotonganVal !== '') ? (int)$skemaPotonganVal : 20,
+                            'status_bayar'        => in_array($statusBayarVal, ['lunas', 'sebagian'], true) ? $statusBayarVal : 'belum_lunas',
+                            'tanggal_bayar'       => !empty($tglBayarVal) ? $tglBayarVal : null,
                             'total_item'          => 0,
                             'total_qty'           => 0,
                             'total_tonase'        => 0,
@@ -8410,6 +8462,18 @@ class C_SalesOrder extends CI_Controller
                     }
                     if (empty($groupedFakturs[$noFaktur]['header']['catatan']) && !empty($catatan)) {
                         $groupedFakturs[$noFaktur]['header']['catatan'] = $catatan;
+                    }
+                    if (empty($groupedFakturs[$noFaktur]['header']['metode_pembayaran']) && !empty($metodePembayaran)) {
+                        $groupedFakturs[$noFaktur]['header']['metode_pembayaran'] = $metodePembayaran;
+                    }
+                    if (!empty($skemaPotonganVal)) {
+                        $groupedFakturs[$noFaktur]['header']['skema_potongan'] = (int)$skemaPotonganVal;
+                    }
+                    if ($statusBayarVal === 'lunas') {
+                        $groupedFakturs[$noFaktur]['header']['status_bayar'] = 'lunas';
+                    }
+                    if (empty($groupedFakturs[$noFaktur]['header']['tanggal_bayar']) && !empty($tglBayarVal)) {
+                        $groupedFakturs[$noFaktur]['header']['tanggal_bayar'] = $tglBayarVal;
                     }
                 }
 
@@ -8447,7 +8511,7 @@ class C_SalesOrder extends CI_Controller
                 throw new \RuntimeException('Tidak ada data faktur yang valid untuk diimpor.');
             }
 
-            // Simpan ke database dengan transaksi terisolasi
+            // Pastikan kolom-kolom status pelunasan dan jurnal tersedia di tbso_faktur_h_import
             $this->M_SalesOrder->ensure_faktur_h_import_tables();
             $this->db->trans_start();
 
@@ -8516,9 +8580,32 @@ class C_SalesOrder extends CI_Controller
                 throw new \RuntimeException('Terjadi kegagalan saat menyimpan data Faktur H import ke database.');
             }
 
-            $this->session->set_flashdata('success', 
-                "Berhasil mengimpor {$totalImportedFaktur} Faktur H ({$totalImportedItems} rincian barang) untuk kebutuhan cetak nota."
-            );
+            // Jika ada faktur yang di-set status_bayar = 'lunas' pada file Excel import Faktur H ini,
+            // proses pelunasan otomatis & buat Jurnal Acak (Q) dan Jurnal (A)
+            $autoLunasCount = 0;
+            foreach ($groupedFakturs as $noFak => $fakData) {
+                if (($fakData['header']['status_bayar'] ?? '') === 'lunas') {
+                    $resLunas = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFak, [
+                        'tanggal_pembayaran' => $fakData['header']['tanggal_bayar'] ?: $fakData['header']['tanggal_faktur'],
+                        'jumlah_bayar'       => (float)$fakData['header']['grand_total'],
+                        'metode_pembayaran'  => $fakData['header']['metode_pembayaran'] ?: 'Q Mandiri',
+                        'skema_potongan'     => (int)($fakData['header']['skema_potongan'] ?? 20),
+                        'parent_no_faktur'   => $fakData['header']['parent_no_faktur'],
+                        'keterangan'         => 'Pelunasan Faktur H ' . $noFak . ' (dari Import Excel)',
+                        'import_batch'       => $importBatchId,
+                        'create_by'          => $currentUsername,
+                    ]);
+                    if (!empty($resLunas['success'])) {
+                        $autoLunasCount++;
+                    }
+                }
+            }
+
+            $successMsg = "Berhasil mengimpor {$totalImportedFaktur} Faktur H ({$totalImportedItems} rincian barang).";
+            if ($autoLunasCount > 0) {
+                $successMsg .= " <strong>{$autoLunasCount} Faktur</strong> langsung dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q) & Jurnal Kas Masuk (A)</strong>.";
+            }
+            $this->session->set_flashdata('success', $successMsg);
         } catch (\Throwable $e) {
             log_message('error', 'Import Faktur H Error: ' . $e->getMessage());
             $this->session->set_flashdata('error', 'Gagal memproses import Faktur H: ' . $e->getMessage());
@@ -8732,13 +8819,565 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $details = $this->M_SalesOrder->get_faktur_h_import_detail($id_import_h);
+        $details     = $this->M_SalesOrder->get_faktur_h_import_detail($id_import_h);
+        $pembayarans = $this->M_SalesOrder->get_faktur_h_import_pembayaran($id_import_h);
+
+        $this->load->model('M_Journal');
+        $jurnal_q = null;
+        $jurnal_a = null;
+        if (!empty($faktur['id_jurnal_q'])) {
+            $jurnal_q = $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_q']);
+        }
+        if (!empty($faktur['id_jurnal_a'])) {
+            $jurnal_a = $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_a']);
+        }
 
         echo json_encode([
-            'status'  => 'success',
-            'faktur'  => $faktur,
-            'details' => $details
+            'status'      => 'success',
+            'faktur'      => $faktur,
+            'details'     => $details,
+            'pembayarans' => $pembayarans,
+            'jurnal_q'    => $jurnal_q,
+            'jurnal_a'    => $jurnal_a,
         ]);
+    }
+
+    /**
+     * Mengambil detail Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Faktur H Import via AJAX JSON.
+     */
+    public function jurnal_pelunasan_faktur_h_import_json($id_import_h)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
+        if (!$faktur) {
+            echo json_encode(['status' => 'error', 'message' => 'Faktur H Import tidak ditemukan.']);
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        $jurnal_q = !empty($faktur['id_jurnal_q'])
+            ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_q'])
+            : null;
+        $jurnal_a = !empty($faktur['id_jurnal_a'])
+            ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_a'])
+            : null;
+
+        $pembayarans = $this->M_SalesOrder->get_faktur_h_import_pembayaran($id_import_h);
+
+        echo json_encode([
+            'status'      => 'success',
+            'faktur'      => $faktur,
+            'pembayarans' => $pembayarans,
+            'jurnal_q'    => $jurnal_q,
+            'jurnal_a'    => $jurnal_a,
+        ]);
+    }
+
+    /**
+     * Mengunduh template Excel (.xlsx) untuk Import Pelunasan Faktur H Import.
+     * Mendukung mode kosong/contoh (?mode=sample) atau langsung terisi daftar Faktur H Import yang belum lunas (?mode=unpaid / ?mode=all).
+     */
+    public function template_import_pelunasan_faktur_h()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $mode = strtolower(trim((string)($this->input->get('mode', true) ?: 'unpaid')));
+        $defaultMetode = trim((string)($this->input->get('metode', true) ?: 'Q Mandiri'));
+        $defaultSkema  = (int)($this->input->get('skema', true) !== null && $this->input->get('skema', true) !== '' ? $this->input->get('skema', true) : 20);
+        $defaultSkema  = ($defaultSkema === 40) ? 40 : (($defaultSkema === 0) ? 0 : 20);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Pelunasan Faktur H');
+
+        $headers = [
+            'no_faktur',
+            'metode_pembayaran',
+            'tanggal_pembayaran',
+            'jumlah_pembayaran',
+            'skema_potongan',
+            'parent_no_faktur',
+            'customer_name',
+            'nominal_tagihan_info',
+            'keterangan'
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $rowsData = [];
+        if ($mode === 'unpaid' || $mode === 'all') {
+            $filter = [];
+            if ($mode === 'unpaid') {
+                $filter['status_bayar'] = 'belum_lunas';
+            }
+            if ($this->_isRestrictedSalesUser()) {
+                $filter['create_by'] = $this->_getUsername();
+            }
+            $listFaktur = $this->M_SalesOrder->get_all_faktur_h_import($filter);
+            foreach ($listFaktur as $fh) {
+                $gt = (float)($fh['grand_total'] ?? 0);
+                $rowsData[] = [
+                    $fh['no_faktur'],
+                    !empty($fh['metode_pembayaran']) ? $fh['metode_pembayaran'] : $defaultMetode,
+                    !empty($fh['tanggal_bayar']) ? $fh['tanggal_bayar'] : ($fh['tanggal_faktur'] ?: date('Y-m-d')),
+                    $gt,
+                    isset($fh['skema_potongan']) && $fh['skema_potongan'] !== null ? (int)$fh['skema_potongan'] : $defaultSkema,
+                    $fh['parent_no_faktur'] ?: '',
+                    $fh['customer_name'] . (!empty($fh['kontak_person']) && $fh['kontak_person'] !== $fh['customer_name'] ? ' (' . $fh['kontak_person'] . ')' : ''),
+                    $gt,
+                    'Pelunasan Faktur H ' . $fh['no_faktur']
+                ];
+            }
+        }
+
+        // Jika belum ada data (atau mode=sample), isi contoh realistis
+        if (empty($rowsData)) {
+            $rowsData = [
+                [
+                    'H2601001',
+                    'Q Mandiri',
+                    date('Y-m-d'),
+                    1000000,
+                    20,
+                    'ZINV2601001',
+                    'TOKO MAKMUR JAYA (BAPAK BUDI)',
+                    1000000,
+                    'Pelunasan Faktur H2601001'
+                ],
+                [
+                    'H2601002',
+                    'Q Kas Ayat Silang',
+                    date('Y-m-d'),
+                    1500000,
+                    20,
+                    'ZINV2601002',
+                    'UD TANI SEJAHTERA (H. AHMAD)',
+                    1500000,
+                    'Pelunasan Faktur H2601002'
+                ]
+            ];
+        }
+
+        $sheet->fromArray($rowsData, null, 'A2');
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '198754'] // Hijau sukses
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+        ];
+        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->freezePane('A2');
+
+        $columnWidths = [
+            'A' => 18,
+            'B' => 22,
+            'C' => 20,
+            'D' => 20,
+            'E' => 16,
+            'F' => 18,
+            'G' => 30,
+            'H' => 20,
+            'I' => 30,
+        ];
+        foreach ($columnWidths as $col => $w) {
+            $sheet->getColumnDimension($col)->setWidth($w);
+        }
+
+        $lastRow = count($rowsData) + 1;
+        if ($lastRow >= 2) {
+            $sheet->getStyle("C2:C{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+            $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle("H2:H{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+        $filename = 'template_pelunasan_faktur_h_' . date('Ymd_His') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Memproses Import Excel Pelunasan Faktur H Import beserta pembuatan Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A).
+     */
+    public function import_pelunasan_faktur_h()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+        if (strtoupper((string)$this->input->method()) !== 'POST') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
+
+        $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
+        $file = $_FILES['file_pelunasan_h'] ?? null;
+        if (!$file || (int)$file['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('error', 'File Excel Pelunasan Faktur H belum dipilih atau gagal diunggah.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xlsx', 'xls'], true) || (int)$file['size'] > (10 * 1024 * 1024)) {
+            $this->session->set_flashdata('error', 'File pelunasan harus berformat .xlsx/.xls dan berukuran maksimal 10 MB.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $defaultMetode  = trim((string)($this->input->post('default_metode_pembayaran', true) ?: 'Q Mandiri'));
+        $defaultSkema   = $this->input->post('default_skema_potongan', true);
+        $defaultSkema   = ($defaultSkema !== null && $defaultSkema !== '') ? (int)$defaultSkema : 20;
+        $defaultSkema   = ($defaultSkema === 40) ? 40 : (($defaultSkema === 0) ? 0 : 20);
+        $defaultTanggal = trim((string)($this->input->post('default_tanggal_pembayaran', true) ?: ''));
+
+        try {
+            $this->_loadPhpSpreadsheetForFakturZ();
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+            $reader->setReadDataOnly(true);
+            $reader->setReadEmptyCells(false);
+
+            $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
+            if (in_array('Pelunasan Faktur H', $worksheetNames, true)) {
+                $reader->setLoadSheetsOnly(['Pelunasan Faktur H']);
+            } elseif (!empty($worksheetNames)) {
+                $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+            }
+
+            $spreadsheet = $reader->load($file['tmp_name']);
+            $sheet = $spreadsheet->getSheetByName('Pelunasan Faktur H') ?: $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, false, false, false);
+
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $sheet, $reader);
+
+            if (count($rows) < 2) {
+                throw new \RuntimeException('File Excel tidak memiliki baris data pelunasan Faktur H.');
+            }
+
+            $headerAliases = [
+                'no_faktur'            => 'no_faktur',
+                'nomor_faktur'         => 'no_faktur',
+                'no_faktur_h'          => 'no_faktur',
+                'faktur_h'             => 'no_faktur',
+                'faktur'               => 'no_faktur',
+                'no_nota'              => 'no_faktur',
+                'tanggal_pembayaran'   => 'tanggal_pembayaran',
+                'tgl_pembayaran'       => 'tanggal_pembayaran',
+                'tanggal_bayar'        => 'tanggal_pembayaran',
+                'tgl_bayar'            => 'tanggal_pembayaran',
+                'tanggal_pelunasan'    => 'tanggal_pembayaran',
+                'tgl_pelunasan'        => 'tanggal_pembayaran',
+                'tanggal'              => 'tanggal_pembayaran',
+                'jumlah_pembayaran'    => 'jumlah_pembayaran',
+                'jumlah_bayar'         => 'jumlah_pembayaran',
+                'nominal_bayar'        => 'jumlah_pembayaran',
+                'nominal_pelunasan'    => 'jumlah_pembayaran',
+                'nominal'              => 'jumlah_pembayaran',
+                'total_bayar'          => 'jumlah_pembayaran',
+                'grand_total'          => 'jumlah_pembayaran',
+                'metode_pembayaran'    => 'metode_pembayaran',
+                'metode_bayar'         => 'metode_pembayaran',
+                'metode'               => 'metode_pembayaran',
+                'akun_kas'             => 'metode_pembayaran',
+                'kas_bank'             => 'metode_pembayaran',
+                'bank'                 => 'metode_pembayaran',
+                'skema_potongan'       => 'skema_potongan',
+                'skema'                => 'skema_potongan',
+                'potongan_persen'      => 'skema_potongan',
+                'nominal_bruto'        => 'nominal_bruto',
+                'bruto'                => 'nominal_bruto',
+                'nominal_potongan'     => 'nominal_potongan',
+                'potongan'             => 'nominal_potongan',
+                'parent_no_faktur'     => 'parent_no_faktur',
+                'faktur_induk'         => 'parent_no_faktur',
+                'no_faktur_z'          => 'parent_no_faktur',
+                'faktur_z'             => 'parent_no_faktur',
+                'keterangan'           => 'keterangan',
+                'catatan'              => 'keterangan',
+            ];
+
+            $headerRow = array_map([$this, '_normalizeImportHeader'], (array)$rows[0]);
+            $headerMap = [];
+            foreach ($headerRow as $index => $headerName) {
+                if ($headerName === '') continue;
+                $canonical = $headerAliases[$headerName] ?? $headerName;
+                if (!isset($headerMap[$canonical])) {
+                    $headerMap[$canonical] = $index;
+                }
+            }
+
+            if (!isset($headerMap['no_faktur'])) {
+                throw new \RuntimeException('Header kolom wajib "no_faktur" tidak ditemukan di baris pertama Excel.');
+            }
+
+            $username    = $this->_getUsername();
+            $importBatch = 'PELUNASAN-FH-' . date('YmdHis');
+            $successCount = 0;
+            $notFoundList = [];
+            $failedList   = [];
+
+            for ($r = 1; $r < count($rows); $r++) {
+                $row = (array)$rows[$r];
+                $noFaktur = trim((string)($row[$headerMap['no_faktur']] ?? ''));
+                if ($noFaktur === '') {
+                    continue;
+                }
+
+                $getVal = function ($key, $default = '') use ($row, $headerMap) {
+                    if (!isset($headerMap[$key])) return $default;
+                    $v = $row[$headerMap[$key]] ?? null;
+                    return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
+                };
+
+                $rawTgl = $getVal('tanggal_pembayaran', '');
+                $tglBayar = $rawTgl !== ''
+                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
+                    : ($defaultTanggal ?: '');
+
+                $jmlBayar = $this->_parseImportNumber($getVal('jumlah_pembayaran', '0'));
+                $metode   = $getVal('metode_pembayaran', $defaultMetode);
+                $skemaRaw = $getVal('skema_potongan', '');
+                if ($skemaRaw !== '') {
+                    $skemaClean = (int)preg_replace('/[^0-9]/', '', $skemaRaw);
+                    $skema = ($skemaClean === 40) ? 40 : (($skemaClean === 0) ? 0 : 20);
+                } else {
+                    $skema = $defaultSkema;
+                }
+
+                $nomBruto    = isset($headerMap['nominal_bruto']) ? $this->_parseImportNumber($getVal('nominal_bruto', '0')) : 0;
+                $nomPotongan = isset($headerMap['nominal_potongan']) && $getVal('nominal_potongan', '') !== ''
+                    ? $this->_parseImportNumber($getVal('nominal_potongan', '0'))
+                    : -1;
+                $parentNo    = $getVal('parent_no_faktur', '');
+                $ket         = $getVal('keterangan', '');
+
+                $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFaktur, [
+                    'tanggal_pembayaran' => $tglBayar,
+                    'jumlah_bayar'       => $jmlBayar,
+                    'metode_pembayaran'  => $metode,
+                    'skema_potongan'     => $skema,
+                    'nominal_bruto'      => $nomBruto,
+                    'nominal_potongan'   => $nomPotongan,
+                    'parent_no_faktur'   => $parentNo,
+                    'keterangan'         => $ket,
+                    'import_batch'       => $importBatch,
+                    'create_by'          => $username,
+                ]);
+
+                if (!empty($res['success'])) {
+                    $successCount++;
+                } else {
+                    if (stripos($res['message'] ?? '', 'tidak ditemukan') !== false) {
+                        $notFoundList[] = $noFaktur;
+                    } else {
+                        $failedList[] = $noFaktur . ' (' . ($res['message'] ?? 'Gagal') . ')';
+                    }
+                }
+            }
+
+            if ($successCount === 0 && empty($notFoundList) && empty($failedList)) {
+                throw new \RuntimeException('Tidak ada baris data nomor Faktur H yang valid pada file Excel.');
+            }
+
+            if ($successCount > 0) {
+                $msg = "Import Pelunasan Faktur H berhasil! <strong>{$successCount} Faktur H</strong> telah dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
+                if (!empty($notFoundList)) {
+                    $previewNotFound = implode(', ', array_slice($notFoundList, 0, 8));
+                    if (count($notFoundList) > 8) $previewNotFound .= ', dll.';
+                    $msg .= " <br><small class='text-warning'>Catatan: " . count($notFoundList) . " nomor faktur tidak ditemukan di daftar Faktur H Import ({$previewNotFound}).</small>";
+                }
+                $this->session->set_flashdata('success', $msg);
+            } else {
+                $errMsg = 'Gagal memproses import pelunasan Faktur H.';
+                if (!empty($notFoundList)) {
+                    $errMsg .= ' Nomor Faktur H berikut belum terdaftar di Faktur H Import: ' . implode(', ', array_slice($notFoundList, 0, 10));
+                }
+                if (!empty($failedList)) {
+                    $errMsg .= ' Detail: ' . implode('; ', array_slice($failedList, 0, 5));
+                }
+                $this->session->set_flashdata('error', $errMsg);
+            }
+        } catch (\Throwable $e) {
+            $this->session->set_flashdata('error', 'Gagal mengimpor pelunasan Faktur H: ' . $e->getMessage());
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Melunasi 1 Faktur H Import secara langsung dari form modal di halaman Faktur H Import.
+     */
+    public function lunasi_faktur_h_import()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $id_import_h        = (int)$this->input->post('id_import_h');
+        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
+        $jumlah_bayar       = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
+        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $skema_potongan     = (int)$this->input->post('skema_potongan', true);
+        $parent_no_faktur   = trim((string)$this->input->post('parent_no_faktur', true));
+        $keterangan         = trim((string)$this->input->post('keterangan', true));
+        $redirectTo         = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
+
+        $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($id_import_h, [
+            'tanggal_pembayaran' => $tanggal_pembayaran,
+            'jumlah_bayar'       => $jumlah_bayar,
+            'metode_pembayaran'  => $metode_pembayaran,
+            'skema_potongan'     => $skema_potongan,
+            'parent_no_faktur'   => $parent_no_faktur,
+            'keterangan'         => $keterangan,
+            'create_by'          => $this->_getUsername(),
+        ]);
+
+        if (!empty($res['success'])) {
+            $d = $res['data'] ?? [];
+            $jurnalInfo = "Jurnal Q: <strong>" . ($d['nomor_jurnal_q'] ?: '-') . "</strong>";
+            if (!empty($d['nomor_jurnal_a'])) {
+                $jurnalInfo .= " | Jurnal A: <strong>" . $d['nomor_jurnal_a'] . "</strong>";
+            }
+            $this->session->set_flashdata('success', $res['message'] . " ({$jurnalInfo})");
+        } else {
+            $this->session->set_flashdata('error', $res['message'] ?? 'Gagal melunasi Faktur H.');
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Melunasi banyak Faktur H Import sekaligus (Batch Pelunasan via Checkbox).
+     */
+    public function lunasi_faktur_h_import_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $ids = $this->input->post('ids');
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        $ids = array_values(array_filter(array_map('intval', (array)$ids)));
+        $redirectTo = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Tidak ada Faktur H Import yang dipilih untuk dilunasi.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: ''));
+        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $skema_potongan     = (int)($this->input->post('skema_potongan', true) !== null && $this->input->post('skema_potongan', true) !== '' ? $this->input->post('skema_potongan', true) : 20);
+        $keterangan         = trim((string)$this->input->post('keterangan', true));
+        $username           = $this->_getUsername();
+        $batchCode          = 'BATCH-LUNAS-FH-' . date('YmdHis');
+
+        $successCount = 0;
+        foreach ($ids as $id) {
+            $fh = $this->M_SalesOrder->get_faktur_h_import($id);
+            if (!$fh) continue;
+
+            $tgl = $tanggal_pembayaran !== '' ? $tanggal_pembayaran : ($fh['tanggal_faktur'] ?: date('Y-m-d'));
+            $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($id, [
+                'tanggal_pembayaran' => $tgl,
+                'jumlah_bayar'       => (float)($fh['grand_total'] ?? 0),
+                'metode_pembayaran'  => $metode_pembayaran,
+                'skema_potongan'     => $skema_potongan,
+                'keterangan'         => $keterangan ?: ('Pelunasan Batch Faktur H ' . $fh['no_faktur']),
+                'import_batch'       => $batchCode,
+                'create_by'          => $username,
+            ]);
+            if (!empty($res['success'])) {
+                $successCount++;
+            }
+        }
+
+        if ($successCount > 0) {
+            $this->session->set_flashdata('success', "Berhasil melunasi <strong>{$successCount} Faktur H Import</strong> sekaligus beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.");
+        } else {
+            $this->session->set_flashdata('error', 'Gagal memproses pelunasan batch Faktur H Import.');
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Membatalkan (Unpost) pelunasan 1 Faktur H Import beserta Jurnal Acak (Q) dan Jurnal (A)-nya.
+     */
+    public function unpost_pelunasan_faktur_h_import($id_import_h)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
+        if ($faktur) {
+            $this->M_SalesOrder->unpost_pelunasan_faktur_h_import((int)$id_import_h);
+            $this->session->set_flashdata('success', "Pelunasan serta Jurnal Acak (Q) & Jurnal (A) untuk Faktur {$faktur['no_faktur']} berhasil di-unpost/dibatalkan.");
+        } else {
+            $this->session->set_flashdata('error', 'Faktur H Import tidak ditemukan.');
+        }
+
+        $redirectTo = $this->input->get('from') === 'page' ? 'sales_order/faktur_h_import' : 'sales_order/faktur_h_import';
+        redirect($redirectTo);
+    }
+
+    /**
+     * Membatalkan (Unpost) pelunasan banyak Faktur H Import sekaligus.
+     */
+    public function unpost_pelunasan_faktur_h_import_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $ids = $this->input->post('ids');
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        $ids = array_values(array_filter(array_map('intval', (array)$ids)));
+        $redirectTo = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Tidak ada Faktur H Import yang dipilih untuk di-unpost.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $count = 0;
+        foreach ($ids as $id) {
+            if ($this->M_SalesOrder->unpost_pelunasan_faktur_h_import($id)) {
+                $count++;
+            }
+        }
+
+        $this->session->set_flashdata('success', "Berhasil membatalkan (unpost) pelunasan & jurnal pada {$count} Faktur H Import.");
+        redirect($redirectTo);
     }
 
     /**
