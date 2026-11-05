@@ -4393,4 +4393,179 @@ class M_SalesOrder extends CI_Model
         }
         return false;
     }
+
+    // =========================================================================
+    // MODUL IMPORT FAKTUR H (KHUSUS KEBUTUHAN CETAK NOTA LX-310)
+    // Tabel terpisah, tidak berpengaruh ke master customer acak, stok, jurnal, dll.
+    // =========================================================================
+
+    /**
+     * Memastikan tabel tbso_faktur_h_import dan tbso_faktur_h_import_detail tersedia
+     */
+    public function ensure_faktur_h_import_tables()
+    {
+        if (!$this->db->table_exists('tbso_faktur_h_import')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbso_faktur_h_import` (
+                    `id_import_h` INT AUTO_INCREMENT PRIMARY KEY,
+                    `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Nomor Faktur H',
+                    `parent_no_faktur` VARCHAR(50) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
+                    `no_so` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor SO jika ada',
+                    `kd_customer` VARCHAR(50) DEFAULT NULL COMMENT 'Kode Customer',
+                    `customer_name` VARCHAR(255) NOT NULL COMMENT 'Nama Customer / Toko',
+                    `kontak_person` VARCHAR(255) DEFAULT NULL COMMENT 'Kontak Person',
+                    `nama_toko` VARCHAR(255) DEFAULT NULL COMMENT 'Nama Toko',
+                    `alamat` TEXT DEFAULT NULL COMMENT 'Alamat Pengantaran',
+                    `kota` VARCHAR(100) DEFAULT NULL COMMENT 'Kota / Regional',
+                    `kd_rute` VARCHAR(50) DEFAULT 'SBY' COMMENT 'Kode Rute / Jabatan',
+                    `tanggal_faktur` DATE NOT NULL COMMENT 'Tanggal Faktur',
+                    `tanggal_jatuh_tempo` DATE DEFAULT NULL COMMENT 'Tanggal Jatuh Tempo',
+                    `tempo` INT DEFAULT 30 COMMENT 'Tempo Pembayaran (Hari)',
+                    `salesman` VARCHAR(100) DEFAULT NULL COMMENT 'Nama Salesman',
+                    `catatan` TEXT DEFAULT NULL COMMENT 'Catatan / Keterangan Faktur',
+                    `total_item` INT DEFAULT 0,
+                    `total_qty` DECIMAL(15,3) DEFAULT 0,
+                    `total_tonase` DECIMAL(12,4) DEFAULT 0,
+                    `total_kubikasi` DECIMAL(12,6) DEFAULT 0,
+                    `grand_total` DECIMAL(18,2) DEFAULT 0,
+                    `status` VARCHAR(20) NOT NULL DEFAULT 'imported',
+                    `import_batch` VARCHAR(50) DEFAULT NULL,
+                    `create_by` VARCHAR(100) NOT NULL,
+                    `create_at` DATETIME NOT NULL,
+                    `update_by` VARCHAR(100) DEFAULT NULL,
+                    `update_at` DATETIME DEFAULT NULL,
+                    INDEX `idx_no_faktur` (`no_faktur`),
+                    INDEX `idx_tanggal_faktur` (`tanggal_faktur`),
+                    INDEX `idx_kd_customer` (`kd_customer`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
+
+        if (!$this->db->table_exists('tbso_faktur_h_import_detail')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbso_faktur_h_import_detail` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `id_import_h` INT NOT NULL COMMENT 'Relasi ke tbso_faktur_h_import.id_import_h',
+                    `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Nomor Faktur H',
+                    `kd_barang` VARCHAR(50) DEFAULT NULL COMMENT 'Kode Barang',
+                    `nama_barang` VARCHAR(255) NOT NULL COMMENT 'Nama Barang',
+                    `no_lot` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor Lot / Batch',
+                    `expired_date` DATE DEFAULT NULL COMMENT 'Tanggal Expired',
+                    `qty` DECIMAL(15,3) NOT NULL DEFAULT 0,
+                    `qty_box` DECIMAL(15,3) DEFAULT 0,
+                    `qty_pcs` DECIMAL(15,3) DEFAULT 0,
+                    `isi_per_box` INT DEFAULT 1,
+                    `satuan` VARCHAR(20) DEFAULT 'PCS',
+                    `hrg_satuan` DECIMAL(18,2) DEFAULT 0,
+                    `disc` DECIMAL(5,2) DEFAULT 0,
+                    `pajak` DECIMAL(5,2) DEFAULT 0,
+                    `subtotal_before_disc` DECIMAL(15,2) DEFAULT 0,
+                    `subtotal_after_disc` DECIMAL(15,2) DEFAULT 0,
+                    `total_harga` DECIMAL(18,2) DEFAULT 0,
+                    `berat_gram` DECIMAL(12,4) DEFAULT 0,
+                    `create_by` VARCHAR(100) NOT NULL,
+                    `create_at` DATETIME NOT NULL,
+                    INDEX `idx_id_import_h` (`id_import_h`),
+                    INDEX `idx_no_faktur` (`no_faktur`),
+                    INDEX `idx_kd_barang` (`kd_barang`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
+    }
+
+    /**
+     * Mengambil daftar Faktur H hasil import dengan filter tanggal & pencarian
+     */
+    public function get_all_faktur_h_import($filter = [])
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->select('*');
+        $this->db->from('tbso_faktur_h_import');
+
+        if (!empty($filter['date1'])) {
+            $this->db->where('tanggal_faktur >=', $filter['date1']);
+        }
+        if (!empty($filter['date2'])) {
+            $this->db->where('tanggal_faktur <=', $filter['date2']);
+        }
+        if (!empty($filter['create_by'])) {
+            $this->db->where('create_by', $filter['create_by']);
+        }
+        if (!empty($filter['search'])) {
+            $q = trim((string)$filter['search']);
+            $this->db->group_start();
+            $this->db->like('no_faktur', $q);
+            $this->db->or_like('parent_no_faktur', $q);
+            $this->db->or_like('customer_name', $q);
+            $this->db->or_like('kontak_person', $q);
+            $this->db->or_like('nama_toko', $q);
+            $this->db->or_like('alamat', $q);
+            $this->db->or_like('kota', $q);
+            $this->db->or_like('salesman', $q);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('tanggal_faktur', 'DESC');
+        $this->db->order_by('id_import_h', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Mengambil satu faktur H import berdasarkan ID atau Nomor Faktur
+     */
+    public function get_faktur_h_import($id_or_no)
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->select('*');
+        $this->db->from('tbso_faktur_h_import');
+        if (is_numeric($id_or_no)) {
+            $this->db->where('id_import_h', (int)$id_or_no);
+        } else {
+            $this->db->where('no_faktur', $id_or_no);
+        }
+        return $this->db->get()->row_array();
+    }
+
+    /**
+     * Mengambil rincian detail barang dari satu faktur H import
+     */
+    public function get_faktur_h_import_detail($id_import_h)
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->select('*');
+        $this->db->from('tbso_faktur_h_import_detail');
+        $this->db->where('id_import_h', (int)$id_import_h);
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Menghapus 1 faktur H import beserta detail barangnya
+     */
+    public function delete_faktur_h_import($id_import_h)
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->trans_start();
+        $this->db->delete('tbso_faktur_h_import_detail', ['id_import_h' => (int)$id_import_h]);
+        $this->db->delete('tbso_faktur_h_import', ['id_import_h' => (int)$id_import_h]);
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    /**
+     * Menghapus batch faktur H import sekaligus
+     */
+    public function delete_faktur_h_import_batch($ids = [])
+    {
+        if (empty($ids)) return false;
+        $this->ensure_faktur_h_import_tables();
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) return false;
+
+        $this->db->trans_start();
+        $this->db->where_in('id_import_h', $ids)->delete('tbso_faktur_h_import_detail');
+        $this->db->where_in('id_import_h', $ids)->delete('tbso_faktur_h_import');
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
 }

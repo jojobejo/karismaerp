@@ -623,7 +623,11 @@
             <button type="button" onclick="window.print()" class="btn-action btn-print">
                 &#128424; <?= $total_sheets > 1 ? 'Cetak Semua (' . $total_sheets . ' Faktur)' : 'Cetak Faktur (LX-310)' ?>
             </button>
-            <?php if ($total_sheets === 1 && !empty($list_faktur[0]['faktur']['id_pecah'])): ?>
+            <?php if (!empty($back_url)): ?>
+                <a href="<?= $back_url ?>" class="btn-action btn-back">
+                    &larr; <?= htmlspecialchars($back_label ?? 'Kembali') ?>
+                </a>
+            <?php elseif ($total_sheets === 1 && !empty($list_faktur[0]['faktur']['id_pecah'])): ?>
                 <a href="<?= base_url('sales_order/detail_faktur_pecah/' . $list_faktur[0]['faktur']['id_pecah']) ?>" class="btn-action btn-back">
                     &larr; Detail
                 </a>

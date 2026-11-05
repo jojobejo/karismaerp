@@ -56,6 +56,15 @@ class C_SalesOrder extends CI_Controller
                 'ajax_search_kios',
                 'admin_sc_activity_log',
                 'get_faktur_activity_log_json',
+                // Modul Faktur H Import (Cetak Nota)
+                'faktur_h_import',
+                'import_faktur_h',
+                'template_import_faktur_h',
+                'cetak_faktur_h_import',
+                'cetak_semua_faktur_h_import',
+                'detail_faktur_h_import_json',
+                'hapus_faktur_h_import',
+                'hapus_faktur_h_import_batch',
             ];
             $currentMethod = strtolower((string)$this->router->fetch_method());
             if (!in_array($currentMethod, $allowedAdmkeuMethods, true)) {
@@ -2346,6 +2355,7 @@ class C_SalesOrder extends CI_Controller
 
         $fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
         $fakturs_h = $this->M_SalesOrder->get_all_faktur_pecah_h($filter);
+        $fakturs_h_import = $this->M_SalesOrder->get_all_faktur_h_import($filter);
 
         // Ringkasan statistik untuk widget
         $stat = [
@@ -2353,6 +2363,7 @@ class C_SalesOrder extends CI_Controller
             'belum_dipecah'  => 0,
             'sudah_dipecah'  => 0,
             'turunan'        => count($fakturs_h),
+            'import_h'       => count($fakturs_h_import ?? []),
             'total_nilai'    => 0,
         ];
 
@@ -2425,6 +2436,7 @@ class C_SalesOrder extends CI_Controller
         $data['fakturs_belum_dipecah'] = $fakturs_belum_dipecah;
         $data['fakturs_sudah_dipecah'] = $fakturs_sudah_dipecah;
         $data['fakturs_h']             = $fakturs_h;
+        $data['fakturs_h_import']      = $fakturs_h_import;
         $data['kios_grouped']          = $kios_grouped;
         $data['kios_grouped_belum']    = $kios_grouped_belum;
         $data['stat']                  = $stat;
@@ -7930,5 +7942,854 @@ class C_SalesOrder extends CI_Controller
             'msg' => $rejected ? 'success' : 'error',
             'message' => $rejected ? 'Pembatalan ditolak.' : 'Gagal menolak.'
         ]);
+    }
+
+    // =========================================================================
+    // MODUL IMPORT FAKTUR H (KHUSUS KEBUTUHAN PRINT NOTA LX-310)
+
+    /**
+     * Halaman khusus (dedicated page) Faktur H Import untuk kebutuhan cetak nota fisik LX-310.
+     */
+    public function faktur_h_import()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $filter = [
+            'date1'  => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'  => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'search' => $this->input->post('search') ?: $this->input->get('search', true),
+        ];
+
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $fakturs_h_import = $this->M_SalesOrder->get_all_faktur_h_import($filter);
+
+        // Ringkasan statistik untuk kartu widget
+        $stat = [
+            'total_faktur' => count($fakturs_h_import),
+            'total_qty'    => 0,
+            'total_item'   => 0,
+            'grand_total'  => 0,
+        ];
+
+        foreach ($fakturs_h_import as $fh) {
+            $stat['total_qty']   += (float)($fh['total_qty'] ?? 0);
+            $stat['total_item']  += (int)($fh['total_item'] ?? 0);
+            $stat['grand_total'] += (float)($fh['grand_total'] ?? 0);
+        }
+
+        $data['page_title']       = 'KARISMA - Faktur H Import (Cetak Nota)';
+        $data['fakturs_h_import'] = $fakturs_h_import;
+        $data['stat']             = $stat;
+        $data['filter']           = $filter;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_h_import_list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // Berada pada tabel terpisah, tidak menyentuh master customer acak, stok, ataupun jurnal.
+    // =========================================================================
+
+    /**
+     * Mengunduh template Excel (.xlsx) untuk import Faktur H khusus kebutuhan cetak nota.
+     */
+    public function template_import_faktur_h()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data Faktur H');
+
+        $headers = [
+            'no_faktur', 'tanggal_faktur', 'customer_name', 'kontak_person',
+            'alamat', 'kota', 'salesman', 'kd_rute', 'kd_customer',
+            'parent_no_faktur', 'no_so', 'tempo', 'tanggal_jatuh_tempo', 'catatan',
+            'kd_barang', 'nama_barang', 'qty', 'satuan', 'qty_box', 'qty_pcs',
+            'isi_per_box', 'hrg_satuan', 'disc', 'pajak', 'no_lot', 'expired_date', 'berat_gram'
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // Contoh Data Realistis (2 Faktur, salah satunya multi-item barang)
+        $sampleData = [
+            [
+                'H2601001', '2026-01-15', 'TOKO MAKMUR JAYA', 'BAPAK BUDI',
+                'Jl. Raya Sukorejo No. 45', 'PASURUAN', 'AGUS', 'SBY', 'CUST001',
+                'ZINV2601001', 'SO2601001', 30, '2026-02-14', 'Pengiriman via truk Karisma',
+                'BRG001', 'ROUNDUP 486 SL 1 LITER', 10, 'BTL', 1, 0,
+                10, 85000, 0, 11, 'LOT-2601', '2027-12-31', 1000
+            ],
+            [
+                'H2601001', '2026-01-15', 'TOKO MAKMUR JAYA', 'BAPAK BUDI',
+                'Jl. Raya Sukorejo No. 45', 'PASURUAN', 'AGUS', 'SBY', 'CUST001',
+                'ZINV2601001', 'SO2601001', 30, '2026-02-14', 'Pengiriman via truk Karisma',
+                'BRG002', 'GRAMOXONE 276 SL 1 LITER', 5, 'BTL', 0, 5,
+                10, 75000, 0, 11, 'LOT-2602', '2027-10-31', 1000
+            ],
+            [
+                'H2601002', '2026-01-16', 'UD TANI SEJAHTERA', 'H. AHMAD',
+                'Jl. Raya Gempol No. 12', 'PASURUAN', 'HERI', 'PSR', 'CUST002',
+                'ZINV2601002', 'SO2601002', 30, '2026-02-15', 'Pengiriman ekspedisi',
+                'BRG003', 'DECIS 25 EC 500 ML', 20, 'BTL', 1, 0,
+                20, 65000, 2.5, 11, 'LOT-2603', '2028-01-31', 600
+            ]
+        ];
+        $sheet->fromArray($sampleData, null, 'A2');
+
+        // Styling Header Hijau Modern
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '0d6efd'] // Biru bootstrap modern
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]
+        ];
+        $sheet->getStyle('A1:AA1')->applyFromArray($headerStyle);
+        $sheet->freezePane('A2');
+
+        // Atur lebar kolom yang nyaman dibaca
+        $columnWidths = [
+            'A' => 16, 'B' => 14, 'C' => 26, 'D' => 20,
+            'E' => 30, 'F' => 16, 'G' => 16, 'H' => 12, 'I' => 14,
+            'J' => 18, 'K' => 16, 'L' => 10, 'M' => 18, 'N' => 28,
+            'O' => 14, 'P' => 32, 'Q' => 10, 'R' => 12, 'S' => 10, 'T' => 10,
+            'U' => 12, 'V' => 16, 'W' => 10, 'X' => 10, 'Y' => 14, 'Z' => 14, 'AA' => 12
+        ];
+        foreach ($columnWidths as $col => $w) {
+            $sheet->getColumnDimension($col)->setWidth($w);
+        }
+
+        $sheet->getStyle('B2:B4')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('M2:M4')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('Z2:Z4')->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle('V2:V4')->getNumberFormat()->setFormatCode('#,##0');
+
+        $spreadsheet->setActiveSheetIndex(0);
+        $filename = 'template_import_faktur_h_' . date('Ymd') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Memproses import file Excel Faktur H khusus untuk kebutuhan cetak nota LX-310.
+     * Tidak berdampak pada stok barang, master customer acak, piutang, maupun jurnal.
+     */
+    public function import_faktur_h()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+        if (strtoupper((string)$this->input->method()) !== 'POST') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
+
+        $file = $_FILES['file_faktur_h'] ?? null;
+        if (!$file || (int)$file['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('error', 'File Excel Faktur H belum dipilih atau gagal diunggah.');
+            $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
+        redirect($redirectTo);
+            return;
+        }
+
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xlsx', 'xls'], true) || (int)$file['size'] > (10 * 1024 * 1024)) {
+            $this->session->set_flashdata('error', 'File harus berformat .xlsx/.xls dan berukuran maksimal 10 MB.');
+            $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
+        redirect($redirectTo);
+            return;
+        }
+
+        try {
+            $this->_loadPhpSpreadsheetForFakturZ();
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+            $reader->setReadDataOnly(true);
+            $reader->setReadEmptyCells(false);
+
+            $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
+            if (in_array('Data Faktur H', $worksheetNames, true)) {
+                $reader->setLoadSheetsOnly(['Data Faktur H']);
+            } elseif (!empty($worksheetNames)) {
+                $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+            }
+
+            $spreadsheet = $reader->load($file['tmp_name']);
+            $sheet = $spreadsheet->getSheetByName('Data Faktur H') ?: $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, false, false, false);
+
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $sheet, $reader);
+
+            if (count($rows) < 2) {
+                throw new \RuntimeException('File Excel tidak memiliki baris data Faktur H.');
+            }
+
+            // Pemetaan alias header yang sangat fleksibel (case-insensitive & whitespace tolerant)
+            $headerAliases = [
+                'nomor_faktur' => 'no_faktur',
+                'no_faktur_h' => 'no_faktur',
+                'faktur_h' => 'no_faktur',
+                'f_acak' => 'no_faktur',
+                'faktur_acak' => 'no_faktur',
+                'no_nota' => 'no_faktur',
+                'faktur' => 'no_faktur',
+                'tanggal' => 'tanggal_faktur',
+                'tgl_faktur' => 'tanggal_faktur',
+                'tgl' => 'tanggal_faktur',
+                'tanggal_nota' => 'tanggal_faktur',
+                'customer' => 'customer_name',
+                'nama_customer' => 'customer_name',
+                'pelanggan' => 'customer_name',
+                'nama_pelanggan' => 'customer_name',
+                'nama_toko' => 'customer_name',
+                'toko' => 'customer_name',
+                'kontak' => 'kontak_person',
+                'pemilik' => 'kontak_person',
+                'nama_pemilik' => 'kontak_person',
+                'pic' => 'kontak_person',
+                'alamat_customer' => 'alamat',
+                'alamat_toko' => 'alamat',
+                'alamat_pengantaran' => 'alamat',
+                'alamat_kirim' => 'alamat',
+                'kota_customer' => 'kota',
+                'regional' => 'kota',
+                'wilayah' => 'kota',
+                'sales' => 'salesman',
+                'nama_sales' => 'salesman',
+                'rute' => 'kd_rute',
+                'kode_rute' => 'kd_rute',
+                'jabatan' => 'kd_rute',
+                'kode_customer' => 'kd_customer',
+                'kode_pelanggan' => 'kd_customer',
+                'kode_kios' => 'kd_customer',
+                'kd_cust' => 'kd_customer',
+                'faktur_z' => 'parent_no_faktur',
+                'no_faktur_z' => 'parent_no_faktur',
+                'faktur_induk' => 'parent_no_faktur',
+                'parent_faktur' => 'parent_no_faktur',
+                'nomor_so' => 'no_so',
+                'so' => 'no_so',
+                'jatuh_tempo_hari' => 'tempo',
+                'hari_tempo' => 'tempo',
+                'term' => 'tempo',
+                'jatuh_tempo' => 'tanggal_jatuh_tempo',
+                'tgl_jatuh_tempo' => 'tanggal_jatuh_tempo',
+                'keterangan' => 'catatan',
+                'note' => 'catatan',
+                'ket' => 'catatan',
+                'kode_barang' => 'kd_barang',
+                'kode_produk' => 'kd_barang',
+                'kode' => 'kd_barang',
+                'barang' => 'nama_barang',
+                'produk' => 'nama_barang',
+                'nama_produk' => 'nama_barang',
+                'item' => 'nama_barang',
+                'jumlah' => 'qty',
+                'kuantiti' => 'qty',
+                'volume' => 'qty',
+                'unit' => 'satuan',
+                'satuan_barang' => 'satuan',
+                'jumlah_box' => 'qty_box',
+                'dus' => 'qty_box',
+                'karton' => 'qty_box',
+                'box' => 'qty_box',
+                'jumlah_pcs' => 'qty_pcs',
+                'pcs' => 'qty_pcs',
+                'sisa_pcs' => 'qty_pcs',
+                'isi' => 'isi_per_box',
+                'isi_box' => 'isi_per_box',
+                'pack_size' => 'isi_per_box',
+                'harga_satuan' => 'hrg_satuan',
+                'harga' => 'hrg_satuan',
+                'harga_jual' => 'hrg_satuan',
+                'hrg_jual' => 'hrg_satuan',
+                'diskon' => 'disc',
+                'disc_persen' => 'disc',
+                'diskon_persen' => 'disc',
+                'pajak_persen' => 'pajak',
+                'ppn' => 'pajak',
+                'nomor_lot' => 'no_lot',
+                'lot' => 'no_lot',
+                'batch' => 'no_lot',
+                'no_batch' => 'no_lot',
+                'expired' => 'expired_date',
+                'kedaluwarsa' => 'expired_date',
+                'tgl_exp' => 'expired_date',
+                'berat' => 'berat_gram',
+                'berat_barang' => 'berat_gram'
+            ];
+
+            $headerMap = [];
+            foreach (($rows[0] ?? []) as $colIdx => $colHeader) {
+                $norm = strtolower(trim((string)$colHeader));
+                $norm = preg_replace('/[^a-z0-9]+/', '_', $norm);
+                $norm = trim($norm, '_');
+                $norm = $headerAliases[$norm] ?? $norm;
+                $headerMap[$norm] = $colIdx;
+            }
+
+            if (!isset($headerMap['no_faktur']) || !isset($headerMap['nama_barang'])) {
+                throw new \RuntimeException('Kolom minimal file Excel harus memuat nomor faktur (no_faktur) dan nama barang (nama_barang).');
+            }
+
+            $currentUsername = $this->_getUsername() ?: 'Admin';
+            $importBatchId = 'IMP-H-' . date('YmdHis');
+            $now = date('Y-m-d H:i:s');
+
+            // Pengelompokan baris data per Nomor Faktur
+            $groupedFakturs = [];
+            $lastNoFaktur = '';
+
+            foreach (array_slice($rows, 1, null, true) as $rIdx => $row) {
+                // Cek apakah baris kosong
+                $hasVal = false;
+                foreach ($row as $cell) {
+                    if (trim((string)$cell) !== '') {
+                        $hasVal = true;
+                        break;
+                    }
+                }
+                if (!$hasVal) continue;
+
+                $getVal = function($key, $default = '') use ($headerMap, $row) {
+                    if (isset($headerMap[$key]) && isset($row[$headerMap[$key]])) {
+                        return trim((string)$row[$headerMap[$key]]);
+                    }
+                    return $default;
+                };
+
+                $noFakturRaw = $getVal('no_faktur');
+                if ($noFakturRaw === '') {
+                    $noFakturRaw = $lastNoFaktur;
+                }
+                if ($noFakturRaw === '') continue;
+
+                $noFaktur = strtoupper(trim($noFakturRaw));
+                $lastNoFaktur = $noFaktur;
+
+                $namaBarang = $getVal('nama_barang');
+                if ($namaBarang === '') continue;
+
+                // Parsing Qty dan Harga
+                $qtyStr = str_replace(',', '.', preg_replace('/[^-0-9,.]/', '', $getVal('qty', '1')));
+                $qty = max(0.001, (float)$qtyStr);
+
+                $hrgStr = str_replace(',', '.', preg_replace('/[^-0-9,.]/', '', $getVal('hrg_satuan', '0')));
+                $hrgSatuan = max(0, (float)$hrgStr);
+
+                $discStr = str_replace(',', '.', preg_replace('/[^-0-9,.]/', '', $getVal('disc', '0')));
+                $disc = max(0, min(100, (float)$discStr));
+
+                $pajakStr = str_replace(',', '.', preg_replace('/[^-0-9,.]/', '', $getVal('pajak', '0')));
+                $pajak = max(0, (float)$pajakStr);
+
+                $subtotalBefore = $qty * $hrgSatuan;
+                $subtotalAfter = $subtotalBefore - ($subtotalBefore * ($disc / 100));
+                $totalHarga = $subtotalAfter;
+
+                // Parsing Tanggal Faktur
+                $tglFakturRaw = $getVal('tanggal_faktur');
+                $tglFaktur = date('Y-m-d');
+                if (!empty($tglFakturRaw)) {
+                    if (is_numeric($tglFakturRaw) && (float)$tglFakturRaw > 1000) {
+                        $tglFaktur = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$tglFakturRaw)->format('Y-m-d');
+                    } else {
+                        $ts = strtotime(str_replace('/', '-', $tglFakturRaw));
+                        if ($ts && (int)date('Y', $ts) > 1990) {
+                            $tglFaktur = date('Y-m-d', $ts);
+                        }
+                    }
+                }
+
+                // Parsing Tanggal Jatuh Tempo / Tempo
+                $tempoHari = max(0, (int)$getVal('tempo', '30'));
+                $tglJatuhTempoRaw = $getVal('tanggal_jatuh_tempo');
+                $tglJatuhTempo = null;
+                if (!empty($tglJatuhTempoRaw)) {
+                    if (is_numeric($tglJatuhTempoRaw) && (float)$tglJatuhTempoRaw > 1000) {
+                        $tglJatuhTempo = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$tglJatuhTempoRaw)->format('Y-m-d');
+                    } else {
+                        $ts = strtotime(str_replace('/', '-', $tglJatuhTempoRaw));
+                        if ($ts && (int)date('Y', $ts) > 1990) {
+                            $tglJatuhTempo = date('Y-m-d', $ts);
+                        }
+                    }
+                }
+                if (empty($tglJatuhTempo)) {
+                    $tglJatuhTempo = date('Y-m-d', strtotime("+{$tempoHari} days", strtotime($tglFaktur)));
+                }
+
+                // Parsing Expired Date
+                $expRaw = $getVal('expired_date');
+                $expiredDate = null;
+                if (!empty($expRaw)) {
+                    if (is_numeric($expRaw) && (float)$expRaw > 1000) {
+                        $expiredDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$expRaw)->format('Y-m-d');
+                    } else {
+                        $ts = strtotime(str_replace('/', '-', $expRaw));
+                        if ($ts && (int)date('Y', $ts) > 1990) {
+                            $expiredDate = date('Y-m-d', $ts);
+                        }
+                    }
+                }
+
+                $customerName = $getVal('customer_name') ?: ($getVal('kontak_person') ?: 'Customer Umum');
+                $kontakPerson = $getVal('kontak_person') ?: $customerName;
+                $alamat = $getVal('alamat');
+                $kota = $getVal('kota');
+                $salesman = $getVal('salesman') ?: 'SALES';
+                $kdRute = strtoupper($getVal('kd_rute', 'SBY')) ?: 'SBY';
+                $kdCustomer = $getVal('kd_customer');
+                $parentNoFaktur = $getVal('parent_no_faktur');
+                $noSo = $getVal('no_so');
+                $catatan = $getVal('catatan');
+                $kdBarang = $getVal('kd_barang');
+                $satuan = strtoupper($getVal('satuan', 'PCS')) ?: 'PCS';
+                $noLot = $getVal('no_lot');
+                $isiPerBox = max(1, (int)$getVal('isi_per_box', '1'));
+                $qtyBox = (float)$getVal('qty_box', '0');
+                $qtyPcs = (float)$getVal('qty_pcs', '0');
+                $beratGram = (float)$getVal('berat_gram', '0');
+
+                if (!isset($groupedFakturs[$noFaktur])) {
+                    $groupedFakturs[$noFaktur] = [
+                        'header' => [
+                            'no_faktur'           => $noFaktur,
+                            'parent_no_faktur'    => $parentNoFaktur,
+                            'no_so'               => $noSo,
+                            'kd_customer'         => $kdCustomer,
+                            'customer_name'       => $customerName,
+                            'kontak_person'       => $kontakPerson,
+                            'nama_toko'           => $customerName,
+                            'alamat'              => $alamat,
+                            'kota'                => $kota,
+                            'kd_rute'             => $kdRute,
+                            'tanggal_faktur'      => $tglFaktur,
+                            'tanggal_jatuh_tempo' => $tglJatuhTempo,
+                            'tempo'               => $tempoHari,
+                            'salesman'            => $salesman,
+                            'catatan'             => $catatan,
+                            'total_item'          => 0,
+                            'total_qty'           => 0,
+                            'total_tonase'        => 0,
+                            'total_kubikasi'      => 0,
+                            'grand_total'         => 0,
+                            'status'              => 'imported',
+                            'import_batch'        => $importBatchId,
+                            'create_by'           => $currentUsername,
+                            'create_at'           => $now
+                        ],
+                        'items' => []
+                    ];
+                } else {
+                    // Jika baris sebelumnya kosong informasi customernya, perbarui jika baris ini ada isinya
+                    if (empty($groupedFakturs[$noFaktur]['header']['alamat']) && !empty($alamat)) {
+                        $groupedFakturs[$noFaktur]['header']['alamat'] = $alamat;
+                    }
+                    if (empty($groupedFakturs[$noFaktur]['header']['kota']) && !empty($kota)) {
+                        $groupedFakturs[$noFaktur]['header']['kota'] = $kota;
+                    }
+                    if (empty($groupedFakturs[$noFaktur]['header']['catatan']) && !empty($catatan)) {
+                        $groupedFakturs[$noFaktur]['header']['catatan'] = $catatan;
+                    }
+                }
+
+                $groupedFakturs[$noFaktur]['header']['total_item']++;
+                $groupedFakturs[$noFaktur]['header']['total_qty'] += $qty;
+                $groupedFakturs[$noFaktur]['header']['grand_total'] += $totalHarga;
+                if ($beratGram > 0) {
+                    $groupedFakturs[$noFaktur]['header']['total_tonase'] += (($beratGram * $qty) / 1000000);
+                }
+
+                $groupedFakturs[$noFaktur]['items'][] = [
+                    'no_faktur'            => $noFaktur,
+                    'kd_barang'            => $kdBarang,
+                    'nama_barang'          => $namaBarang,
+                    'no_lot'               => $noLot,
+                    'expired_date'         => $expiredDate,
+                    'qty'                  => $qty,
+                    'qty_box'              => $qtyBox,
+                    'qty_pcs'              => $qtyPcs,
+                    'isi_per_box'          => $isiPerBox,
+                    'satuan'               => $satuan,
+                    'hrg_satuan'           => $hrgSatuan,
+                    'disc'                 => $disc,
+                    'pajak'                => $pajak,
+                    'subtotal_before_disc' => $subtotalBefore,
+                    'subtotal_after_disc'  => $subtotalAfter,
+                    'total_harga'          => $totalHarga,
+                    'berat_gram'           => $beratGram,
+                    'create_by'            => $currentUsername,
+                    'create_at'            => $now
+                ];
+            }
+
+            if (empty($groupedFakturs)) {
+                throw new \RuntimeException('Tidak ada data faktur yang valid untuk diimpor.');
+            }
+
+            // Simpan ke database dengan transaksi terisolasi
+            $this->M_SalesOrder->ensure_faktur_h_import_tables();
+            $this->db->trans_start();
+
+            $fakturNumbers = array_keys($groupedFakturs);
+            // Hapus data faktur H import lama dengan nomor yang sama agar tidak duplikat
+            if (!empty($fakturNumbers)) {
+                $this->db->where_in('no_faktur', $fakturNumbers)->delete('tbso_faktur_h_import_detail');
+                $this->db->where_in('no_faktur', $fakturNumbers)->delete('tbso_faktur_h_import');
+            }
+
+            $totalImportedFaktur = 0;
+            $totalImportedItems = 0;
+
+            foreach ($groupedFakturs as $noFak => $fakData) {
+                $this->db->insert('tbso_faktur_h_import', $fakData['header']);
+                $idImportH = $this->db->insert_id();
+
+                if (!empty($fakData['items'])) {
+                    $detailBatch = [];
+                    foreach ($fakData['items'] as $item) {
+                        $item['id_import_h'] = $idImportH;
+                        $detailBatch[] = $item;
+                        $totalImportedItems++;
+                    }
+                    $this->db->insert_batch('tbso_faktur_h_import_detail', $detailBatch);
+                }
+                $totalImportedFaktur++;
+            }
+
+            // Auto-lookup berat barang dari Faktur Z Induk atau Master Barang jika kolom berat di Excel tidak terisi
+            $this->db->query("
+                UPDATE tbso_faktur_h_import_detail d
+                JOIN tbso_faktur_h_import h ON h.id_import_h = d.id_import_h
+                JOIN tbso_faktur_penjualan fz ON fz.no_faktur = h.parent_no_faktur
+                JOIN tbso_faktur_detail fzd ON (fzd.id_faktur = fz.id_faktur AND fzd.kd_barang = d.kd_barang)
+                SET d.berat_gram = fzd.berat_gram
+                WHERE h.import_batch = " . $this->db->escape($importBatchId) . "
+                  AND (d.berat_gram = 0 OR d.berat_gram IS NULL) 
+                  AND fzd.berat_gram > 0
+            ");
+
+            $this->db->query("
+                UPDATE tbso_faktur_h_import_detail d
+                JOIN tbso_faktur_h_import h ON h.id_import_h = d.id_import_h
+                JOIN tbpo_barang b ON b.kode_barang = d.kd_barang
+                SET d.berat_gram = b.berat
+                WHERE h.import_batch = " . $this->db->escape($importBatchId) . "
+                  AND (d.berat_gram = 0 OR d.berat_gram IS NULL) 
+                  AND b.berat > 0
+            ");
+
+            $this->db->query("
+                UPDATE tbso_faktur_h_import h
+                JOIN (
+                    SELECT id_import_h, SUM(qty * berat_gram) / 1000000 AS tonase
+                    FROM tbso_faktur_h_import_detail
+                    GROUP BY id_import_h
+                ) calc ON calc.id_import_h = h.id_import_h
+                SET h.total_tonase = calc.tonase
+                WHERE h.import_batch = " . $this->db->escape($importBatchId) . "
+            ");
+
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status() === false) {
+                throw new \RuntimeException('Terjadi kegagalan saat menyimpan data Faktur H import ke database.');
+            }
+
+            $this->session->set_flashdata('success', 
+                "Berhasil mengimpor {$totalImportedFaktur} Faktur H ({$totalImportedItems} rincian barang) untuk kebutuhan cetak nota."
+            );
+        } catch (\Throwable $e) {
+            log_message('error', 'Import Faktur H Error: ' . $e->getMessage());
+            $this->session->set_flashdata('error', 'Gagal memproses import Faktur H: ' . $e->getMessage());
+        }
+
+        $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
+        redirect($redirectTo);
+    }
+
+    /**
+     * Cetak 1 Faktur H hasil import dengan format nota dot-matrix Epson LX-310 (21 cm x 14 cm)
+     */
+    public function cetak_faktur_h_import($id_import_h)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
+        if (!$faktur) {
+            show_404();
+            return;
+        }
+
+        $details = $this->M_SalesOrder->get_faktur_h_import_detail($faktur['id_import_h']);
+        $grand_total = (float)($faktur['grand_total'] ?? 0);
+        if ($grand_total <= 0 && !empty($details)) {
+            foreach ($details as $d) {
+                $grand_total += (float)($d['total_harga'] ?? 0);
+            }
+        }
+
+        // Susun data agar kompatibel dengan template faktur_pecah_print_lx310.php
+        $kontakNama = !empty($faktur['kontak_person']) ? $faktur['kontak_person'] : $faktur['customer_name'];
+        if (!empty($faktur['customer_name']) && $faktur['customer_name'] !== $kontakNama) {
+            $kontakNama = $faktur['customer_name'] . ' (' . $kontakNama . ')';
+        }
+
+        $fakturPrint = [
+            'id_pecah'            => $faktur['id_import_h'],
+            'no_faktur'           => $faktur['no_faktur'],
+            'parent_no_faktur'    => $faktur['parent_no_faktur'],
+            'tanggal_faktur'      => $faktur['tanggal_faktur'],
+            'tanggal_jatuh_tempo' => $faktur['tanggal_jatuh_tempo'],
+            'tempo'               => (int)($faktur['tempo'] ?: 30),
+            'full_customer_name'  => $kontakNama,
+            'customer_name'       => $faktur['customer_name'],
+            'nama_toko'           => $faktur['nama_toko'] ?: $faktur['customer_name'],
+            'ca_alamat'           => $faktur['alamat'],
+            'ca_kota'             => $faktur['kota'],
+            'customer_kd_rute'    => $faktur['kd_rute'] ?: 'SBY',
+            'salesman'            => $faktur['salesman'] ?: 'SALES',
+            'kd_customer'         => $faktur['kd_customer'] ?: '-',
+            'catatan'             => $faktur['catatan'],
+            'create_by'           => $faktur['create_by'],
+            'create_at'           => $faktur['create_at'],
+            'total_tonase'        => $faktur['total_tonase']
+        ];
+
+        $data['page_title']      = 'Cetak Faktur ' . $faktur['no_faktur'] . ' (Import)';
+        $data['list_faktur']     = [
+            [
+                'faktur'        => $fakturPrint,
+                'details'       => $details,
+                'parent_faktur' => ['no_faktur' => $faktur['parent_no_faktur'] ?: '-'],
+                'grand_total'   => $grand_total
+            ]
+        ];
+        $data['total_all_grand'] = $grand_total;
+        $data['is_batch_print']  = false;
+        $data['back_url']        = base_url('sales_order/pecah_faktur#content-faktur-h-import');
+        $data['back_label']      = 'Daftar Faktur H Import';
+
+        $this->load->view('content/sales/faktur_pecah_print_lx310.php', $data);
+    }
+
+    /**
+     * Cetak Semua atau Faktur H Import Terpilih secara batch ke Printer Dot-Matrix Epson LX-310
+     */
+    public function cetak_semua_faktur_h_import()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $id_raw = $this->input->post('id_import_h') ?: $this->input->get('id_import_h');
+        $date1  = $this->input->get('date1') ?: $this->input->post('date1');
+        $date2  = $this->input->get('date2') ?: $this->input->post('date2');
+        $search = $this->input->get('search') ?: $this->input->post('search');
+
+        $ids = [];
+        if (is_array($id_raw)) {
+            $ids = array_filter(array_map('intval', $id_raw));
+        } elseif (is_string($id_raw) && trim($id_raw) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', $id_raw)));
+        }
+
+        $this->M_SalesOrder->ensure_faktur_h_import_tables();
+        $this->db->select('*')->from('tbso_faktur_h_import');
+
+        if (!empty($ids)) {
+            $this->db->where_in('id_import_h', $ids);
+        } else {
+            if (!empty($date1)) {
+                $this->db->where('tanggal_faktur >=', $date1);
+            }
+            if (!empty($date2)) {
+                $this->db->where('tanggal_faktur <=', $date2);
+            }
+            if (!empty($search)) {
+                $s = trim($search);
+                $this->db->group_start();
+                $this->db->like('no_faktur', $s);
+                $this->db->or_like('parent_no_faktur', $s);
+                $this->db->or_like('customer_name', $s);
+                $this->db->or_like('kontak_person', $s);
+                $this->db->or_like('alamat', $s);
+                $this->db->or_like('kota', $s);
+                $this->db->or_like('salesman', $s);
+                $this->db->group_end();
+            }
+        }
+
+        $this->db->order_by('tanggal_faktur', 'ASC');
+        $this->db->order_by('id_import_h', 'ASC');
+        $faktur_rows = $this->db->get()->result_array();
+
+        if (empty($faktur_rows)) {
+            echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Cetak Faktur</title><link rel='stylesheet' href='" . base_url('assets/plugins/bootstrap/css/bootstrap.min.css') . "'></head><body class='bg-light text-center p-5'>";
+            echo "<div class='card shadow-sm p-4 mx-auto' style='max-width:550px;'>";
+            echo "<h4 class='text-dark font-weight-bold mb-3'>Tidak Ada Faktur H Import</h4>";
+            echo "<p class='text-muted mb-4'>Tidak ditemukan faktur H hasil import yang sesuai dengan kriteria yang dipilih.</p>";
+            echo "<div><a href='javascript:window.close()' class='btn btn-secondary btn-sm mr-2'>Tutup Jendela</a> ";
+            echo "<a href='" . base_url('sales_order/pecah_faktur#content-faktur-h-import') . "' class='btn btn-primary btn-sm'>Buka Daftar Faktur H Import</a></div>";
+            echo "</div></body></html>";
+            return;
+        }
+
+        $list_faktur = [];
+        $total_all_grand = 0;
+
+        foreach ($faktur_rows as $faktur) {
+            $details = $this->M_SalesOrder->get_faktur_h_import_detail($faktur['id_import_h']);
+            $grand_total = (float)($faktur['grand_total'] ?? 0);
+            if ($grand_total <= 0 && !empty($details)) {
+                foreach ($details as $d) {
+                    $grand_total += (float)($d['total_harga'] ?? 0);
+                }
+            }
+            $total_all_grand += $grand_total;
+
+            $kontakNama = !empty($faktur['kontak_person']) ? $faktur['kontak_person'] : $faktur['customer_name'];
+            if (!empty($faktur['customer_name']) && $faktur['customer_name'] !== $kontakNama) {
+                $kontakNama = $faktur['customer_name'] . ' (' . $kontakNama . ')';
+            }
+
+            $fakturPrint = [
+                'id_pecah'            => $faktur['id_import_h'],
+                'no_faktur'           => $faktur['no_faktur'],
+                'parent_no_faktur'    => $faktur['parent_no_faktur'],
+                'tanggal_faktur'      => $faktur['tanggal_faktur'],
+                'tanggal_jatuh_tempo' => $faktur['tanggal_jatuh_tempo'],
+                'tempo'               => (int)($faktur['tempo'] ?: 30),
+                'full_customer_name'  => $kontakNama,
+                'customer_name'       => $faktur['customer_name'],
+                'nama_toko'           => $faktur['nama_toko'] ?: $faktur['customer_name'],
+                'ca_alamat'           => $faktur['alamat'],
+                'ca_kota'             => $faktur['kota'],
+                'customer_kd_rute'    => $faktur['kd_rute'] ?: 'SBY',
+                'salesman'            => $faktur['salesman'] ?: 'SALES',
+                'kd_customer'         => $faktur['kd_customer'] ?: '-',
+                'catatan'             => $faktur['catatan'],
+                'create_by'           => $faktur['create_by'],
+                'create_at'           => $faktur['create_at'],
+                'total_tonase'        => $faktur['total_tonase']
+            ];
+
+            $list_faktur[] = [
+                'faktur'        => $fakturPrint,
+                'details'       => $details,
+                'parent_faktur' => ['no_faktur' => $faktur['parent_no_faktur'] ?: '-'],
+                'grand_total'   => $grand_total
+            ];
+        }
+
+        $data['page_title']      = 'Cetak ' . count($list_faktur) . ' Faktur H Import (LX-310)';
+        $data['list_faktur']     = $list_faktur;
+        $data['total_all_grand'] = $total_all_grand;
+        $data['is_batch_print']  = true;
+        $data['back_url']        = base_url('sales_order/pecah_faktur#content-faktur-h-import');
+        $data['back_label']      = 'Daftar Faktur H Import';
+
+        $this->load->view('content/sales/faktur_pecah_print_lx310.php', $data);
+    }
+
+    /**
+     * Mengambil data rincian faktur H import via AJAX JSON untuk modal detail.
+     */
+    public function detail_faktur_h_import_json($id_import_h)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
+        if (!$faktur) {
+            echo json_encode(['status' => 'error', 'message' => 'Data faktur tidak ditemukan.']);
+            return;
+        }
+
+        $details = $this->M_SalesOrder->get_faktur_h_import_detail($id_import_h);
+
+        echo json_encode([
+            'status'  => 'success',
+            'faktur'  => $faktur,
+            'details' => $details
+        ]);
+    }
+
+    /**
+     * Menghapus 1 data Faktur H import beserta item rinciannya.
+     */
+    public function hapus_faktur_h_import($id_import_h)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $faktur = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
+        if ($faktur) {
+            $this->M_SalesOrder->delete_faktur_h_import($id_import_h);
+            $this->session->set_flashdata('success', "Faktur H Import {$faktur['no_faktur']} berhasil dihapus.");
+        } else {
+            $this->session->set_flashdata('error', 'Faktur H Import tidak ditemukan.');
+        }
+
+        $redirectTo = $this->input->get('from') === 'page' ? 'sales_order/faktur_h_import' : 'sales_order/pecah_faktur#content-faktur-h-import';
+        redirect($redirectTo);
+    }
+
+    /**
+     * Menghapus batch Faktur H import yang dipilih via checkbox.
+     */
+    public function hapus_faktur_h_import_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+
+        $ids = $this->input->post('ids');
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        $ids = array_filter(array_map('intval', (array)$ids));
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Tidak ada Faktur H import yang dipilih untuk dihapus.');
+            $redirectTo = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
+        redirect($redirectTo);
+            return;
+        }
+
+        $this->M_SalesOrder->delete_faktur_h_import_batch($ids);
+        $count = count($ids);
+        $this->session->set_flashdata('success', "Berhasil menghapus {$count} Faktur H hasil import.");
+        $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
+        redirect($redirectTo);
     }
 }

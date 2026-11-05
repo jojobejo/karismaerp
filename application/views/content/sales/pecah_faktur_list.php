@@ -158,6 +158,9 @@
                         <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#modalImportMasterBarang">
                             <i class="fas fa-file-excel mr-1"></i> Import Master Barang
                         </button>
+                        <button type="button" class="btn btn-purple text-white btn-sm ml-1 shadow-sm" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportFakturH" title="Import Faktur H khusus kebutuhan cetak nota">
+                            <i class="fas fa-file-import mr-1"></i> Import Faktur H (Print)
+                        </button>
                         <button type="button" class="btn btn-success btn-sm ml-1" data-toggle="modal" data-target="#modalImportFakturZ">
                             <i class="fas fa-file-import mr-1"></i> Import Faktur Z
                         </button>
@@ -675,6 +678,110 @@
         </section>
     </div>
 
+    
+    <!-- Modal Import Faktur H Khusus Kebutuhan Cetak Nota LX-310 -->
+    <div class="modal fade" id="modalImportFakturH" tabindex="-1" role="dialog" aria-labelledby="modalImportFakturHLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <form action="<?= base_url('sales_order/import_faktur_h') ?>" method="post" enctype="multipart/form-data" id="formImportFakturH">
+                    <div class="modal-header text-white" style="background-color: #6f42c1;">
+                        <h5 class="modal-title font-weight-bold" id="modalImportFakturHLabel">
+                            <i class="fas fa-file-import mr-1"></i> Import Faktur H (Khusus Cetak Nota LX-310)
+                        </h5>
+                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2" style="font-size: 13px;">
+                            <i class="fas fa-shield-alt mr-1"></i> <strong>Aman & Terisolasi:</strong>
+                            Data faktur H yang diimpor melalui modul ini disimpan pada tabel terpisah khusus kebutuhan cetak nota.
+                            Proses ini <strong>sama sekali TIDAK mempengaruhi</strong> master customer acak, stok gudang, piutang, maupun jurnal sistem.
+                        </div>
+                        <div class="alert alert-light border py-2" style="font-size: 12.5px;">
+                            <strong>Petunjuk:</strong>
+                            <ol class="mb-0 pl-3">
+                                <li>Unduh template Excel resmi melalui tombol <strong>Unduh Template Excel</strong> di bawah.</li>
+                                <li>Buka template dan salin data faktur H Anda (bulan Januari - September atau periode lainnya).</li>
+                                <li>Satu nomor faktur H dapat memuat beberapa baris barang (multi-item).</li>
+                                <li>Simpan file dalam format <code>.xlsx</code> atau <code>.xls</code>, lalu pilih file pada kolom di bawah dan klik <strong>Proses Import</strong>.</li>
+                            </ol>
+                        </div>
+                        <div class="form-group">
+                            <label for="fileImportFakturH" class="font-weight-bold text-dark">Pilih File Excel Faktur H (.xlsx / .xls)</label>
+                            <div class="custom-file">
+                                <input type="file" name="file_faktur_h" id="fileImportFakturH" class="custom-file-input" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="fileImportFakturH" id="labelFileImportFakturH">Pilih file Excel Faktur H...</label>
+                            </div>
+                            <small class="form-text text-muted">Format file yang didukung: .xlsx atau .xls (Ukuran maksimal: 10 MB).</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <a href="<?= base_url('sales_order/template_import_faktur_h') ?>" class="btn btn-outline-primary btn-sm mr-auto font-weight-bold shadow-sm">
+                            <i class="fas fa-download mr-1"></i> Unduh Template Excel (.xlsx)
+                        </a>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn text-white btn-sm font-weight-bold shadow-sm" style="background-color: #6f42c1; border-color: #6f42c1;" id="btnSubmitImportFakturH">
+                            <i class="fas fa-upload mr-1"></i> Proses Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Rincian Barang Faktur H Import -->
+    <div class="modal fade" id="modalDetailFakturHImport" tabindex="-1" role="dialog" aria-labelledby="modalDetailFakturHImportLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title font-weight-bold text-dark" id="modalDetailFakturHImportLabel">
+                        <i class="fas fa-tag mr-1" style="color: #6f42c1;"></i> Rincian Faktur H Import: <span id="detailNoFakturH" class="font-weight-bold" style="color: #6f42c1;"></span>
+                    </h5>
+                    <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="row mb-3" id="detailHeaderFakturH">
+                        <!-- Rincian header di-inject via JS -->
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-2">
+                        <i class="fas fa-boxes mr-1 text-secondary"></i> Daftar Rincian Barang
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-striped mb-0 text-nowrap" id="tableDetailItemsFakturH">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="30" class="text-center">No</th>
+                                    <th>Kode Barang</th>
+                                    <th>Nama Barang</th>
+                                    <th class="text-center">No. Lot</th>
+                                    <th class="text-center">Expired</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-center">Satuan</th>
+                                    <th class="text-right">Harga Satuan</th>
+                                    <th class="text-center">Disc (%)</th>
+                                    <th class="text-right">Total Harga</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyDetailItemsFakturH">
+                                <!-- Items di-inject via JS -->
+                            </tbody>
+                            <tfoot class="bg-light font-weight-bold">
+                                <tr>
+                                    <td colspan="9" class="text-right">Grand Total:</td>
+                                    <td class="text-right text-success" id="detailGrandTotalFakturH">Rp 0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <a href="#" target="_blank" class="btn btn-primary btn-sm font-weight-bold shadow-sm" id="btnCetakModalDetailFakturH">
+                        <i class="fas fa-print mr-1"></i> Cetak Faktur Ini (LX-310)
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Modal Konfirmasi & Penentuan Jumlah Faktur Pecahan -->
     <div class="modal fade" id="modalBatchSplit" tabindex="-1" role="dialog" aria-labelledby="modalBatchSplitLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -1360,6 +1467,264 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Handler klik tombol Export Excel Faktur Pecahan H
+        
+        // =========================================================================
+        // JAVASCRIPT LOGIC FAKTUR H IMPORT (CETAK NOTA LX-310)
+        // =========================================================================
+
+        // File label custom upload
+        $('#fileImportFakturH').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            $('#labelFileImportFakturH').text(fileName || 'Pilih file Excel Faktur H...');
+        });
+
+        $('#formImportFakturH').on('submit', function() {
+            $('#btnSubmitImportFakturH').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses Import...');
+        });
+
+        // Setup DataTables Faktur H Import
+        if ($.fn.DataTable && !$.fn.DataTable.isDataTable('#tableFakturHImport')) {
+            $('#tableFakturHImport').DataTable({
+                responsive: false,
+                scrollX: true,
+                autoWidth: false,
+                ordering: true,
+                order: [[4, 'desc']], // Urutkan tanggal faktur desc
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 100, 250, 500, -1], [10, 25, 50, 100, 250, 500, "Semua"]],
+                language: {
+                    search: "Cari Faktur H Import:",
+                    lengthMenu: "Tampilkan _MENU_ data",
+                    info: "Menampilkan _START_ s/d _END_ dari _TOTAL_ faktur",
+                    infoEmpty: "Tidak ada data faktur H import",
+                    infoFiltered: "(disaring dari _MAX_ total faktur)",
+                    zeroRecords: "Tidak ada faktur H import yang cocok dengan pencarian",
+                    paginate: {
+                        first: "Awal",
+                        last: "Akhir",
+                        next: "Lanjut",
+                        previous: "Kembali"
+                    }
+                },
+                columnDefs: [
+                    { orderable: false, targets: 'no-sort' }
+                ]
+            });
+        }
+
+        // Fungsi Update Status Checkbox Faktur H Import
+        function updateSelectedFakturHImportState() {
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport') ? $('#tableFakturHImport').DataTable() : null;
+            var currentNodes = dt ? dt.rows({ page: 'current' }).nodes() : $('#tableFakturHImport tbody tr');
+            var currentCheckboxes = $(currentNodes).find('.check-item-faktur-h-import');
+            var totalCurrent = currentCheckboxes.length;
+            var checkedCurrent = currentCheckboxes.filter(':checked').length;
+
+            $('#checkAllFakturHImport').prop('checked', totalCurrent > 0 && totalCurrent === checkedCurrent);
+
+            // Ambil semua checkbox terpilih (seluruh halaman)
+            var allChecked = dt ? $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked') : $('.check-item-faktur-h-import:checked');
+            var totalCheckedAll = allChecked.length;
+
+            $('#countSelectedFakturHImport').text(totalCheckedAll);
+            if (totalCheckedAll > 0) {
+                $('#btnHapusBatchFakturHImport').show();
+                $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Terpilih (' + totalCheckedAll + ' Faktur)');
+            } else {
+                $('#btnHapusBatchFakturHImport').hide();
+                $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Semua (LX-310)');
+            }
+        }
+
+        $(document).on('change', '#checkAllFakturHImport', function() {
+            var isChecked = $(this).is(':checked');
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport') ? $('#tableFakturHImport').DataTable() : null;
+            if (dt) {
+                var currentNodes = dt.rows({ page: 'current' }).nodes();
+                $(currentNodes).find('.check-item-faktur-h-import').prop('checked', isChecked);
+            } else {
+                $('.check-item-faktur-h-import:visible').prop('checked', isChecked);
+            }
+            updateSelectedFakturHImportState();
+        });
+
+        $(document).on('click', '#btnToggleSelectAllFakturHImport', function(e) {
+            e.preventDefault();
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport') ? $('#tableFakturHImport').DataTable() : null;
+            var currentCheckboxes = dt ? $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h-import') : $('.check-item-faktur-h-import:visible');
+            var isAllChecked = currentCheckboxes.length > 0 && currentCheckboxes.length === currentCheckboxes.filter(':checked').length;
+            currentCheckboxes.prop('checked', !isAllChecked);
+            updateSelectedFakturHImportState();
+        });
+
+        $(document).on('change', '.check-item-faktur-h-import', function() {
+            updateSelectedFakturHImportState();
+        });
+
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport')) {
+            var dtHImport = $('#tableFakturHImport').DataTable();
+            dtHImport.on('draw', function() {
+                updateSelectedFakturHImportState();
+            });
+        }
+
+        // Tombol Cetak Semua / Terpilih Faktur H Import
+        $(document).on('click', '#btnCetakSemuaFakturHImport', function(e) {
+            e.preventDefault();
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport') ? $('#tableFakturHImport').DataTable() : null;
+            var selectedIds = [];
+
+            if (dt) {
+                $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+            } else {
+                $('.check-item-faktur-h-import:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+            }
+
+            var form = $('<form>', {
+                'action': '<?= base_url("sales_order/cetak_semua_faktur_h_import") ?>',
+                'method': 'POST',
+                'target': '_blank',
+                'style': 'display:none;'
+            });
+
+            if (selectedIds.length > 0) {
+                form.append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'id_import_h',
+                    'value': selectedIds.join(',')
+                }));
+            } else {
+                // Cetak seluruh faktur yang sedang tampil di halaman
+                var visibleIds = [];
+                if (dt) {
+                    $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h-import').each(function() {
+                        visibleIds.push($(this).val());
+                    });
+                }
+                if (visibleIds.length > 0) {
+                    form.append($('<input>', {
+                        'type': 'hidden',
+                        'name': 'id_import_h',
+                        'value': visibleIds.join(',')
+                    }));
+                }
+            }
+
+            $('body').append(form);
+            form.submit();
+            setTimeout(function() { form.remove(); }, 2000);
+        });
+
+        // Tombol Hapus Batch Faktur H Import
+        $(document).on('click', '#btnHapusBatchFakturHImport', function(e) {
+            e.preventDefault();
+            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImport') ? $('#tableFakturHImport').DataTable() : null;
+            var selectedIds = [];
+
+            if (dt) {
+                $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+            } else {
+                $('.check-item-faktur-h-import:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+            }
+
+            if (selectedIds.length === 0) return;
+
+            if (confirm('Apakah Anda yakin ingin menghapus ' + selectedIds.length + ' Faktur H Import terpilih?\n\nData import ini akan dihapus secara permanen.')) {
+                var form = $('<form>', {
+                    'action': '<?= base_url("sales_order/hapus_faktur_h_import_batch") ?>',
+                    'method': 'POST',
+                    'style': 'display:none;'
+                });
+                form.append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'ids',
+                    'value': selectedIds.join(',')
+                }));
+                $('body').append(form);
+                form.submit();
+            }
+        });
+
+        // Modal Detail AJAX Faktur H Import
+        window.lihatDetailFakturHImport = function(id) {
+            $('#detailNoFakturH').text('Memuat...');
+            $('#detailHeaderFakturH').html('<div class="col-12 text-center py-3"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i></div>');
+            $('#tbodyDetailItemsFakturH').empty();
+            $('#modalDetailFakturHImport').modal('show');
+
+            $.getJSON('<?= base_url("sales_order/detail_faktur_h_import_json/") ?>' + id, function(res) {
+                if (res.status === 'success') {
+                    var f = res.faktur;
+                    $('#detailNoFakturH').text(f.no_faktur);
+                    $('#btnCetakModalDetailFakturH').attr('href', '<?= base_url("sales_order/cetak_faktur_h_import/") ?>' + f.id_import_h);
+
+                    var headerHtml = '' +
+                        '<div class="col-md-4 mb-2">' +
+                            '<table class="table table-sm table-borderless mb-0">' +
+                                '<tr><td class="text-muted" width="120">No. Faktur:</td><td class="font-weight-bold text-primary">' + f.no_faktur + '</td></tr>' +
+                                '<tr><td class="text-muted">Faktur Z Induk:</td><td>' + (f.parent_no_faktur || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted">Tanggal:</td><td>' + f.tanggal_faktur + '</td></tr>' +
+                                '<tr><td class="text-muted">Jatuh Tempo:</td><td>' + (f.tanggal_jatuh_tempo || '-') + ' (' + f.tempo + ' hari)</td></tr>' +
+                            '</table>' +
+                        '</div>' +
+                        '<div class="col-md-4 mb-2">' +
+                            '<table class="table table-sm table-borderless mb-0">' +
+                                '<tr><td class="text-muted" width="120">Customer:</td><td class="font-weight-bold">' + f.customer_name + '</td></tr>' +
+                                '<tr><td class="text-muted">Kontak Person:</td><td>' + (f.kontak_person || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted">Alamat:</td><td>' + (f.alamat || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted">Kota / Rute:</td><td>' + (f.kota || '-') + ' (' + (f.kd_rute || 'SBY') + ')</td></tr>' +
+                            '</table>' +
+                        '</div>' +
+                        '<div class="col-md-4 mb-2">' +
+                            '<table class="table table-sm table-borderless mb-0">' +
+                                '<tr><td class="text-muted" width="120">Salesman:</td><td>' + (f.salesman || '-') + '</td></tr>' +
+                                '<tr><td class="text-muted">Diimport Oleh:</td><td>' + f.create_by + ' (' + f.create_at + ')</td></tr>' +
+                                '<tr><td class="text-muted">Catatan:</td><td>' + (f.catatan || '-') + '</td></tr>' +
+                            '</table>' +
+                        '</div>';
+                    $('#detailHeaderFakturH').html(headerHtml);
+
+                    var itemsHtml = '';
+                    var totalGrand = 0;
+                    if (res.details && res.details.length > 0) {
+                        $.each(res.details, function(idx, item) {
+                            var subtotal = parseFloat(item.total_harga || 0);
+                            totalGrand += subtotal;
+                            itemsHtml += '' +
+                                '<tr>' +
+                                    '<td class="text-center">' + (idx + 1) + '</td>' +
+                                    '<td>' + (item.kd_barang || '-') + '</td>' +
+                                    '<td class="font-weight-bold">' + item.nama_barang + '</td>' +
+                                    '<td class="text-center">' + (item.no_lot || '-') + '</td>' +
+                                    '<td class="text-center">' + (item.expired_date || '-') + '</td>' +
+                                    '<td class="text-right font-weight-bold">' + parseFloat(item.qty).toLocaleString('id-ID') + '</td>' +
+                                    '<td class="text-center">' + item.satuan + '</td>' +
+                                    '<td class="text-right">Rp ' + parseFloat(item.hrg_satuan).toLocaleString('id-ID') + '</td>' +
+                                    '<td class="text-center">' + parseFloat(item.disc) + '%</td>' +
+                                    '<td class="text-right font-weight-bold text-success">Rp ' + subtotal.toLocaleString('id-ID') + '</td>' +
+                                '</tr>';
+                        });
+                    } else {
+                        itemsHtml = '<tr><td colspan="10" class="text-center text-muted py-3">Tidak ada rincian barang.</td></tr>';
+                    }
+                    $('#tbodyDetailItemsFakturH').html(itemsHtml);
+                    $('#detailGrandTotalFakturH').text('Rp ' + totalGrand.toLocaleString('id-ID'));
+                } else {
+                    $('#detailHeaderFakturH').html('<div class="col-12 text-danger p-3"><i class="fas fa-exclamation-triangle mr-1"></i> ' + res.message + '</div>');
+                }
+            }).fail(function() {
+                $('#detailHeaderFakturH').html('<div class="col-12 text-danger p-3"><i class="fas fa-exclamation-triangle mr-1"></i> Gagal memuat data rincian faktur.</div>');
+            });
+        };
+
         $(document).on('click', '#btnExportFakturH', function(e) {
             e.preventDefault();
             var ids = getVisibleFakturHIds();
