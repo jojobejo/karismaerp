@@ -1741,25 +1741,24 @@ class M_Ics extends CI_Model
     public function list_do_today($tgl)
     {
         return $this->db->query("SELECT
-            a.id,
-            a.tgl_transaksi,
+            MAX(a.id) AS id,
+            MAX(a.tgl_transaksi) AS tgl_transaksi,
             a.kd_faktur,
             a.nama_barang,
-            a.qty,
-            COALESCE(FLOOR(a.qty / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
-            COALESCE(MOD(a.qty, NULLIF((m.panjang * m.lebar * m.tinggi), 0)), a.qty)    AS qty_pcs,
+            SUM(a.qty) AS qty,
+            COALESCE(FLOOR(SUM(a.qty) / NULLIF((MAX(m.panjang) * MAX(m.lebar) * MAX(m.tinggi)), 0)), 0) AS qty_box,
+            COALESCE(MOD(SUM(a.qty), NULLIF((MAX(m.panjang) * MAX(m.lebar) * MAX(m.tinggi)), 0)), SUM(a.qty))    AS qty_pcs,
             a.no_lot,
             a.exp_date,
-            c.nama_kios as nm_kios,
-            b.kd_rute as rute
+            MAX(c.nama_kios) as nm_kios,
+            MAX(b.kd_rute) as rute
         FROM tb_ics_do a
         LEFT JOIN tbpo_barang m ON m.nama_barang = a.nama_barang
         LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
         LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
             a.input_at = '$tgl'
-            AND (m.panjang * m.lebar * m.tinggi) > 0
-            GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer 
+            GROUP BY a.kd_faktur, a.nama_barang, a.exp_date, a.no_lot
         ")->result();
     }
 
@@ -1778,19 +1777,19 @@ class M_Ics extends CI_Model
     d.kd_rute   AS rute
 FROM (
     SELECT
-        a.tgl_transaksi,
+        MAX(a.tgl_transaksi) AS tgl_transaksi,
         a.kd_faktur,
         a.kd_barang,
         a.nama_barang,
         SUM(a.qty) AS qty,
-        COALESCE(FLOOR(SUM(a.qty) / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
-        COALESCE(MOD(SUM(a.qty), NULLIF((m.panjang * m.lebar * m.tinggi), 0)), SUM(a.qty))    AS qty_pcs,
+        COALESCE(FLOOR(SUM(a.qty) / NULLIF((MAX(m.panjang) * MAX(m.lebar) * MAX(m.tinggi)), 0)), 0) AS qty_box,
+        COALESCE(MOD(SUM(a.qty), NULLIF((MAX(m.panjang) * MAX(m.lebar) * MAX(m.tinggi)), 0)), SUM(a.qty))    AS qty_pcs,
         a.no_lot,
         a.exp_date
     FROM tb_ics_do a
     LEFT JOIN tbpo_barang m 
         ON m.kode_barang = a.kd_barang
-    GROUP BY a.kd_faktur, a.kd_barang, a.exp_date
+    GROUP BY a.kd_faktur, a.kd_barang, a.nama_barang, a.exp_date, a.no_lot
 ) x
 LEFT JOIN (
     SELECT 
