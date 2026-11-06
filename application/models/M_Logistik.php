@@ -2270,17 +2270,17 @@ class M_Logistik extends CI_Model
     public function getbarangics()
     {
         return $this->db->query("SELECT 
-        b.kd_system,
+        b.kode_barang AS kd_system,
         a.nm_barang AS nama_barang,
-        (b.p * b.l * b.t) AS dimensi,
+        (b.panjang * b.lebar * b.tinggi) AS dimensi,
         a.exp_date,
         SUM(a.qty) AS tot_qty,
-        FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) AS qty_box,
-        (SUM(a.qty) - FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) * (b.p * b.l * b.t)) AS qty_pcs
+        COALESCE(FLOOR(SUM(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)), 0) AS qty_box,
+        COALESCE((SUM(a.qty) - FLOOR(SUM(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)) * (b.panjang * b.lebar * b.tinggi)), SUM(a.qty)) AS qty_pcs
     FROM tb_qty_lot a
     JOIN tbpo_barang b ON b.nama_barang = a.nm_barang
     JOIN tb_suplier c ON c.kd_suplier = a.suplier
-    GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
+    GROUP BY a.nm_barang, a.exp_date, b.kode_barang, b.panjang, b.lebar, b.tinggi ")->result();
     }
 
     public function list_item_ics()

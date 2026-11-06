@@ -2134,9 +2134,9 @@ class C_Logistik extends CI_Controller
             d.jam_buka_tutup,
             d.karakteristik_kios,
             x.qty,
-            (c.p * c.l * c.t) AS dimensi,
-            FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
-            (x.qty % (c.p * c.l * c.t)) AS qty_pcs
+            (c.panjang * c.lebar * c.tinggi) AS dimensi,
+            COALESCE(FLOOR(x.qty / NULLIF((c.panjang * c.lebar * c.tinggi), 0)), 0) AS qty_box,
+            COALESCE((x.qty % NULLIF((c.panjang * c.lebar * c.tinggi), 0)), x.qty) AS qty_pcs
         FROM (
             SELECT
                 a.id,
@@ -2308,8 +2308,8 @@ class C_Logistik extends CI_Controller
             a.tgl_exp,
             (b.p*b.l*b.t) AS dimensi,
             sum(a.qty) AS qty,
-            FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
-            (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
+            COALESCE(FLOOR(sum(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)), 0) AS qty_box,
+            COALESCE((sum(a.qty) - FLOOR(sum(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)) * (b.panjang * b.lebar * b.tinggi)), sum(a.qty)) AS qty_pcs
             FROM tb_detail_do a
             JOIN tbpo_barang b ON b.kode_barang = a.kd_barang
             WHERE a.kd_do = '$kd_do'

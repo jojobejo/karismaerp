@@ -3781,7 +3781,7 @@ class C_Ics extends CI_Controller
     public function get_detail_barang()
     {
         $id = $this->input->post('id');
-        $this->db->select('i.id, i.nama_barang, i.exp_date, (m.p * m.l * m.t) AS dimensi');
+        $this->db->select('i.id, i.nama_barang, i.exp_date, COALESCE(m.dimensi, 0) AS dimensi');
         $this->db->from('tb_ics i');
         $this->db->join('tb_mbarang m', 'm.nm_barang = i.nama_barang', 'left');
         $this->db->where('i.id', $id);

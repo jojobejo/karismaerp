@@ -567,7 +567,7 @@ class M_Ics extends CI_Model
             GROUP BY exp_date , kd_system
         ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang as kd
+            SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , kode_barang as kd
             FROM tbpo_barang
             GROUP BY kode_barang
         ) mb ON mb.kd = x.kode_barang_zahir
@@ -678,7 +678,7 @@ class M_Ics extends CI_Model
             GROUP BY kd_system, nama_barang
         ) o ON o.kd_system = x.kode_barang_zahir
         LEFT JOIN (
-            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang
+            SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , kode_barang as kd_barang
             FROM tbpo_barang
             GROUP BY kode_barang,nama_barang
         ) mb ON mb.kd_barang = x.kode_barang_zahir
@@ -731,12 +731,12 @@ class M_Ics extends CI_Model
     public function get_master_barang_log()
     {
         return $this->db->query("SELECT
-        a.id as id,
+        a.id_barang as id,
         a.nama_barang AS nama_barang,
         b.nama_suplier as nama_suplier,
         a.bhn_aktif as bahan_aktif,
         a.satuan as satuan,
-        (a.p*a.l*a.t) as dimensi,
+        (a.panjang * a.lebar * a.tinggi) as dimensi,
         a.berat as berat,
         a.kubikasi as kubikasi
         FROM tbpo_barang a
@@ -769,8 +769,8 @@ class M_Ics extends CI_Model
         return $this->db->query("SELECT
             a.id,
             opname.id AS opname_id,
-            b.kd_barang,
-            b.p * b.l * b.t AS dimensi,
+            b.kode_barang as kd_barang,
+            (b.panjang * b.lebar * b.tinggi) AS dimensi,
             a.nama_barang,
             a.exp_date AS expired,
             (COALESCE(sum(a.qty),0) - COALESCE(mutasi.qty_mutasi,0)) AS qty,
@@ -846,7 +846,7 @@ class M_Ics extends CI_Model
                 a.id,
                 a.nama_barang,
                 a.exp_date as expired,
-                (b.p*b.l*b.t) AS dimensi,
+                COALESCE(b.dimensi, 0) AS dimensi,
                 SUM(a.qty) AS qty,
                 COALESCE(pending.qty_pending, 0) AS do,
                 COALESCE(purchase.qty_po, 0) AS po,
@@ -987,7 +987,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1124,7 +1124,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1261,7 +1261,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1398,7 +1398,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1535,7 +1535,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1672,7 +1672,7 @@ class M_Ics extends CI_Model
         GROUP BY kd_system , exp_date
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        SELECT nama_barang, MAX(panjang) AS p, MAX(lebar) AS l, MAX(tinggi) AS t , MAX(kode_barang) AS kd
         FROM tbpo_barang
         GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
@@ -1746,8 +1746,8 @@ class M_Ics extends CI_Model
             a.kd_faktur,
             a.nama_barang,
             a.qty,
-            FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
-            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            COALESCE(FLOOR(a.qty / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
+            COALESCE(MOD(a.qty, NULLIF((m.panjang * m.lebar * m.tinggi), 0)), a.qty)    AS qty_pcs,
             a.no_lot,
             a.exp_date,
             c.nama_kios as nm_kios,
@@ -1758,7 +1758,7 @@ class M_Ics extends CI_Model
         LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
             a.input_at = '$tgl'
-            AND (m.p * m.l * m.t) > 0
+            AND (m.panjang * m.lebar * m.tinggi) > 0
             GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer 
         ")->result();
     }
@@ -1783,8 +1783,8 @@ FROM (
         a.kd_barang,
         a.nama_barang,
         SUM(a.qty) AS qty,
-        FLOOR(SUM(a.qty) / (m.p * m.l * m.t)) AS qty_box,
-        MOD(SUM(a.qty), (m.p * m.l * m.t))    AS qty_pcs,
+        COALESCE(FLOOR(SUM(a.qty) / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
+        COALESCE(MOD(SUM(a.qty), NULLIF((m.panjang * m.lebar * m.tinggi), 0)), SUM(a.qty))    AS qty_pcs,
         a.no_lot,
         a.exp_date
     FROM tb_ics_do a
@@ -1814,14 +1814,14 @@ LEFT JOIN tb_customer c
             a.nama_barang,
             a.qty,
             a.exp_date,
-            (m.p * m.l * m.t) AS dimensi,
-            FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
-            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            (m.panjang * m.lebar * m.tinggi) AS dimensi,
+            COALESCE(FLOOR(a.qty / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
+            COALESCE(MOD(a.qty, NULLIF((m.panjang * m.lebar * m.tinggi), 0)), a.qty)    AS qty_pcs,
             a.lpb_note as note
         FROM tb_ics_po a
         LEFT JOIN tbpo_barang m ON m.nama_barang = a.nama_barang
         WHERE DATE(a.tgl_transaksi) = '$tgl'
-        AND (m.p * m.l * m.t) > 0")->result();
+        AND (m.panjang * m.lebar * m.tinggi) > 0")->result();
     }
 
     public function list_po()
@@ -1834,9 +1834,9 @@ LEFT JOIN tb_customer c
             a.nama_barang,
             a.qty,
             a.exp_date,
-            COALESCE((m.p * m.l * m.t),0) AS dimensi,
-            FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
-            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            COALESCE((m.panjang * m.lebar * m.tinggi),0) AS dimensi,
+            COALESCE(FLOOR(a.qty / NULLIF((m.panjang * m.lebar * m.tinggi), 0)), 0) AS qty_box,
+            COALESCE(MOD(a.qty, NULLIF((m.panjang * m.lebar * m.tinggi), 0)), a.qty)    AS qty_pcs,
             a.lpb_note as note,
             a.lpb_status as status
         FROM tb_ics_po a
@@ -1917,7 +1917,7 @@ LEFT JOIN tb_customer c
         return $this->db->query("SELECT
             a.id,
             a.nama_barang,
-            (b.p*b.l*b.t) AS dimensi,
+            COALESCE(b.dimensi, 0) AS dimensi,
             SUM(a.qty) AS qty_awal,
             COALESCE(pending.qty_pending, 0) AS DO,
             COALESCE(purchase.qty_po, 0) AS PO,
@@ -2096,9 +2096,9 @@ LEFT JOIN tb_customer c
         return $this->db->query("
         SELECT
             a.*,
-            (b.p*b.l*b.t) AS dimensi,
-            FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
-            MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
+            (b.panjang * b.lebar * b.tinggi) AS dimensi,
+            COALESCE(FLOOR(a.qty / NULLIF((b.panjang * b.lebar * b.tinggi), 0)), 0) AS qty_box,
+            COALESCE(MOD(a.qty, NULLIF((b.panjang * b.lebar * b.tinggi), 0)), a.qty) AS qty_pcs
         FROM v_stock_per_gudang a
         JOIN tbpo_barang b
             ON b.kode_barang = a.kode_barang
@@ -2116,9 +2116,9 @@ LEFT JOIN tb_customer c
                 a.exp_date,
                 a.gudang,
                 a.qty,
-                (b.p*b.l*b.t) AS dimensi,
-                FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
-                MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
+                (b.panjang * b.lebar * b.tinggi) AS dimensi,
+                COALESCE(FLOOR(a.qty / NULLIF((b.panjang * b.lebar * b.tinggi), 0)), 0) AS qty_box,
+                COALESCE(MOD(a.qty, NULLIF((b.panjang * b.lebar * b.tinggi), 0)), a.qty) AS qty_pcs
             FROM v_stock_per_gudang a
             JOIN tbpo_barang b
                 ON b.kode_barang = a.kode_barang
