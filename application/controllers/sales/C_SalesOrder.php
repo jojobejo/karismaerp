@@ -72,6 +72,13 @@ class C_SalesOrder extends CI_Controller
                 'unpost_pelunasan_faktur_h_import',
                 'unpost_pelunasan_faktur_h_import_batch',
                 'jurnal_pelunasan_faktur_h_import_json',
+                'export_faktur_h_lunas',
+                'template_import_pelunasan_faktur_z_pecah',
+                'import_pelunasan_faktur_z_pecah',
+                'unpost_pelunasan_faktur_z_pecah',
+                'unpost_pelunasan_faktur_z_pecah_batch',
+                'jurnal_pelunasan_faktur_z_pecah_json',
+                'export_faktur_z_pecah_lunas',
             ];
             $currentMethod = strtolower((string)$this->router->fetch_method());
             if (!in_array($currentMethod, $allowedAdmkeuMethods, true)) {
@@ -8928,7 +8935,7 @@ class C_SalesOrder extends CI_Controller
                     $fh['no_faktur'],
                     !empty($fh['metode_pembayaran']) ? $fh['metode_pembayaran'] : $defaultMetode,
                     !empty($fh['tanggal_bayar']) ? $fh['tanggal_bayar'] : ($fh['tanggal_faktur'] ?: date('Y-m-d')),
-                    $gt,
+                    '', // Jumlah pembayaran dikosongkan agar dipilih faktur mana yang lunas
                     isset($fh['skema_potongan']) && $fh['skema_potongan'] !== null ? (int)$fh['skema_potongan'] : $defaultSkema,
                     $fh['parent_no_faktur'] ?: '',
                     $fh['customer_name'] . (!empty($fh['kontak_person']) && $fh['kontak_person'] !== $fh['customer_name'] ? ' (' . $fh['kontak_person'] . ')' : ''),
@@ -9036,8 +9043,8 @@ class C_SalesOrder extends CI_Controller
         }
 
         $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
-        if (!in_array($extension, ['xlsx', 'xls'], true) || (int)$file['size'] > (10 * 1024 * 1024)) {
-            $this->session->set_flashdata('error', 'File pelunasan harus berformat .xlsx/.xls dan berukuran maksimal 10 MB.');
+        if (!in_array($extension, ['xlsx', 'xls', 'csv'], true) || (int)$file['size'] > (10 * 1024 * 1024)) {
+            $this->session->set_flashdata('error', 'File pelunasan harus berformat .xlsx, .xls, atau .csv dan berukuran maksimal 10 MB.');
             redirect($redirectTo);
             return;
         }
@@ -9050,26 +9057,36 @@ class C_SalesOrder extends CI_Controller
 
         try {
             $this->_loadPhpSpreadsheetForFakturZ();
-            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
-            $reader->setReadDataOnly(true);
-            $reader->setReadEmptyCells(false);
 
-            $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
-            if (in_array('Pelunasan Faktur H', $worksheetNames, true)) {
-                $reader->setLoadSheetsOnly(['Pelunasan Faktur H']);
-            } elseif (!empty($worksheetNames)) {
-                $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+            if ($extension === 'csv') {
+                $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+                $reader->setInputEncoding('UTF-8');
+                $reader->setAutoDetect(true);
+                $spreadsheet = $reader->load($file['tmp_name']);
+                $sheet = $spreadsheet->getActiveSheet();
+            } else {
+                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+                $reader->setReadDataOnly(true);
+                $reader->setReadEmptyCells(false);
+
+                $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
+                if (in_array('Pelunasan Faktur H', $worksheetNames, true)) {
+                    $reader->setLoadSheetsOnly(['Pelunasan Faktur H']);
+                } elseif (!empty($worksheetNames)) {
+                    $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+                }
+
+                $spreadsheet = $reader->load($file['tmp_name']);
+                $sheet = $spreadsheet->getSheetByName('Pelunasan Faktur H') ?: $spreadsheet->getActiveSheet();
             }
 
-            $spreadsheet = $reader->load($file['tmp_name']);
-            $sheet = $spreadsheet->getSheetByName('Pelunasan Faktur H') ?: $spreadsheet->getActiveSheet();
             $rows = $sheet->toArray(null, false, false, false);
 
             $spreadsheet->disconnectWorksheets();
             unset($spreadsheet, $sheet, $reader);
 
             if (count($rows) < 2) {
-                throw new \RuntimeException('File Excel tidak memiliki baris data pelunasan Faktur H.');
+                throw new \RuntimeException('File tidak memiliki baris data pelunasan Faktur H.');
             }
 
             $headerAliases = [
@@ -9114,27 +9131,41 @@ class C_SalesOrder extends CI_Controller
                 'catatan'              => 'keterangan',
             ];
 
-            $headerRow = array_map([$this, '_normalizeImportHeader'], (array)$rows[0]);
             $headerMap = [];
-            foreach ($headerRow as $index => $headerName) {
-                if ($headerName === '') continue;
-                $canonical = $headerAliases[$headerName] ?? $headerName;
-                if (!isset($headerMap[$canonical])) {
-                    $headerMap[$canonical] = $index;
+            $headerRowIndex = 0;
+            $maxScanRows = min(10, count($rows));
+
+            for ($r = 0; $r < $maxScanRows; $r++) {
+                $candidateRow = (array)$rows[$r];
+                $tempMap = [];
+                foreach ($candidateRow as $colIdx => $colVal) {
+                    $cleanedHeader = $this->_normalizeImportHeader($colVal);
+                    if ($cleanedHeader !== '' && isset($headerAliases[$cleanedHeader])) {
+                        $canonical = $headerAliases[$cleanedHeader];
+                        if (!isset($tempMap[$canonical])) {
+                            $tempMap[$canonical] = $colIdx;
+                        }
+                    }
+                }
+                if (isset($tempMap['no_faktur'])) {
+                    $headerMap = $tempMap;
+                    $headerRowIndex = $r;
+                    break;
                 }
             }
 
             if (!isset($headerMap['no_faktur'])) {
-                throw new \RuntimeException('Header kolom wajib "no_faktur" tidak ditemukan di baris pertama Excel.');
+                throw new \RuntimeException('Header kolom wajib "no_faktur" tidak ditemukan pada file Excel.');
             }
 
             $username    = $this->_getUsername();
             $importBatch = 'PELUNASAN-FH-' . date('YmdHis');
             $successCount = 0;
+            $skippedCount = 0;
             $notFoundList = [];
             $failedList   = [];
 
-            for ($r = 1; $r < count($rows); $r++) {
+            for ($r = $headerRowIndex + 1; $r < count($rows); $r++) {
                 $row = (array)$rows[$r];
                 $noFaktur = trim((string)($row[$headerMap['no_faktur']] ?? ''));
                 if ($noFaktur === '') {
@@ -9147,12 +9178,24 @@ class C_SalesOrder extends CI_Controller
                     return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
                 };
 
+                // Periksa jumlah pembayaran: jika kosong atau <= 0, lewati (belum lunas)
+                $rawJmlBayar = $getVal('jumlah_pembayaran', '');
+                if ($rawJmlBayar === '') {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $jmlBayar = $this->_parseImportNumber($rawJmlBayar);
+                if ($jmlBayar <= 0) {
+                    $skippedCount++;
+                    continue;
+                }
+
                 $rawTgl = $getVal('tanggal_pembayaran', '');
                 $tglBayar = $rawTgl !== ''
                     ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
-                    : ($defaultTanggal ?: '');
+                    : ($defaultTanggal ?: date('Y-m-d'));
 
-                $jmlBayar = $this->_parseImportNumber($getVal('jumlah_pembayaran', '0'));
                 $metode   = $getVal('metode_pembayaran', $defaultMetode);
                 $skemaRaw = $getVal('skema_potongan', '');
                 if ($skemaRaw !== '') {
@@ -9194,11 +9237,19 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($successCount === 0 && empty($notFoundList) && empty($failedList)) {
+                if ($skippedCount > 0) {
+                    $this->session->set_flashdata('info', "Tidak ada faktur yang dilunasi. Sebanyak {$skippedCount} baris faktur dilewati karena kolom jumlah pembayaran dikosongkan (belum lunas).");
+                    redirect($redirectTo);
+                    return;
+                }
                 throw new \RuntimeException('Tidak ada baris data nomor Faktur H yang valid pada file Excel.');
             }
 
             if ($successCount > 0) {
                 $msg = "Import Pelunasan Faktur H berhasil! <strong>{$successCount} Faktur H</strong> telah dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
+                if ($skippedCount > 0) {
+                    $msg .= " <br><small class='text-muted'>Informasi: {$skippedCount} faktur belum lunas dilewati (kolom jumlah pembayaran dikosongi).</small>";
+                }
                 if (!empty($notFoundList)) {
                     $previewNotFound = implode(', ', array_slice($notFoundList, 0, 8));
                     if (count($notFoundList) > 8) $previewNotFound .= ', dll.';
@@ -9430,5 +9481,1520 @@ class C_SalesOrder extends CI_Controller
         $this->session->set_flashdata('success', "Berhasil menghapus {$count} Faktur H hasil import.");
         $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
         redirect($redirectTo);
+    }
+
+    /**
+     * Mengekspor Faktur H Import yang sudah lunas beserta data Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) ke Excel (.xlsx).
+     * Format Sheet 1 persis Report Jurnal Keuangan (C_ReportJurnal::export_excel) dan Sheet 2 Rekap Faktur H Lunas.
+     */
+    public function export_faktur_h_lunas()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $rawIds = $this->input->post('ids') ?: $this->input->get('ids');
+        $ids = [];
+        if (is_array($rawIds)) {
+            $ids = array_filter(array_map('intval', $rawIds));
+        } elseif (is_string($rawIds) && trim($rawIds) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', trim($rawIds))));
+        }
+
+        $filter = [
+            'date1'        => $this->input->get('date1', true),
+            'date2'        => $this->input->get('date2', true),
+            'search'       => $this->input->get('search', true),
+            'status_bayar' => 'lunas',
+        ];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $this->db->select('fh.*');
+        $this->db->from('tbso_faktur_h_import fh');
+        $this->db->where('fh.status_bayar', 'lunas');
+
+        if (!empty($ids)) {
+            $this->db->where_in('fh.id_import_h', $ids);
+        } else {
+            if (!empty($filter['date1'])) {
+                $this->db->where('fh.tanggal_faktur >=', $filter['date1']);
+            }
+            if (!empty($filter['date2'])) {
+                $this->db->where('fh.tanggal_faktur <=', $filter['date2']);
+            }
+            if (!empty($filter['create_by'])) {
+                $this->db->where('fh.create_by', $filter['create_by']);
+            }
+            if (!empty($filter['search'])) {
+                $q = trim((string)$filter['search']);
+                $this->db->group_start();
+                $this->db->like('fh.no_faktur', $q);
+                $this->db->or_like('fh.parent_no_faktur', $q);
+                $this->db->or_like('fh.customer_name', $q);
+                $this->db->or_like('fh.kontak_person', $q);
+                $this->db->or_like('fh.nomor_jurnal_q', $q);
+                $this->db->or_like('fh.nomor_jurnal_a', $q);
+                $this->db->group_end();
+            }
+        }
+        $this->db->order_by('fh.id_import_h', 'DESC');
+        $faktursLunas = $this->db->get()->result_array();
+
+        if (empty($faktursLunas)) {
+            $this->session->set_flashdata('error', 'Tidak ada data Faktur H Import yang berstatus lunas untuk diekspor.');
+            redirect('sales_order/faktur_h_import');
+            return;
+        }
+
+        $jurnalIds = [];
+        foreach ($faktursLunas as $f) {
+            if (!empty($f['id_jurnal_q'])) $jurnalIds[] = (int)$f['id_jurnal_q'];
+            if (!empty($f['id_jurnal_a'])) $jurnalIds[] = (int)$f['id_jurnal_a'];
+        }
+        $jurnalIds = array_unique(array_filter($jurnalIds));
+
+        $journalRows = [];
+        if (!empty($jurnalIds)) {
+            $this->db->select('
+                j.id_jurnal,
+                j.nomor_jurnal,
+                j.tanggal_transaksi,
+                j.keterangan AS keterangan_jurnal,
+                j.source_module,
+                j.source_type,
+                j.source_id,
+                j.source_no,
+                j.status,
+                jj.kode_jenis_jurnal,
+                jj.nama_jenis_jurnal,
+                d.id_jurnal_detail,
+                d.nomor_baris,
+                d.id_akun,
+                d.keterangan AS keterangan_detail,
+                d.debit,
+                d.kredit,
+                a.kode_akun,
+                a.nama_akun
+            ');
+            $this->db->from('tbkeu_jurnal j');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->join('tbkeu_jurnal_detail d', 'd.id_jurnal = j.id_jurnal', 'inner');
+            $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+            $this->db->where_in('j.id_jurnal', $jurnalIds);
+            $this->db->order_by('j.tanggal_transaksi', 'ASC');
+            $this->db->order_by('j.id_jurnal', 'ASC');
+            $this->db->order_by('d.nomor_baris', 'ASC');
+            $journalRows = $this->db->get()->result_array();
+        }
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        // SHEET 1: REPORT JURNAL
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Report Jurnal');
+
+        $sheet->setCellValue('A1', 'KARISMA ERP - REPORT JURNAL TRANSAKSI');
+        $periodeStr = (!empty($filter['date1']) || !empty($filter['date2']))
+            ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
+            : 'Periode: Pelunasan Faktur H Lunas (' . date('d/m/Y') . ')';
+        $sheet->setCellValue('A2', $periodeStr);
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
+
+        $sheet->setCellValue('A3', 'PANDUAN WARNA:');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(9);
+        $sheet->getStyle('A3')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+
+        $sheet->setCellValue('B3', '■ Jurnal Asli (Z - Faktur Induk)');
+        $sheet->mergeCells('B3:C3');
+        $sheet->getStyle('B3:C3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
+        $sheet->getStyle('B3:C3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
+        $sheet->getStyle('B3:C3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
+        $sheet->getStyle('B3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('E3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
+        $sheet->mergeCells('E3:F3');
+        $sheet->getStyle('E3:F3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
+        $sheet->getStyle('E3:F3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        $sheet->getStyle('E3:F3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
+        $sheet->getStyle('E3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('H3', '■ Jurnal (A) Kas Masuk (Potongan KIU / Tax)');
+        $sheet->mergeCells('H3:J3');
+        $sheet->getStyle('H3:J3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('78281F');
+        $sheet->getStyle('H3:J3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFEBEE');
+        $sheet->getStyle('H3:J3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F5B7B1');
+        $sheet->getStyle('H3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->getRowDimension(3)->setRowHeight(22);
+
+        $headers = [
+            'A5' => 'No.',
+            'B5' => 'Ref.',
+            'C5' => 'Date',
+            'D5' => 'No. Bukti',
+            'E5' => 'No. Bukti',
+            'F5' => 'Kategori Jurnal',
+            'G5' => 'Ref Faktur',
+            'H5' => 'No. Perk',
+            'I5' => 'Descriptions AKUN',
+            'J5' => 'Descriptions',
+            'K5' => 'Debit',
+            'L5' => 'Credit'
+        ];
+        foreach ($headers as $cell => $text) {
+            $sheet->setCellValue($cell, $text);
+        }
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '000000']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D6DBDF']],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'A6ACAF']]]
+        ];
+        $sheet->getStyle('A5:L5')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(5)->setRowHeight(26);
+
+        $rowIdx = 6;
+        $no = 1;
+        $total_debit = 0.0;
+        $total_kredit = 0.0;
+
+        foreach ($journalRows as $r) {
+            $deb = (float)$r['debit'];
+            $kre = (float)$r['kredit'];
+            $total_debit  += $deb;
+            $total_kredit += $kre;
+
+            $kode_jenis = strtoupper(trim((string)$r['kode_jenis_jurnal']));
+            $ref = 'CR';
+            if ($kode_jenis === 'KK' || $kode_jenis === 'CD' || $kode_jenis === 'BK') {
+                $ref = 'CD';
+            } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
+                $ref = 'JU';
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+                $ref = 'CR';
+            } else {
+                $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
+            }
+
+            $no_perk = $this->_format_no_perk($r['kode_akun']);
+            $dateStr = !empty($r['tanggal_transaksi']) ? date('d/m/Y', strtotime($r['tanggal_transaksi'])) : '-';
+            $prefix = !empty($kode_jenis) ? $kode_jenis : substr((string)$r['nomor_jurnal'], 0, 2);
+            $raw_desc = $r['keterangan_detail'] ?: ($r['keterangan_jurnal'] ?: '-');
+
+            $kat_info = $this->_detect_kategori_jurnal($r);
+            $formatted_desc = $raw_desc;
+
+            $sheet->setCellValue('A' . $rowIdx, $no++);
+            $sheet->setCellValue('B' . $rowIdx, $ref);
+            $sheet->setCellValue('C' . $rowIdx, $dateStr);
+            $sheet->setCellValue('D' . $rowIdx, $prefix);
+            $sheet->setCellValue('E' . $rowIdx, $r['nomor_jurnal']);
+            $sheet->setCellValue('F' . $rowIdx, $kat_info['kategori']);
+            $sheet->setCellValue('G' . $rowIdx, $r['source_no'] ?: '-');
+            $sheet->setCellValueExplicit('H' . $rowIdx, $no_perk, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('I' . $rowIdx, $r['nama_akun'] ?: '-');
+            $sheet->setCellValue('J' . $rowIdx, $formatted_desc);
+            $sheet->setCellValue('K' . $rowIdx, $deb);
+            $sheet->setCellValue('L' . $rowIdx, $kre);
+
+            $bgColor = $kat_info['excel_color'] ?? 'FFFFFF';
+            if ($bgColor !== 'FFFFFF') {
+                $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB($bgColor);
+            }
+
+            $sheet->getStyle('F' . $rowIdx)->getFont()->setBold(true)->getColor()->setRGB($kat_info['excel_text_color']);
+
+            $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('B' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('C' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('D' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('F' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('G' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('H' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('K' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('L' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $rowIdx++;
+        }
+
+        // Baris Total
+        $sheet->setCellValue('A' . $rowIdx, 'TOTAL KESELURUHAN');
+        $sheet->mergeCells('A' . $rowIdx . ':J' . $rowIdx);
+        $sheet->setCellValue('K' . $rowIdx, $total_debit);
+        $sheet->setCellValue('L' . $rowIdx, $total_kredit);
+
+        $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('K' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('L' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('EAEDED');
+
+        $contentRange = 'A5:L' . $rowIdx;
+        $sheet->getStyle($contentRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('BDC3C7');
+        $sheet->setAutoFilter('A5:L' . ($rowIdx - 1));
+
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // SHEET 2: REKAP FAKTUR H LUNAS
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Rekap Faktur H Lunas');
+
+        $sheet2->setCellValue('A1', 'LAPORAN REKAP FAKTUR H LUNAS & JURNAL PELUNASAN');
+        $sheet2->setCellValue('A2', 'PT. Karisma Indoagro Universal');
+        $sheet2->setCellValue('A3', $periodeStr . ' | Total: ' . count($faktursLunas) . ' Faktur');
+
+        $sheet2->mergeCells('A1:R1');
+        $sheet2->mergeCells('A2:R2');
+        $sheet2->mergeCells('A3:R3');
+        $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $sheet2->getStyle('A2')->getFont()->setBold(true)->setSize(11);
+        $sheet2->getStyle('A3')->getFont()->setItalic(true)->setSize(10)->getColor()->setRGB('555555');
+
+        $headers2 = [
+            'No',
+            'No. Faktur H',
+            'Faktur Z Induk',
+            'Tgl Faktur',
+            'Customer (Toko)',
+            'Kontak Person',
+            'Kota / Rute',
+            'Salesman',
+            'Total Netto (Rp)',
+            'Nominal Bruto (Rp)',
+            'Potongan (Rp)',
+            'Skema (%)',
+            'Metode Pembayaran',
+            'Tgl Pelunasan',
+            'No. Jurnal Acak (Q)',
+            'Keterangan Jurnal Q',
+            'No. Jurnal Kas (A)',
+            'Keterangan Jurnal A'
+        ];
+        $sheet2->fromArray($headers2, null, 'A5');
+
+        $row2 = 6;
+        $totalNetto = 0;
+        $totalBruto = 0;
+        $totalPot   = 0;
+
+        foreach ($faktursLunas as $idx => $f) {
+            $netto = (float)($f['total_bayar'] ?: $f['grand_total'] ?: 0);
+            $bruto = (float)($f['nominal_bruto'] ?: 0);
+            $pot   = (float)($f['nominal_potongan'] ?: 0);
+            $skema = isset($f['skema_potongan']) ? (int)$f['skema_potongan'] : 20;
+
+            if ($bruto <= 0 && $netto > 0) {
+                $pembagi = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
+                $bruto = round($netto / $pembagi, 2);
+                $pot   = max(0, round($bruto - $netto, 2));
+            }
+
+            $totalNetto += $netto;
+            $totalBruto += $bruto;
+            $totalPot   += $pot;
+
+            $ketJurnalQ = !empty($f['kontak_person']) ? 'Penerimaan dari ' . $f['kontak_person'] : '-';
+            $ketJurnalA = !empty($f['nomor_jurnal_a']) ? 'PND u/Pot Penjualan (Tax)' : '-';
+
+            $rowData = [
+                $idx + 1,
+                $f['no_faktur'],
+                $f['parent_no_faktur'] ?: '-',
+                $f['tanggal_faktur'],
+                $f['customer_name'],
+                $f['kontak_person'] ?: '-',
+                ($f['kota'] ?: '-') . (!empty($f['kd_rute']) ? ' (' . $f['kd_rute'] . ')' : ''),
+                $f['salesman'] ?: '-',
+                $netto,
+                $bruto,
+                $pot,
+                $skema . '%',
+                $f['metode_pembayaran'] ?: 'Q Mandiri',
+                $f['tanggal_bayar'] ?: $f['tanggal_faktur'],
+                $f['nomor_jurnal_q'] ?: '-',
+                $ketJurnalQ,
+                $f['nomor_jurnal_a'] ?: '-',
+                $ketJurnalA
+            ];
+            $sheet2->fromArray($rowData, null, 'A' . $row2);
+            $row2++;
+        }
+
+        $sheet2->setCellValue('A' . $row2, 'TOTAL KESELURUHAN');
+        $sheet2->mergeCells('A' . $row2 . ':H' . $row2);
+        $sheet2->setCellValue('I' . $row2, $totalNetto);
+        $sheet2->setCellValue('J' . $row2, $totalBruto);
+        $sheet2->setCellValue('K' . $row2, $totalPot);
+        $sheet2->getStyle('A' . $row2 . ':R' . $row2)->getFont()->setBold(true);
+        $sheet2->getStyle('A' . $row2 . ':H' . $row2)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet2->getStyle('A' . $row2 . ':R' . $row2)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E9ECEF');
+
+        $headerStyle2 = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '157347']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]
+        ];
+        $sheet2->getStyle('A5:R5')->applyFromArray($headerStyle2);
+        $sheet2->getRowDimension(5)->setRowHeight(25);
+        $sheet2->freezePane('A6');
+
+        $sheet2->getStyle('I6:K' . $row2)->getNumberFormat()->setFormatCode('#,##0');
+        $sheet2->getStyle('D6:D' . ($row2 - 1))->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet2->getStyle('N6:N' . ($row2 - 1))->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet2->getStyle('A6:A' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle('B6:D' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle('L6:N' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        foreach (range('A', 'R') as $col) {
+            $sheet2->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $filename = 'Report_Jurnal_Faktur_H_' . date('Ymd_His') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Mengunduh file template Excel (.xlsx) untuk Import Pelunasan Faktur Pecahan Kode H dari Sistem.
+     * Kolom jumlah_pembayaran dikosongkan agar pengguna dapat memilih faktur yang lunas.
+     */
+    public function template_import_pelunasan_faktur_z_pecah()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $mode          = strtolower(trim((string)($this->input->get('mode', true) ?: 'unpaid')));
+        $defaultMetode = trim((string)($this->input->get('metode', true) ?: 'Q Mandiri'));
+        $defaultSkema  = (int)($this->input->get('skema', true) !== null && $this->input->get('skema', true) !== '' ? $this->input->get('skema', true) : 20);
+        $defaultSkema  = ($defaultSkema === 40) ? 40 : (($defaultSkema === 0) ? 0 : 20);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Pelunasan Faktur H');
+
+        $headers = [
+            'no_faktur',
+            'metode_pembayaran',
+            'tanggal_pembayaran',
+            'jumlah_pembayaran',
+            'skema_potongan',
+            'parent_no_faktur',
+            'customer_name',
+            'kontak_person',
+            'total_tagihan',
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $this->db->select('
+            p.id_pecah,
+            p.no_faktur,
+            p.parent_no_faktur,
+            COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+            p.customer_name,
+            COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+            p.skema_potongan,
+            p.status_bayar,
+            p.total_bayar,
+            p.metode_pembayaran,
+            COALESCE(SUM(pd.total_harga), 0) AS grand_total
+        ');
+        $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
+        $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+
+        if ($mode === 'unpaid') {
+            $this->db->group_start();
+            $this->db->where('p.status_bayar', 'belum_lunas');
+            $this->db->or_where('p.status_bayar IS NULL', null, false);
+            $this->db->group_end();
+        }
+        $this->db->group_by('p.id_pecah');
+        $this->db->order_by('p.id_pecah', 'DESC');
+        $this->db->limit(1000);
+        $fakturs = $this->db->get()->result_array();
+
+        $rowIdx = 2;
+        foreach ($fakturs as $f) {
+            $tglFaktur = !empty($f['tanggal_faktur']) ? $f['tanggal_faktur'] : date('Y-m-d');
+            $metodeRow = !empty($f['metode_pembayaran']) ? $f['metode_pembayaran'] : $defaultMetode;
+            $skemaRow  = isset($f['skema_potongan']) && $f['skema_potongan'] !== null ? (int)$f['skema_potongan'] : $defaultSkema;
+            $tagihan   = (float)$f['grand_total'];
+
+            $sheet->fromArray([
+                $f['no_faktur'],
+                $metodeRow,
+                $tglFaktur,
+                '', // dikosongi
+                $skemaRow,
+                $f['parent_no_faktur'] ?: '-',
+                $f['customer_name'] ?: '-',
+                $f['kontak_person'] ?: '-',
+                $tagihan
+            ], null, 'A' . $rowIdx);
+            $rowIdx++;
+        }
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E7E34']
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+            ]
+        ];
+        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->freezePane('A2');
+
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $lastRow = max(2, $rowIdx - 1);
+        $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()->setFormatCode('@');
+        $sheet->getStyle("C2:C{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("I2:I{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+
+        $spreadsheet->setActiveSheetIndex(0);
+        $filename = 'template_pelunasan_faktur_h_sistem_' . date('Ymd_His') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Memproses Import Excel Pelunasan Faktur Pecahan H (Sistem) beserta pembuatan Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A).
+     */
+    public function import_pelunasan_faktur_z_pecah()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+        if (strtoupper((string)$this->input->method()) !== 'POST') {
+            show_error('Metode permintaan tidak diizinkan.', 405);
+            return;
+        }
+
+        $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur#content-faktur-h');
+        $file = $_FILES['file_pelunasan_h'] ?? null;
+        if (!$file || (int)$file['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('error', 'File Excel Pelunasan Faktur H belum dipilih atau gagal diunggah.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xlsx', 'xls', 'csv'], true) || (int)$file['size'] > (10 * 1024 * 1024)) {
+            $this->session->set_flashdata('error', 'File pelunasan harus berformat .xlsx, .xls, atau .csv dan berukuran maksimal 10 MB.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $defaultMetode  = trim((string)($this->input->post('default_metode_pembayaran', true) ?: 'Q Mandiri'));
+        $defaultSkema   = $this->input->post('default_skema_potongan', true);
+        $defaultSkema   = ($defaultSkema !== null && $defaultSkema !== '') ? (int)$defaultSkema : 20;
+        $defaultSkema   = ($defaultSkema === 40) ? 40 : (($defaultSkema === 0) ? 0 : 20);
+        $defaultTanggal = trim((string)($this->input->post('default_tanggal_pembayaran', true) ?: ''));
+
+        try {
+            $this->_loadPhpSpreadsheetForFakturZ();
+
+            if ($extension === 'csv') {
+                $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+                $reader->setInputEncoding('UTF-8');
+                $reader->setAutoDetect(true);
+                $spreadsheet = $reader->load($file['tmp_name']);
+                $sheet = $spreadsheet->getActiveSheet();
+            } else {
+                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+                $reader->setReadDataOnly(true);
+                $reader->setReadEmptyCells(false);
+
+                $worksheetNames = $reader->listWorksheetNames($file['tmp_name']);
+                if (in_array('Pelunasan Faktur H', $worksheetNames, true)) {
+                    $reader->setLoadSheetsOnly(['Pelunasan Faktur H']);
+                } elseif (!empty($worksheetNames)) {
+                    $reader->setLoadSheetsOnly([$worksheetNames[0]]);
+                }
+
+                $spreadsheet = $reader->load($file['tmp_name']);
+                $sheet = $spreadsheet->getSheetByName('Pelunasan Faktur H') ?: $spreadsheet->getActiveSheet();
+            }
+
+            $rows = $sheet->toArray(null, false, false, false);
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $sheet, $reader);
+
+            if (count($rows) < 2) {
+                throw new \RuntimeException('File tidak memiliki baris data pelunasan Faktur H.');
+            }
+
+            $headerAliases = [
+                'no_faktur'            => 'no_faktur',
+                'nomor_faktur'         => 'no_faktur',
+                'no_faktur_h'          => 'no_faktur',
+                'faktur_h'             => 'no_faktur',
+                'faktur'               => 'no_faktur',
+                'no_nota'              => 'no_faktur',
+                'tanggal_pembayaran'   => 'tanggal_pembayaran',
+                'tgl_pembayaran'       => 'tanggal_pembayaran',
+                'tanggal_bayar'        => 'tanggal_pembayaran',
+                'tgl_bayar'            => 'tanggal_pembayaran',
+                'tanggal_pelunasan'    => 'tanggal_pembayaran',
+                'tgl_pelunasan'        => 'tanggal_pembayaran',
+                'tanggal'              => 'tanggal_pembayaran',
+                'jumlah_pembayaran'    => 'jumlah_pembayaran',
+                'jumlah_bayar'         => 'jumlah_pembayaran',
+                'nominal_bayar'        => 'jumlah_pembayaran',
+                'nominal_pelunasan'    => 'jumlah_pembayaran',
+                'nominal'              => 'jumlah_pembayaran',
+                'total_bayar'          => 'jumlah_pembayaran',
+                'grand_total'          => 'jumlah_pembayaran',
+                'metode_pembayaran'    => 'metode_pembayaran',
+                'metode_bayar'         => 'metode_pembayaran',
+                'metode'               => 'metode_pembayaran',
+                'akun_kas'             => 'metode_pembayaran',
+                'kas_bank'             => 'metode_pembayaran',
+                'bank'                 => 'metode_pembayaran',
+                'skema_potongan'       => 'skema_potongan',
+                'skema'                => 'skema_potongan',
+                'potongan_persen'      => 'skema_potongan',
+                'nominal_bruto'        => 'nominal_bruto',
+                'bruto'                => 'nominal_bruto',
+                'nominal_potongan'     => 'nominal_potongan',
+                'potongan'             => 'nominal_potongan',
+                'parent_no_faktur'     => 'parent_no_faktur',
+                'faktur_induk'         => 'parent_no_faktur',
+                'no_faktur_z'          => 'parent_no_faktur',
+            ];
+
+            $headerMap = [];
+            $headerRowIndex = 0;
+            $maxScanRows = min(10, count($rows));
+
+            for ($r = 0; $r < $maxScanRows; $r++) {
+                $candidateRow = (array)$rows[$r];
+                $tempMap = [];
+                foreach ($candidateRow as $colIdx => $colVal) {
+                    $cleanedHeader = $this->_normalizeImportHeader($colVal);
+                    if ($cleanedHeader !== '' && isset($headerAliases[$cleanedHeader])) {
+                        $canonical = $headerAliases[$cleanedHeader];
+                        if (!isset($tempMap[$canonical])) {
+                            $tempMap[$canonical] = $colIdx;
+                        }
+                    }
+                }
+                if (isset($tempMap['no_faktur'])) {
+                    $headerMap = $tempMap;
+                    $headerRowIndex = $r;
+                    break;
+                }
+            }
+
+            if (!isset($headerMap['no_faktur'])) {
+                throw new \RuntimeException('Header kolom wajib "no_faktur" tidak ditemukan pada file Excel.');
+            }
+
+            $successCount = 0;
+            $skippedCount = 0;
+            $notFoundList = [];
+            $failedList   = [];
+            $username     = $this->_getUsername();
+
+            $this->load->model('M_Journal');
+            $this->M_SalesOrder->ensure_faktur_z_pecah_tables();
+
+            for ($r = $headerRowIndex + 1; $r < count($rows); $r++) {
+                $row = (array)$rows[$r];
+                $noFaktur = trim((string)($row[$headerMap['no_faktur']] ?? ''));
+                if ($noFaktur === '') {
+                    continue;
+                }
+
+                $getVal = function ($canonicalKey, $default = '') use ($headerMap, $row) {
+                    if (!isset($headerMap[$canonicalKey])) return $default;
+                    $idx = $headerMap[$canonicalKey];
+                    $v = $row[$idx] ?? null;
+                    return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
+                };
+
+                // Periksa jumlah pembayaran: jika kosong atau <= 0, lewati (belum lunas)
+                $rawJmlBayar = $getVal('jumlah_pembayaran', '');
+                if ($rawJmlBayar === '') {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $jmlBayar = $this->_parseImportNumber($rawJmlBayar);
+                if ($jmlBayar <= 0) {
+                    $skippedCount++;
+                    continue;
+                }
+
+                $rawTgl = $getVal('tanggal_pembayaran', '');
+                $tglBayar = $rawTgl !== ''
+                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
+                    : ($defaultTanggal ?: date('Y-m-d'));
+
+                $metode   = $getVal('metode_pembayaran', $defaultMetode);
+                $skemaRaw = $getVal('skema_potongan', '');
+                if ($skemaRaw !== '') {
+                    $skemaParsed = (int)$this->_parseImportNumber($skemaRaw);
+                    $skema = ($skemaParsed === 40) ? 40 : (($skemaParsed === 0) ? 0 : 20);
+                } else {
+                    $skema = $defaultSkema;
+                }
+
+                // Cari data Faktur Pecahan H di tbso_faktur_z_pecah
+                $faktur = $this->db->select('
+                    p.*,
+                    COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+                    COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+                    MAX(ca.nama_toko) AS nama_toko,
+                    COALESCE(SUM(pd.total_harga), 0) AS grand_total
+                ')
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
+                ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+                ->where('p.no_faktur', $noFaktur)
+                ->group_by('p.id_pecah')
+                ->get()->row_array();
+
+                if (!$faktur) {
+                    $notFoundList[] = $noFaktur;
+                    continue;
+                }
+
+                $pembagi = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
+                $rawBruto = $getVal('nominal_bruto', '');
+                $rawPot   = $getVal('nominal_potongan', '');
+
+                $bruto = $rawBruto !== '' ? $this->_parseImportNumber($rawBruto) : round($jmlBayar / $pembagi, 2);
+                $pot   = $rawPot !== '' ? $this->_parseImportNumber($rawPot) : max(0, round($bruto - $jmlBayar, 2));
+
+                $paymentData = [
+                    'tanggal_pembayaran' => $tglBayar,
+                    'metode_pembayaran'  => $metode,
+                    'jumlah_bayar'       => $jmlBayar,
+                    'skema_potongan'     => $skema,
+                    'nominal_bruto'      => $bruto,
+                    'nominal_potongan'   => $pot,
+                    'parent_no_faktur'   => $faktur['parent_no_faktur'] ?: $getVal('parent_no_faktur', ''),
+                ];
+
+                $this->db->trans_start();
+
+                // Hapus jurnal lama jika ada
+                if (!empty($faktur['id_jurnal_q'])) {
+                    $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+                }
+                if (!empty($faktur['id_jurnal_a'])) {
+                    $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+                }
+
+                // Buat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A)
+                $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
+
+                $updateData = [
+                    'status_bayar'      => 'lunas',
+                    'total_bayar'       => $jmlBayar,
+                    'sisa_tagihan'      => 0,
+                    'tanggal_bayar'     => $tglBayar,
+                    'metode_pembayaran' => $metode,
+                    'skema_potongan'    => $skema,
+                    'nominal_bruto'     => $bruto,
+                    'nominal_potongan'  => $pot,
+                    'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
+                    'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
+                    'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
+                    'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
+                    'update_by'         => $username,
+                    'update_at'         => date('Y-m-d H:i:s'),
+                ];
+                $this->db->where('id_pecah', (int)$faktur['id_pecah'])->update('tbso_faktur_z_pecah', $updateData);
+
+                $this->db->trans_complete();
+
+                if ($this->db->trans_status() === false) {
+                    $failedList[] = $noFaktur;
+                } else {
+                    $successCount++;
+                }
+            }
+
+            if ($successCount === 0 && empty($notFoundList) && empty($failedList)) {
+                if ($skippedCount > 0) {
+                    $this->session->set_flashdata('info', "Tidak ada faktur yang dilunasi. Sebanyak {$skippedCount} baris faktur dilewati karena kolom jumlah pembayaran dikosongkan (belum lunas).");
+                    redirect($redirectTo);
+                    return;
+                }
+                throw new \RuntimeException('Tidak ada baris data nomor Faktur H yang valid pada file Excel.');
+            }
+
+            if ($successCount > 0) {
+                $msg = "Import Pelunasan Faktur Pecahan H berhasil! <strong>{$successCount} Faktur H</strong> telah dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
+                if ($skippedCount > 0) {
+                    $msg .= " <br><small class='text-muted'>Informasi: {$skippedCount} faktur belum lunas dilewati (kolom jumlah pembayaran dikosongi).</small>";
+                }
+                if (!empty($notFoundList)) {
+                    $previewNotFound = implode(', ', array_slice($notFoundList, 0, 8));
+                    if (count($notFoundList) > 8) $previewNotFound .= ', dll.';
+                    $msg .= "<br><span class='text-warning'><i class='fas fa-exclamation-triangle'></i> {$previewNotFound} tidak ditemukan di database.</span>";
+                }
+                if (!empty($failedList)) {
+                    $msg .= "<br><span class='text-danger'><i class='fas fa-times-circle'></i> Faktur gagal diproses: " . implode(', ', $failedList) . "</span>";
+                }
+                $this->session->set_flashdata('success', $msg);
+            } else {
+                $this->session->set_flashdata('error', "Gagal mengimpor pelunasan Faktur H. Tidak ditemukan faktur yang cocok atau terjadi kegagalan database.");
+            }
+
+        } catch (\Throwable $e) {
+            $this->session->set_flashdata('error', 'Gagal mengimpor pelunasan Faktur H: ' . $e->getMessage());
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Membatalkan (Unpost) Pelunasan Faktur Pecahan H (Sistem) dan menghapus Jurnal Q & A terkait.
+     */
+    public function unpost_pelunasan_faktur_z_pecah($id_pecah)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $redirectTo = $this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur#content-faktur-h';
+        $faktur = $this->db->get_where('tbso_faktur_z_pecah', ['id_pecah' => (int)$id_pecah])->row_array();
+        if (!$faktur) {
+            $this->session->set_flashdata('error', 'Faktur Pecahan H tidak ditemukan.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        $this->db->trans_start();
+
+        if (!empty($faktur['id_jurnal_q'])) {
+            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+        }
+        if (!empty($faktur['id_jurnal_a'])) {
+            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+        }
+
+        $this->db->where('id_pecah', (int)$id_pecah)->update('tbso_faktur_z_pecah', [
+            'status_bayar'      => 'belum_lunas',
+            'total_bayar'       => 0,
+            'sisa_tagihan'      => 0,
+            'tanggal_bayar'     => null,
+            'metode_pembayaran' => null,
+            'nominal_bruto'     => 0,
+            'nominal_potongan'  => 0,
+            'id_jurnal_q'       => null,
+            'nomor_jurnal_q'    => null,
+            'id_jurnal_a'       => null,
+            'nomor_jurnal_a'    => null,
+            'update_by'         => $this->_getUsername(),
+            'update_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            $this->session->set_flashdata('error', 'Gagal membatalkan pelunasan Faktur Pecahan ' . $faktur['no_faktur']);
+        } else {
+            $this->session->set_flashdata('success', 'Pelunasan Faktur Pecahan <strong>' . $faktur['no_faktur'] . '</strong> berhasil dibatalkan (Unpost). Jurnal pelunasan terkait telah dihapus.');
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Membatalkan (Unpost) Pelunasan Beberapa Faktur Pecahan H Sekaligus (Batch).
+     */
+    public function unpost_pelunasan_faktur_z_pecah_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur#content-faktur-h');
+        $rawIds = $this->input->post('ids');
+        $ids = [];
+        if (is_array($rawIds)) {
+            $ids = array_filter(array_map('intval', $rawIds));
+        } elseif (is_string($rawIds) && trim($rawIds) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', trim($rawIds))));
+        }
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Pilih minimal satu Faktur Pecahan H untuk dibatalkan pelunasannya.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $fakturs = $this->db->where_in('id_pecah', $ids)->get('tbso_faktur_z_pecah')->result_array();
+        if (empty($fakturs)) {
+            $this->session->set_flashdata('error', 'Data Faktur Pecahan H tidak ditemukan.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        $success = 0;
+        $username = $this->_getUsername();
+
+        foreach ($fakturs as $f) {
+            $this->db->trans_start();
+
+            if (!empty($f['id_jurnal_q'])) {
+                $this->M_Journal->delete_journal((int)$f['id_jurnal_q']);
+            }
+            if (!empty($f['id_jurnal_a'])) {
+                $this->M_Journal->delete_journal((int)$f['id_jurnal_a']);
+            }
+
+            $this->db->where('id_pecah', (int)$f['id_pecah'])->update('tbso_faktur_z_pecah', [
+                'status_bayar'      => 'belum_lunas',
+                'total_bayar'       => 0,
+                'sisa_tagihan'      => 0,
+                'tanggal_bayar'     => null,
+                'metode_pembayaran' => null,
+                'nominal_bruto'     => 0,
+                'nominal_potongan'  => 0,
+                'id_jurnal_q'       => null,
+                'nomor_jurnal_q'    => null,
+                'id_jurnal_a'       => null,
+                'nomor_jurnal_a'    => null,
+                'update_by'         => $username,
+                'update_at'         => date('Y-m-d H:i:s'),
+            ]);
+
+            $this->db->trans_complete();
+            if ($this->db->trans_status() !== false) {
+                $success++;
+            }
+        }
+
+        $this->session->set_flashdata('success', "Sebanyak <strong>{$success} Faktur Pecahan H</strong> berhasil dibatalkan pelunasannya (Unpost).");
+        redirect($redirectTo);
+    }
+
+    /**
+     * Mengambil data rincian ayat jurnal pelunasan (Jurnal Q & Jurnal A) Faktur Pecahan H dalam format JSON untuk modal pop-up.
+     */
+    public function jurnal_pelunasan_faktur_z_pecah_json($id_pecah)
+    {
+        $this->output->set_content_type('application/json');
+
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+
+        try {
+            $faktur = $this->db->select('p.*, ca.kontak_person, ca.nama_toko')
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+                ->where('p.id_pecah', (int)$id_pecah)
+                ->get()->row_array();
+
+            if (!$faktur) {
+                echo json_encode(['status' => 'error', 'message' => 'Faktur Pecahan H tidak ditemukan.']);
+                return;
+            }
+
+            $this->load->model('M_Journal');
+            $jurnal_q = !empty($faktur['id_jurnal_q'])
+                ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_q'])
+                : null;
+            $jurnal_a = !empty($faktur['id_jurnal_a'])
+                ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_a'])
+                : null;
+
+            echo json_encode([
+                'status'   => 'success',
+                'faktur'   => $faktur,
+                'jurnal_q' => $jurnal_q,
+                'jurnal_a' => $jurnal_a,
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Gagal memuat jurnal pelunasan: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Mengekspor Faktur Pecahan Kode H (Sistem) yang sudah lunas beserta data Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) ke Excel (.xlsx).
+     * Format kolom, warna legend, dan struktur persis Report Jurnal Keuangan (C_ReportJurnal::export_excel).
+     */
+    public function export_faktur_z_pecah_lunas()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->_loadPhpSpreadsheetForFakturZ();
+
+        $rawIds = $this->input->post('ids') ?: $this->input->get('ids');
+        $ids = [];
+        if (is_array($rawIds)) {
+            $ids = array_filter(array_map('intval', $rawIds));
+        } elseif (is_string($rawIds) && trim($rawIds) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', trim($rawIds))));
+        }
+
+        $filter = [
+            'date1'        => $this->input->get('date1', true),
+            'date2'        => $this->input->get('date2', true),
+            'search'       => $this->input->get('search', true),
+            'status_bayar' => 'lunas',
+        ];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $this->db->select('
+            p.*,
+            COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+            COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+            MAX(ca.nama_toko) AS nama_toko,
+            MAX(ca.kota) AS kota,
+            MAX(c.kd_rute) AS kd_rute,
+            COALESCE(SUM(pd.total_harga), 0) AS grand_total
+        ');
+        $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
+        $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
+        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+        $this->db->where('p.status_bayar', 'lunas');
+
+        if (!empty($ids)) {
+            $this->db->where_in('p.id_pecah', $ids);
+        } else {
+            if (!empty($filter['date1'])) {
+                $this->db->group_start();
+                $this->db->where('p.tanggal_faktur >=', $filter['date1']);
+                $this->db->or_where('fp.tanggal_faktur >=', $filter['date1']);
+                $this->db->group_end();
+            }
+            if (!empty($filter['date2'])) {
+                $this->db->group_start();
+                $this->db->where('p.tanggal_faktur <=', $filter['date2']);
+                $this->db->or_where('fp.tanggal_faktur <=', $filter['date2']);
+                $this->db->group_end();
+            }
+            if (!empty($filter['create_by'])) {
+                $this->db->where('p.create_by', $filter['create_by']);
+            }
+            if (!empty($filter['search'])) {
+                $q = trim((string)$filter['search']);
+                $this->db->group_start();
+                $this->db->like('p.no_faktur', $q);
+                $this->db->or_like('p.parent_no_faktur', $q);
+                $this->db->or_like('p.customer_name', $q);
+                $this->db->or_like('ca.kontak_person', $q);
+                $this->db->or_like('p.nomor_jurnal_q', $q);
+                $this->db->or_like('p.nomor_jurnal_a', $q);
+                $this->db->group_end();
+            }
+        }
+        $this->db->group_by('p.id_pecah');
+        $this->db->order_by('p.id_pecah', 'DESC');
+        $faktursLunas = $this->db->get()->result_array();
+
+        if (empty($faktursLunas)) {
+            $this->session->set_flashdata('error', 'Tidak ada data Faktur Pecahan H yang berstatus lunas untuk diekspor.');
+            redirect('sales_order/pecah_faktur#content-faktur-h');
+            return;
+        }
+
+        // Kumpulkan ID Jurnal pelunasan
+        $jurnalIds = [];
+        foreach ($faktursLunas as $f) {
+            if (!empty($f['id_jurnal_q'])) $jurnalIds[] = (int)$f['id_jurnal_q'];
+            if (!empty($f['id_jurnal_a'])) $jurnalIds[] = (int)$f['id_jurnal_a'];
+        }
+        $jurnalIds = array_unique(array_filter($jurnalIds));
+
+        $journalRows = [];
+        if (!empty($jurnalIds)) {
+            $this->db->select('
+                j.id_jurnal,
+                j.nomor_jurnal,
+                j.tanggal_transaksi,
+                j.keterangan AS keterangan_jurnal,
+                j.source_module,
+                j.source_type,
+                j.source_id,
+                j.source_no,
+                j.status,
+                jj.kode_jenis_jurnal,
+                jj.nama_jenis_jurnal,
+                d.id_jurnal_detail,
+                d.nomor_baris,
+                d.id_akun,
+                d.keterangan AS keterangan_detail,
+                d.debit,
+                d.kredit,
+                a.kode_akun,
+                a.nama_akun
+            ');
+            $this->db->from('tbkeu_jurnal j');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->join('tbkeu_jurnal_detail d', 'd.id_jurnal = j.id_jurnal', 'inner');
+            $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+            $this->db->where_in('j.id_jurnal', $jurnalIds);
+            $this->db->order_by('j.tanggal_transaksi', 'ASC');
+            $this->db->order_by('j.id_jurnal', 'ASC');
+            $this->db->order_by('d.nomor_baris', 'ASC');
+            $journalRows = $this->db->get()->result_array();
+        }
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        // SHEET 1: REPORT JURNAL
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Report Jurnal');
+
+        $sheet->setCellValue('A1', 'KARISMA ERP - REPORT JURNAL TRANSAKSI');
+        $periodeStr = (!empty($filter['date1']) || !empty($filter['date2']))
+            ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
+            : 'Periode: Pelunasan Faktur Pecahan H (' . date('d/m/Y') . ')';
+        $sheet->setCellValue('A2', $periodeStr);
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
+
+        $sheet->setCellValue('A3', 'PANDUAN WARNA:');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(9);
+        $sheet->getStyle('A3')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+
+        $sheet->setCellValue('B3', '■ Jurnal Asli (Z - Faktur Induk)');
+        $sheet->mergeCells('B3:C3');
+        $sheet->getStyle('B3:C3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
+        $sheet->getStyle('B3:C3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
+        $sheet->getStyle('B3:C3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
+        $sheet->getStyle('B3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('E3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
+        $sheet->mergeCells('E3:F3');
+        $sheet->getStyle('E3:F3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
+        $sheet->getStyle('E3:F3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        $sheet->getStyle('E3:F3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
+        $sheet->getStyle('E3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('H3', '■ Jurnal (A) Kas Masuk (Potongan KIU / Tax)');
+        $sheet->mergeCells('H3:J3');
+        $sheet->getStyle('H3:J3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('78281F');
+        $sheet->getStyle('H3:J3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFEBEE');
+        $sheet->getStyle('H3:J3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F5B7B1');
+        $sheet->getStyle('H3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->getRowDimension(3)->setRowHeight(22);
+
+        $headers = [
+            'A5' => 'No.',
+            'B5' => 'Ref.',
+            'C5' => 'Date',
+            'D5' => 'No. Bukti',
+            'E5' => 'No. Bukti',
+            'F5' => 'Kategori Jurnal',
+            'G5' => 'Ref Faktur',
+            'H5' => 'No. Perk',
+            'I5' => 'Descriptions AKUN',
+            'J5' => 'Descriptions',
+            'K5' => 'Debit',
+            'L5' => 'Credit'
+        ];
+        foreach ($headers as $cell => $text) {
+            $sheet->setCellValue($cell, $text);
+        }
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => '000000']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D6DBDF']],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'A6ACAF']]]
+        ];
+        $sheet->getStyle('A5:L5')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(5)->setRowHeight(26);
+
+        $rowIdx = 6;
+        $no = 1;
+        $total_debit = 0.0;
+        $total_kredit = 0.0;
+
+        foreach ($journalRows as $r) {
+            $deb = (float)$r['debit'];
+            $kre = (float)$r['kredit'];
+            $total_debit  += $deb;
+            $total_kredit += $kre;
+
+            $kode_jenis = strtoupper(trim((string)$r['kode_jenis_jurnal']));
+            $ref = 'CR';
+            if ($kode_jenis === 'KK' || $kode_jenis === 'CD' || $kode_jenis === 'BK') {
+                $ref = 'CD';
+            } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
+                $ref = 'JU';
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+                $ref = 'CR';
+            } else {
+                $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
+            }
+
+            $no_perk = $this->_format_no_perk($r['kode_akun']);
+            $dateStr = !empty($r['tanggal_transaksi']) ? date('d/m/Y', strtotime($r['tanggal_transaksi'])) : '-';
+            $prefix = !empty($kode_jenis) ? $kode_jenis : substr((string)$r['nomor_jurnal'], 0, 2);
+            $raw_desc = $r['keterangan_detail'] ?: ($r['keterangan_jurnal'] ?: '-');
+
+            $kat_info = $this->_detect_kategori_jurnal($r);
+            $formatted_desc = $raw_desc;
+
+            $sheet->setCellValue('A' . $rowIdx, $no++);
+            $sheet->setCellValue('B' . $rowIdx, $ref);
+            $sheet->setCellValue('C' . $rowIdx, $dateStr);
+            $sheet->setCellValue('D' . $rowIdx, $prefix);
+            $sheet->setCellValue('E' . $rowIdx, $r['nomor_jurnal']);
+            $sheet->setCellValue('F' . $rowIdx, $kat_info['kategori']);
+            $sheet->setCellValue('G' . $rowIdx, $r['source_no'] ?: '-');
+            $sheet->setCellValueExplicit('H' . $rowIdx, $no_perk, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('I' . $rowIdx, $r['nama_akun'] ?: '-');
+            $sheet->setCellValue('J' . $rowIdx, $formatted_desc);
+            $sheet->setCellValue('K' . $rowIdx, $deb);
+            $sheet->setCellValue('L' . $rowIdx, $kre);
+
+            $bgColor = $kat_info['excel_color'] ?? 'FFFFFF';
+            if ($bgColor !== 'FFFFFF') {
+                $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB($bgColor);
+            }
+
+            $sheet->getStyle('F' . $rowIdx)->getFont()->setBold(true)->getColor()->setRGB($kat_info['excel_text_color']);
+
+            $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('B' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('C' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('D' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('F' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('G' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('H' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('K' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle('L' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+
+            $rowIdx++;
+        }
+
+        // Baris Total
+        $sheet->setCellValue('A' . $rowIdx, 'TOTAL KESELURUHAN');
+        $sheet->mergeCells('A' . $rowIdx . ':J' . $rowIdx);
+        $sheet->setCellValue('K' . $rowIdx, $total_debit);
+        $sheet->setCellValue('L' . $rowIdx, $total_kredit);
+
+        $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('K' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('L' . $rowIdx)->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('A' . $rowIdx . ':L' . $rowIdx)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('EAEDED');
+
+        $contentRange = 'A5:L' . $rowIdx;
+        $sheet->getStyle($contentRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('BDC3C7');
+        $sheet->setAutoFilter('A5:L' . ($rowIdx - 1));
+
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // SHEET 2: REKAP FAKTUR H LUNAS
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Rekap Faktur H Lunas');
+
+        $sheet2->setCellValue('A1', 'LAPORAN REKAP FAKTUR PECAHAN H LUNAS & JURNAL PELUNASAN');
+        $sheet2->setCellValue('A2', 'PT. Karisma Indoagro Universal');
+        $sheet2->setCellValue('A3', $periodeStr . ' | Total: ' . count($faktursLunas) . ' Faktur');
+
+        $sheet2->mergeCells('A1:R1');
+        $sheet2->mergeCells('A2:R2');
+        $sheet2->mergeCells('A3:R3');
+        $sheet2->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $sheet2->getStyle('A2')->getFont()->setBold(true)->setSize(11);
+        $sheet2->getStyle('A3')->getFont()->setItalic(true)->setSize(10)->getColor()->setRGB('555555');
+
+        $headers2 = [
+            'No',
+            'No. Faktur H',
+            'Faktur Z Induk',
+            'Tgl Faktur',
+            'Customer Penerima',
+            'Kontak Person',
+            'Kota / Rute',
+            'Salesman',
+            'Total Netto (Rp)',
+            'Nominal Bruto (Rp)',
+            'Potongan (Rp)',
+            'Skema (%)',
+            'Metode Pembayaran',
+            'Tgl Pelunasan',
+            'No. Jurnal Acak (Q)',
+            'Keterangan Jurnal Q',
+            'No. Jurnal Kas (A)',
+            'Keterangan Jurnal A'
+        ];
+        $sheet2->fromArray($headers2, null, 'A5');
+
+        $row2 = 6;
+        $totalNetto = 0;
+        $totalBruto = 0;
+        $totalPot   = 0;
+
+        foreach ($faktursLunas as $idx => $f) {
+            $netto = (float)($f['total_bayar'] ?: $f['grand_total'] ?: 0);
+            $bruto = (float)($f['nominal_bruto'] ?: 0);
+            $pot   = (float)($f['nominal_potongan'] ?: 0);
+            $skema = isset($f['skema_potongan']) ? (int)$f['skema_potongan'] : 20;
+
+            if ($bruto <= 0 && $netto > 0) {
+                $pembagi = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
+                $bruto = round($netto / $pembagi, 2);
+                $pot   = max(0, round($bruto - $netto, 2));
+            }
+
+            $totalNetto += $netto;
+            $totalBruto += $bruto;
+            $totalPot   += $pot;
+
+            $ketJurnalQ = !empty($f['kontak_person']) ? 'Penerimaan dari ' . $f['kontak_person'] : '-';
+            $ketJurnalA = !empty($f['nomor_jurnal_a']) ? 'PND u/Pot Penjualan (Tax)' : '-';
+
+            $rowData = [
+                $idx + 1,
+                $f['no_faktur'],
+                $f['parent_no_faktur'] ?: '-',
+                $f['tanggal_faktur'],
+                $f['customer_name'],
+                $f['kontak_person'] ?: '-',
+                ($f['kota'] ?: '-') . (!empty($f['kd_rute']) ? ' (' . $f['kd_rute'] . ')' : ''),
+                $f['salesman'] ?: '-',
+                $netto,
+                $bruto,
+                $pot,
+                $skema . '%',
+                $f['metode_pembayaran'] ?: 'Q Mandiri',
+                $f['tanggal_bayar'] ?: $f['tanggal_faktur'],
+                $f['nomor_jurnal_q'] ?: '-',
+                $ketJurnalQ,
+                $f['nomor_jurnal_a'] ?: '-',
+                $ketJurnalA
+            ];
+            $sheet2->fromArray($rowData, null, 'A' . $row2);
+            $row2++;
+        }
+
+        $sheet2->setCellValue('A' . $row2, 'TOTAL KESELURUHAN');
+        $sheet2->mergeCells('A' . $row2 . ':H' . $row2);
+        $sheet2->setCellValue('I' . $row2, $totalNetto);
+        $sheet2->setCellValue('J' . $row2, $totalBruto);
+        $sheet2->setCellValue('K' . $row2, $totalPot);
+        $sheet2->getStyle('A' . $row2 . ':R' . $row2)->getFont()->setBold(true);
+        $sheet2->getStyle('A' . $row2 . ':H' . $row2)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+        $sheet2->getStyle('A' . $row2 . ':R' . $row2)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E9ECEF');
+
+        $headerStyle2 = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '157347']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]
+        ];
+        $sheet2->getStyle('A5:R5')->applyFromArray($headerStyle2);
+        $sheet2->getRowDimension(5)->setRowHeight(25);
+        $sheet2->freezePane('A6');
+
+        $sheet2->getStyle('I6:K' . $row2)->getNumberFormat()->setFormatCode('#,##0');
+        $sheet2->getStyle('D6:D' . ($row2 - 1))->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet2->getStyle('N6:N' . ($row2 - 1))->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet2->getStyle('A6:A' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle('B6:D' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet2->getStyle('L6:N' . ($row2 - 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        foreach (range('A', 'R') as $col) {
+            $sheet2->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $filename = 'Report_Jurnal_Faktur_H_Sistem_' . date('Ymd_His') . '.xlsx';
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    /**
+     * Format Kode Akun 5 Digit menjadi Standar 3-2 (misal 11010 -> 110-10)
+     */
+    private function _format_no_perk($kode)
+    {
+        $clean = trim((string)$kode);
+        if (strpos($clean, '-') !== false) {
+            return $clean;
+        }
+        if (strlen($clean) === 5) {
+            return substr($clean, 0, 3) . '-' . substr($clean, 3, 2);
+        }
+        return $clean ?: '-';
+    }
+
+    /**
+     * Deteksi Kategori Jurnal (Jurnal Asli Z, Jurnal Acak Q, Jurnal A Kas Masuk, Jurnal Umum)
+     */
+    private function _detect_kategori_jurnal($r)
+    {
+        $src_no = strtoupper(trim((string)($r['source_no'] ?? '')));
+        $ket    = (string)($r['keterangan_jurnal'] ?? '');
+        $ket_d  = (string)($r['keterangan_detail'] ?? '');
+        $prefix = strtoupper(trim((string)($r['kode_jenis_jurnal'] ?? '')));
+
+        if (stripos($ket, 'PND u/Pot') !== false || stripos($ket_d, 'PND u/Pot') !== false || ($prefix === 'KM' && (stripos($ket, 'Tax') !== false || stripos($ket, 'Pot') !== false))) {
+            return [
+                'code'             => 'a_pot',
+                'kategori'         => 'Jurnal (A) Kas Masuk',
+                'short_label'      => '[JURNAL A]',
+                'badge_class'      => 'badge-danger',
+                'excel_color'      => 'FFEBEE',
+                'excel_text_color' => '78281F'
+            ];
+        }
+
+        if (substr($src_no, 0, 1) === 'H' || stripos($ket, 'Pecahan') !== false || stripos($ket, 'Penerimaan dari') !== false) {
+            return [
+                'code'             => 'q_acak',
+                'kategori'         => 'Jurnal Acak (Q) Pecahan',
+                'short_label'      => '[JURNAL Q ACAK]',
+                'badge_class'      => 'badge-warning text-dark',
+                'excel_color'      => 'FFFDE7',
+                'excel_text_color' => '7D6608'
+            ];
+        }
+
+        if (substr($src_no, 0, 1) === 'Z') {
+            return [
+                'code'             => 'z_asli',
+                'kategori'         => 'Jurnal Asli (Z)',
+                'short_label'      => '[JURNAL ASLI Z]',
+                'badge_class'      => 'badge-primary',
+                'excel_color'      => 'E8F4F8',
+                'excel_text_color' => '1B4F72'
+            ];
+        }
+
+        return [
+            'code'             => 'umum',
+            'kategori'         => 'Jurnal ' . ($prefix ?: 'Umum'),
+            'short_label'      => '[JURNAL ' . ($prefix ?: 'UMUM') . ']',
+            'badge_class'      => 'badge-secondary',
+            'excel_color'      => 'FFFFFF',
+            'excel_text_color' => '000000'
+        ];
+    }
+
+    /**
+     * Menormalisasi header kolom import Excel/CSV agar konsisten dan toleran terhadap spasi, simbol, dan UTF-8 BOM.
+     */
+    private function _normalizeImportHeader($header)
+    {
+        $header = (string)$header;
+        $header = preg_replace('/^\xEF\xBB\xBF/', '', $header);
+        $normalized = strtolower(trim($header));
+        $normalized = preg_replace('/[^a-z0-9]+/', '_', $normalized);
+        return trim($normalized, '_');
+    }
+
+    /**
+     * Parsing nilai numerik import dari Excel/CSV menjadi float murni.
+     */
+    private function _parseImportNumber($value)
+    {
+        return $this->_parse_number_input($value);
+    }
+
+    /**
+     * Parsing nilai tanggal import dari Excel/CSV menjadi format Y-m-d standar.
+     */
+    private function _parseImportExcelDate($value, $default = '')
+    {
+        if ($value === null || trim((string)$value) === '') {
+            return $default ?: date('Y-m-d');
+        }
+
+        try {
+            if (is_numeric($value)) {
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$value)->format('Y-m-d');
+            }
+            $text = trim((string)$value);
+            foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'Y/m/d'] as $format) {
+                $date = \DateTime::createFromFormat('!' . $format, $text);
+                $errors = \DateTime::getLastErrors();
+                if ($date && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))) {
+                    return $date->format('Y-m-d');
+                }
+            }
+            $ts = strtotime($text);
+            if ($ts !== false && $ts > 0) {
+                return date('Y-m-d', $ts);
+            }
+        } catch (\Throwable $e) {
+            // fallback
+        }
+
+        return $default ?: date('Y-m-d');
     }
 }

@@ -37,6 +37,18 @@
                     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
             <?php endif; ?>
+            <?php if ($this->session->flashdata('info')): ?>
+                <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-info-circle mr-1"></i> <?= $this->session->flashdata('info') ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+            <?php endif; ?>
+            <?php if ($this->session->flashdata('warning')): ?>
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-exclamation-circle mr-1"></i> <?= $this->session->flashdata('warning') ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+            <?php endif; ?>
             <?php if ($this->session->flashdata('error')): ?>
                 <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
                     <i class="fas fa-exclamation-triangle mr-1"></i> <?= $this->session->flashdata('error') ?>
@@ -53,6 +65,9 @@
                     <button type="button" class="btn btn-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" data-toggle="modal" data-target="#modalImportPelunasanFakturH">
                         <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Jurnal Q & A)
                     </button>
+                    <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" class="btn btn-outline-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" title="Unduh file Excel seluruh Faktur H yang berstatus lunas beserta data Jurnal Q & A">
+                        <i class="fas fa-file-excel mr-1"></i> Export Faktur Lunas & Jurnal (.xlsx)
+                    </a>
                 </div>
                 <div>
                     <a href="<?= base_url('sales_order/pecah_faktur') ?>" class="btn btn-outline-info btn-sm shadow-sm font-weight-bold">
@@ -227,6 +242,13 @@
                             <i class="fas fa-trash-alt mr-1"></i> Hapus Terpilih (<span id="countSelectedFakturHImport">0</span>)
                         </button>
                         <button type="button" 
+                                id="btnExportBatchLunasFakturHImport" 
+                                class="btn btn-outline-success btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
+                                style="display:none;" 
+                                title="Export data Faktur H lunas beserta rincian Jurnal Q & A untuk faktur yang dicentang">
+                            <i class="fas fa-file-excel mr-1"></i> Export Lunas Terpilih (<span class="countSelectedFakturHImport">0</span>)
+                        </button>
+                        <button type="button" 
                                 class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1" 
                                 data-toggle="modal" 
                                 data-target="#modalImportPelunasanFakturH">
@@ -237,8 +259,13 @@
                         <span class="badge badge-warning p-2 mr-2" style="font-size: 12.5px;">
                             Total: <strong><?= count($fakturs_h_import ?? []) ?></strong> Faktur H Import
                         </span>
+                        <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" 
+                           class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1"
+                           title="Export seluruh Faktur H yang berstatus lunas beserta data Jurnal Q & A ke Excel (.xlsx)">
+                            <i class="fas fa-file-excel mr-1"></i> Export Lunas & Jurnal
+                        </a>
                         <button type="button" 
-                                class="btn btn-primary btn-sm font-weight-bold shadow-sm"
+                                class="btn btn-primary btn-sm font-weight-bold shadow-sm mb-1"
                                 id="btnCetakSemuaFakturHImport"
                                 title="Cetak Faktur H Import Sekaligus ke Printer Dot-Matrix Epson LX-310 (21 cm x 14 cm)">
                             <i class="fas fa-print mr-1"></i> Cetak Faktur (LX-310)
@@ -511,22 +538,23 @@
                     </div>
 
                     <div class="alert alert-light border py-2" style="font-size: 12.5px;">
-                        <strong>Petunjuk Pelunasan Faktur H (Metode Pembayaran per Faktur):</strong>
+                        <strong>Petunjuk Pelunasan Faktur H (Pilih Faktur yang Lunas):</strong>
                         <ol class="mb-0 pl-3">
                             <li>Klik tombol hijau <strong>Unduh Template Terisi Faktur Belum Lunas (.xlsx)</strong> di bawah.</li>
-                            <li>Pada file Excel, Anda dapat mengisi atau mengubah kolom <strong><code>metode_pembayaran</code></strong> di setiap baris faktur (contoh: <code>Q Mandiri</code>, <code>Q Kas Ayat Silang</code>, <code>Q Kas</code>, <code>Q BCA</code>, <code>Q BRI</code>).</li>
-                            <li>Setiap nomor faktur dapat memiliki metode pembayaran, tanggal bayar, nominal bayar, dan skema potongan yang berbeda-beda sesuai realisasi.</li>
+                            <li>Pada template Excel, kolom <strong><code>jumlah_pembayaran</code> sengaja dikosongkan</strong>. Cukup isi nominal pembayaran pada baris faktur yang sudah lunas (Anda dapat melihat patokan tagihan di kolom <code>nominal_tagihan_info</code>).</li>
+                            <li><strong>Faktur yang belum lunas biarkan kosong</strong> pada kolom <code>jumlah_pembayaran</code> (sistem akan otomatis melewati faktur tersebut tanpa mengubah statusnya).</li>
+                            <li>Anda juga dapat menyesuaikan kolom <code>metode_pembayaran</code> (contoh: <code>Q Mandiri</code>, <code>Q Kas Ayat Silang</code>, <code>Q BCA</code>, <code>Q BRI</code>, <code>Q Kas</code>), <code>tanggal_pembayaran</code>, dan <code>skema_potongan</code>.</li>
                             <li>Unggah kembali file Excel tersebut di form bawah, lalu klik <strong>Proses Import Pelunasan & Buat Jurnal</strong>.</li>
                         </ol>
                     </div>
 
                     <div class="form-group mb-0">
-                        <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Excel Pelunasan Faktur H (.xlsx / .xls)</label>
+                        <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur H (.xlsx / .xls / .csv)</label>
                         <div class="custom-file">
-                            <input type="file" name="file_pelunasan_h" id="fileImportPelunasanH" class="custom-file-input" accept=".xlsx,.xls" required>
-                            <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel Pelunasan Faktur H...</label>
+                            <input type="file" name="file_pelunasan_h" id="fileImportPelunasanH" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
+                            <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel / CSV Pelunasan Faktur H...</label>
                         </div>
-                        <small class="form-text text-muted">Kolom Excel: <code>no_faktur</code> (wajib), <code>metode_pembayaran</code> (per faktur), <code>tanggal_pembayaran</code>, <code>jumlah_pembayaran</code>, <code>skema_potongan</code> (20/40/0), <code>parent_no_faktur</code>, <code>keterangan</code>.</small>
+                        <small class="form-text text-muted">Mendukung file .xlsx, .xls, dan .csv. Kolom: <code>no_faktur</code> (wajib), <code>metode_pembayaran</code>, <code>tanggal_pembayaran</code>, <code>jumlah_pembayaran</code>, <code>skema_potongan</code>, <code>parent_no_faktur</code>, <code>keterangan</code>.</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light d-flex justify-content-between">
@@ -867,11 +895,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#btnHapusBatchFakturHImport').show();
                 $('#btnLunasiBatchFakturHImport').show();
                 $('#btnUnpostBatchPelunasanFakturHImport').show();
+                $('#btnExportBatchLunasFakturHImport').show();
                 $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Terpilih (' + totalCheckedAll + ' Faktur)');
             } else {
                 $('#btnHapusBatchFakturHImport').hide();
                 $('#btnLunasiBatchFakturHImport').hide();
                 $('#btnUnpostBatchPelunasanFakturHImport').hide();
+                $('#btnExportBatchLunasFakturHImport').hide();
                 $('#btnCetakSemuaFakturHImport').html('<i class="fas fa-print mr-1"></i> Cetak Semua (LX-310)');
             }
         }
@@ -948,6 +978,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('body').append(form);
                 form.submit();
             }
+        });
+
+        // Tombol Export Batch Lunas & Jurnal Terpilih
+        $(document).on('click', '#btnExportBatchLunasFakturHImport', function(e) {
+            e.preventDefault();
+            var selectedIds = getSelectedIds();
+            if (selectedIds.length === 0) return;
+
+            var form = $('<form>', {
+                'action': '<?= base_url("sales_order/export_faktur_h_lunas") ?>',
+                'method': 'POST',
+                'style': 'display:none;'
+            });
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            $('body').append(form);
+            form.submit();
+            setTimeout(function() { form.remove(); }, 2000);
         });
 
         // Tombol Cetak Semua / Terpilih
@@ -1086,8 +1137,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     $('#jurnalModalBodyContent').html('<div class="alert alert-danger">' + (res.message || 'Gagal memuat jurnal.') + '</div>');
                 }
-            }).fail(function() {
-                $('#jurnalModalBodyContent').html('<div class="alert alert-danger">Gagal menghubungi server.</div>');
+            }).fail(function(xhr, status, error) {
+                var errDetail = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : (xhr.responseText ? xhr.responseText.substring(0, 200) : error);
+                $('#jurnalModalBodyContent').html('<div class="alert alert-danger"><strong>Gagal memuat jurnal:</strong> ' + (errDetail || 'Gagal menghubungi server.') + '</div>');
             });
         };
 

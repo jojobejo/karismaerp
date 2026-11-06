@@ -3755,6 +3755,27 @@ class M_SalesOrder extends CI_Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             ");
         }
+
+        if ($this->db->table_exists('tbso_faktur_z_pecah')) {
+            $cols = [
+                'total_bayar'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `total_bayar` DECIMAL(18,2) DEFAULT 0 AFTER `status`",
+                'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) DEFAULT 0 AFTER `total_bayar`",
+                'status_bayar'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `status_bayar` VARCHAR(20) DEFAULT 'belum_lunas' AFTER `sisa_tagihan`",
+                'tanggal_bayar'     => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `tanggal_bayar` DATE DEFAULT NULL AFTER `status_bayar`",
+                'metode_pembayaran' => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `metode_pembayaran` VARCHAR(100) DEFAULT NULL AFTER `tanggal_bayar`",
+                'nominal_bruto'     => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nominal_bruto` DECIMAL(18,2) DEFAULT 0 AFTER `metode_pembayaran`",
+                'nominal_potongan'  => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nominal_potongan` DECIMAL(18,2) DEFAULT 0 AFTER `nominal_bruto`",
+                'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
+                'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
+                'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
+                'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+            ];
+            foreach ($cols as $colName => $sql) {
+                if (!$this->db->field_exists($colName, 'tbso_faktur_z_pecah')) {
+                    $this->db->query($sql);
+                }
+            }
+        }
     }
 
     public function get_faktur_pecah_h($id_pecah)
@@ -3797,6 +3818,7 @@ class M_SalesOrder extends CI_Model
             COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
             COALESCE(fp.tanggal_jatuh_tempo, p.tanggal_jatuh_tempo) AS tanggal_jatuh_tempo,
             COALESCE(MAX(ca.kontak_person), MAX(c.nama_customer)) AS nama_customer, 
+            COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
             MAX(ca.nama_toko) AS nama_toko, 
             MAX(ca.kota) AS customer_kota,
             MAX(c.kd_rute) AS customer_kd_rute,
@@ -3820,6 +3842,16 @@ class M_SalesOrder extends CI_Model
             $this->db->or_where('fp.tanggal_faktur <=', $filter['date2']);
             $this->db->group_end();
         }
+        if (!empty($filter['status_bayar']) && $filter['status_bayar'] !== 'all') {
+            if ($filter['status_bayar'] === 'lunas') {
+                $this->db->where('p.status_bayar', 'lunas');
+            } elseif ($filter['status_bayar'] === 'belum_lunas') {
+                $this->db->group_start();
+                $this->db->where('p.status_bayar', 'belum_lunas');
+                $this->db->or_where('p.status_bayar IS NULL', null, false);
+                $this->db->group_end();
+            }
+        }
         if (!empty($filter['create_by'])) $this->db->where('p.create_by', $filter['create_by']);
         if (!empty($filter['search'])) {
             $q = trim((string)$filter['search']);
@@ -3831,6 +3863,8 @@ class M_SalesOrder extends CI_Model
             $this->db->or_like('ca.kontak_person', $q);
             $this->db->or_like('ca.nama_toko', $q);
             $this->db->or_like('c.nama_customer', $q);
+            $this->db->or_like('p.nomor_jurnal_q', $q);
+            $this->db->or_like('p.nomor_jurnal_a', $q);
             $this->db->group_end();
         }
         $this->db->group_by('p.id_pecah');
