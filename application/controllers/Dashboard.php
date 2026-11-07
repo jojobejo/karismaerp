@@ -11,11 +11,6 @@ class Dashboard extends CI_Controller
             redirect('Auth');
         }
 
-        // User admkeu hanya diizinkan mengakses modul Pecah Faktur
-        if (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu') {
-            redirect('sales_order/pecah_faktur');
-        }
-
         $this->load->model('M_Dashboard');
     }
 

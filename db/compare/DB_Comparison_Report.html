@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Comparison Report - KARISMAERP</title>
+    <style>
+        /* Base styles */
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11pt;
+            color: #333;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+        }
+
+        /* Container for web view */
+        .container {
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            margin: 20px auto;
+            background: #fff;
+            padding: 20mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        /* Typography & Colors */
+        h1, h2, h3, h4 {
+            color: #1a365d; /* Dark blue */
+            margin-top: 0;
+        }
+        
+        h1 {
+            font-size: 24pt;
+            text-align: center;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 16pt;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            font-size: 13pt;
+            margin-top: 20px;
+        }
+
+        .meta-info {
+            background-color: #f8fafc;
+            border-left: 4px solid #1a365d;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .meta-info p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 10pt;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #1a365d;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+
+        .table-section {
+            margin-bottom: 30px;
+        }
+
+        /* Print Specific Styles */
+        @media print {
+            body {
+                background: none;
+            }
+            .container {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            @page {
+                size: A4;
+                margin: 15mm 15mm;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+            .avoid-break {
+                page-break-inside: avoid;
+            }
+            
+            /* Print header/footer logic (handled by browser usually, but CSS helps) */
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Halaman Judul & Meta Info -->
+        <h1>KARISMAERP<br><span style="font-size:16pt; font-weight:normal;">Database Comparison Report</span></h1>
+        
+        <div class="meta-info">
+            <p>Database 1 (Referensi): karismaerp_bram.sql (270 KB) - MariaDB/XAMPP</p>
+            <p>Database 2 (Target): karismaerp_yoga.sql (268 KB) - MySQL 8.0+</p>
+            <p>Tanggal Laporan: 8 Agustus 2026</p>
+        </div>
+
+        <!-- 1. Ringkasan Eksekutif -->
+        <div class="table-section avoid-break">
+            <h2>1. RINGKASAN EKSEKUTIF</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metrik</th>
+                        <th>DB Bram</th>
+                        <th>DB Yoga</th>
+                        <th>Selisih</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Total Tabel</td>
+                        <td>264</td>
+                        <td>267</td>
+                        <td>+3 (Yoga)</td>
+                    </tr>
+                    <tr>
+                        <td>Tabel Eksklusif</td>
+                        <td>9</td>
+                        <td>12</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Tabel Sama</td>
+                        <td>255</td>
+                        <td>255</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Tabel Beda Kolom</td>
+                        <td>11</td>
+                        <td>11</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. Tabel Eksklusif DB Bram -->
+        <div class="table-section avoid-break">
+            <h2>2. TABEL EKSKLUSIF DB BRAM (9 tabel)</h2>
+            <p>Tabel berikut hanya ada di database Bram dan tidak ditemukan di database Yoga.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%">No</th>
+                        <th width="30%">Nama Tabel</th>
+                        <th width="50%">Deskripsi</th>
+                        <th width="15%">Jumlah Kolom</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>tb_kpi_history_bck</td><td>Backup History KPI</td><td>17</td></tr>
+                    <tr><td>2</td><td>tb_loading_kk_bck</td><td>Backup Loading Kapal Kontainer</td><td>25</td></tr>
+                    <tr><td>3</td><td>tb_loading_lk_bck</td><td>Backup Loading LK</td><td>27</td></tr>
+                    <tr><td>4</td><td>tb_lpb_manual_log</td><td>Log LPB Manual</td><td>11</td></tr>
+                    <tr><td>5</td><td>tblpb_faktur_pajak</td><td>Faktur Pajak LPB</td><td>7</td></tr>
+                    <tr><td>6</td><td>tbpo_formula_variable</td><td>Variable Formula PO</td><td>10</td></tr>
+                    <tr><td>7</td><td>tbpo_realisasi_detail_po_nk</td><td>Detail Realisasi PO NK</td><td>19</td></tr>
+                    <tr><td>8</td><td>tbpo_realisasi_harganyata_log</td><td>Log Realisasi Harga Nyata</td><td>8</td></tr>
+                    <tr><td>9</td><td>tbpo_realisasi_po_nk</td><td>Header Realisasi PO NK</td><td>6</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- 3. Tabel Eksklusif DB Yoga -->
+        <div class="table-section">
+            <h2>3. TABEL EKSKLUSIF DB YOGA (12 tabel)</h2>
+            <p>Tabel berikut hanya ada di database Yoga dan tidak ditemukan di database Bram.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%">No</th>
+                        <th width="30%">Nama Tabel</th>
+                        <th width="50%">Deskripsi</th>
+                        <th width="15%">Jumlah Kolom</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>tb_kasbon</td><td>Pengajuan Kasbon</td><td>9</td></tr>
+                    <tr><td>2</td><td>tb_pengajuan_od</td><td>Pengajuan Overdue</td><td>24</td></tr>
+                    <tr><td>3</td><td>tb_pengajuan_od_faktur</td><td>Faktur Pengajuan OD</td><td>7</td></tr>
+                    <tr><td>4</td><td>tb_ss_simulasi</td><td>Simulasi Suggestion System</td><td>7</td></tr>
+                    <tr><td>5</td><td>tb_ss_verified</td><td>Verifikasi SS</td><td>6</td></tr>
+                    <tr><td>6</td><td>tbkeu_kas_keluar</td><td>Kas Keluar</td><td>14</td></tr>
+                    <tr><td>7</td><td>tbkeu_kas_keluar_detail</td><td>Detail Kas Keluar</td><td>5</td></tr>
+                    <tr><td>8</td><td>tbkeu_kas_masuk</td><td>Kas Masuk</td><td>14</td></tr>
+                    <tr><td>9</td><td>tbkeu_kas_masuk_detail</td><td>Detail Kas Masuk</td><td>5</td></tr>
+                    <tr><td>10</td><td>tbpo_barang_akun</td><td>Mapping Barang ke Akun</td><td>7</td></tr>
+                    <tr><td>11</td><td>tbso_cancel_partial_request</td><td>Request Cancel Partial SO</td><td>9</td></tr>
+                    <tr><td>12</td><td>tbso_faktur_jurnal</td><td>Jurnal Faktur SO</td><td>7</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. Perbedaan Kolom -->
+        <div class="table-section">
+            <h2>4. PERBEDAAN KOLOM PADA TABEL YANG SAMA (11 tabel)</h2>
+            <p>Terdapat perbedaan struktur kolom pada tabel yang ada di kedua database.</p>
+
+            <div class="avoid-break">
+                <h3>4.1 tb_karyawan</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>faktur_prefix</td><td>Hanya Yoga</td><td>varchar(4)</td><td>Prefix faktur per karyawan</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.2 tb_lpb</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>tgl_perubahan_invoice</td><td>Hanya Bram</td><td>date</td><td>Tanggal perubahan invoice</td></tr>
+                        <tr><td>tgl_riil_invoice</td><td>Hanya Bram</td><td>date</td><td>Tanggal riil invoice</td></tr>
+                        <tr><td>source_type</td><td>Hanya Bram</td><td>varchar(20)</td><td>Tipe sumber</td></tr>
+                        <tr><td>manual_ref_no</td><td>Hanya Bram</td><td>varchar(50)</td><td>Referensi manual</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.3 tb_lpb_detail</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>sales_disc</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>Diskon sales</td></tr>
+                        <tr><td>cbd</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>CBD</td></tr>
+                        <tr><td>foc</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>Free of Charge</td></tr>
+                        <tr><td>insentif_cn</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>Insentif CN</td></tr>
+                        <tr><td>dpp</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>Dasar Pengenaan Pajak</td></tr>
+                        <tr><td>ppn_11</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>PPN 11%</td></tr>
+                        <tr><td>ppn_12</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>PPN 12%</td></tr>
+                        <tr><td>dpp_nilai_lain</td><td>Hanya Bram</td><td>decimal(15,2)</td><td>DPP Nilai Lain</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="page-break"></div>
+
+            <div class="avoid-break">
+                <h3>4.4 tb_penilaian_karakter_assignment</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>bulan</td><td>Hanya Yoga</td><td>varchar(7)</td><td>Periode penilaian</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.5 tb_ss</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>tipe_ss</td><td>Hanya Yoga</td><td>enum('umum','teknis')</td><td>Tipe SS</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.6 tbkeu_pembayaran_faktur</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>jumlah_diskon</td><td>Hanya Yoga</td><td>decimal(16,2)</td><td>Jumlah diskon</td></tr>
+                        <tr><td>cara_pembayaran</td><td>Hanya Yoga</td><td>varchar(50)</td><td>Cara pembayaran</td></tr>
+                        <tr><td>no_bg</td><td>Hanya Yoga</td><td>varchar(50)</td><td>Nomor BG</td></tr>
+                        <tr><td>nama_bank</td><td>Hanya Yoga</td><td>varchar(100)</td><td>Nama bank</td></tr>
+                        <tr><td>status_kasir</td><td>Hanya Yoga</td><td>varchar(20)</td><td>Status kasir</td></tr>
+                        <tr><td>kasir_approved_by</td><td>Hanya Yoga</td><td>varchar(100)</td><td>Kasir approver</td></tr>
+                        <tr><td>kasir_approved_at</td><td>Hanya Yoga</td><td>datetime</td><td>Waktu approval</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.7 tbpo_barang</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>produsen</td><td>Hanya Bram</td><td>varchar(150)</td><td>Nama produsen</td></tr>
+                        <tr><td>spesifikasi_merk</td><td>Hanya Bram</td><td>varchar(255)</td><td>Spesifikasi merk</td></tr>
+                        <tr><td>golongan</td><td>Hanya Bram</td><td>varchar(100)</td><td>Golongan barang</td></tr>
+                        <tr><td>kelompok</td><td>Hanya Bram</td><td>varchar(100)</td><td>Kelompok barang</td></tr>
+                        <tr><td>komposisi</td><td>Hanya Bram</td><td>text</td><td>Komposisi</td></tr>
+                        <tr><td>grup</td><td>Hanya Bram</td><td>varchar(100)</td><td>Grup barang</td></tr>
+                        <tr><td>kubikasi</td><td>Hanya Yoga</td><td>decimal(12,6)</td><td>Kubikasi m3</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.8 tbpo_formula_result</h3>
+                <p><strong>Catatan:</strong> 8 kolom (id_variable, variable_key, variable_label, input_type, unit, default_value, is_required, sort_order) semuanya <strong>Hanya Yoga</strong>. Di DB Bram, data ini ada di tabel terpisah <code>tbpo_formula_variable</code>.</p>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.9 tbpo_po</h3>
+                <table>
+                    <thead>
+                        <tr><th>Kolom</th><th>Status</th><th>Tipe Data</th><th>Keterangan</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>tgl_perubahan_po</td><td>Hanya Bram</td><td>date</td><td>Tanggal perubahan PO</td></tr>
+                        <tr><td>top</td><td>Hanya Bram</td><td>int(11)</td><td>Term of Payment (hari)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="page-break"></div>
+
+            <div class="avoid-break">
+                <h3>4.10 tbrp_retur_penjualan_header</h3>
+                <p>Terdapat 3 kolom data + 27 kolom approval chain (9 approver x 3 field). Semua <strong>Hanya Yoga</strong>.</p>
+            </div>
+
+            <div class="avoid-break">
+                <h3>4.11 tbrp_spr_header</h3>
+                <p>Terdapat 9 kolom approval (mngsc, kadepub, admretur - masing-masing *_by, *_at, *_catatan). Semua <strong>Hanya Yoga</strong>.</p>
+            </div>
+        </div>
+
+        <!-- 5. Catatan Teknis -->
+        <div class="table-section avoid-break">
+            <h2>5. CATATAN TEKNIS</h2>
+            <ul>
+                <li><strong>Platform:</strong> Bram menggunakan MariaDB (XAMPP), sedangkan Yoga menggunakan MySQL 8.0+.</li>
+                <li><strong>Collation:</strong> Terdapat perbedaan <code>utf8mb4_general_ci</code> vs <code>utf8mb4_0900_ai_ci</code> (Perbedaan versi ini tidak berdampak pada fungsionalitas).</li>
+                <li><strong>Display Width:</strong> Perbedaan format penulisan <code>int(11)</code> vs <code>int</code> (Bawaan MySQL 8.0 menghilangkan padding width secara default, tidak berdampak fungsional).</li>
+                <li><strong>Default Values:</strong> Perbedaan string literal seperti <code>DEFAULT 0</code> vs <code>DEFAULT '0'</code> (Tidak berdampak fungsional).</li>
+                <li><strong>Function:</strong> Perbedaan penulisan <code>current_timestamp()</code> vs <code>CURRENT_TIMESTAMP</code> (Tidak berdampak fungsional).</li>
+            </ul>
+        </div>
+        
+    </div>
+</body>
+</html>

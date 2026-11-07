@@ -1,8 +1,7 @@
   <!-- Main Sidebar Container -->
-  <?php $is_admkeu_only = (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu'); ?>
   <aside class="main-sidebar sidebar-dark-primary elevation-2">
     <!-- Brand Logo -->
-    <a href="<?php echo base_url($is_admkeu_only ? 'sales_order/pecah_faktur' : 'dashboard') ?>" class="brand-link">
+    <a href="<?php echo base_url('dashboard') ?>" class="brand-link">
       <img src="<?php echo base_url("assets/images/Karisma.png") ?>" style="width: 50px; height: 30px;" alt="Karisma Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
       <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
@@ -92,60 +91,7 @@
     <?php endif; ?>
 
     <!-- Sidebar -->
-    <?php if ($is_admkeu_only) : ?>
-      <?php
-      $admkeuUri1 = strtolower((string)$this->uri->segment(1));
-      $admkeuUri2 = strtolower((string)$this->uri->segment(2));
-
-      $isAdmkeuMasterBarang     = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
-      $isAdmkeuPembayaranFaktur = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'pembayaran');
-      $isAdmkeuReportJurnal     = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'report_jurnal');
-      $isAdmkeuFakturHImport    = ($admkeuUri1 === 'sales_order' && $admkeuUri2 === 'faktur_h_import') || ($admkeuUri1 === 'faktur_h_import');
-      $isAdmkeuPecahFaktur      = !$isAdmkeuMasterBarang && !$isAdmkeuPembayaranFaktur && !$isAdmkeuReportJurnal && !$isAdmkeuFakturHImport;
-      ?>
-      <div class="sidebar">
-        <nav class="mt-2">
-          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link <?= $isAdmkeuPecahFaktur ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-cut"></i>
-                <p>Pecah Faktur</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/faktur_h_import') ?>" class="nav-link <?= $isAdmkeuFakturHImport ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
-                <p>Faktur H Import</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= $isAdmkeuMasterBarang ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-boxes"></i>
-                <p>Master Barang</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link <?= $isAdmkeuPembayaranFaktur ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>Pembayaran Faktur</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= $isAdmkeuReportJurnal ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>Report Jurnal</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('logout') ?>" class="nav-link">
-                <i class="nav-icon fas fa-sign-out-alt"></i>
-                <p>Log Out</p>
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </div>
-    <?php elseif (!empty($dynamicSidebarTree)) : ?>
+    <?php if (!empty($dynamicSidebarTree)) : ?>
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
@@ -199,26 +145,6 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Pembayaran Supplier
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>
-                  Pembayaran Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= ($this->uri->segment(1) == 'keuangan' && $this->uri->segment(2) == 'report_jurnal') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>
-                  Report Jurnal
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
               <a href="<?php echo base_url('keuangan/buku_besar') ?>" class="nav-link">
                 <i class="nav-icon fas fa-book"></i>
                 <p>
@@ -247,14 +173,6 @@
                 <i class="nav-icon fas fa-cut"></i>
                 <p>
                   Pecah Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/faktur_h_import') ?>" class="nav-link <?= (($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'faktur_h_import') || $this->uri->segment(1) == 'faktur_h_import') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
-                <p>
-                  Faktur H Import
                 </p>
               </a>
             </li>
@@ -300,14 +218,6 @@
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= ($this->uri->segment(1) == 'keuangan' && $this->uri->segment(2) == 'report_jurnal') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>
-                  Report Jurnal
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
                 <p>
@@ -328,14 +238,6 @@
                 <i class="nav-icon fas fa-cut"></i>
                 <p>
                   Pecah Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/faktur_h_import') ?>" class="nav-link <?= (($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'faktur_h_import') || $this->uri->segment(1) == 'faktur_h_import') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
-                <p>
-                  Faktur H Import
                 </p>
               </a>
             </li>
@@ -529,14 +431,6 @@
             <a href="<?php echo base_url('sales_order/pecah_faktur') ?>" class="nav-link">
               <i class="nav-icon fas fa-cut"></i>
               <p>Pecah Faktur</p>
-            </a>
-          </li>
-
-          <!-- Faktur H Import -->
-          <li class="nav-item">
-            <a href="<?php echo base_url('sales_order/faktur_h_import') ?>" class="nav-link <?= (($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'faktur_h_import') || $this->uri->segment(1) == 'faktur_h_import') ? 'active' : '' ?>">
-              <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
-              <p>Faktur H Import</p>
             </a>
           </li>
 
@@ -778,14 +672,6 @@
                 <i class="nav-icon fas fa-cut"></i>
                 <p>
                   Pecah Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/faktur_h_import') ?>" class="nav-link <?= (($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'faktur_h_import') || $this->uri->segment(1) == 'faktur_h_import') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
-                <p>
-                  Faktur H Import
                 </p>
               </a>
             </li>

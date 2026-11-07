@@ -1,0 +1,1 @@
+RENAME TABLE tbso_pembayaran_faktur TO tbkeu_pembayaran_faktur;
