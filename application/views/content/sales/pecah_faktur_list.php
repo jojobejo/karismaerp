@@ -581,34 +581,6 @@
                                             Belum: <strong><?= $belumH ?></strong>
                                         </span>
 
-                                        <button type="button" 
-                                                class="btn btn-sm font-weight-bold text-white shadow-sm mr-2" 
-                                                style="background-color: #6f42c1;"
-                                                data-toggle="modal" 
-                                                data-target="#modalImportPelunasanFakturZ" 
-                                                title="Import Pelunasan Faktur Pecahan H melalui Excel / CSV">
-                                            <i class="fas fa-file-invoice-dollar mr-1"></i> Import Pelunasan Faktur H
-                                        </button>
-
-                                        <div class="btn-group btn-group-sm mr-2 shadow-sm">
-                                            <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=unpaid') ?>" 
-                                               class="btn btn-outline-success font-weight-bold" 
-                                               title="Download Template Excel Pelunasan Faktur H (Khusus Belum Lunas)">
-                                                <i class="fas fa-download mr-1"></i> Template Pelunasan
-                                            </a>
-                                            <button type="button" class="btn btn-outline-success dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                <span class="sr-only">Toggle Dropdown</span>
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-right shadow">
-                                                <a class="dropdown-item" href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=unpaid') ?>">
-                                                    <i class="fas fa-file-excel text-success mr-2"></i> Hanya Faktur Belum Lunas
-                                                </a>
-                                                <a class="dropdown-item" href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=all') ?>">
-                                                    <i class="fas fa-list text-primary mr-2"></i> Semua Faktur Pecahan H
-                                                </a>
-                                            </div>
-                                        </div>
-
                                         <a href="<?= base_url('sales_order/export_faktur_z_pecah_lunas') ?>" 
                                            class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"
                                            id="btnExportFakturZLunas"
