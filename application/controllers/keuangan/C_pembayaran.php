@@ -150,89 +150,6 @@ class C_pembayaran extends CI_Controller
         exit;
     }
 
-    public function get_pecahan_faktur_h_json()
-    {
-        $id_faktur = (int)$this->input->get('id_faktur', true);
-        if ($id_faktur <= 0) {
-            echo json_encode(['status' => false, 'message' => 'ID Faktur tidak valid']);
-            return;
-        }
-
-        if (!$this->db->table_exists('tbso_faktur_z_pecah')) {
-            echo json_encode(['status' => false, 'message' => 'Tabel pecahan tidak tersedia']);
-            return;
-        }
-
-        $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
-        if (!$faktur) {
-            echo json_encode(['status' => false, 'message' => 'Faktur induk tidak ditemukan']);
-            return;
-        }
-
-        // Ambil seluruh faktur pecahan H dengan urutan prioritas pecahan lama dahulu
-        $pecahans = $this->db
-            ->select('p.*, COALESCE(SUM(pd.total_harga), 0) AS total_tagihan_h')
-            ->from('tbso_faktur_z_pecah p')
-            ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
-            ->where('p.parent_id_faktur', $id_faktur)
-            ->where("p.status !=", 'cancelled')
-            ->group_by('p.id_pecah')
-            ->order_by('p.tanggal_faktur', 'ASC')
-            ->order_by('p.id_pecah', 'ASC')
-            ->get()
-            ->result_array();
-
-        // Cari jurnal yang terkait dengan masing-masing Faktur H dan hitung status pembayarannya
-        foreach ($pecahans as &$pec) {
-            $jurnal_rows = [];
-            if ($this->db->table_exists('tbkeu_jurnal')) {
-                $jurnal_rows = $this->db
-                    ->select('id_jurnal, nomor_jurnal, tanggal_transaksi, status, keterangan, total_debit, total_kredit')
-                    ->from('tbkeu_jurnal')
-                    ->where('source_module', 'KEUANGAN')
-                    ->where('source_no', $pec['no_faktur'])
-                    ->order_by('id_jurnal', 'DESC')
-                    ->get()
-                    ->result_array();
-            }
-            $pec['jurnals'] = $jurnal_rows;
-
-            // Hitung status pembayaran faktur H berdasarkan jurnal yang terposting
-            $skema = (int)($pec['skema_potongan'] ?? 20);
-            $factor_netto = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
-
-            $total_bayar_bruto = 0.0;
-            foreach ($jurnal_rows as $j) {
-                if ($j['status'] === 'POSTED') {
-                    $total_bayar_bruto += (float)$j['total_debit'];
-                }
-            }
-            $total_bayar_netto = round($total_bayar_bruto * $factor_netto, 2);
-            $total_tagihan_netto = (float)$pec['total_tagihan_h'];
-            $sisa_tagihan_netto = max(0.0, round($total_tagihan_netto - $total_bayar_netto, 2));
-
-            if ($sisa_tagihan_netto <= 0.01 && $total_tagihan_netto > 0 && $total_bayar_netto > 0) {
-                $status_bayar_h = 'lunas';
-            } elseif ($total_bayar_netto > 0) {
-                $status_bayar_h = 'sebagian';
-            } else {
-                $status_bayar_h = 'belum_lunas';
-            }
-
-            $pec['total_terbayar_h']  = $total_bayar_netto;
-            $pec['total_bayar_bruto'] = $total_bayar_bruto;
-            $pec['sisa_tagihan_h']    = $sisa_tagihan_netto;
-            $pec['status_bayar_h']    = $status_bayar_h;
-        }
-        unset($pec);
-
-        echo json_encode([
-            'status'       => true,
-            'parent_faktur' => $faktur,
-            'data'          => $pecahans
-        ]);
-    }
-
     public function get_payment_history_json()
     {
         $id_faktur = $this->input->get('id_faktur', true);
@@ -351,27 +268,6 @@ class C_pembayaran extends CI_Controller
             ->result_array();
 
         $data['akun_harta'] = $this->M_pembayaran->get_harta_accounts();
-
-        // Data Faktur Z dan pecahan untuk opsi potongan jurnal
-        $is_faktur_z = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'Z';
-        $pecahan_faktur_z = [];
-        if ($this->db->table_exists('tbso_faktur_z_pecah')) {
-            $pecahan_faktur_z = $this->db
-                ->select('p.id_pecah, p.no_faktur, p.kd_customer, p.customer_name, COALESCE(SUM(pd.total_harga), 0) AS total_pecahan')
-                ->from('tbso_faktur_z_pecah p')
-                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
-                ->where('p.parent_id_faktur', (int)$faktur['id_faktur'])
-                ->where("p.status !=", 'cancelled')
-                ->group_by('p.id_pecah')
-                ->order_by('p.id_pecah', 'ASC')
-                ->get()
-                ->result_array();
-        }
-        if (!empty($pecahan_faktur_z)) {
-            $is_faktur_z = true;
-        }
-        $data['is_faktur_z'] = $is_faktur_z;
-        $data['pecahan_faktur_z'] = $pecahan_faktur_z;
 
         // ── Data Barang Konsinyasi untuk Input Qty Pelunasan ────────
         $is_konsinyasi = strtoupper(substr((string)$faktur['no_faktur'], 0, 1)) === 'K';
@@ -587,10 +483,6 @@ class C_pembayaran extends CI_Controller
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
         $jumlah_diskon = $this->_normalize_amount($this->input->post('jumlah_diskon', true));
-        $skema_potongan_z = (int)$this->input->post('skema_potongan_z', true);
-        if (!in_array($skema_potongan_z, [0, 20, 40], true)) {
-            $skema_potongan_z = 0;
-        }
         $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
 
         // Validasi metode pembayaran secara dinamis berdasarkan akun Harta aktif di database
@@ -708,7 +600,6 @@ class C_pembayaran extends CI_Controller
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
-            'skema_potongan_z'    => $skema_potongan_z,
             'qty_konsinyasi'      => ($is_realisasi_barang && $qty_konsinyasi > 0) ? $qty_konsinyasi : null,
             'kd_barang'           => ($is_realisasi_barang && !empty($kd_barang_konsinyasi)) ? $kd_barang_konsinyasi : null,
             'id_settlement'       => ($is_konsinyasi && $id_settlement_konsinyasi > 0) ? $id_settlement_konsinyasi : null,

@@ -1,0 +1,2 @@
+ALTER TABLE tbso_sales_order
+ADD COLUMN IF NOT EXISTS is_faktur_z TINYINT(1) NOT NULL DEFAULT 0 AFTER catatan;

@@ -295,45 +295,13 @@ class C_BukuBesar extends CI_Controller
         $this->db->order_by('d.nomor_baris', 'ASC');
         $details = $this->db->get()->result_array();
         
-                // Ambil seluruh jurnal jika berasal dari pembayaran (multi-jurnal Faktur Z dsb)
-        $multi_journals = [];
-        $id_pembayaran_check = (int)$this->input->post('id_pembayaran');
-        if ($id_pembayaran_check <= 0 && $journal && ($journal['source_type'] ?? '') === 'PEMBAYARAN_FAKTUR') {
-            $id_pembayaran_check = (int)$journal['source_id'];
-        }
-        if ($id_pembayaran_check > 0) {
-            $j_list = $this->db->where('source_module', 'KEUANGAN')
-                ->where('source_type', 'PEMBAYARAN_FAKTUR')
-                ->group_start()
-                    ->where('source_id', (string)$id_pembayaran_check)
-                    ->or_where('source_id', $id_pembayaran_check)
-                ->group_end()
-                ->order_by('id_jurnal', 'ASC')
-                ->get('tbkeu_jurnal')
-                ->result_array();
-            foreach ($j_list as $jl) {
-                $j_details = $this->db->select('d.*, a.kode_akun, a.nama_akun')
-                    ->from('tbkeu_jurnal_detail d')
-                    ->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left')
-                    ->where('d.id_jurnal', (int)$jl['id_jurnal'])
-                    ->order_by('d.nomor_baris', 'ASC')
-                    ->get()
-                    ->result_array();
-                $multi_journals[] = [
-                    'journal' => $jl,
-                    'details' => $j_details
-                ];
-            }
-        }
-
         return $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode([
                 'success' => true,
                 'data' => [
-                    'journal'        => $journal,
-                    'details'        => $details,
-                    'multi_journals' => $multi_journals
+                    'journal' => $journal,
+                    'details' => $details
                 ]
             ]));
     }
