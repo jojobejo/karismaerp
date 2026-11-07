@@ -166,7 +166,7 @@ class M_Journal extends CI_Model
                     'id_jurnal' => $id_jurnal,
                     'nomor_baris' => $baris++,
                     'id_akun' => $id_akun_debit,
-                    'keterangan' => 'Penerimaan ' . $nama_akun_debit_label,
+                    'keterangan' => 'Penerimaan dari ' . ($customerName !== '' ? $customerName : 'Customer'),
                     'debit' => $jumlah,
                     'kredit' => 0
                 ]);
@@ -189,11 +189,13 @@ class M_Journal extends CI_Model
                 'id_jurnal' => $id_jurnal,
                 'nomor_baris' => $baris++,
                 'id_akun' => $id_akun_kredit,
-                'keterangan' => 'Piutang Usaha Faktur ' . $no_faktur,
+                'keterangan' => 'Penerimaan dari ' . ($customerName !== '' ? $customerName : 'Customer'),
                 'debit' => 0,
                 'kredit' => $total_piutang
             ]);
         }
+
+        $this->_post_jurnal_pecahan_faktur_z($id_pembayaran, $data_pembayaran, $id_akun_debit, $id_akun_kredit, $userId, $id_jenis_jurnal);
 
         return true;
     }
@@ -768,20 +770,31 @@ class M_Journal extends CI_Model
             return [];
         }
 
+        $hasImportTable = $this->db->table_exists('tbso_faktur_h_import');
+        $importCustomerSelect = $hasImportTable
+            ? "COALESCE(NULLIF(f.customer_name, ''), NULLIF(fhi.customer_name, ''), NULLIF(fhi.nama_toko, ''), '')"
+            : "COALESCE(f.customer_name, '')";
+        $importKeteranganSelect = $hasImportTable
+            ? "COALESCE(NULLIF(j.keterangan, ''), CONCAT('Penerimaan dari ', COALESCE(f.customer_name, fhi.customer_name, '')))"
+            : "COALESCE(NULLIF(j.keterangan, ''), CONCAT('Penerimaan dari ', COALESCE(f.customer_name, '')))";
+
         $this->db->select("
             j.id_jurnal,
             j.nomor_jurnal,
             j.tanggal_transaksi,
             j.source_no AS referensi,
             j.source_id AS id_pembayaran,
-            CONCAT('Penerimaan dari ', COALESCE(f.customer_name, '')) AS keterangan,
+            {$importKeteranganSelect} AS keterangan,
             j.total_debit AS nilai,
             j.status,
-            COALESCE(f.customer_name, '') AS pelanggan
+            {$importCustomerSelect} AS pelanggan
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');
         $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
+        if ($hasImportTable) {
+            $this->db->join('tbso_faktur_h_import fhi', 'fhi.no_faktur = j.source_no', 'left');
+        }
         $this->db->where('j.source_module', 'KEUANGAN');
         $this->db->where('j.source_type', 'PEMBAYARAN_FAKTUR');
         $this->db->where('j.status', 'POSTED');
@@ -794,6 +807,10 @@ class M_Journal extends CI_Model
             $this->db->like('j.source_no', $search);
             $this->db->or_like('j.nomor_jurnal', $search);
             $this->db->or_like('f.customer_name', $search);
+            if ($hasImportTable) {
+                $this->db->or_like('fhi.customer_name', $search);
+                $this->db->or_like('fhi.nama_toko', $search);
+            }
             $this->db->or_like('j.keterangan', $search);
             $this->db->group_end();
         }
@@ -936,13 +953,12 @@ class M_Journal extends CI_Model
         $this->db->select("
             j.*,
             jj.kode_jenis_jurnal,
-            COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(u.nama_lngkp, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
+            COALESCE(NULLIF(k.nm_karyawan, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
         $this->db->join('tb_karyawan k', 'k.id = j.created_by', 'left');
-        $this->db->join('tb_users u', 'u.id = j.created_by', 'left');
         $this->db->where('j.id_jurnal', (int)$idJurnal);
         $journal = $this->db->get()->row();
         if (!$journal) {
@@ -952,12 +968,11 @@ class M_Journal extends CI_Model
         $this->db->select("
             d.*,
             a.kode_akun,
-            COALESCE(NULLIF(a.nama_akun, ''), NULLIF(ref.nama_karismaerp, ''), NULLIF(ref.alias_karismaerp, ''), d.keterangan, '') AS nama_akun,
-            COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display
+            COALESCE(NULLIF(a.nama_akun, ''), d.keterangan, '') AS nama_akun,
+            a.kode_akun AS kode_rekening_display
         ", false);
         $this->db->from('tbkeu_jurnal_detail d');
         $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
-        $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
         $this->db->where('d.id_jurnal', (int)$idJurnal);
         $this->db->order_by('d.nomor_baris', 'ASC');
 
@@ -979,7 +994,6 @@ class M_Journal extends CI_Model
             COALESCE(f.customer_name, '') AS pelanggan,
             COALESCE(
                 NULLIF(k.nm_karyawan, ''), 
-                NULLIF(u.nama_user, ''), 
                 NULLIF(p.create_by, ''), 
                 NULLIF(f.create_by, ''), 
                 CASE WHEN j.created_by = 0 THEN '' ELSE CONCAT('User #', j.created_by) END,
@@ -990,7 +1004,6 @@ class M_Journal extends CI_Model
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbso_faktur_penjualan f', '(j.source_module = "SALES" AND f.no_faktur = j.source_id) OR (j.source_module = "KEUANGAN" AND f.no_faktur = j.source_no)', 'left');
         $this->db->join('tb_karyawan k', 'j.created_by = k.id', 'left');
-        $this->db->join('tb_user u', 'j.created_by = u.id', 'left');
         $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');
         $this->db->where('j.id_jurnal', (int)$idJurnal);
         $journal = $this->db->get()->row();
@@ -1014,10 +1027,9 @@ class M_Journal extends CI_Model
             }
         }
 
-        $this->db->select("d.*, a.kode_akun, a.nama_akun, COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display", false);
+        $this->db->select("d.*, a.kode_akun, a.nama_akun, a.kode_akun AS kode_rekening_display", false);
         $this->db->from('tbkeu_jurnal_detail d');
         $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
-        $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
         $this->db->where_in('d.id_jurnal', $journal_ids);
         $this->db->order_by('d.id_jurnal', 'ASC');
         $this->db->order_by('d.nomor_baris', 'ASC');
@@ -1523,4 +1535,1073 @@ class M_Journal extends CI_Model
 
         return $headers;
     }
+
+    /**
+     * Memproses Jurnal Acak (Q) dan Jurnal (A) untuk Faktur Pecahan Z berdasarkan skema potongan
+     * Skema Potongan:
+     * - 0  : Tanpa Potongan
+     * - 20 : Potongan 20% (Tax)
+     * - 40 : Potongan 40% (20% Tax + 20% Fee Petugas)
+     *
+     * Faktur Induk (Z) tetap dicatat lunas tanpa potongan pada Jurnal Asli Z.
+     * Potongan dialokasikan ke jurnal pecahan (Jurnal Acak Q & Jurnal A).
+     */
+    private function _post_jurnal_pecahan_faktur_z($id_pembayaran, $data_pembayaran, $id_akun_debit, $id_akun_kredit, $userId, $id_jenis_jurnal)
+    {
+        $no_faktur = $data_pembayaran['no_faktur'] ?? '';
+        $id_faktur = (int)($data_pembayaran['id_faktur'] ?? 0);
+        $jumlah = (float)($data_pembayaran['jumlah_pembayaran'] ?? 0);
+        $metode = $data_pembayaran['metode_pembayaran'] ?? '';
+        $tanggal = $data_pembayaran['tanggal_pembayaran'] ?? date('Y-m-d');
+
+        if ($id_faktur <= 0 && !empty($no_faktur)) {
+            $fRow = $this->db->select('id_faktur')->where('no_faktur', $no_faktur)->get('tbso_faktur_penjualan')->row();
+            if ($fRow) {
+                $id_faktur = (int)$fRow->id_faktur;
+            }
+        }
+
+        if ($id_faktur <= 0 || !$this->db->table_exists('tbso_faktur_z_pecah')) {
+            return false;
+        }
+
+        // Deteksi skema potongan otomatis dari faktur pecahan (tbso_faktur_z_pecah)
+        $select_skema = $this->db->field_exists('skema_potongan', 'tbso_faktur_z_pecah') ? 'p.skema_potongan,' : '';
+
+        $pecahans = $this->db
+            ->select('p.id_pecah, p.no_faktur, ' . $select_skema . ' p.kd_customer, p.customer_name, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS total_pecahan')
+            ->from('tbso_faktur_z_pecah p')
+            ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+            ->where('p.parent_id_faktur', $id_faktur)
+            ->where("p.status !=", 'cancelled')
+            ->group_by('p.id_pecah')
+            ->order_by('p.tanggal_faktur', 'ASC')
+            ->order_by('p.id_pecah', 'ASC')
+            ->get()
+            ->result_array();
+
+        if (empty($pecahans)) {
+            return false;
+        }
+
+        // Ambil nama customer Faktur Z induk
+        $customerIndukName = '';
+        $fInduk = $this->db
+            ->select('c.nama_customer')
+            ->from('tbso_faktur_penjualan f')
+            ->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left')
+            ->where('f.id_faktur', $id_faktur)
+            ->get()
+            ->row();
+        if ($fInduk && !empty($fInduk->nama_customer)) {
+            $customerIndukName = trim($fInduk->nama_customer);
+        }
+
+        // Cari Akun Tambahan:
+        // 1. Akun Q Kas (11010 / 110-10) untuk selisih potongan pada Jurnal Acak Q
+        $akun_q_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row_array();
+        if (!$akun_q_kas) {
+            $this->db->like('nama_akun', 'Q Kas');
+            $akun_q_kas = $this->db->get('tbkeu_akun')->row_array();
+        }
+        $id_akun_q_kas = $akun_q_kas ? (int)$akun_q_kas['id_akun'] : null;
+
+        // 2. Akun A Kas (11030 / 110-30) untuk Debit Jurnal A
+        $akun_a_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11030'])->row_array();
+        if (!$akun_a_kas) {
+            $this->db->like('nama_akun', 'A Kas');
+            $akun_a_kas = $this->db->get('tbkeu_akun')->row_array();
+        }
+        $id_akun_a_kas = $akun_a_kas ? (int)$akun_a_kas['id_akun'] : null;
+
+        // 3. Akun A PND atas Pendapatan Pot Penj KIU (Tax) (13036 / 13040)
+        $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13036'])->row_array();
+        if (!$akun_tax) {
+            $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13040'])->row_array();
+        }
+        if (!$akun_tax) {
+            $this->db->like('nama_akun', 'Pot Penj KIU');
+            $akun_tax = $this->db->get('tbkeu_akun')->row_array();
+        }
+        $id_akun_tax = $akun_tax ? (int)$akun_tax['id_akun'] : null;
+
+        // 4. Akun A PND atas Pendapatan Pot Penj KIU (Fee Petugas) (13041)
+        $akun_fee = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13041'])->row_array();
+        if (!$akun_fee) {
+            $this->db->like('nama_akun', 'Fee Petugas');
+            $akun_fee = $this->db->get('tbkeu_akun')->row_array();
+        }
+        $id_akun_fee = $akun_fee ? (int)$akun_fee['id_akun'] : null;
+
+        // ── Deteksi Skema Potongan Otomatis (0%, 20%, atau 40%) ──
+        $skema_potongan_z = 20; // Default standar Karisma
+        if (!empty($pecahans[0]['skema_potongan'])) {
+            $skema_potongan_z = (int)$pecahans[0]['skema_potongan'];
+        } else {
+            // Deteksi cerdas dari rasio nilai total pecahan terhadap Faktur Z induk
+            $tot_z_induk = (float)$this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $id_faktur)->get('tbso_faktur_detail')->row()->tot;
+            $tot_h_pecahan = 0.0;
+            foreach ($pecahans as $p) {
+                $tot_h_pecahan += (float)$p['total_pecahan'];
+            }
+            if ($tot_z_induk > 0 && $tot_h_pecahan > 0) {
+                $ratio_h_z = $tot_h_pecahan / $tot_z_induk;
+                if ($ratio_h_z <= 0.65) {
+                    $skema_potongan_z = 40; // Potongan 40% (Netto ~60%)
+                } elseif ($ratio_h_z <= 0.85) {
+                    $skema_potongan_z = 20; // Potongan 20% (Netto ~80%)
+                } else {
+                    $skema_potongan_z = 0;  // Tanpa Potongan (Netto ~100%)
+                }
+            }
+        }
+
+        // Tentukan faktor pembagi untuk mendapatkan nilai bruto dasar
+        $pembagi_bruto = ($skema_potongan_z === 40) ? 0.6 : (($skema_potongan_z === 20) ? 0.8 : 1.0);
+
+        // ── Bersihkan Jurnal Pecahan (Q) & Jurnal A Lama Milik id_pembayaran ini jika pernah ada (Idempotence) ──
+        $h_nos = array_column($pecahans, 'no_faktur');
+        if (!empty($h_nos)) {
+            $old_q = $this->db->select('id_jurnal')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                ->where('source_id', $id_pembayaran)
+                ->where_in('source_no', $h_nos)
+                ->get()->result_array();
+            if (!empty($old_q)) {
+                $oq_ids = array_column($old_q, 'id_jurnal');
+                $this->db->where_in('id_jurnal', $oq_ids)->delete('tbkeu_jurnal_detail');
+                $this->db->where_in('id_jurnal', $oq_ids)->delete('tbkeu_jurnal');
+            }
+        }
+
+        // Bersihkan Jurnal A lama milik id_pembayaran ini jika pernah ada
+        $old_a = $this->db->select('id_jurnal')
+            ->from('tbkeu_jurnal')
+            ->where('source_module', 'KEUANGAN')
+            ->where('source_type', 'PEMBAYARAN_FAKTUR')
+            ->where('source_id', $id_pembayaran)
+            ->where('source_no', $no_faktur)
+            ->like('keterangan', 'PND u/Pot')
+            ->get()->result_array();
+        if (!empty($old_a)) {
+            $oa_ids = array_column($old_a, 'id_jurnal');
+            $this->db->where_in('id_jurnal', $oa_ids)->delete('tbkeu_jurnal_detail');
+            $this->db->where_in('id_jurnal', $oa_ids)->delete('tbkeu_jurnal');
+        }
+
+        // ── Ambil Total Pembayaran Bruto yang SUDAH DIBAYAR untuk Masing-Masing Faktur H dari Pembayaran Sebelumnya ──
+        $existing_paid_h = [];
+        if (!empty($h_nos)) {
+            $prev_jurnals = $this->db
+                ->select('source_no, COALESCE(SUM(total_debit), 0) AS total_sudah_bayar')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                ->where_in('source_no', $h_nos)
+                ->where('source_id !=', $id_pembayaran)
+                ->where('status', 'POSTED')
+                ->group_by('source_no')
+                ->get()
+                ->result_array();
+            foreach ($prev_jurnals as $pj) {
+                $existing_paid_h[$pj['source_no']] = (float)$pj['total_sudah_bayar'];
+            }
+        }
+
+        // ── 1. PEMBUATAN JURNAL ACAK (Q) DENGAN PRIORITAS FIFO (URUTAN PECAHAN LAMA LUNAS DULU) ──
+        $sisa_dana_bayar = (float)$jumlah;
+        $total_seluruh_potongan = 0.0;
+        $count_pecahan = count($pecahans);
+
+        foreach ($pecahans as $idx => $pec) {
+            if ($sisa_dana_bayar <= 0.001) {
+                // Dana pembayaran sudah habis diserap oleh pecahan-pecahan yang lebih awal.
+                // Pecahan selanjutnya BELUM ADA PEMBAYARAN SAMA SEKALI.
+                break;
+            }
+
+            $no_h = $pec['no_faktur'];
+            $val_netto = (float)$pec['total_pecahan'];
+            $val_bruto_target = ($val_netto > 0) ? round($val_netto / $pembagi_bruto, 2) : 0.0;
+
+            $sudah_bayar_bruto = $existing_paid_h[$no_h] ?? 0.0;
+            $sisa_bruto_h = max(0.0, round($val_bruto_target - $sudah_bayar_bruto, 2));
+
+            if ($sisa_bruto_h <= 0.001) {
+                // Pecahan ini sudah lunas dari pembayaran sebelumnya, lanjut ke pecahan berikutnya
+                continue;
+            }
+
+            $is_last = ($idx === $count_pecahan - 1);
+            if ($is_last) {
+                // Pecahan terakhir menyerap seluruh sisa dana pembayaran yang tersedia
+                $bruto_pecahan = round($sisa_dana_bayar, 2);
+            } else {
+                // Prioritaskan melunasi pecahan lama ini hingga target plafon brutonya terpenuhi
+                $bruto_pecahan = min($sisa_dana_bayar, $sisa_bruto_h);
+                $bruto_pecahan = round($bruto_pecahan, 2);
+            }
+
+            if ($bruto_pecahan <= 0.001) {
+                continue;
+            }
+
+            $sisa_dana_bayar = max(0.0, round($sisa_dana_bayar - $bruto_pecahan, 2));
+
+            if ($skema_potongan_z === 20) {
+                $potongan_pecahan = round($bruto_pecahan * 0.20, 2);
+                $netto_pecahan = $bruto_pecahan - $potongan_pecahan;
+            } elseif ($skema_potongan_z === 40) {
+                $potongan_pecahan = round($bruto_pecahan * 0.40, 2);
+                $netto_pecahan = $bruto_pecahan - $potongan_pecahan;
+            } else {
+                $potongan_pecahan = 0.0;
+                $netto_pecahan = $bruto_pecahan;
+            }
+            $total_seluruh_potongan += $potongan_pecahan;
+
+            $no_jurnal_q = $this->generate_no_jurnal($metode);
+            $nama_cust_q = !empty($pec['kontak_person']) && trim((string)$pec['kontak_person']) !== '-'
+                ? trim((string)$pec['kontak_person'])
+                : (!empty($pec['customer_name']) ? $pec['customer_name'] : $pec['kd_customer']);
+            $ket_q = 'Penerimaan dari ' . $nama_cust_q;
+
+            $jurnal_q_data = [
+                'nomor_jurnal'      => $no_jurnal_q,
+                'id_jenis_jurnal'   => $id_jenis_jurnal,
+                'tanggal_transaksi' => $tanggal,
+                'keterangan'        => $ket_q,
+                'status'            => 'POSTED',
+                'source_module'     => 'KEUANGAN',
+                'source_type'       => 'PEMBAYARAN_FAKTUR',
+                'source_id'         => $id_pembayaran,
+                'source_no'         => $pec['no_faktur'],
+                'total_debit'       => $bruto_pecahan,
+                'total_kredit'      => $bruto_pecahan,
+                'created_by'        => $userId,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'posted_by'         => $userId,
+                'posted_at'         => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tbkeu_jurnal', $jurnal_q_data);
+            $id_jurnal_q = $this->db->insert_id();
+
+            $line_q = 1;
+            // Baris Debit: Kas / Bank yang dipilih (Q Mandiri, Q Kas Ayat Silang, dsb)
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_q,
+                'nomor_baris' => $line_q++,
+                'id_akun'     => $id_akun_debit,
+                'keterangan'  => $ket_q,
+                'debit'       => $bruto_pecahan,
+                'kredit'      => 0
+            ]);
+
+            // Baris Kredit: Piutang Usaha (Nilai Netto setelah potongan)
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_q,
+                'nomor_baris' => $line_q++,
+                'id_akun'     => $id_akun_kredit,
+                'keterangan'  => $ket_q,
+                'debit'       => 0,
+                'kredit'      => $netto_pecahan
+            ]);
+
+            // Baris Kredit: Q Kas (Selisih potongan pada jurnal acak)
+            if ($potongan_pecahan > 0 && $id_akun_q_kas) {
+                $this->db->insert('tbkeu_jurnal_detail', [
+                    'id_jurnal'   => $id_jurnal_q,
+                    'nomor_baris' => $line_q++,
+                    'id_akun'     => $id_akun_q_kas,
+                    'keterangan'  => $ket_q,
+                    'debit'       => 0,
+                    'kredit'      => $potongan_pecahan
+                ]);
+            }
+        }
+
+        // ── 2. PEMBUATAN JURNAL (A) DENGAN KODE KM (KAS MASUK) ────────
+        if (($skema_potongan_z === 20 || $skema_potongan_z === 40) && $total_seluruh_potongan > 0 && $id_akun_a_kas) {
+            $jenis_km = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => 'KM'])->row();
+            if (!$jenis_km) {
+                $this->db->insert('tbkeu_jenis_jurnal', [
+                    'kode_jenis_jurnal' => 'KM',
+                    'nama_jenis_jurnal' => 'Kas Masuk',
+                    'is_active'         => 1
+                ]);
+                $id_jenis_km = $this->db->insert_id();
+            } else {
+                $id_jenis_km = (int)$jenis_km->id_jenis_jurnal;
+            }
+
+            $no_jurnal_a = $this->generate_no_jurnal('A Kas', 'KM');
+            $label_suffix = ($skema_potongan_z === 40) ? '(Tax & Fee Petugas)' : '(Tax)';
+            $nama_cust_z = !empty($customerIndukName) ? $customerIndukName : 'Customer';
+            $ket_a = 'PND u/Pot ' . $nama_cust_z . ' F.' . $no_faktur . ' ' . $label_suffix;
+
+            $jurnal_a_data = [
+                'nomor_jurnal'      => $no_jurnal_a,
+                'id_jenis_jurnal'   => $id_jenis_km,
+                'tanggal_transaksi' => $tanggal,
+                'keterangan'        => $ket_a,
+                'status'            => 'POSTED',
+                'source_module'     => 'KEUANGAN',
+                'source_type'       => 'PEMBAYARAN_FAKTUR',
+                'source_id'         => $id_pembayaran,
+                'source_no'         => $no_faktur,
+                'total_debit'       => $total_seluruh_potongan,
+                'total_kredit'      => $total_seluruh_potongan,
+                'created_by'        => $userId,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'posted_by'         => $userId,
+                'posted_at'         => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tbkeu_jurnal', $jurnal_a_data);
+            $id_jurnal_a = $this->db->insert_id();
+
+            $line_a = 1;
+            // Baris Debit: A Kas (11030) sebesar Total Potongan
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_a,
+                'nomor_baris' => $line_a++,
+                'id_akun'     => $id_akun_a_kas,
+                'keterangan'  => $ket_a,
+                'debit'       => $total_seluruh_potongan,
+                'kredit'      => 0
+            ]);
+
+            if ($skema_potongan_z === 20) {
+                // Baris Kredit: A PND atas Pendapatan Pot Penj KIU (Tax) (13036)
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => $ket_a,
+                        'debit'       => 0,
+                        'kredit'      => $total_seluruh_potongan
+                    ]);
+                }
+            } elseif ($skema_potongan_z === 40) {
+                // Baris Kredit 1: 20% Tax
+                $tax_val = round($total_seluruh_potongan / 2, 2);
+                $fee_val = $total_seluruh_potongan - $tax_val;
+
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_z . ' F.' . $no_faktur . ' (Tax)',
+                        'debit'       => 0,
+                        'kredit'      => $tax_val
+                    ]);
+                }
+                // Baris Kredit 2: 20% Fee Petugas
+                if ($id_akun_fee) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_fee,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_z . ' F.' . $no_faktur . ' (Fee Petugas)',
+                        'debit'       => 0,
+                        'kredit'      => $fee_val
+                    ]);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Menghapus Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) milik Faktur H Import
+     *
+     * @param int $id_import_h
+     * @param string $no_faktur
+     * @param int $id_jurnal_q
+     * @param int $id_jurnal_a
+     * @return bool
+     */
+    public function delete_jurnal_pelunasan_faktur_h_import($id_import_h, $no_faktur = '', $id_jurnal_q = 0, $id_jurnal_a = 0)
+    {
+        if (!$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return false;
+        }
+
+        $jurnal_ids = [];
+        if ((int)$id_jurnal_q > 0) {
+            $jurnal_ids[] = (int)$id_jurnal_q;
+        }
+        if ((int)$id_jurnal_a > 0) {
+            $jurnal_ids[] = (int)$id_jurnal_a;
+        }
+
+        $id_import_h = (int)$id_import_h;
+        $no_faktur   = trim((string)$no_faktur);
+
+        if ($id_import_h > 0 || $no_faktur !== '') {
+            $this->db->select('id_jurnal');
+            $this->db->from('tbkeu_jurnal');
+            $this->db->where('source_module', 'KEUANGAN');
+            $this->db->where('source_type', 'PEMBAYARAN_FAKTUR');
+            $this->db->group_start();
+            if ($id_import_h > 0) {
+                $this->db->where('idempotency_key', 'PAYMENT_FH_IMPORT_Q_' . $id_import_h);
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_A_' . $id_import_h);
+            }
+            if ($no_faktur !== '') {
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_Q_' . $no_faktur);
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_A_' . $no_faktur);
+            }
+            $this->db->group_end();
+            $rows = $this->db->get()->result_array();
+            foreach ($rows as $r) {
+                $jurnal_ids[] = (int)$r['id_jurnal'];
+            }
+        }
+
+        $jurnal_ids = array_values(array_unique(array_filter($jurnal_ids)));
+        if (empty($jurnal_ids)) {
+            return false;
+        }
+
+        $this->db->where_in('id_jurnal', $jurnal_ids)->delete('tbkeu_jurnal_detail');
+        $this->db->where_in('id_jurnal', $jurnal_ids)->delete('tbkeu_jurnal');
+        return true;
+    }
+
+    /**
+     * Membuat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Pelunasan Faktur H Import.
+     *
+     * Mengikuti aturan akuntansi yang sama persis dengan _post_jurnal_pecahan_faktur_z:
+     * 1. Jurnal Pembayaran Acak (Q):
+     *    - Debit  : Akun Kas/Bank yang dipilih (misal Q Mandiri 12014 / Q Kas Ayat Silang / Q Kas 11010) = Nominal Bruto
+     *    - Kredit : Piutang Usaha (13099) = Nominal Netto (Jumlah Bayar Faktur H)
+     *    - Kredit : Q Kas (11010) = Nominal Potongan (jika Skema 20% atau 40%)
+     * 2. Jurnal Kas Masuk (A) [Kode KM]:
+     *    - Debit  : A Kas (11030) = Nominal Potongan
+     *    - Kredit (Skema 20%): A PND atas Pendapatan Pot Penj KIU (Tax) (13036) = Nominal Potongan
+     *    - Kredit (Skema 40%):
+     *      - Baris 1: A PND atas Pendapatan Pot Penj KIU (Tax) (13036) = 50% dari Potongan (20%)
+     *      - Baris 2: A PND atas Pendapatan Pot Penj KIU (Fee Petugas) (13041) = 50% dari Potongan (20%)
+     *
+     * @param array $faktur Baris dari tbso_faktur_h_import
+     * @param array $paymentData Parameter pelunasan
+     * @return array [id_jurnal_q, nomor_jurnal_q, id_jurnal_a, nomor_jurnal_a]
+     */
+    public function post_jurnal_pelunasan_faktur_h_import($faktur, $paymentData = [])
+    {
+        $result = [
+            'id_jurnal_q'    => null,
+            'nomor_jurnal_q' => null,
+            'id_jurnal_a'    => null,
+            'nomor_jurnal_a' => null,
+        ];
+
+        if (!$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return $result;
+        }
+
+        $id_import_h      = (int)($faktur['id_import_h'] ?? 0);
+        $no_faktur_h      = trim((string)($faktur['no_faktur'] ?? ''));
+        $parent_no_faktur = trim((string)($paymentData['parent_no_faktur'] ?? $faktur['parent_no_faktur'] ?? ''));
+        $tanggal          = !empty($paymentData['tanggal_pembayaran']) ? $paymentData['tanggal_pembayaran'] : ($faktur['tanggal_faktur'] ?? date('Y-m-d'));
+        $metode           = trim((string)($paymentData['metode_pembayaran'] ?? 'Q Mandiri'));
+        $skema_raw        = isset($paymentData['skema_potongan']) ? (int)$paymentData['skema_potongan'] : (int)($faktur['skema_potongan'] ?? 20);
+        $skema_potongan   = ($skema_raw === 40) ? 40 : (($skema_raw === 0) ? 0 : 20);
+
+        $netto_pecahan    = round((float)($paymentData['jumlah_bayar'] ?? $faktur['grand_total'] ?? 0), 2);
+        if ($netto_pecahan <= 0) {
+            return $result;
+        }
+
+        $pembagi_bruto = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
+        $bruto_pecahan = isset($paymentData['nominal_bruto']) && (float)$paymentData['nominal_bruto'] > 0
+            ? round((float)$paymentData['nominal_bruto'], 2)
+            : (($pembagi_bruto > 0 && $pembagi_bruto < 1.0) ? round($netto_pecahan / $pembagi_bruto, 2) : $netto_pecahan);
+        $potongan_pecahan = isset($paymentData['nominal_potongan']) && (float)$paymentData['nominal_potongan'] >= 0
+            ? round((float)$paymentData['nominal_potongan'], 2)
+            : max(0, round($bruto_pecahan - $netto_pecahan, 2));
+
+        $userId = (int)($this->session->userdata('id_karyawan')
+            ?: $this->session->userdata('id')
+            ?: $this->session->userdata('id_user')
+            ?: 0);
+        if ($userId <= 0) {
+            $userId = null;
+        }
+
+        // Nama untuk Keterangan Jurnal Acak (Q) harus menggunakan Kontak Person
+        $kontak_q = trim((string)($faktur['kontak_person'] ?? ''));
+        if ($kontak_q === '-' || strtolower($kontak_q) === 'null') {
+            $kontak_q = '';
+        }
+
+        if ($kontak_q !== '') {
+            $nama_cust_q = $kontak_q;
+        } elseif (!empty($faktur['customer_name']) && trim((string)$faktur['customer_name']) !== '-') {
+            $nama_cust_q = trim((string)$faktur['customer_name']);
+        } elseif (!empty($faktur['nama_toko'])) {
+            $nama_cust_q = trim((string)$faktur['nama_toko']);
+        } else {
+            $nama_cust_q = 'Pelanggan';
+        }
+
+        // Cari Akun-akun untuk Jurnal Acak (Q) dan Jurnal (A)
+        // 1. Akun Piutang Usaha (13099)
+        $akun_piutang = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row();
+        if (!$akun_piutang) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_piutang = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_piutang = $akun_piutang ? (int)$akun_piutang->id_akun : 196;
+
+        // 2. Akun Kas / Bank sesuai metode pembayaran
+        $akun_kas = null;
+        if (!empty($metode)) {
+            $this->db->where('LOWER(nama_akun)', strtolower($metode));
+            $akun_kas = $this->db->get('tbkeu_akun')->row();
+
+            if (!$akun_kas) {
+                $this->db->where('kode_akun', $metode);
+                $akun_kas = $this->db->get('tbkeu_akun')->row();
+            }
+            if (!$akun_kas) {
+                $this->db->like('nama_akun', $metode);
+                $akun_kas = $this->db->get('tbkeu_akun')->row();
+            }
+        }
+        if (!$akun_kas) {
+            // Default fallback ke Q Mandiri (12014) atau Q Kas (11010)
+            $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12014'])->row()
+                ?: $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
+        }
+        $id_akun_kas = $akun_kas ? (int)$akun_kas->id_akun : 187;
+
+        // Tentukan prefix jurnal Q berdasarkan metode/akun kas (KM untuk Kas, MR untuk Mandiri, BC untuk BCA, BR untuk BRI)
+        $prefix_jurnal_q = 'MR';
+        $nama_akun_kas_lower = strtolower($akun_kas ? $akun_kas->nama_akun : $metode);
+        if (strpos($nama_akun_kas_lower, 'mandiri') !== false) {
+            $prefix_jurnal_q = 'MR';
+        } elseif (strpos($nama_akun_kas_lower, 'bca') !== false) {
+            $prefix_jurnal_q = 'BC';
+        } elseif (strpos($nama_akun_kas_lower, 'bri') !== false) {
+            $prefix_jurnal_q = 'BR';
+        } elseif (strpos($nama_akun_kas_lower, 'kas') !== false) {
+            $prefix_jurnal_q = 'KM';
+        }
+        $jenis_q = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix_jurnal_q])->row();
+        $id_jenis_jurnal_q = $jenis_q ? (int)$jenis_q->id_jenis_jurnal : 3;
+
+        // 3. Akun Q Kas (11010) untuk Kredit Potongan pada Jurnal Q
+        $akun_q_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
+        $id_akun_q_kas = $akun_q_kas ? (int)$akun_q_kas->id_akun : 185;
+
+        // 4. Akun A Kas (11030) untuk Debit pada Jurnal A
+        $akun_a_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11030'])->row();
+        $id_akun_a_kas = $akun_a_kas ? (int)$akun_a_kas->id_akun : 186;
+
+        // 5. Akun A PND atas Pendapatan Pot Penj KIU (Tax) (13036)
+        $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13036'])->row();
+        if (!$akun_tax) {
+            $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13040'])->row();
+        }
+        if (!$akun_tax) {
+            $this->db->like('nama_akun', 'Pot Penj KIU');
+            $akun_tax = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_tax = $akun_tax ? (int)$akun_tax->id_akun : null;
+
+        // 6. Akun A PND atas Pendapatan Pot Penj KIU (Fee Petugas) (13041)
+        $akun_fee = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13041'])->row();
+        if (!$akun_fee) {
+            $this->db->like('nama_akun', 'Fee Petugas');
+            $akun_fee = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_fee = $akun_fee ? (int)$akun_fee->id_akun : $id_akun_tax;
+
+        // =========================================================================
+        // A. BUAT JURNAL PEMBAYARAN ACAK (Q)
+        // =========================================================================
+        $no_jurnal_q = $this->generate_no_jurnal('pembayaran', $prefix_jurnal_q);
+        $ket_q       = 'Penerimaan dari ' . $nama_cust_q;
+
+        $jurnal_q_header = [
+            'nomor_jurnal'      => $no_jurnal_q,
+            'id_jenis_jurnal'   => $id_jenis_jurnal_q,
+            'tanggal_transaksi' => $tanggal,
+            'keterangan'        => $ket_q,
+            'status'            => 'POSTED',
+            'source_module'     => 'KEUANGAN',
+            'source_type'       => 'PEMBAYARAN_FAKTUR',
+            'source_id'         => (string)$id_import_h,
+            'source_no'         => $no_faktur_h,
+            'idempotency_key'   => 'PAYMENT_FH_IMPORT_Q_' . ($id_import_h > 0 ? $id_import_h : $no_faktur_h),
+            'total_debit'       => $bruto_pecahan,
+            'total_kredit'      => $bruto_pecahan,
+            'created_by'        => $userId,
+            'created_at'        => date('Y-m-d H:i:s'),
+            'posted_by'         => $userId,
+            'posted_at'         => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('tbkeu_jurnal', $jurnal_q_header);
+        $id_jurnal_q = (int)$this->db->insert_id();
+
+        $line_q = 1;
+        // Baris 1 (Debit): Kas/Bank yang dipilih (sebesar Bruto)
+        $this->db->insert('tbkeu_jurnal_detail', [
+            'id_jurnal'   => $id_jurnal_q,
+            'nomor_baris' => $line_q++,
+            'id_akun'     => $id_akun_kas,
+            'keterangan'  => $ket_q,
+            'debit'       => $bruto_pecahan,
+            'kredit'      => 0
+        ]);
+
+        // Baris 2 (Kredit): Piutang Usaha 13099 (sebesar Netto Faktur H)
+        $this->db->insert('tbkeu_jurnal_detail', [
+            'id_jurnal'   => $id_jurnal_q,
+            'nomor_baris' => $line_q++,
+            'id_akun'     => $id_akun_piutang,
+            'keterangan'  => $ket_q,
+            'debit'       => 0,
+            'kredit'      => $netto_pecahan
+        ]);
+
+        // Baris 3 (Kredit): Q Kas 11010 (sebesar Potongan jika > 0)
+        if ($potongan_pecahan > 0 && $id_akun_q_kas) {
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_q,
+                'nomor_baris' => $line_q++,
+                'id_akun'     => $id_akun_q_kas,
+                'keterangan'  => $ket_q,
+                'debit'       => 0,
+                'kredit'      => $potongan_pecahan
+            ]);
+        }
+
+        $result['id_jurnal_q']    = $id_jurnal_q;
+        $result['nomor_jurnal_q'] = $no_jurnal_q;
+
+        // =========================================================================
+        // B. BUAT JURNAL KAS MASUK (A) — Jika terdapat Potongan (Skema 20% atau 40%)
+        // =========================================================================
+        if ($potongan_pecahan > 0 && $id_akun_a_kas && ($id_akun_tax || $id_akun_fee)) {
+            $jenis_km = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => 'KM'])->row();
+            $id_jenis_km = $jenis_km ? (int)$jenis_km->id_jenis_jurnal : $id_jenis_jurnal_q;
+
+            $no_jurnal_a = $this->generate_no_jurnal('pembayaran', 'KM');
+
+            // Jika ada parent_no_faktur (Faktur Z induk), coba ambil nama customer Z induk untuk keterangan Jurnal A
+            $ref_faktur_a = $parent_no_faktur !== '' ? $parent_no_faktur : $no_faktur_h;
+            $nama_cust_a  = $nama_cust_q;
+            if ($parent_no_faktur !== '' && $this->db->table_exists('tbso_faktur_penjualan')) {
+                $parentRow = $this->db->select('customer_name, kd_customer')
+                    ->where('no_faktur', $parent_no_faktur)
+                    ->get('tbso_faktur_penjualan')
+                    ->row_array();
+                if ($parentRow && !empty($parentRow['customer_name'])) {
+                    $nama_cust_a = trim($parentRow['customer_name']);
+                    if (!empty($parentRow['kd_customer']) && $this->db->table_exists('tb_customer')) {
+                        $cRow = $this->db->get_where('tb_customer', ['kd_customer' => $parentRow['kd_customer']])->row_array();
+                        if ($cRow && !empty($cRow['nama_kios']) && stripos($nama_cust_a, $cRow['nama_kios']) === false) {
+                            $nama_cust_a .= ' (' . trim($cRow['nama_kios']) . ')';
+                        }
+                    }
+                }
+            }
+
+            $ket_a = ($skema_potongan === 40)
+                ? ('PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax & Fee Petugas)')
+                : ('PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax)');
+
+            $jurnal_a_header = [
+                'nomor_jurnal'      => $no_jurnal_a,
+                'id_jenis_jurnal'   => $id_jenis_km,
+                'tanggal_transaksi' => $tanggal,
+                'keterangan'        => $ket_a,
+                'status'            => 'POSTED',
+                'source_module'     => 'KEUANGAN',
+                'source_type'       => 'PEMBAYARAN_FAKTUR',
+                'source_id'         => (string)$id_import_h,
+                'source_no'         => $no_faktur_h,
+                'idempotency_key'   => 'PAYMENT_FH_IMPORT_A_' . ($id_import_h > 0 ? $id_import_h : $no_faktur_h),
+                'total_debit'       => $potongan_pecahan,
+                'total_kredit'      => $potongan_pecahan,
+                'created_by'        => $userId,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'posted_by'         => $userId,
+                'posted_at'         => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tbkeu_jurnal', $jurnal_a_header);
+            $id_jurnal_a = (int)$this->db->insert_id();
+
+            $line_a = 1;
+            // Baris Debit: A Kas (11030) sebesar Potongan
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_a,
+                'nomor_baris' => $line_a++,
+                'id_akun'     => $id_akun_a_kas,
+                'keterangan'  => $ket_a,
+                'debit'       => $potongan_pecahan,
+                'kredit'      => 0
+            ]);
+
+            if ($skema_potongan === 20) {
+                // Baris Kredit: A PND atas Pendapatan Pot Penj KIU (Tax) (13036)
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => $ket_a,
+                        'debit'       => 0,
+                        'kredit'      => $potongan_pecahan
+                    ]);
+                }
+            } elseif ($skema_potongan === 40) {
+                $tax_val = round($potongan_pecahan / 2, 2);
+                $fee_val = round($potongan_pecahan - $tax_val, 2);
+
+                // Baris Kredit 1: 20% Tax (13036)
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax)',
+                        'debit'       => 0,
+                        'kredit'      => $tax_val
+                    ]);
+                }
+                // Baris Kredit 2: 20% Fee Petugas (13041)
+                if ($id_akun_fee) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_fee,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Fee Petugas)',
+                        'debit'       => 0,
+                        'kredit'      => $fee_val
+                    ]);
+                }
+            }
+
+            $result['id_jurnal_a']    = $id_jurnal_a;
+            $result['nomor_jurnal_a'] = $no_jurnal_a;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Membuat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Pelunasan Faktur Pecahan Kode H dari Sistem (tbso_faktur_z_pecah)
+     */
+    public function post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData = [])
+    {
+        $result = [
+            'id_jurnal_q'    => null,
+            'nomor_jurnal_q' => null,
+            'id_jurnal_a'    => null,
+            'nomor_jurnal_a' => null,
+        ];
+
+        if (!$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return $result;
+        }
+
+        $id_pecah         = (int)($faktur['id_pecah'] ?? 0);
+        $no_faktur_h      = trim((string)($faktur['no_faktur'] ?? ''));
+        $parent_no_faktur = trim((string)($paymentData['parent_no_faktur'] ?? $faktur['parent_no_faktur'] ?? ''));
+        $tanggal          = !empty($paymentData['tanggal_pembayaran']) ? $paymentData['tanggal_pembayaran'] : ($faktur['tanggal_faktur'] ?? date('Y-m-d'));
+        $metode           = trim((string)($paymentData['metode_pembayaran'] ?? 'Q Mandiri'));
+        $skema_raw        = isset($paymentData['skema_potongan']) ? (int)$paymentData['skema_potongan'] : (int)($faktur['skema_potongan'] ?? 20);
+        $skema_potongan   = ($skema_raw === 40) ? 40 : (($skema_raw === 0) ? 0 : 20);
+
+        $netto_pecahan    = round((float)($paymentData['jumlah_bayar'] ?? $faktur['grand_total'] ?? 0), 2);
+        if ($netto_pecahan <= 0) {
+            return $result;
+        }
+
+        $pembagi_bruto = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
+        $bruto_pecahan = isset($paymentData['nominal_bruto']) && (float)$paymentData['nominal_bruto'] > 0
+            ? round((float)$paymentData['nominal_bruto'], 2)
+            : (($pembagi_bruto > 0 && $pembagi_bruto < 1.0) ? round($netto_pecahan / $pembagi_bruto, 2) : $netto_pecahan);
+        $potongan_pecahan = isset($paymentData['nominal_potongan']) && (float)$paymentData['nominal_potongan'] >= 0
+            ? round((float)$paymentData['nominal_potongan'], 2)
+            : max(0, round($bruto_pecahan - $netto_pecahan, 2));
+
+        $userId = (int)($this->session->userdata('id_karyawan')
+            ?: $this->session->userdata('id')
+            ?: $this->session->userdata('id_user')
+            ?: 0);
+        if ($userId <= 0) {
+            $userId = null;
+        }
+
+        // Nama untuk Keterangan Jurnal Acak (Q) harus menggunakan Kontak Person
+        $kontak_q = trim((string)($faktur['kontak_person'] ?? ''));
+        if ($kontak_q === '-' || strtolower($kontak_q) === 'null') {
+            $kontak_q = '';
+        }
+
+        if ($kontak_q !== '') {
+            $nama_cust_q = $kontak_q;
+        } elseif (!empty($faktur['customer_name']) && trim((string)$faktur['customer_name']) !== '-') {
+            $nama_cust_q = trim((string)$faktur['customer_name']);
+        } elseif (!empty($faktur['nama_toko'])) {
+            $nama_cust_q = trim((string)$faktur['nama_toko']);
+        } else {
+            $nama_cust_q = 'Pelanggan';
+        }
+
+        // Cari Akun-akun untuk Jurnal Acak (Q) dan Jurnal (A)
+        // 1. Akun Piutang Usaha (13099)
+        $akun_piutang = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row();
+        if (!$akun_piutang) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_piutang = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_piutang = $akun_piutang ? (int)$akun_piutang->id_akun : 196;
+
+        // 2. Akun Kas / Bank sesuai metode pembayaran
+        $akun_kas = null;
+        if (!empty($metode)) {
+            $this->db->where('LOWER(nama_akun)', strtolower($metode));
+            $akun_kas = $this->db->get('tbkeu_akun')->row();
+
+            if (!$akun_kas) {
+                $this->db->where('kode_akun', $metode);
+                $akun_kas = $this->db->get('tbkeu_akun')->row();
+            }
+            if (!$akun_kas) {
+                $this->db->like('nama_akun', $metode);
+                $akun_kas = $this->db->get('tbkeu_akun')->row();
+            }
+        }
+        if (!$akun_kas) {
+            $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12014'])->row()
+                ?: $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
+        }
+        $id_akun_kas = $akun_kas ? (int)$akun_kas->id_akun : 187;
+
+        // Tentukan prefix jurnal Q (KM, MR, BC, BR)
+        $prefix_jurnal_q = 'MR';
+        $nama_akun_kas_lower = strtolower($akun_kas ? $akun_kas->nama_akun : $metode);
+        if (strpos($nama_akun_kas_lower, 'mandiri') !== false) {
+            $prefix_jurnal_q = 'MR';
+        } elseif (strpos($nama_akun_kas_lower, 'bca') !== false) {
+            $prefix_jurnal_q = 'BC';
+        } elseif (strpos($nama_akun_kas_lower, 'bri') !== false) {
+            $prefix_jurnal_q = 'BR';
+        } elseif (strpos($nama_akun_kas_lower, 'kas') !== false) {
+            $prefix_jurnal_q = 'KM';
+        }
+        $jenis_q = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix_jurnal_q])->row();
+        $id_jenis_jurnal_q = $jenis_q ? (int)$jenis_q->id_jenis_jurnal : 3;
+
+        // 3. Akun Q Kas (11010) untuk Kredit Potongan pada Jurnal Q
+        $akun_q_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
+        $id_akun_q_kas = $akun_q_kas ? (int)$akun_q_kas->id_akun : 185;
+
+        // 4. Akun A Kas (11030) untuk Debit pada Jurnal A
+        $akun_a_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11030'])->row();
+        $id_akun_a_kas = $akun_a_kas ? (int)$akun_a_kas->id_akun : 186;
+
+        // 5. Akun A PND atas Pendapatan Pot Penj KIU (Tax) (13036)
+        $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13036'])->row();
+        if (!$akun_tax) {
+            $akun_tax = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13040'])->row();
+        }
+        if (!$akun_tax) {
+            $this->db->like('nama_akun', 'Pot Penj KIU');
+            $akun_tax = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_tax = $akun_tax ? (int)$akun_tax->id_akun : null;
+
+        // 6. Akun A PND atas Pendapatan Pot Penj KIU (Fee Petugas) (13041)
+        $akun_fee = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13041'])->row();
+        if (!$akun_fee) {
+            $this->db->like('nama_akun', 'Fee Petugas');
+            $akun_fee = $this->db->get('tbkeu_akun')->row();
+        }
+        $id_akun_fee = $akun_fee ? (int)$akun_fee->id_akun : $id_akun_tax;
+
+        // =========================================================================
+        // A. BUAT JURNAL PEMBAYARAN ACAK (Q)
+        // =========================================================================
+        $no_jurnal_q = $this->generate_no_jurnal('pembayaran', $prefix_jurnal_q);
+        $ket_q       = 'Penerimaan dari ' . $nama_cust_q;
+
+        $jurnal_q_header = [
+            'nomor_jurnal'      => $no_jurnal_q,
+            'id_jenis_jurnal'   => $id_jenis_jurnal_q,
+            'tanggal_transaksi' => $tanggal,
+            'keterangan'        => $ket_q,
+            'status'            => 'POSTED',
+            'source_module'     => 'KEUANGAN',
+            'source_type'       => 'PEMBAYARAN_FAKTUR_PECAH',
+            'source_id'         => (string)$id_pecah,
+            'source_no'         => $no_faktur_h,
+            'idempotency_key'   => 'PAYMENT_FZ_PECAH_Q_' . ($id_pecah > 0 ? $id_pecah : $no_faktur_h),
+            'total_debit'       => $bruto_pecahan,
+            'total_kredit'      => $bruto_pecahan,
+            'created_by'        => $userId,
+            'created_at'        => date('Y-m-d H:i:s'),
+            'posted_by'         => $userId,
+            'posted_at'         => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('tbkeu_jurnal', $jurnal_q_header);
+        $id_jurnal_q = (int)$this->db->insert_id();
+
+        $line_q = 1;
+        // Baris 1 (Debit): Kas/Bank yang dipilih (sebesar Bruto)
+        $this->db->insert('tbkeu_jurnal_detail', [
+            'id_jurnal'   => $id_jurnal_q,
+            'nomor_baris' => $line_q++,
+            'id_akun'     => $id_akun_kas,
+            'keterangan'  => $ket_q,
+            'debit'       => $bruto_pecahan,
+            'kredit'      => 0
+        ]);
+
+        // Baris 2 (Kredit): Piutang Usaha 13099 (sebesar Netto Faktur H)
+        $this->db->insert('tbkeu_jurnal_detail', [
+            'id_jurnal'   => $id_jurnal_q,
+            'nomor_baris' => $line_q++,
+            'id_akun'     => $id_akun_piutang,
+            'keterangan'  => $ket_q,
+            'debit'       => 0,
+            'kredit'      => $netto_pecahan
+        ]);
+
+        // Baris 3 (Kredit): Q Kas 11010 (sebesar Potongan jika > 0)
+        if ($potongan_pecahan > 0 && $id_akun_q_kas) {
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_q,
+                'nomor_baris' => $line_q++,
+                'id_akun'     => $id_akun_q_kas,
+                'keterangan'  => $ket_q,
+                'debit'       => 0,
+                'kredit'      => $potongan_pecahan
+            ]);
+        }
+
+        $result['id_jurnal_q']    = $id_jurnal_q;
+        $result['nomor_jurnal_q'] = $no_jurnal_q;
+
+        // =========================================================================
+        // B. BUAT JURNAL KAS MASUK (A) — Jika terdapat Potongan (Skema 20% atau 40%)
+        // =========================================================================
+        if ($potongan_pecahan > 0 && $id_akun_a_kas && ($id_akun_tax || $id_akun_fee)) {
+            $jenis_km = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => 'KM'])->row();
+            $id_jenis_km = $jenis_km ? (int)$jenis_km->id_jenis_jurnal : $id_jenis_jurnal_q;
+
+            $no_jurnal_a = $this->generate_no_jurnal('pembayaran', 'KM');
+
+            // Ambil info nama toko induk / customer untuk keterangan Jurnal A
+            $ref_faktur_a = $parent_no_faktur !== '' ? $parent_no_faktur : $no_faktur_h;
+            $nama_cust_a  = $nama_cust_q;
+            if ($parent_no_faktur !== '' && $this->db->table_exists('tbso_faktur_penjualan')) {
+                $parentRow = $this->db->select('customer_name, kd_customer')
+                    ->where('no_faktur', $parent_no_faktur)
+                    ->get('tbso_faktur_penjualan')
+                    ->row_array();
+                if ($parentRow && !empty($parentRow['customer_name'])) {
+                    $nama_cust_a = trim($parentRow['customer_name']);
+                    if (!empty($parentRow['kd_customer']) && $this->db->table_exists('tb_customer')) {
+                        $cRow = $this->db->get_where('tb_customer', ['kd_customer' => $parentRow['kd_customer']])->row_array();
+                        if ($cRow && !empty($cRow['nama_kios']) && stripos($nama_cust_a, $cRow['nama_kios']) === false) {
+                            $nama_cust_a .= ' (' . trim($cRow['nama_kios']) . ')';
+                        }
+                    }
+                }
+            }
+
+            $ket_a = ($skema_potongan === 40)
+                ? ('PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax & Fee Petugas)')
+                : ('PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax)');
+
+            $jurnal_a_header = [
+                'nomor_jurnal'      => $no_jurnal_a,
+                'id_jenis_jurnal'   => $id_jenis_km,
+                'tanggal_transaksi' => $tanggal,
+                'keterangan'        => $ket_a,
+                'status'            => 'POSTED',
+                'source_module'     => 'KEUANGAN',
+                'source_type'       => 'PEMBAYARAN_FAKTUR_PECAH',
+                'source_id'         => (string)$id_pecah,
+                'source_no'         => $no_faktur_h,
+                'idempotency_key'   => 'PAYMENT_FZ_PECAH_A_' . ($id_pecah > 0 ? $id_pecah : $no_faktur_h),
+                'total_debit'       => $potongan_pecahan,
+                'total_kredit'      => $potongan_pecahan,
+                'created_by'        => $userId,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'posted_by'         => $userId,
+                'posted_at'         => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tbkeu_jurnal', $jurnal_a_header);
+            $id_jurnal_a = (int)$this->db->insert_id();
+
+            $line_a = 1;
+            // Baris Debit: A Kas (11030) sebesar Potongan
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal'   => $id_jurnal_a,
+                'nomor_baris' => $line_a++,
+                'id_akun'     => $id_akun_a_kas,
+                'keterangan'  => $ket_a,
+                'debit'       => $potongan_pecahan,
+                'kredit'      => 0
+            ]);
+
+            if ($skema_potongan === 20) {
+                // Baris Kredit: A PND atas Pendapatan Pot Penj KIU (Tax) (13036)
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => $ket_a,
+                        'debit'       => 0,
+                        'kredit'      => $potongan_pecahan
+                    ]);
+                }
+            } elseif ($skema_potongan === 40) {
+                $tax_val = round($potongan_pecahan / 2, 2);
+                $fee_val = round($potongan_pecahan - $tax_val, 2);
+
+                // Baris Kredit 1: 20% Tax (13036)
+                if ($id_akun_tax) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_tax,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Tax)',
+                        'debit'       => 0,
+                        'kredit'      => $tax_val
+                    ]);
+                }
+                // Baris Kredit 2: 20% Fee Petugas (13041)
+                if ($id_akun_fee) {
+                    $this->db->insert('tbkeu_jurnal_detail', [
+                        'id_jurnal'   => $id_jurnal_a,
+                        'nomor_baris' => $line_a++,
+                        'id_akun'     => $id_akun_fee,
+                        'keterangan'  => 'PND u/Pot ' . $nama_cust_a . ' F.' . $ref_faktur_a . ' (Fee Petugas)',
+                        'debit'       => 0,
+                        'kredit'      => $fee_val
+                    ]);
+                }
+            }
+
+            $result['id_jurnal_a']    = $id_jurnal_a;
+            $result['nomor_jurnal_a'] = $no_jurnal_a;
+        }
+
+        return $result;
+    }
+
 }

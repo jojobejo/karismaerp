@@ -7,7 +7,17 @@ class M_Keuangan extends CI_Model
 {
     private $masterBarangHasKelompokDagang = null;
     private $masterKelompokDagangTableExists = null;
+    private $masterSuplierTableExists = null;
     private $masterBarangFieldExists = [];
+
+    private function master_suplier_table_exists()
+    {
+        if ($this->masterSuplierTableExists === null) {
+            $this->masterSuplierTableExists = $this->db->table_exists('tbpo_suplier');
+        }
+
+        return $this->masterSuplierTableExists;
+    }
 
     private function master_barang_has_kelompok_dagang()
     {
@@ -450,6 +460,7 @@ class M_Keuangan extends CI_Model
             COALESCE(a.lebar, 0) AS lebar,
             COALESCE(a.tinggi, 0) AS tinggi,
             COALESCE(a.berat, 0) AS berat,
+            " . ($this->master_barang_field_exists('kubikasi') ? 'COALESCE(a.kubikasi, 0) AS kubikasi,' : '0 AS kubikasi,') . "
             COALESCE(a.isi, 0) AS isi,
             COALESCE(a.kemasan, 0) AS kemasan,
             COALESCE(a.is_lot, 'F') AS is_lot,
@@ -466,11 +477,13 @@ class M_Keuangan extends CI_Model
             " . $this->master_barang_text_select('kode_akun_pengiriman_beli', '51032') . ",
             " . $this->master_barang_text_select('kode_akun_pengiriman_jual', '64030') . ",
             " . $this->master_barang_text_select('kode_akun_retur_penjualan', '41034') . ",
-            COALESCE(s.nama_suplier, '') AS nama_suplier
+            " . ($this->master_suplier_table_exists() ? "COALESCE(s.nama_suplier, a.kd_suplier, '') AS nama_suplier" : "COALESCE(a.kd_suplier, '') AS nama_suplier") . "
         ", false);
-        $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tbpo_suplier GROUP BY kd_suplier)';
         $this->db->from('tbpo_barang a');
-        $this->db->join($supplierSubquery . ' s', 's.kd_suplier = a.kd_suplier', 'left', false);
+        if ($this->master_suplier_table_exists()) {
+            $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tbpo_suplier GROUP BY kd_suplier)';
+            $this->db->join($supplierSubquery . ' s', 's.kd_suplier = a.kd_suplier', 'left', false);
+        }
         if ($hasKelompokDagangColumn && $hasKelompokDagangMaster) {
             $this->db->join('tbkeu_kelompok_dagang kd', 'CAST(kd.NOINDEX AS CHAR) = a.kelompok_dagang', 'left', false);
         }
@@ -493,7 +506,10 @@ class M_Keuangan extends CI_Model
             if ($this->master_barang_field_exists('golongan')) $this->db->or_like('a.golongan', $search);
             if ($this->master_barang_field_exists('kelompok')) $this->db->or_like('a.kelompok', $search);
             if ($this->master_barang_field_exists('grup')) $this->db->or_like('a.grup', $search);
-            $this->db->or_like('s.nama_suplier', $search);
+            $this->db->or_like('a.kd_suplier', $search);
+            if ($this->master_suplier_table_exists()) {
+                $this->db->or_like('s.nama_suplier', $search);
+            }
             $this->db->group_end();
         }
 
@@ -706,6 +722,20 @@ class M_Keuangan extends CI_Model
 
     public function master_barang_supplier_options()
     {
+        if (!$this->master_suplier_table_exists()) {
+            if (!$this->db->table_exists('tbpo_barang')) {
+                return [];
+            }
+            return $this->db->select("kd_suplier, kd_suplier AS nama_suplier", false)
+                ->from('tbpo_barang')
+                ->where('kd_suplier IS NOT NULL', null, false)
+                ->where("TRIM(kd_suplier) != ''", null, false)
+                ->group_by('kd_suplier')
+                ->order_by('kd_suplier', 'ASC')
+                ->get()
+                ->result();
+        }
+
         return $this->db->select("kd_suplier, COALESCE(NULLIF(MAX(nama_suplier), ''), kd_suplier) AS nama_suplier", false)
             ->from('tbpo_suplier')
             ->where('kd_suplier IS NOT NULL', null, false)

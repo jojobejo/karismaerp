@@ -480,7 +480,7 @@ class M_Logistik extends CI_Model
                 ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
-            WHERE COALESCE(f.status, 'confirmed') <> 'cancelled'
+            WHERE COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur
@@ -683,7 +683,7 @@ class M_Logistik extends CI_Model
             LEFT JOIN tb_tmp_detaildo t
                 ON t.kd_faktur = f.no_faktur
                 AND t.kd_customer = f.kd_customer
-            WHERE COALESCE(f.status, 'confirmed') <> 'cancelled'
+            WHERE COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')
             AND d.kd_faktur IS NULL
             AND t.kd_faktur IS NULL
             GROUP BY f.id_faktur, f.no_faktur

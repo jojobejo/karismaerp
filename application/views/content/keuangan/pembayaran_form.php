@@ -551,6 +551,44 @@ $default_metode = '';
                                         </div>
                                         <small class="text-muted">Saldo retur customer yang tersedia untuk pemotongan faktur ini.</small>
                                     </div>
+                                    <?php if (!empty($is_faktur_z) && !empty($pecahan_faktur_z)): ?>
+                                        <div class="form-group">
+                                            <label class="font-weight-bold text-muted small mb-1">
+                                                <i class="fas fa-sitemap mr-1 text-primary"></i> Daftar Faktur Pecahan Terkait (<?= count($pecahan_faktur_z) ?> Faktur H):
+                                            </label>
+                                            <div class="table-responsive border rounded" style="max-height: 160px; overflow-y: auto;">
+                                                <table class="table table-sm table-bordered table-striped mb-0 small">
+                                                    <thead class="bg-light">
+                                                        <tr>
+                                                            <th>No. Faktur H</th>
+                                                            <th>Customer / Kios</th>
+                                                            <th class="text-right">Nominal Tagihan Pecahan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php 
+                                                        $total_all_pecahan = 0;
+                                                        foreach ($pecahan_faktur_z as $pfz): 
+                                                            $total_all_pecahan += (float)$pfz['total_pecahan'];
+                                                        ?>
+                                                            <tr>
+                                                                <td class="font-weight-bold text-primary"><?= htmlspecialchars($pfz['no_faktur']) ?></td>
+                                                                <td><?= htmlspecialchars($pfz['customer_name']) ?></td>
+                                                                <td class="text-right font-weight-bold">Rp <?= number_format((float)$pfz['total_pecahan'], 0, ',', '.') ?></td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                    <tfoot class="bg-light font-weight-bold">
+                                                        <tr>
+                                                            <td colspan="2" class="text-right">Total Tagihan Pecahan:</td>
+                                                            <td class="text-right text-success">Rp <?= number_format($total_all_pecahan, 0, ',', '.') ?></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <div class="form-group mb-0">
                                         <label>Keterangan</label>
                                         <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran"><?= $is_draft_mode ? htmlspecialchars($draft_payment['keterangan'] ?? '') : ($is_validasi_kasir_mode ? htmlspecialchars($validasi_kasir['keterangan'] ?? '') : ($is_bg_cair_mode ? htmlspecialchars($pending_bg['keterangan'] ?? '') : '')) ?></textarea>

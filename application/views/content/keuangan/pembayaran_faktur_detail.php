@@ -188,6 +188,15 @@
                                             data-no-faktur="<?= htmlspecialchars($faktur['no_faktur']) ?>">
                                             <td>
                                                 <strong><?= htmlspecialchars($faktur['no_faktur']) ?></strong>
+                                                <span class="badge badge-info ml-1" style="font-size: 10px;" title="Faktur Penjualan Induk"><i class="fas fa-file-invoice mr-1"></i>Faktur Induk</span>
+                                                <?php if (!empty($faktur['total_pecahan_h'])): ?>
+                                                    <br><button type="button" class="btn btn-outline-info btn-xs mt-1 btn-lihat-pecahan-h font-weight-bold" 
+                                                            data-id-faktur="<?= (int)$faktur['id_faktur'] ?>" 
+                                                            data-no-faktur="<?= htmlspecialchars($faktur['no_faktur']) ?>"
+                                                            title="Lihat Daftar Faktur H dan Jurnal Terkait">
+                                                        <i class="fas fa-sitemap mr-1"></i><?= (int)$faktur['total_pecahan_h'] ?> Faktur H (Pecahan)
+                                                    </button>
+                                                <?php endif; ?>
                                                 <br><small class="text-muted"><?= htmlspecialchars($faktur['no_so'] ?? '-') ?></small>
                                             </td>
                                             <td class="text-nowrap">
@@ -309,6 +318,70 @@
     </ul>
 </div>
 
+<!-- MODAL: DAFTAR FAKTUR H (PECAHAN) & JURNAL TERKAIT -->
+<div class="modal fade zahir-modal" id="modal-faktur-h" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-sitemap mr-2"></i> Rincian Faktur Pecahan (H) — Induk: <span id="modal-h-parent-no" class="badge badge-light text-info font-weight-bold">Z</span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 1;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="p-3 bg-light d-flex justify-content-between align-items-center border-bottom flex-wrap">
+                    <div>
+                        <strong class="text-dark">Customer Induk:</strong> <span id="modal-h-parent-customer" class="text-primary font-weight-bold">-</span> | 
+                        <strong class="text-dark">Total Faktur H:</strong> <span id="modal-h-total-count" class="badge badge-info">0</span>
+                    </div>
+                    <div>
+                        <a href="<?= base_url('sales_order/pecah_faktur#content-faktur-h') ?>" target="_blank" class="btn btn-outline-primary btn-sm font-weight-bold">
+                            <i class="fas fa-external-link-alt mr-1"></i> Buka Master Faktur H
+                        </a>
+                    </div>
+                </div>
+                <div class="p-3" id="modal-h-loading" style="display: none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                        <p class="mt-2 text-muted mb-0">Mengambil data faktur pecahan H dan jurnalnya...</p>
+                    </div>
+                </div>
+                <div class="table-responsive" id="modal-h-table-container">
+                    <table class="table table-bordered table-striped table-hover mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th style="width: 12%;">No. Faktur H</th>
+                                <th style="width: 22%;">Customer / Kios Pecahan</th>
+                                <th style="width: 10%;">Tgl Faktur</th>
+                                <th style="width: 14%;" class="text-right">Tagihan Netto</th>
+                                <th style="width: 18%;" class="text-center">Status Pelunasan</th>
+                                <th style="width: 24%;">Jurnal Acak (Q) Terkait</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-h-tbody">
+                            <!-- Populated dynamically via AJAX -->
+                        </tbody>
+                        <tfoot class="bg-light font-weight-bold" id="modal-h-tfoot">
+                            <tr>
+                                <td colspan="3" class="text-right">Total Tagihan Netto Seluruh Faktur H:</td>
+                                <td class="text-right text-success" id="modal-h-total-amount">Rp 0</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: PERINCIAN JURNAL -->
 <div class="modal fade zahir-modal" id="modal-perincian-jurnal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -359,6 +432,114 @@
 
 <script>
 $(function () {
+    // Handler Klik Tombol Lihat Faktur H Pecahan
+    $(document).on('click', '.btn-lihat-pecahan-h', function(e) {
+        e.stopPropagation();
+        let idFaktur = $(this).data('id-faktur');
+        let noFaktur = $(this).data('no-faktur');
+
+        $('#modal-h-parent-no').text(noFaktur);
+        $('#modal-h-tbody').html('');
+        $('#modal-h-loading').show();
+        $('#modal-h-table-container').hide();
+        $('#modal-faktur-h').modal('show');
+
+        $.ajax({
+            url: '<?= base_url("keuangan/pembayaran/get_pecahan_faktur_h_json") ?>',
+            type: 'GET',
+            data: { id_faktur: idFaktur },
+            dataType: 'json',
+            success: function(res) {
+                $('#modal-h-loading').hide();
+                $('#modal-h-table-container').show();
+
+                if (res && res.status && res.data) {
+                    let parent = res.parent_faktur || {};
+                    let list = res.data || [];
+                    $('#modal-h-parent-customer').text(parent.customer_name || parent.kd_customer || '-');
+                    $('#modal-h-total-count').text(list.length + ' Pecahan');
+
+                    if (list.length === 0) {
+                        $('#modal-h-tbody').html('<tr><td colspan="6" class="text-center text-muted py-4">Belum ada pecahan Faktur H untuk faktur Z ini.</td></tr>');
+                        $('#modal-h-total-amount').text('Rp 0');
+                        return;
+                    }
+
+                    let totalNominal = 0;
+                    let rowsHtml = '';
+                    list.forEach(function(item) {
+                        let tagihan = parseFloat(item.total_tagihan_h) || 0;
+                        totalNominal += tagihan;
+
+                        let terbayar = parseFloat(item.total_terbayar_h) || 0;
+                        let sisa = (item.sisa_tagihan_h !== undefined) ? parseFloat(item.sisa_tagihan_h) : Math.max(0, tagihan - terbayar);
+
+                        let statusBadge = '';
+                        if (item.status_bayar_h === 'lunas') {
+                            statusBadge = `<span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i>Lunas</span>
+                                           <br><small class="text-success font-weight-bold">Terbayar: Rp ${new Intl.NumberFormat('id-ID').format(terbayar)}</small>`;
+                        } else if (item.status_bayar_h === 'sebagian') {
+                            statusBadge = `<span class="badge badge-warning px-2 py-1 text-dark"><i class="fas fa-adjust mr-1"></i>Sebagian</span>
+                                           <br><small class="text-dark font-weight-bold">Terbayar: Rp ${new Intl.NumberFormat('id-ID').format(terbayar)}</small>
+                                           <br><small class="text-danger font-weight-bold">Sisa: Rp ${new Intl.NumberFormat('id-ID').format(sisa)}</small>`;
+                        } else {
+                            statusBadge = `<span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i>Belum Ada Pembayaran</span>
+                                           <br><small class="text-muted">Sisa: Rp ${new Intl.NumberFormat('id-ID').format(tagihan)}</small>`;
+                        }
+
+                        let jurnalsHtml = '';
+                        if (item.jurnals && item.jurnals.length > 0) {
+                            item.jurnals.forEach(function(j) {
+                                let debStr = (parseFloat(j.total_debit) > 0) ? ` (Rp ${new Intl.NumberFormat('id-ID').format(parseFloat(j.total_debit))})` : '';
+                                jurnalsHtml += `<div class="mb-1">
+                                    <a href="javascript:void(0)" class="badge badge-info py-1 px-2 btn-open-single-jurnal" data-id-jurnal="${j.id_jurnal}" title="Klik untuk melihat baris jurnal ini">
+                                        <i class="fas fa-book mr-1"></i>${j.nomor_jurnal}${debStr}
+                                    </a>
+                                    <span class="badge ${j.status === 'POSTED' ? 'badge-success' : 'badge-secondary'}">${j.status}</span>
+                                </div>`;
+                            });
+                        } else {
+                            jurnalsHtml = '<span class="text-muted small"><i class="fas fa-minus-circle mr-1"></i>Belum diterbitkan jurnal</span>';
+                        }
+
+                        rowsHtml += `<tr>
+                            <td class="font-weight-bold text-primary">
+                                <i class="fas fa-file-invoice mr-1"></i>${item.no_faktur}
+                            </td>
+                            <td>
+                                <strong>${item.customer_name || item.kd_customer}</strong>
+                                <br><small class="text-muted">Kode: ${item.kd_customer}</small>
+                            </td>
+                            <td>${formatTanggal(item.tanggal_faktur)}</td>
+                            <td class="text-right font-weight-bold">Rp ${new Intl.NumberFormat('id-ID').format(tagihan)}</td>
+                            <td class="text-center">${statusBadge}</td>
+                            <td>${jurnalsHtml}</td>
+                        </tr>`;
+                    });
+
+                    $('#modal-h-tbody').html(rowsHtml);
+                    $('#modal-h-total-amount').text('Rp ' + new Intl.NumberFormat('id-ID').format(totalNominal));
+                } else {
+                    $('#modal-h-tbody').html('<tr><td colspan="6" class="text-center text-danger py-4">Gagal memuat data faktur pecahan.</td></tr>');
+                }
+            },
+            error: function() {
+                $('#modal-h-loading').hide();
+                $('#modal-h-table-container').show();
+                $('#modal-h-tbody').html('<tr><td colspan="6" class="text-center text-danger py-4">Terjadi kesalahan koneksi server.</td></tr>');
+            }
+        });
+    });
+
+    // Handler klik badge jurnal di dalam modal Faktur H
+    $(document).on('click', '.btn-open-single-jurnal', function(e) {
+        e.stopPropagation();
+        let jId = $(this).data('id-jurnal');
+        if (jId) {
+            showDetailJurnalModal(jId, 0);
+        }
+    });
+
     // Inisialisasi DataTable untuk tabel faktur
     if ($.fn.DataTable) {
         $('#tabelPembayaranFaktur').DataTable({
@@ -867,24 +1048,115 @@ $(function () {
             dataType: 'json',
             success: function(res) {
                 if (res && res.success && res.data) {
+                    let multiJournals = res.data.multi_journals || [];
+                    
+                    if (multiJournals.length > 1) {
+                        let html = '<div class="p-3" style="max-height: 540px; overflow-y: auto;">';
+                        
+                        multiJournals.forEach(function(item, idx) {
+                            let j = item.journal;
+                            let details = item.details || [];
+                            
+                            let badgeType = 'badge-primary';
+                            let labelTitle = 'Jurnal Asli (Z)';
+                            if (j.nomor_jurnal && j.nomor_jurnal.indexOf('KM') === 0) {
+                                badgeType = 'badge-warning';
+                                labelTitle = 'Jurnal Kas Masuk (A)';
+                            } else if (idx > 0) {
+                                badgeType = 'badge-info';
+                                labelTitle = 'Jurnal Acak (Q) Pecahan';
+                            }
+
+                            html += `<div class="card mb-3 border shadow-none">
+                                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap">
+                                    <div>
+                                        <span class="badge ${badgeType} mr-2">${labelTitle}</span>
+                                        <strong>No: </strong><span class="text-primary font-weight-bold">${j.nomor_jurnal || '-'}</span>
+                                        ${j.source_no ? ' <span class="badge badge-secondary ml-1">Faktur: ' + j.source_no + '</span>' : ''}
+                                    </div>
+                                    <div class="text-muted small">
+                                        <span>${formatTanggal(j.tanggal_transaksi)}</span> | 
+                                        <span class="badge ${j.status === 'POSTED' ? 'badge-success' : 'badge-secondary'}">${j.status || 'DRAFT'}</span>
+                                    </div>
+                                </div>
+                                <div class="px-3 py-2 bg-white small border-bottom text-muted">
+                                    <i class="fas fa-info-circle mr-1"></i><strong>Keterangan:</strong> ${j.keterangan || '-'}
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0 small">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th style="width: 20%;">Kode Akun</th>
+                                                <th style="width: 40%;">Nama Akun</th>
+                                                <th style="width: 20%;" class="text-right">Debit</th>
+                                                <th style="width: 20%;" class="text-right">Kredit</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+
+                            let tDeb = 0, tKre = 0;
+                            if (details.length === 0) {
+                                html += `<tr><td colspan="4" class="text-center text-muted py-2">Tidak ada baris akun.</td></tr>`;
+                            } else {
+                                details.forEach(function(row) {
+                                    let d = parseFloat(row.debit) || 0;
+                                    let k = parseFloat(row.kredit) || 0;
+                                    tDeb += d;
+                                    tKre += k;
+                                    html += `<tr>
+                                        <td>${row.kode_akun || '-'}</td>
+                                        <td>${row.nama_akun || '-'}</td>
+                                        <td class="text-right">${d > 0 ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(d) : '-'}</td>
+                                        <td class="text-right">${k > 0 ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(k) : '-'}</td>
+                                    </tr>`;
+                                });
+                                html += `<tr class="font-weight-bold bg-light">
+                                    <td colspan="2" class="text-right">Total :</td>
+                                    <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(tDeb)}</td>
+                                    <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(tKre)}</td>
+                                </tr>`;
+                            }
+
+                            html += `</tbody></table></div></div>`;
+                        });
+
+                        html += '</div>';
+                        $('#modal-perincian-jurnal .modal-body').html(html);
+                        $('#modal-perincian-jurnal').modal('show');
+                        return;
+                    }
+
+                    // Tampilan default untuk single journal
                     let journal = res.data.journal || {};
                     let details = res.data.details || [];
 
-                    $('#detail-ref').text(journal.nomor_jurnal || journal.source_no || '-');
-                    $('#detail-tanggal').text(formatTanggal(journal.tanggal_transaksi));
-                    $('#detail-keterangan').text(journal.keterangan || '-');
+                    let defaultBody = `<div class="p-3 bg-light d-flex justify-content-between border-bottom flex-wrap">
+                        <div class="mb-2 mb-md-0">
+                            <strong>No. Ref:</strong> <span id="detail-ref" class="text-primary font-weight-bold">${journal.nomor_jurnal || journal.source_no || '-'}</span><br>
+                            <strong>Tanggal:</strong> <span id="detail-tanggal">${formatTanggal(journal.tanggal_transaksi)}</span>
+                        </div>
+                        <div class="text-right">
+                            <strong>Status:</strong> <span id="detail-status">${(journal.status === 'POSTED') ? '<span class="badge badge-success font-weight-bold">POSTED</span>' : '<span class="badge badge-warning font-weight-bold">' + (journal.status || 'DRAFT') + '</span>'}</span><br>
+                            <strong>Keterangan:</strong> <span id="detail-keterangan">${journal.keterangan || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 20%;">Kode Akun</th>
+                                    <th style="width: 40%;">Nama Akun</th>
+                                    <th style="width: 20%;" class="text-right">Debit</th>
+                                    <th style="width: 20%;" class="text-right">Kredit</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detail-lines-body">`;
 
-                    let statusBadge = (journal.status === 'POSTED')
-                        ? '<span class="badge badge-success font-weight-bold">POSTED</span>'
-                        : '<span class="badge badge-warning font-weight-bold">' + (journal.status || 'DRAFT') + '</span>';
-                    $('#detail-status').html(statusBadge);
-
-                    let linesHtml = '';
                     let totalDebit = 0;
                     let totalKredit = 0;
 
                     if (details.length === 0) {
-                        linesHtml = '<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada baris akun pada jurnal ini.</td></tr>';
+                        defaultBody += '<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada baris akun pada jurnal ini.</td></tr>';
                     } else {
                         details.forEach(function(row) {
                             let deb = parseFloat(row.debit) || 0;
@@ -895,26 +1167,23 @@ $(function () {
                             let debitStr = deb > 0 ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(deb) : '-';
                             let kreditStr = kre > 0 ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(kre) : '-';
 
-                            linesHtml += `
-                                <tr>
-                                    <td>${row.kode_akun || '-'}</td>
-                                    <td>${row.nama_akun || '-'}</td>
-                                    <td class="text-right">${debitStr}</td>
-                                    <td class="text-right">${kreditStr}</td>
-                                </tr>
-                            `;
+                            defaultBody += `<tr>
+                                <td>${row.kode_akun || '-'}</td>
+                                <td>${row.nama_akun || '-'}</td>
+                                <td class="text-right">${debitStr}</td>
+                                <td class="text-right">${kreditStr}</td>
+                            </tr>`;
                         });
 
-                        linesHtml += `
-                            <tr class="font-weight-bold bg-light">
-                                <td colspan="2" class="text-right">Total :</td>
-                                <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(totalDebit)}</td>
-                                <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(totalKredit)}</td>
-                            </tr>
-                        `;
+                        defaultBody += `<tr class="font-weight-bold bg-light">
+                            <td colspan="2" class="text-right">Total :</td>
+                            <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(totalDebit)}</td>
+                            <td class="text-right">${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(totalKredit)}</td>
+                        </tr>`;
                     }
 
-                    $('#detail-lines-body').html(linesHtml);
+                    defaultBody += `</tbody></table></div>`;
+                    $('#modal-perincian-jurnal .modal-body').html(defaultBody);
                     $('#modal-perincian-jurnal').modal('show');
                 } else {
                     if (typeof Swal !== 'undefined') {

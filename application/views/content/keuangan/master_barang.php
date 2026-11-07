@@ -3,7 +3,8 @@ $access = isset($master_barang_access) && is_array($master_barang_access) ? $mas
 $canFullEdit = !empty($access['can_full_edit']);
 $canInfoLainEdit = !empty($access['can_info_lain_edit']);
 $jobdesk = isset($access['jobdesk']) ? (string)$access['jobdesk'] : '';
-$dashboardUrl = base_url('dashboard/');
+$isAdmkeu = (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu');
+$dashboardUrl = base_url($isAdmkeu ? 'sales_order/pecah_faktur' : 'dashboard/');
 ?>
 <style>
     .master-barang-page .content-header {
@@ -444,11 +445,30 @@ $dashboardUrl = base_url('dashboard/');
 
             <section class="content">
                 <div class="container-fluid">
-                    <div class="page-title-row">
-                        <a href="<?= $dashboardUrl ?>" class="page-home-btn" title="Dashboard">
-                            <i class="fas fa-home"></i>
-                        </a>
-                        <h1 class="page-title">Master Barang</h1>
+                    <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $flashKey => $flashCls): ?>
+                        <?php if ($flashMsg = $this->session->flashdata($flashKey)): ?>
+                            <div class="alert alert-<?= $flashCls ?> alert-dismissible fade show shadow-sm">
+                                <i class="fas fa-<?= $flashKey === 'success' ? 'check-circle' : ($flashKey === 'error' ? 'exclamation-circle' : 'exclamation-triangle') ?> mr-1"></i>
+                                <?= $flashMsg ?>
+                                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <div class="page-title-row justify-content-between flex-wrap">
+                        <div class="d-flex align-items-center" style="gap: 10px;">
+                            <a href="<?= $dashboardUrl ?>" class="page-home-btn" title="<?= $isAdmkeu ? 'Pecah Faktur' : 'Dashboard' ?>">
+                                <i class="fas fa-home"></i>
+                            </a>
+                            <h1 class="page-title">Master Barang</h1>
+                        </div>
+                        <?php if ($canFullEdit): ?>
+                        <div>
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalImportMasterBarang">
+                                <i class="fas fa-file-excel mr-1"></i> Import Master Barang
+                            </button>
+                        </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="row">
@@ -714,6 +734,50 @@ $dashboardUrl = base_url('dashboard/');
                     </div>
                 </div>
             </section>
+        </div>
+
+        <div class="modal fade" id="modalImportMasterBarang" tabindex="-1" role="dialog" aria-labelledby="modalImportMasterBarangLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <form action="<?= base_url('sales_order/import_master_barang') ?>" method="post" enctype="multipart/form-data" id="formImportMasterBarang">
+                        <input type="hidden" name="redirect_to" value="master_barang">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="modalImportMasterBarangLabel">
+                                <i class="fas fa-boxes mr-1"></i> Import Data Master Barang
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info py-2">
+                                <strong>Alur:</strong> unduh template Master Barang, isi daftar barang, lalu unggah kembali file Excel/CSV. Barang dengan kode baru akan ditambahkan, sedangkan kode yang sudah ada akan diperbarui otomatis.
+                            </div>
+                            <div class="form-group">
+                                <label for="fileImportMasterBarang" class="font-weight-bold">File Excel / CSV (.xlsx, .xls, atau .csv)</label>
+                                <div class="custom-file">
+                                    <input type="file" name="file_master_barang" id="fileImportMasterBarang" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
+                                    <label class="custom-file-label" for="fileImportMasterBarang">Pilih file template Master Barang yang telah diisi</label>
+                                </div>
+                                <small class="form-text text-muted">Maksimal 5 MB dan 10.000 baris. Seluruh file dibatalkan apabila ada baris dengan format tidak valid.</small>
+                            </div>
+                            <ul class="small text-muted mb-0 pl-3">
+                                <li>Kolom <code>kode_barang</code> (maks. 25 karakter) dan <code>nama_barang</code> wajib diisi pada setiap baris.</li>
+                                <li>Kolom <code>isi_per_box</code> digunakan sebagai acuan konversi kuantitas box ke pcs pada Faktur Z.</li>
+                                <li>Kolom opsional seperti <code>satuan</code>, <code>berat_gram</code>, <code>kubikasi_m3</code>, <code>kd_suplier</code>, <code>merk_barang</code>, dan <code>bahan_aktif</code> akan otomatis dilengkapi nilai standar apabila dikosongkan.</li>
+                                <li>Jika <code>kode_barang</code> sudah terdaftar di Master Barang, data barang tersebut akan diperbarui (Upsert).</li>
+                            </ul>
+                        </div>
+                        <div class="modal-footer">
+                            <a href="<?= base_url('sales_order/template_import_master_barang') ?>" class="btn btn-outline-primary btn-sm mr-auto">
+                                <i class="fas fa-download mr-1"></i> Unduh Template Master Barang
+                            </a>
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary btn-sm" id="btnImportMasterBarang">
+                                <i class="fas fa-upload mr-1"></i> Proses Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <footer class="main-footer">

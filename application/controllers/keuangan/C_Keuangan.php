@@ -16,6 +16,23 @@ class C_Keuangan extends CI_Controller
         $this->load->library('Accounting_service');
         $this->load->library('Closing_service');
         $this->load->database();
+
+        // Pembatasan akses khusus user admkeu pada C_Keuangan: hanya diizinkan mengakses Master Barang
+        if (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu') {
+            $allowedAdmkeuKeuanganMethods = [
+                'master_barang',
+                'master_barang_list',
+                'master_barang_detail',
+                'master_barang_store',
+                'master_barang_update',
+                'master_barang_delete',
+            ];
+            $currentMethod = strtolower((string)$this->router->fetch_method());
+            if (!in_array($currentMethod, $allowedAdmkeuKeuanganMethods, true)) {
+                redirect('sales_order/pecah_faktur');
+                return;
+            }
+        }
     }
 
     public function index()
@@ -676,10 +693,13 @@ class C_Keuangan extends CI_Controller
 
     private function can_full_edit_master_barang()
     {
-        $jobdesk = (string)$this->session->userdata('jobdesk');
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string)$this->session->userdata('username')));
         $level = (int)$this->session->userdata('lv');
 
-        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'ADMINPURCHASING'], true) || $level === 1;
+        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'ADMINPURCHASING', 'ADMKEU'], true)
+            || $username === 'admkeu'
+            || $level === 1;
     }
 
     private function can_edit_info_lain_master_barang()
@@ -794,10 +814,13 @@ class C_Keuangan extends CI_Controller
         }
 
         $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+        $requireSuplier = $this->db->table_exists('tbpo_suplier') && strtolower(trim((string)$this->session->userdata('username'))) !== 'admkeu';
+        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || ($requireSuplier && $payload['kd_suplier'] === '')) {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+                'message' => $requireSuplier
+                    ? 'Kode barang, nama barang, dan supplier utama wajib diisi.'
+                    : 'Kode barang dan nama barang wajib diisi.',
             ], 422);
         }
 
@@ -857,10 +880,13 @@ class C_Keuangan extends CI_Controller
 
         $payload = $this->master_barang_payload();
         if ($this->can_full_edit_master_barang()) {
-            if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+            $requireSuplier = $this->db->table_exists('tbpo_suplier') && strtolower(trim((string)$this->session->userdata('username'))) !== 'admkeu';
+            if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || ($requireSuplier && $payload['kd_suplier'] === '')) {
                 return $this->response_json([
                     'status' => false,
-                    'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+                    'message' => $requireSuplier
+                        ? 'Kode barang, nama barang, dan supplier utama wajib diisi.'
+                        : 'Kode barang dan nama barang wajib diisi.',
                 ], 422);
             }
 
