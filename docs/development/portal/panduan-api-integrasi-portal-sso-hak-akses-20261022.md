@@ -85,12 +85,28 @@ Jika diizinkan, portal mengarahkan browser ke callback:
 {URL_CALLBACK_TERDAFTAR}?code={AUTHORIZATION_CODE}&state={STATE}
 ```
 
+Contoh konkret (nilai fiktif, bukan code login yang dapat dipakai):
+
+```http
+HTTP/1.1 302 Found
+Location: https://klien.example.test/auth/sso/callback?code=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef&state=sso-uji-20261104-abc123
+```
+
+Callback menerima **GET dengan query string**, bukan body JSON atau POST dari Portal. Setelah redirect, backend klien membaca payload berikut dari query URL:
+
+| Parameter query | Contoh nilai | Kegunaan |
+|---|---|---|
+| `code` | `0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef` | Authorization code sekali pakai untuk dikirim oleh backend klien ke endpoint token. |
+| `state` | `sso-uji-20261104-abc123` | Nilai yang harus sama dengan `state` yang disimpan di session server klien saat memulai login. |
+
+Portal tidak mengirim `client_secret`, `code_verifier`, profil user, atau role melalui callback. Nilai `code` dan `state` di atas hanya contoh; pada login sebenarnya keduanya dibuat baru untuk setiap transaksi.
+
 ### 5.2 Validasi callback
 
 Callback aplikasi klien wajib:
 1. Membandingkan state yang kembali dengan nilai di session server klien menggunakan perbandingan aman seperti hash_equals().
-2. Menolak callback jika state tidak tersedia atau nilainya berbeda.
-3. Menukar code dari backend klien ke portal. Jangan menukar code melalui JavaScript/browser.
+2. Menolak callback jika `code` atau state tidak tersedia, atau state berbeda; jangan membuat session lokal.
+3. Mengambil `code_verifier` dari session server transaksi yang sama, lalu menukar code dari backend klien ke portal. Jangan menukar code melalui JavaScript/browser.
 
 ### 5.3 Tukar authorization code
 
@@ -103,6 +119,18 @@ Backend klien mengirim HTTPS POST ke {PORTAL_BASE_URL}/api/sso/token dengan Cont
 | code | Code dari callback portal |
 | redirect_uri | Callback HTTPS yang didaftarkan; harus sama persis |
 | code_verifier | Verifier yang disimpan sebelum redirect |
+
+Contoh payload form yang dikirim **server klien** (semua nilai fiktif; secret dan verifier diambil dari environment/session server, bukan dari callback):
+
+```text
+client_id=kiu_po
+client_secret={SECRET_SERVER_KLIEN}
+code=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+redirect_uri=https://klien.example.test/auth/sso/callback
+code_verifier={VERIFIER_DARI_SESSION_SERVER}
+```
+
+Saat dikirim dengan `application/x-www-form-urlencoded`, HTTP client mengodekan tiap nilai field; `redirect_uri` harus tetap bernilai URL callback yang sama persis dengan registrasi Portal dan request authorize.
 
 Contoh cURL dari backend:
 
@@ -130,13 +158,14 @@ Respons sukses HTTP 200:
       "username": "contoh.user",
       "name": "Nama Pengguna"
     },
-    "app_code": "{APP_CODE}",
-    "state": "state-yang-dikirim-klien"
+    "app_code": "kiu_po",
+    "state": "sso-uji-20261104-abc123",
+    "client_account_username": "operator.po"
   }
 }
 ```
 
-sub menggabungkan sumber akun dan ID karena tb_karyawan dan tb_users dapat memiliki ID yang sama. Kaitkan akun lokal ke sub, bukan hanya username. name adalah nama tampilan. Portal tidak mengirim email, password, departemen, role klien, atau daftar izin modul.
+Contoh request token memakai `code` dari contoh callback; respons token mengembalikan `state` dari transaksi yang sama tanpa mengulang `code`. `client_account_username` adalah username akun lokal yang ditetapkan admin untuk aplikasi tersebut. Pada alur saat ini, penetapan akun wajib; bila tidak tersedia, pertukaran code ditolak. `sub` menggabungkan sumber akun dan ID karena `tb_karyawan` dan `tb_users` dapat memiliki ID yang sama. Kaitkan akun lokal ke `sub` serta periksa penetapan akun sesuai kebijakan klien, bukan hanya username Portal. `name` adalah nama tampilan. Portal tidak mengirim email, password, departemen, role klien, atau daftar izin modul.
 
 Code berlaku 120 detik dan hanya dapat ditukar sekali. Code salah/terpakai/kedaluwarsa, secret salah, callback berbeda, verifier PKCE salah, atau klien nonaktif menghasilkan HTTP 400 invalid_grant.
 
@@ -222,6 +251,8 @@ Terapkan hanya jika belum ada pada environment Portal:
 Klien perlu tabel akun lokal dan tabel penghubung identity yang memuat sumber/issuer, `external_sub`, `local_user_id`, dan timestamp. Terapkan unique key pada `(provider, external_sub)`, foreign key ke tabel user lokal, serta unique `(provider, local_user_id)` bila pemetaan satu-ke-satu. Role dan permission tetap disimpan/dikelola pada schema masing-masing klien. Nama tabel/kolom dan migration dibuat di repository klien; Portal tidak membuat atau mengubah database aplikasi klien. Jangan menyimpan `client_secret` atau code sekali pakai sebagai data akun.
 
 Perubahan URL peluncuran hanya menambah kolom Portal. Perubahan policy/session pada klien tidak memerlukan DDL Portal tambahan. Backup dan verifikasi tiap migration pada database target sebelum mengaktifkan SSO.
+
+Pembaruan contoh payload callback dan token pada panduan ini tidak mengubah skema atau data database.
 
 ## 11. Error dan batasan
 
