@@ -30,6 +30,10 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
     }
 
     /* Styling Tata Letak Batch Split */
+    .card-body.d-flex::after,
+    .card-header.d-flex::after {
+        display: none !important;
+    }
     .split-top-card {
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -184,28 +188,9 @@ $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur')
                     <?php endif; ?>
                 <?php endforeach; ?>
 
-                <?php if (!empty($is_auto_prefilled)): ?>
-                    <div class="alert alert-info border-info shadow-sm mb-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-clipboard-check fa-2x text-info mr-3"></i>
-                            <div>
-                                <h6 class="font-weight-bold mb-1 text-dark">
-                                    <i class="fas fa-magic text-warning mr-1"></i> Rancangan Pemecahan Otomatis Siap Diperiksa
-                                </h6>
-                                <div class="small text-dark">
-                                    Sistem telah menyusun rancangan pembagian menjadi <strong><?= (int)$jumlah_pecah ?> Faktur Pecahan (Kode H)</strong> dengan batas maksimal <strong>Rp <?= number_format($max_plafon ?? 25000000, 0, ',', '.') ?></strong> per faktur. Barang antar Faktur Z <strong>terisolasi (tidak bercampur)</strong>.
-                                    <br>
-                                    <span class="text-primary font-weight-bold">
-                                        <i class="fas fa-search mr-1"></i> Silakan periksa kembali kuantitas barang, customer penerima, dan nominal di bawah ini. Anda dapat mengeditnya sebelum menekan tombol simpan di bawah.
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
                 <form action="<?= base_url('sales_order/simpan_split_faktur_batch') ?>" method="post" id="formBatchSplit">
                     <!-- Hidden Parent IDs -->
+                    <input type="hidden" name="pakai_potongan_20" value="<?= htmlspecialchars((string)($pakai_potongan_20 ?? '20')) ?>">
                     <?php foreach ($parent_fakturs as $pid => $pf): ?>
                         <input type="hidden" name="parent_ids[]" value="<?= (int)$pid ?>">
                     <?php endforeach; ?>
@@ -381,39 +366,93 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
 
                     <!-- Panel Info Total Nilai & Fitur Bagi Rata Otomatis -->
                     <div class="card bg-light border shadow-sm mb-3">
-                        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap">
-                            <div class="my-1">
-                                <span class="text-muted small">Total Nilai Faktur Induk:</span>
-                                <strong class="text-primary ml-1" style="font-size: 15px;">Rp <?= number_format($total_induk_nilai, 0, ',', '.') ?></strong>
-                                <span class="mx-2 text-muted">&bull;</span>
-                                <span class="badge badge-warning text-dark font-weight-bold" style="font-size: 11.5px;" title="Harga barang pada Faktur H terdiskon 20%">
-                                    <i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp <?= number_format($total_induk_nilai * 0.8, 0, ',', '.') ?>)
-                                </span>
-                                <span class="mx-2 text-muted">&bull;</span>
-                                <span class="badge badge-info font-weight-bold" style="font-size: 11.5px;">
-                                    <i class="fas fa-boxes mr-1"></i> Total Kuantitas: <?= number_format($total_pool_qty) ?> pcs
-                                </span>
-                            </div>
-                            <div class="my-1 d-flex align-items-center">
-                                <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
-                                    <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetQty" title="Kosongkan semua input kuantitas">
-                                    <i class="fas fa-undo mr-1"></i> Kosongkan Qty
-                                </button>
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap w-100">
+                                <div class="my-1">
+                                    <?php 
+                                    $pot_val = isset($pakai_potongan_20) ? (string)$pakai_potongan_20 : '20';
+                                    if ($pot_val === '40') {
+                                        $disc_factor = 0.6;
+                                        $pot_badge_class = 'badge-danger text-white';
+                                        $pot_badge_label = '<i class="fas fa-tag mr-1"></i> Potongan Faktur H: 40% (Netto Rp ' . number_format($total_induk_nilai * 0.6, 0, ',', '.') . ')';
+                                    } elseif ($pot_val === '0') {
+                                        $disc_factor = 1.0;
+                                        $pot_badge_class = 'badge-primary text-white';
+                                        $pot_badge_label = '<i class="fas fa-check-circle mr-1"></i> Tanpa Potongan (Harga Normal 100% - Rp ' . number_format($total_induk_nilai, 0, ',', '.') . ')';
+                                    } else {
+                                        $disc_factor = 0.8;
+                                        $pot_badge_class = 'badge-warning text-dark';
+                                        $pot_badge_label = '<i class="fas fa-tag mr-1 text-danger"></i> Potongan Faktur H: 20% (Netto Rp ' . number_format($total_induk_nilai * 0.8, 0, ',', '.') . ')';
+                                    }
+                                    $total_netto_display = $total_induk_nilai * $disc_factor;
+                                    ?>
+                                    <span class="text-muted small">Total Nilai Faktur Induk:</span>
+                                    <strong class="text-primary ml-1" style="font-size: 15px;">Rp <?= number_format($total_induk_nilai, 0, ',', '.') ?></strong>
+                                    <span class="mx-2 text-muted">&bull;</span>
+                                    <span class="badge <?= $pot_badge_class ?> font-weight-bold" style="font-size: 11.5px;">
+                                        <?= $pot_badge_label ?>
+                                    </span>
+                                    <span class="mx-2 text-muted">&bull;</span>
+                                    <span class="badge badge-info font-weight-bold" style="font-size: 11.5px;">
+                                        <i class="fas fa-boxes mr-1"></i> Total Kuantitas: <?= number_format($total_pool_qty) ?> pcs
+                                    </span>
+                                </div>
+                                <div class="my-1 d-flex align-items-center ml-auto">
+                                    <button type="button" class="btn btn-primary btn-sm font-weight-bold shadow-sm mr-2" id="btnAutoDistribute" title="Bagi rata kuantitas seluruh barang secara seimbang ke seluruh slot pecahan">
+                                        <i class="fas fa-magic mr-1"></i> Bagi Rata Qty Otomatis
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetQty" title="Kosongkan semua input kuantitas">
+                                        <i class="fas fa-undo mr-1"></i> Kosongkan Qty
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Container Grid Slot Pecahan (3 Kolom: col-lg-4 col-md-6 col-12) -->
                     <div class="row" id="slotsContainer">
+                        <?php 
+                        // Prioritaskan kontak person yang belum limit untuk slot awal jika mode manual
+                        $valid_customers = array_values(array_filter($customers, function($c) {
+                            $nom = (float)($c['total_nominal_pecah'] ?? 0);
+                            return empty($c['is_limit_reached']) && $nom < 250000000;
+                        }));
+                        if (empty($valid_customers)) {
+                            $valid_customers = $customers;
+                        }
+                        ?>
                         <?php for ($slot_idx = 0; $slot_idx < $jumlah_pecah; $slot_idx++): ?>
                             <?php 
                             $slot_no = $slot_idx + 1; 
                             // Tentukan customer penerima dari pre_allocated_splits atau urutan prioritas
                             $pre_slot = $pre_allocated_splits[$slot_idx] ?? null;
-                            $auto_cust_kd = $pre_slot['kd_customer'] ?? ($customers[$slot_idx]['kd_customer'] ?? '');
+                            $auto_cust_kd = $pre_slot['kd_customer'] ?? ($valid_customers[$slot_idx % count($valid_customers)]['kd_customer'] ?? '');
                             $slot_parent_no = $pre_slot['parent_no_faktur'] ?? '';
+                            $slot_parent_id = $pre_slot['parent_id_faktur'] ?? null;
+
+                            // Default tanggal faktur & jatuh tempo mengikuti Faktur Z Induk
+                            $first_parent = !empty($parent_fakturs) ? reset($parent_fakturs) : [];
+                            $slot_parent_row = null;
+                            if (!empty($slot_parent_id) && isset($parent_fakturs[$slot_parent_id])) {
+                                $slot_parent_row = $parent_fakturs[$slot_parent_id];
+                            } elseif (!empty($slot_parent_no)) {
+                                foreach ($parent_fakturs as $pf_cand) {
+                                    if (($pf_cand['no_faktur'] ?? '') === $slot_parent_no) {
+                                        $slot_parent_row = $pf_cand;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$slot_parent_row) {
+                                $slot_parent_row = $first_parent;
+                            }
+                            $slot_tgl_faktur = !empty($slot_parent_row['tanggal_faktur']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_faktur'])) : date('Y-m-d');
+                            $slot_parent_jtempo = !empty($slot_parent_row['tanggal_jatuh_tempo']) ? date('Y-m-d', strtotime($slot_parent_row['tanggal_jatuh_tempo'])) : null;
+                            if (!empty($slot_parent_jtempo)) {
+                                $slot_tgl_jtempo = $slot_parent_jtempo;
+                            } else {
+                                $slot_tgl_jtempo = date('Y-m-d', strtotime($slot_tgl_faktur . ' +30 days'));
+                            }
 
                             // Cari objek customer
                             $auto_c = null;
@@ -518,11 +557,11 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                             <div class="row">
                                                 <div class="col-6 mb-2">
                                                     <label class="small font-weight-bold mb-0" style="font-size: 10.5px;">Tgl Faktur</label>
-                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_faktur]" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" style="font-size: 11px; height: 28px;">
+                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_faktur]" class="form-control form-control-sm" value="<?= $slot_tgl_faktur ?>" style="font-size: 11px; height: 28px;">
                                                 </div>
                                                 <div class="col-6 mb-2">
                                                     <label class="small font-weight-bold mb-0" style="font-size: 10.5px;">Jatuh Tempo</label>
-                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_jatuh_tempo]" class="form-control form-control-sm" value="<?= date('Y-m-d', strtotime('+30 days')) ?>" style="font-size: 11px; height: 28px;">
+                                                    <input type="date" name="splits[<?= $slot_idx ?>][tanggal_jatuh_tempo]" class="form-control form-control-sm" value="<?= $slot_tgl_jtempo ?>" style="font-size: 11px; height: 28px;">
                                                 </div>
                                             </div>
 
@@ -537,7 +576,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         <tr>
                                                             <th>Barang & Sumber</th>
                                                             <th width="80" class="text-right">Qty (Pcs)</th>
-                                                            <th width="115" class="text-right">Harga (Disc 20%)</th>
+                                                            <th width="115" class="text-right">Harga (<?= ($pot_val === '40') ? 'Disc 40%' : (($pot_val === '0') ? 'Normal' : 'Disc 20%') ?>)</th>
                                                             <th width="90" class="text-right">Subtotal</th>
                                                         </tr>
                                                     </thead>
@@ -557,7 +596,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                         <?php foreach ($pool_items as $d_id => $it): ?>
                                                             <?php 
                                                             $hrg_asli = (float)$it['hrg_satuan'];
-                                                            $default_hrg = round($hrg_asli * 0.8, 2);
+                                                            $default_hrg = round($hrg_asli * $disc_factor, 2);
                                                             $default_disc = (float)($it['disc'] ?? 0);
                                                             $default_pajak = (float)($it['pajak'] ?? 0);
                                                             $val_qty = isset($pre_allocated_splits[$slot_idx]['items'][$d_id]['qty']) ? (float)$pre_allocated_splits[$slot_idx]['items'][$d_id]['qty'] : 0;
@@ -590,8 +629,15 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                                                 <td class="text-right align-middle p-1 text-muted font-weight-bold" style="font-size: 11px;">
                                                                     <span class="text-success font-weight-bold">Rp <?= number_format($default_hrg, 0, ',', '.') ?></span>
                                                                     <br>
-                                                                    <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
-                                                                    <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                                                    <?php if ($pot_val === '40'): ?>
+                                                                        <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                                        <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-40%</span>
+                                                                    <?php elseif ($pot_val === '0'): ?>
+                                                                        <span class="badge badge-primary px-1 py-0" style="font-size: 8.5px;">100%</span>
+                                                                    <?php else: ?>
+                                                                        <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                                        <span class="badge badge-warning text-dark px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                                                    <?php endif; ?>
                                                                     <input type="hidden" 
                                                                            name="splits[<?= $slot_idx ?>][items][<?= $d_id ?>][hrg_satuan]" 
                                                                            class="input-hrg-split input-calc" 
@@ -616,24 +662,37 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                         <?php endfor; ?>
                     </div>
 
+                    <!-- Alert Peringatan Validasi (Hanya muncul jika ada pelanggaran alokasi / kuota) -->
+                    <div id="alertBatchValidation" class="alert alert-danger shadow-sm mb-3" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x mr-3 text-warning"></i>
+                            <div>
+                                <h6 class="font-weight-bold mb-1" id="alertBatchValidationTitle">Peringatan Validasi Alokasi</h6>
+                                <div class="small" id="alertBatchValidationMsg"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tombol Aksi Simpan Semua -->
                     <div class="card card-outline card-success shadow-sm mb-4 mt-2">
-                        <div class="card-body d-flex justify-content-between align-items-center flex-wrap py-3">
-                            <div>
-                                <span class="font-weight-bold text-dark d-block" style="font-size: 15px;">
-                                    <i class="fas fa-check-double text-success mr-1"></i> Siap Menerbitkan Seluruh Faktur Pecahan H?
-                                </span>
-                                <span class="text-muted small">
-                                    Faktur pecahan tersimpan di tabel khusus tanpa mempengaruhi kartu stok dan tanpa penjurnalan ulang.
-                                </span>
-                            </div>
-                            <div class="mt-2 mt-sm-0">
-                                <a href="<?= $back_url ?>" class="btn btn-secondary mr-1">
-                                    <i class="fas fa-times mr-1"></i> Batal
-                                </a>
-                                <button type="submit" class="btn btn-success font-weight-bold shadow-sm px-4" id="btnSubmitBatch">
-                                    <i class="fas fa-save mr-1"></i> Simpan & Terbitkan Semua Faktur H
-                                </button>
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap w-100">
+                                <div>
+                                    <span class="font-weight-bold text-dark d-block" style="font-size: 15px;">
+                                        <i class="fas fa-check-double text-success mr-1"></i> Siap Menerbitkan Seluruh Faktur Pecahan H?
+                                    </span>
+                                    <span class="text-muted small">
+                                        Faktur pecahan tersimpan di tabel khusus tanpa mempengaruhi kartu stok dan tanpa penjurnalan ulang.
+                                    </span>
+                                </div>
+                                <div class="mt-2 mt-sm-0 ml-auto">
+                                    <a href="<?= $back_url ?>" class="btn btn-secondary mr-1">
+                                        <i class="fas fa-times mr-1"></i> Batal
+                                    </a>
+                                    <button type="submit" class="btn btn-success font-weight-bold shadow-sm px-4" id="btnSubmitBatch">
+                                        <i class="fas fa-save mr-1"></i> Simpan & Terbitkan Semua Faktur H
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -736,7 +795,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <tr>
                                     <th>Barang & Sumber</th>
                                     <th width="80" class="text-right">Qty (Pcs)</th>
-                                    <th width="115" class="text-right">Harga (Disc 20%)</th>
+                                    <th width="115" class="text-right">Harga (<?= ($pot_val === '40') ? 'Disc 40%' : (($pot_val === '0') ? 'Normal' : 'Disc 20%') ?>)</th>
                                     <th width="90" class="text-right">Subtotal</th>
                                 </tr>
                             </thead>
@@ -744,7 +803,7 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                 <?php foreach ($pool_items as $d_id => $it): ?>
                                     <?php 
                                     $hrg_asli = (float)$it['hrg_satuan'];
-                                    $default_hrg = round($hrg_asli * 0.8, 2);
+                                    $default_hrg = round($hrg_asli * $disc_factor, 2);
                                     $default_disc = (float)($it['disc'] ?? 0);
                                     $default_pajak = (float)($it['pajak'] ?? 0);
                                     ?>
@@ -771,8 +830,15 @@ if ($total_pool_qty <= 0 && !empty($pool_items)) {
                                         <td class="text-right align-middle p-1 text-muted font-weight-bold" style="font-size: 11px;">
                                             <span class="text-success font-weight-bold">Rp <?= number_format($default_hrg, 0, ',', '.') ?></span>
                                             <br>
-                                            <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
-                                            <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                            <?php if ($pot_val === '40'): ?>
+                                                <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                <span class="badge badge-danger px-1 py-0" style="font-size: 8.5px;">-40%</span>
+                                            <?php elseif ($pot_val === '0'): ?>
+                                                <span class="badge badge-primary px-1 py-0" style="font-size: 8.5px;">100%</span>
+                                            <?php else: ?>
+                                                <small class="text-muted" style="text-decoration: line-through; font-size: 9.5px;">Rp <?= number_format($hrg_asli, 0, ',', '.') ?></small>
+                                                <span class="badge badge-warning text-dark px-1 py-0" style="font-size: 8.5px;">-20%</span>
+                                            <?php endif; ?>
                                             <input type="hidden" 
                                                    name="splits[{{IDX}}][items][<?= $d_id ?>][hrg_satuan]" 
                                                    class="input-hrg-split input-calc" 
@@ -1033,10 +1099,73 @@ $(document).ready(function() {
             }
         });
 
-        if (hasOverAllocation) {
+        var hasQuotaViolation = false;
+        var quotaViolations = [];
+        if (isCustomerAcak) {
+            // Hitung akumulasi per customer di seluruh slot
+            var custUsage = {};
+            $('.slot-column').each(function() {
+                var custVal = $(this).find('.select-customer').val();
+                var slotNominal = 0;
+                $(this).find('.row-item-split').each(function() {
+                    var q = parseFloat($(this).find('.input-qty-split').val()) || 0;
+                    var h = parseFloat($(this).find('.input-hrg-split').val()) || 0;
+                    slotNominal += q * h;
+                });
+                if (custVal && slotNominal > 0) {
+                    custUsage[custVal] = (custUsage[custVal] || 0) + slotNominal;
+                }
+            });
+
+            // Tandai slot jika kontak person terpilih melebihi sisa kuotanya
+            $('.slot-column').each(function() {
+                var $slotCol = $(this);
+                var slotIdx = $slotCol.data('slot-idx');
+                var custVal = $slotCol.find('.select-customer').val();
+                var $totalBadge = $('#slotTotalNominal_' + slotIdx);
+
+                if (custVal) {
+                    var custObj = null;
+                    for (var i = 0; i < availableCustomers.length; i++) {
+                        if (availableCustomers[i].kd_customer === custVal) {
+                            custObj = availableCustomers[i];
+                            break;
+                        }
+                    }
+                    if (custObj) {
+                        var riwayat = parseFloat(custObj.total_nominal_pecah) || 0;
+                        var sisa = Math.max(0, 250000000 - riwayat);
+                        var totalAlokasiCust = custUsage[custVal] || 0;
+
+                        if (totalAlokasiCust > (sisa + 0.01)) {
+                            hasQuotaViolation = true;
+                            if (quotaViolations.indexOf(custObj.kontak_person) === -1) {
+                                quotaViolations.push(custObj.kontak_person + ' (Sisa Plafon: Rp ' + Math.round(sisa).toLocaleString('id-ID') + ', Dialokasikan: Rp ' + Math.round(totalAlokasiCust).toLocaleString('id-ID') + ')');
+                            }
+                            $totalBadge.removeClass('badge-success badge-light').addClass('badge-danger text-white border-danger')
+                                .attr('title', 'Peringatan: Alokasi total untuk ' + custObj.kontak_person + ' (Rp ' + Math.round(totalAlokasiCust).toLocaleString('id-ID') + ') melebihi sisa kuota (Rp ' + Math.round(sisa).toLocaleString('id-ID') + ')!');
+                        } else {
+                            $totalBadge.removeAttr('title');
+                        }
+                    }
+                }
+            });
+        }
+
+        if (hasOverAllocation || hasQuotaViolation) {
             $('#btnSubmitBatch').prop('disabled', true).addClass('btn-danger').removeClass('btn-success');
+            var errorMsgs = [];
+            if (hasQuotaViolation) {
+                errorMsgs.push('<strong>Pelanggaran Batas Kuota Kontak Person (Plafon Rp 250 Juta):</strong><br>&bull; ' + quotaViolations.join('<br>&bull; '));
+            }
+            if (hasOverAllocation) {
+                errorMsgs.push('<strong>Alokasi Barang Melebihi Kuantitas Faktur Z:</strong> Silakan periksa tabel indikator stok di atas.');
+            }
+            $('#alertBatchValidationMsg').html(errorMsgs.join('<br><br>'));
+            $('#alertBatchValidation').slideDown(200);
         } else {
             $('#btnSubmitBatch').prop('disabled', false).addClass('btn-success').removeClass('btn-danger');
+            $('#alertBatchValidation').slideUp(200);
         }
     }
 
@@ -1163,7 +1292,21 @@ $(document).ready(function() {
             return false;
         }
 
-        return confirm('Konfirmasi: Terbitkan seluruh Faktur Pecahan (Kode H) sekarang?');
+        if (!confirm('Konfirmasi: Terbitkan seluruh Faktur Pecahan (Kode H) sekarang?')) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Nonaktifkan input pada baris barang dengan kuantitas 0 agar payload POST ringan dan tidak melebihi batas max_input_vars PHP
+        $('.row-item-split').each(function() {
+            var q = parseFloat($(this).find('.input-qty-split').val()) || 0;
+            if (q <= 0.0001) {
+                $(this).find('input').prop('disabled', true);
+            }
+        });
+
+        $('#btnSubmitBatch').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses & Menerbitkan...');
+        return true;
     });
 
     // Inisialisasi awal: jika mode auto-split terisi, langsung hitung subtotal & pantau alokasi

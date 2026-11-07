@@ -115,7 +115,7 @@
 
                 <div class="card">
                     <div class="card-header bg-primary text-white">
-                        <h3 class="card-title"><i class="fas fa-users mr-2"></i>Customer dengan Faktur Belum Lunas</h3>
+                        <h3 class="card-title"><i class="fas fa-users mr-2"></i>Customer dengan Faktur Induk Belum Lunas</h3>
                         <div class="card-tools">
                             <span class="badge badge-light"><?= count($customers) ?> customer</span>
                         </div>

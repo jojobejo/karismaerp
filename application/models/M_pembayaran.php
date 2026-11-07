@@ -347,6 +347,20 @@ class M_pembayaran extends CI_Model
         $is_test_market_select = $this->db->field_exists('is_test_market', 'tbso_faktur_penjualan')
             ? 'f.is_test_market'
             : '0 AS is_test_market';
+        $is_split_parent_select = $this->db->field_exists('is_split_parent', 'tbso_faktur_penjualan')
+            ? 'COALESCE(f.is_split_parent, 0) AS is_split_parent'
+            : '0 AS is_split_parent';
+        $has_pengajuan_od = $this->db->table_exists('tb_pengajuan_od_faktur') && $this->db->table_exists('tb_pengajuan_od');
+        $tempo_lama_select = $has_pengajuan_od
+            ? "(
+                SELECT po_f.tempo_lama
+                FROM tb_pengajuan_od_faktur po_f
+                JOIN tb_pengajuan_od po ON po.id = po_f.id_pengajuan
+                WHERE po.status = 'approved' AND po_f.id_faktur = f.id_faktur
+                ORDER BY po.id DESC
+                LIMIT 1
+            ) AS tempo_lama"
+            : "NULL AS tempo_lama";
 
         $this->db->select("
             f.id_faktur,
@@ -355,6 +369,8 @@ class M_pembayaran extends CI_Model
             f.no_so,
             f.gudang_id,
             {$is_test_market_select},
+            {$is_split_parent_select},
+            {$total_pecahan_h_select},
             f.kd_customer,
             COALESCE(NULLIF(f.customer_name, ''), c.nama_customer, '-') AS nama_customer,
             c.nama_kios,
@@ -364,14 +380,7 @@ class M_pembayaran extends CI_Model
             f.tanggal_jatuh_tempo,
             f.tempo,
             f.jtempo,
-            (
-                SELECT po_f.tempo_lama
-                FROM tb_pengajuan_od_faktur po_f
-                JOIN tb_pengajuan_od po ON po.id = po_f.id_pengajuan
-                WHERE po.status = 'approved' AND po_f.id_faktur = f.id_faktur
-                ORDER BY po.id DESC
-                LIMIT 1
-            ) AS tempo_lama,
+            {$tempo_lama_select},
             {$cara_pembayaran_select},
             {$tanggal_selesai_do} AS tanggal_selesai_do,
             f.status,
@@ -403,6 +412,11 @@ class M_pembayaran extends CI_Model
         $this->db->join('(' . $this->_total_pembayaran_sql() . ') fp', 'fp.id_faktur = f.id_faktur', 'left');
         $this->db->join('(' . $this->_nama_barang_sql() . ') fnb', 'fnb.id_faktur = f.id_faktur', 'left');
         $this->db->where_in('f.status', ['selesai', 'selesai_do']);
+
+        // Hanya tampilkan Faktur Induk (faktur pecahan/turunan yang memiliki parent_id_faktur tidak ditampilkan di pembayaran)
+        if ($this->db->field_exists('parent_id_faktur', 'tbso_faktur_penjualan')) {
+            $this->db->where('f.parent_id_faktur IS NULL', null, false);
+        }
     }
 
     public function get_customers_with_unpaid_faktur($keyword = '')
@@ -465,6 +479,7 @@ class M_pembayaran extends CI_Model
             JOIN (" . $this->_total_tagihan_sql() . ") ft ON ft.id_faktur = f.id_faktur
             LEFT JOIN (" . $this->_total_pembayaran_sql() . ") fp ON fp.id_faktur = f.id_faktur
             WHERE f.status IN ('selesai', 'selesai_do')
+              AND f.parent_id_faktur IS NULL
               {$whereCust}
               AND (COALESCE(ft.total_tagihan, 0) - COALESCE(fp.total_pembayaran, 0)) > 0
         ";
@@ -1059,12 +1074,19 @@ class M_pembayaran extends CI_Model
                 ->row_array();
 
             if ($existing_journal) {
-                $this->db->where('id_jurnal', $existing_journal['id_jurnal'])->update('tbkeu_jurnal', [
-                    'status'     => 'POSTED',
-                    'posted_by'  => $user_id > 0 ? $user_id : null,
-                    'posted_at'  => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ]);
+                // Update seluruh jurnal terkait (Jurnal Asli, Jurnal Q Acak, dan Jurnal A)
+                $this->db->where('source_module', 'KEUANGAN')
+                    ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                    ->group_start()
+                        ->where('source_id', (string)$id_pembayaran)
+                        ->or_where('source_id', $id_pembayaran)
+                    ->group_end()
+                    ->update('tbkeu_jurnal', [
+                        'status'     => 'POSTED',
+                        'posted_by'  => $user_id > 0 ? $user_id : null,
+                        'posted_at'  => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
             } else {
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);

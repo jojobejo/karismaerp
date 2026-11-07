@@ -58,6 +58,7 @@ $route['translate_uri_dashes'] = FALSE;
 // Portal Dashboard
 $route['portal'] = 'Portal/index';
 $route['auth'] = 'Auth/index';
+$route['Auth'] = 'Auth/index';
 
 //Auth Login
 $route['process']                                   = 'Auth/process';
@@ -203,6 +204,12 @@ $route['keuangan/pembayaran/simpan/(:any)']         = 'keuangan/C_pembayaran/sim
 $route['keuangan/pembayaran/cair/(:any)']           = 'keuangan/C_pembayaran/cair/$1';
 $route['keuangan/pembayaran/ajax_unpost_pembayaran'] = 'keuangan/C_pembayaran/ajax_unpost_pembayaran';
 $route['keuangan/pembayaran/ajax_post_pembayaran']   = 'keuangan/C_pembayaran/ajax_post_pembayaran';
+
+// REPORT JURNAL TRANSAKSI
+$route['keuangan/report_jurnal']              = 'keuangan/C_ReportJurnal/index';
+$route['keuangan/report_jurnal/data']         = 'keuangan/C_ReportJurnal/get_data_json';
+$route['keuangan/report_jurnal/export_excel'] = 'keuangan/C_ReportJurnal/export_excel';
+$route['keuangan/report_jurnal/export_csv']   = 'keuangan/C_ReportJurnal/export_csv';
 $route['keuangan/pembayaran/ajax_delete_pembayaran'] = 'keuangan/C_pembayaran/ajax_delete_pembayaran';
 $route['keuangan/pembayaran/print_bukti/(:any)']     = 'keuangan/C_pembayaran/print_bukti/$1';
 $route['keuangan/pembayaran/print_bukti']            = 'keuangan/C_pembayaran/print_bukti';
@@ -891,6 +898,15 @@ $route['sales_order/admin_sc/get_faktur_detail_json'] = 'sales/C_SalesOrder/get_
 $route['sales_order/admin_sc/get_faktur_detail_info_json'] = 'sales/C_SalesOrder/get_faktur_detail_info_json';
 $route['pecah_faktur']                              = 'sales/C_SalesOrder/pecah_faktur';
 $route['sales_order/pecah_faktur']                  = 'sales/C_SalesOrder/pecah_faktur';
+$route['sales_order/template_import_pelunasan_faktur_z_pecah']       = 'sales/C_SalesOrder/template_import_pelunasan_faktur_z_pecah';
+$route['pecah_faktur/template_import_pelunasan_h']                   = 'sales/C_SalesOrder/template_import_pelunasan_faktur_z_pecah';
+$route['sales_order/import_pelunasan_faktur_z_pecah']                 = 'sales/C_SalesOrder/import_pelunasan_faktur_z_pecah';
+$route['pecah_faktur/import_pelunasan_h']                             = 'sales/C_SalesOrder/import_pelunasan_faktur_z_pecah';
+$route['sales_order/unpost_pelunasan_faktur_z_pecah/(:any)']         = 'sales/C_SalesOrder/unpost_pelunasan_faktur_z_pecah/$1';
+$route['sales_order/unpost_pelunasan_faktur_z_pecah_batch']          = 'sales/C_SalesOrder/unpost_pelunasan_faktur_z_pecah_batch';
+$route['sales_order/jurnal_pelunasan_faktur_z_pecah_json/(:any)']   = 'sales/C_SalesOrder/jurnal_pelunasan_faktur_z_pecah_json/$1';
+$route['sales_order/export_faktur_z_pecah_lunas']                     = 'sales/C_SalesOrder/export_faktur_z_pecah_lunas';
+$route['pecah_faktur/export_faktur_h_lunas']                          = 'sales/C_SalesOrder/export_faktur_z_pecah_lunas';
 $route['pecah_faktur_kios/(:any)']                  = 'sales/C_SalesOrder/pecah_faktur_kios/$1';
 $route['sales_order/pecah_faktur_kios/(:any)']      = 'sales/C_SalesOrder/pecah_faktur_kios/$1';
 $route['sales_order/auto_split_kios/(:any)']        = 'sales/C_SalesOrder/auto_split_kios/$1';
@@ -899,8 +915,20 @@ $route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpa
 $route['sales_order/split_faktur_batch']            = 'sales/C_SalesOrder/split_faktur_batch';
 $route['sales_order/simpan_split_faktur_batch']     = 'sales/C_SalesOrder/simpan_split_faktur_batch';
 $route['sales_order/detail_faktur_pecah/(:any)']     = 'sales/C_SalesOrder/detail_faktur_pecah/$1';
+$route['sales_order/cetak_faktur_pecah/(:any)']          = 'sales/C_SalesOrder/cetak_faktur_pecah/$1';
+$route['pecah_faktur/cetak/(:any)']                      = 'sales/C_SalesOrder/cetak_faktur_pecah/$1';
+$route['sales_order/cetak_semua_faktur_pecah']           = 'sales/C_SalesOrder/cetak_semua_faktur_pecah';
+$route['pecah_faktur/cetak_semua']                       = 'sales/C_SalesOrder/cetak_semua_faktur_pecah';
+$route['sales_order/hapus_faktur_pecah/(:any)']          = 'sales/C_SalesOrder/hapus_faktur_pecah/$1';
+$route['pecah_faktur/hapus/(:any)']                      = 'sales/C_SalesOrder/hapus_faktur_pecah/$1';
+$route['sales_order/unpost_faktur_pecah_batch']          = 'sales/C_SalesOrder/unpost_faktur_pecah_batch';
+$route['pecah_faktur/unpost_batch']                      = 'sales/C_SalesOrder/unpost_faktur_pecah_batch';
+$route['sales_order/ubah_customer_faktur_z']             = 'sales/C_SalesOrder/ubah_customer_faktur_z';
+$route['pecah_faktur/ubah_customer']                     = 'sales/C_SalesOrder/ubah_customer_faktur_z';
 $route['sales_order/customer_acak']                  = 'sales/C_SalesOrder/customer_acak';
-$route['sales_order/sync_customer_acak']             = 'sales/C_SalesOrder/sync_customer_acak';
+// Dinonaktifkan: sinkronisasi dari file cust acak.xlsx tidak dipakai lagi (import awal hanya sekali)
+// $route['sales_order/sync_customer_acak']             = 'sales/C_SalesOrder/sync_customer_acak';
+$route['sales_order/export_customer_acak']           = 'sales/C_SalesOrder/export_customer_acak';
 $route['sales_order/simpan_customer_acak']           = 'sales/C_SalesOrder/simpan_customer_acak';
 $route['sales_order/update_customer_acak']           = 'sales/C_SalesOrder/update_customer_acak';
 $route['sales_order/hapus_customer_acak/(:any)']      = 'sales/C_SalesOrder/hapus_customer_acak/$1';
@@ -908,6 +936,8 @@ $route['sales_order/get_next_kode_acak']             = 'sales/C_SalesOrder/get_n
 $route['sales_order/ajax_search_kios']               = 'sales/C_SalesOrder/ajax_search_kios';
 $route['sales_order/export_faktur_pecah']              = 'sales/C_SalesOrder/export_faktur_pecah';
 $route['pecah_faktur/export']                         = 'sales/C_SalesOrder/export_faktur_pecah';
+$route['sales_order/export_faktur_z_belum']           = 'sales/C_SalesOrder/export_faktur_z_belum';
+$route['pecah_faktur/export_belum']                   = 'sales/C_SalesOrder/export_faktur_z_belum';
 $route['sales_order/export_faktur_z_selesai']         = 'sales/C_SalesOrder/export_faktur_z_selesai';
 $route['pecah_faktur/export_selesai']                 = 'sales/C_SalesOrder/export_faktur_z_selesai';
 $route['sales_order/reset_pecah_faktur_induk/(:any)'] = 'sales/C_SalesOrder/reset_pecah_faktur_induk/$1';

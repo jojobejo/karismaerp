@@ -480,7 +480,7 @@ class M_Logistik extends CI_Model
                 ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
-            WHERE COALESCE(f.status, 'confirmed') <> 'cancelled'
+            WHERE COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur
@@ -683,7 +683,7 @@ class M_Logistik extends CI_Model
             LEFT JOIN tb_tmp_detaildo t
                 ON t.kd_faktur = f.no_faktur
                 AND t.kd_customer = f.kd_customer
-            WHERE COALESCE(f.status, 'confirmed') <> 'cancelled'
+            WHERE COALESCE(f.status, 'confirmed') NOT IN ('cancelled', 'draft')
             AND d.kd_faktur IS NULL
             AND t.kd_faktur IS NULL
             GROUP BY f.id_faktur, f.no_faktur
@@ -2270,17 +2270,17 @@ class M_Logistik extends CI_Model
     public function getbarangics()
     {
         return $this->db->query("SELECT 
-        b.kode_barang AS kd_system,
+        b.kd_system,
         a.nm_barang AS nama_barang,
-        (b.panjang * b.lebar * b.tinggi) AS dimensi,
+        (b.p * b.l * b.t) AS dimensi,
         a.exp_date,
         SUM(a.qty) AS tot_qty,
-        COALESCE(FLOOR(SUM(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)), 0) AS qty_box,
-        COALESCE((SUM(a.qty) - FLOOR(SUM(a.qty) / NULLIF((b.panjang * b.lebar * b.tinggi), 0)) * (b.panjang * b.lebar * b.tinggi)), SUM(a.qty)) AS qty_pcs
+        FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) AS qty_box,
+        (SUM(a.qty) - FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) * (b.p * b.l * b.t)) AS qty_pcs
     FROM tb_qty_lot a
     JOIN tbpo_barang b ON b.nama_barang = a.nm_barang
     JOIN tb_suplier c ON c.kd_suplier = a.suplier
-    GROUP BY a.nm_barang, a.exp_date, b.kode_barang, b.panjang, b.lebar, b.tinggi ")->result();
+    GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
     }
 
     public function list_item_ics()

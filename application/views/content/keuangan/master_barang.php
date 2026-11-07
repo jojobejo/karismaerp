@@ -3,7 +3,8 @@ $access = isset($master_barang_access) && is_array($master_barang_access) ? $mas
 $canFullEdit = !empty($access['can_full_edit']);
 $canInfoLainEdit = !empty($access['can_info_lain_edit']);
 $jobdesk = isset($access['jobdesk']) ? (string)$access['jobdesk'] : '';
-$dashboardUrl = base_url('dashboard/');
+$isAdmkeu = (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu');
+$dashboardUrl = base_url($isAdmkeu ? 'sales_order/pecah_faktur' : 'dashboard/');
 ?>
 <style>
     .master-barang-page .content-header {
@@ -444,11 +445,23 @@ $dashboardUrl = base_url('dashboard/');
 
             <section class="content">
                 <div class="container-fluid">
-                    <div class="page-title-row">
-                        <a href="<?= $dashboardUrl ?>" class="page-home-btn" title="Dashboard">
-                            <i class="fas fa-home"></i>
-                        </a>
-                        <h1 class="page-title">Master Barang</h1>
+                    <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $flashKey => $flashCls): ?>
+                        <?php if ($flashMsg = $this->session->flashdata($flashKey)): ?>
+                            <div class="alert alert-<?= $flashCls ?> alert-dismissible fade show shadow-sm">
+                                <i class="fas fa-<?= $flashKey === 'success' ? 'check-circle' : ($flashKey === 'error' ? 'exclamation-circle' : 'exclamation-triangle') ?> mr-1"></i>
+                                <?= $flashMsg ?>
+                                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
+                    <div class="page-title-row justify-content-between flex-wrap">
+                        <div class="d-flex align-items-center" style="gap: 10px;">
+                            <a href="<?= $dashboardUrl ?>" class="page-home-btn" title="<?= $isAdmkeu ? 'Pecah Faktur' : 'Dashboard' ?>">
+                                <i class="fas fa-home"></i>
+                            </a>
+                            <h1 class="page-title">Master Barang</h1>
+                        </div>
                     </div>
 
                     <div class="row">

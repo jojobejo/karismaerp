@@ -10,8 +10,9 @@
             $('#kd_suplier').select2({
                 theme: 'bootstrap4',
                 width: '100%',
-                placeholder: 'Pilih Supplier',
-                allowClear: true
+                placeholder: 'Pilih atau Ketik Supplier',
+                allowClear: true,
+                tags: true
             });
         }
 
@@ -210,10 +211,17 @@
             $('#kelompok').val(row.kelompok || '');
             $('#komposisi').val(row.komposisi || '');
             $('#grup').val(row.grup || '');
+            const suplierVal = row.kd_suplier || '';
+            if (suplierVal !== '' && $('#kd_suplier option[value="' + suplierVal.replace(/"/g, '\\"') + '"]').length === 0) {
+                $('#kd_suplier').append($('<option>', {
+                    value: suplierVal,
+                    text: (row.nama_suplier ? row.nama_suplier + ' (' + suplierVal + ')' : suplierVal)
+                }));
+            }
             if ($.fn.select2) {
-                $('#kd_suplier').val(row.kd_suplier || '').trigger('change');
+                $('#kd_suplier').val(suplierVal).trigger('change');
             } else {
-                $('#kd_suplier').val(row.kd_suplier || '');
+                $('#kd_suplier').val(suplierVal);
             }
             $('#stock_minimum').val(row.stock_minimum || 0);
             $('#produk_fokus').val(row.produk_fokus || '');
