@@ -15,6 +15,17 @@
         return str_replace(['\\','\'',"\r","\n","\t"], ['\\\\',"\\'", '','',''], (string)$v);
     }
 ?>
+<style>
+/* Hilangkan spinner panah atas/bawah pada input type number */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+}
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
@@ -60,6 +71,32 @@
                     <div class="alert alert-warning alert-dismissible fade show">
                         <?= $this->session->flashdata('warning') ?>
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($cancel_request_pending)): ?>
+                    <div class="alert alert-warning shadow-sm border-warning d-flex align-items-center justify-content-between p-3 mb-3 flex-wrap" style="border-left: 5px solid #f39c12;">
+                        <div class="mb-2 mb-md-0">
+                            <h6 class="font-weight-bold text-dark mb-1">
+                                <i class="fas fa-exclamation-triangle text-warning mr-1"></i> Permintaan Pembatalan SO Menunggu Persetujuan MNGSC (Manager SC)
+                            </h6>
+                            <div class="text-muted small">
+                                Diajukan oleh: <b><?= htmlspecialchars($cancel_request_pending['request_by']) ?></b> pada <?= date('d/m/Y H:i', strtotime($cancel_request_pending['request_at'])) ?><br>
+                                Alasan: <em>"<?= htmlspecialchars($cancel_request_pending['alasan'] ?? '-') ?>"</em>
+                            </div>
+                        </div>
+                        <?php if (!empty($is_atasan)): ?>
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <button type="button" class="btn btn-sm btn-success font-weight-bold" onclick="handleApproveCancelSo(<?= (int)$cancel_request_pending['id'] ?>, <?= (int)($so['id_so'] ?? 0) ?>)">
+                                    <i class="fas fa-check mr-1"></i> Setujui Pembatalan
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger font-weight-bold" onclick="handleRejectCancelSo(<?= (int)$cancel_request_pending['id'] ?>, <?= (int)($so['id_so'] ?? 0) ?>)">
+                                    <i class="fas fa-times mr-1"></i> Tolak
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <span class="badge badge-warning px-3 py-2 text-dark font-weight-bold"><i class="fas fa-clock mr-1"></i> Menunggu Approval MNGSC</span>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
@@ -166,7 +203,7 @@
                                             <select name="cara_pembayaran" id="cara_pembayaran" class="form-control" required>
                                                 <?php
                                                 $cp_val = $is_edit ? strtolower(trim((string)($so['cara_pembayaran'] ?? 'cash'))) : 'cash';
-                                                $cp_options = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG', 'tempo' => 'Tempo'];
+                                                $cp_options = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG'];
 
                                                 foreach ($cp_options as $cpKey => $cpLabel):
                                                 ?>
@@ -299,7 +336,7 @@
                                             <th style="width:85px" class="text-center">+Eceran</th>
                                             <th style="width:80px" class="text-center">Pcs</th>
                                             <th style="width:60px">Satuan</th>
-                                            <th style="width:160px">Harga/Pcs</th>
+                                            <th style="width:115px">Harga/Pcs</th>
                                             <th style="width:65px" class="text-center">Disc%</th>
                                             <th style="width:110px" class="text-right">Stl&nbsp;Disc</th>
                                             <th style="width:115px" class="text-right">Subtotal</th>
@@ -310,7 +347,7 @@
                                     <tfoot>
                                         <tr>
                                             <td colspan="9" class="text-right">GRAND TOTAL</td>
-                                            <td class="text-right" id="total-grand">0</td>
+                                            <td class="text-right font-weight-bold" id="total-grand">Rp 0</td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -328,7 +365,12 @@
                         </div>
                         <div class="col-6 text-right">
                             <!-- Tombol Batal & Simpan di pojok kanan bawah -->
-                             <button type="submit" class="btn btn-primary so-action-btn" id="btn-submit">
+                            <?php if ($is_edit && !in_array($so['status'] ?? '', ['completed', 'cancelled'], true) && empty($cancel_request_pending)): ?>
+                                <button type="button" class="btn btn-outline-danger so-action-btn mr-2" id="btn-cancel-so-action" onclick="openModalCancelSo(<?= (int)$so['id_so'] ?>, '<?= escJs($so['no_so'] ?? '') ?>')">
+                                    <i class="fas fa-times-circle mr-1"></i> Batalkan SO
+                                </button>
+                            <?php endif; ?>
+                            <button type="submit" class="btn btn-primary so-action-btn" id="btn-submit">
                                 <i class="fas fa-save"></i> Simpan SO
                             </button>
                             <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary so-action-btn mr-2">
@@ -675,12 +717,12 @@ function buatBaris(idx, d) {
 
     /* 2 Qty Box */
     h += '<td><input type="number" step="1" min="0" name="qty_box[]" id="qtybox_'+idx+'"'
-       + ' class="form-control form-control-sm text-center" value="'+qtyBox+'">'
+       + ' onwheel="this.blur()" class="form-control form-control-sm text-center" value="'+qtyBox+'">'
        + '<small class="text-muted d-block text-center">maks <span id="maxbox_'+idx+'">'+fmtNum(avBox,0)+'</span></small></td>';
 
     /* 3 Eceran */
     h += '<td><input type="number" step="1" min="0" name="qty_satuan[]" id="qtyecer_'+idx+'"'
-       + ' class="form-control form-control-sm text-center" value="'+qtySat+'">'
+       + ' onwheel="this.blur()" class="form-control form-control-sm text-center" value="'+qtySat+'">'
        + '<small class="text-muted d-block text-center">maks <span id="maxecer_'+idx+'">'+fmtNum(avEcer,0)+'</span></small></td>';
 
     /* 4 Total Pcs */
@@ -692,7 +734,7 @@ function buatBaris(idx, d) {
     /* 6 Harga (Manual Input) */
     h += '<td>'
        + '<input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" id="hrg_'+idx+'"'
-       + ' class="form-control form-control-sm" value="'+(hrg > 0 ? formatHargaInput(hrg) : '')+'" placeholder="Input harga" required>'
+       + ' class="form-control form-control-sm text-right" value="'+(hrg > 0 ? formatHargaInput(hrg) : '')+'" placeholder="Harga" required>'
        + '<div id="hargaapproval_wrap_'+idx+'" class="mt-1" style="'+(hargaApproval ? '' : 'display:none')+'">'
        +   '<select name="harga_approval_by[]" id="hargaapproval_'+idx+'" class="form-control form-control-sm">'
        +     '<option value="">-- Approval harga --</option>'
@@ -706,13 +748,13 @@ function buatBaris(idx, d) {
 
     /* 7 Disc */
     h += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" id="disc_'+idx+'"'
-       + ' class="form-control form-control-sm text-center" value="'+disc+'"></td>';
+       + ' onwheel="this.blur()" class="form-control form-control-sm text-center" value="'+disc+'"></td>';
 
     /* 8 Stl Disc */
     h += '<td class="text-right align-middle"><small class="text-muted d-block" style="font-size:10px">stl disc</small><b id="subdisc_'+idx+'">'+fmtNum(subDisc)+'</b></td>';
 
     /* 9 Subtotal */
-    h += '<td class="text-right align-middle"><b id="sub_'+idx+'">'+fmtNum(sub)+'</b></td>';
+    h += '<td class="text-right align-middle"><b id="sub_'+idx+'">Rp '+fmtNum(sub)+'</b></td>';
 
     /* 10 Hapus */
     h += '<td class="text-center align-middle"><button type="button" class="btn btn-xs btn-danger btn-remove" data-idx="'+idx+'"><i class="fas fa-trash"></i></button></td>';
@@ -841,7 +883,7 @@ function hitungBaris(idx) {
     var elS  = document.getElementById('sub_'    +idx);
     if (elQ)  elQ.textContent  = fmtNum(qK,0);
     if (elSD) elSD.textContent = fmtNum(sD);
-    if (elS)  elS.textContent  = fmtNum(tot);
+    if (elS)  elS.textContent  = 'Rp ' + fmtNum(tot);
 
     hitungGrand(); hitungTK();
 }
@@ -857,7 +899,7 @@ function hitungGrand() {
         var qK =(qB*getIsi(i))+qE;
         g += hrg*qK*(1-d/100);
     });
-    document.getElementById('total-grand').textContent = fmtNum(g);
+    document.getElementById('total-grand').textContent = 'Rp ' + fmtNum(g);
 }
 
 function hitungTK() {
@@ -1196,11 +1238,11 @@ function applyPlafonRestriction(plafon) {
 
     Array.prototype.forEach.call(sel.options, function(opt) {
         var val = opt.value;
-        if (isPlafon1000 && (val === 'bg' || val === 'tempo')) {
+        if (isPlafon1000 && val === 'bg') {
             opt.style.display = 'none';
             opt.disabled = true;
-            /* Jika nilai saat ini adalah bg/tempo, reset ke cash */
-            if (sel.value === 'bg' || sel.value === 'tempo') {
+            /* Jika nilai saat ini adalah bg, reset ke cash */
+            if (sel.value === 'bg') {
                 sel.value = 'cash';
             }
         } else {
@@ -1533,7 +1575,7 @@ document.getElementById('form-so').addEventListener('submit', function(e){
     var custPlafon = parsePlafonNumber(document.getElementById('customer_plafon').value);
     var cp = ((document.getElementById('cara_pembayaran') || {}).value || '').toLowerCase().trim();
     if (custPlafon !== null && custPlafon === 1000) {
-        if (cp === 'bg' || cp === 'tempo') {
+        if (cp === 'bg') {
             e.preventDefault();
             salesToast('error', 'Customer dengan plafon 1.000 hanya boleh menggunakan cara pembayaran Cash atau Transfer.');
             return;
@@ -1639,6 +1681,13 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         updateCustomerPiutangView(initialKdCustomer);
     }
 
+    // Mencegah scroll mouse mengubah nilai pada kolom input number (qty box, eceran, disc)
+    document.addEventListener('wheel', function(e) {
+        if (e.target && e.target.matches && e.target.matches('input[type="number"]')) {
+            e.target.blur();
+        }
+    }, { passive: true });
+
     setTimeout(function() {
         var firstField = document.querySelector('#form-so input[name="no_so"]');
         if (firstField) {
@@ -1647,5 +1696,167 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         }
     }, 100);
 })();
+
+var IS_ATASAN_USER = <?= !empty($is_atasan) ? 'true' : 'false' ?>;
+
+function openModalCancelSo(idSo, noSo) {
+    if (!window.Swal) {
+        var reason = prompt('Masukkan alasan pembatalan Sales Order ' + (noSo || '') + ':');
+        if (!reason) return;
+        submitCancelSoRequest(idSo, reason, '0');
+        return;
+    }
+
+    var directHtml = IS_ATASAN_USER 
+        ? '<div class="text-left mt-3 p-2 bg-light border rounded"><label class="small font-weight-bold text-dark mb-0" style="cursor:pointer;"><input type="checkbox" id="swal-direct-cancel" value="1" class="mr-1"> Sebagai MNGSC (Manager SC), langsung setujui pembatalan sekarang (Auto-Approve)</label></div>' 
+        : '';
+
+    Swal.fire({
+        title: 'Batalkan Sales Order?',
+        html: '<div class="text-left mb-2 text-muted small">Pembatalan Sales Order ' + (noSo ? '<b>' + noSo + '</b>' : '') + ' memerlukan persetujuan dari <b>MNGSC (Manager SC)</b>. Harap masukkan alasan pembatalan:</div>' +
+              '<textarea id="swal-cancel-reason" class="swal2-textarea m-0 w-100" placeholder="Tuliskan alasan pembatalan secara jelas..." style="box-sizing:border-box; font-size:14px; min-height:80px;"></textarea>' +
+              directHtml,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> Ajukan Pembatalan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc3545',
+        focusConfirm: false,
+        preConfirm: function() {
+            var el = document.getElementById('swal-cancel-reason');
+            var reason = el ? el.value.trim() : '';
+            if (!reason) {
+                Swal.showValidationMessage('Alasan pembatalan wajib diisi!');
+                return false;
+            }
+            var direct = document.getElementById('swal-direct-cancel') ? (document.getElementById('swal-direct-cancel').checked ? '1' : '0') : '0';
+            return { alasan: reason, direct_cancel: direct };
+        }
+    }).then(function(result) {
+        if (!result.isConfirmed || !result.value) return;
+        submitCancelSoRequest(idSo, result.value.alasan, result.value.direct_cancel);
+    });
+}
+
+function submitCancelSoRequest(idSo, alasan, directCancel) {
+    if (window.Swal) {
+        Swal.fire({ title: 'Memproses...', text: 'Mengirim permohonan pembatalan...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+    }
+    $.ajax({
+        url: BASE_URL + 'sales_order/request_cancel_so',
+        type: 'POST',
+        data: {
+            id_so: idSo,
+            alasan: alasan,
+            direct_cancel: directCancel || '0'
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: res.message || 'Permintaan pembatalan berhasil diproses.',
+                        confirmButtonText: 'OK'
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    alert(res.message);
+                    window.location.reload();
+                }
+            } else {
+                if (window.Swal) {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message || 'Terjadi kesalahan.' });
+                } else {
+                    alert(res.message || 'Gagal');
+                }
+            }
+        },
+        error: function(xhr) {
+            var msg = 'Terjadi kesalahan koneksi server.';
+            try { var err = JSON.parse(xhr.responseText); if (err && err.message) msg = err.message; } catch(e){}
+            if (window.Swal) {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+            } else {
+                alert(msg);
+            }
+        }
+    });
+}
+
+function handleApproveCancelSo(idRequest, idSo) {
+    Swal.fire({
+        title: 'Setujui Pembatalan SO?',
+        text: 'Sales Order ini akan resmi DIBATALKAN dan alokasi stok akan dilepas.',
+        icon: 'question',
+        input: 'text',
+        inputPlaceholder: 'Catatan approval (opsional)...',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-check mr-1"></i> Ya, Setujui',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#28a745'
+    }).then(function(result) {
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'Menyetujui...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+        $.ajax({
+            url: BASE_URL + 'sales_order/approve_cancel_so',
+            type: 'POST',
+            data: { id_request: idRequest, id_so: idSo, catatan: result.value || '' },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    Swal.fire({ icon: 'success', title: 'Disetujui', text: res.message }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+                }
+            },
+            error: function() {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan saat menyetujui pembatalan.' });
+            }
+        });
+    });
+}
+
+function handleRejectCancelSo(idRequest, idSo) {
+    Swal.fire({
+        title: 'Tolak Pembatalan SO?',
+        text: 'Permintaan pembatalan akan ditolak dan Sales Order akan tetap berjalan.',
+        icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'Alasan penolakan wajib diisi...',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-times mr-1"></i> Tolak Permintaan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc3545',
+        inputValidator: function(val) {
+            if (!val || !val.trim()) return 'Alasan penolakan wajib diisi!';
+        }
+    }).then(function(result) {
+        if (!result.isConfirmed || !result.value) return;
+        Swal.fire({ title: 'Menolak...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+        $.ajax({
+            url: BASE_URL + 'sales_order/reject_cancel_so',
+            type: 'POST',
+            data: { id_request: idRequest, id_so: idSo, catatan: result.value },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    Swal.fire({ icon: 'success', title: 'Ditolak', text: res.message }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+                }
+            },
+            error: function() {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan saat menolak pembatalan.' });
+            }
+        });
+    });
+}
 </script>
 </body>

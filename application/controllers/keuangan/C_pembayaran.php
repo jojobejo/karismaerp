@@ -735,14 +735,17 @@ class C_pembayaran extends CI_Controller
         }
 
         if ($save_success) {
-            // Restore plafon
+            // Pengembalian plafon: HANYA jika faktur sebelumnya memotong plafon (transfer, bg, tempo)
             if (!$is_pending && ($jumlah_pembayaran + $jumlah_diskon) > 0) {
-                $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
-                if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
-                    $restore_amount = (float)($jumlah_pembayaran + $jumlah_diskon);
-                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $restore_amount, FALSE);
-                    $this->db->where('kd_customer', $faktur['kd_customer']);
-                    $this->db->update('tb_customer');
+                $faktur_cp = strtolower(trim((string)($faktur['cara_pembayaran'] ?? '')));
+                if (in_array($faktur_cp, ['transfer', 'bg', 'tempo'], true)) {
+                    $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
+                    if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                        $restore_amount = (float)($jumlah_pembayaran + $jumlah_diskon);
+                        $this->db->set('plafon_aktif', 'plafon_aktif + ' . $restore_amount, FALSE);
+                        $this->db->where('kd_customer', $faktur['kd_customer']);
+                        $this->db->update('tb_customer');
+                    }
                 }
             }
 

@@ -172,6 +172,11 @@
                                                 <a href="<?= $detail_url ?>" class="btn btn-info btn-sm">
                                                     <i class="fas fa-play-circle mr-1"></i>Lanjut Loading
                                                 </a>
+                                                <?php if ($can_start): ?>
+                                                <button type="button" class="btn btn-outline-danger btn-sm btn-cancel-start-route ml-1" data-rute="<?= htmlspecialchars($route['kd_rute'], ENT_QUOTES, 'UTF-8') ?>" title="Batalkan start loading">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                                <?php endif; ?>
                                             <?php elseif ($can_start): ?>
                                                 <button type="button"
                                                         class="btn btn-success btn-sm btn-start-route"
@@ -240,6 +245,34 @@ $(document).on('click', '.btn-start-route', function() {
         error: function() {
             alert('Terjadi kesalahan koneksi saat memulai loading.');
             button.prop('disabled', false).html('<i class="fas fa-play mr-1"></i>Start');
+        }
+    });
+});
+
+$(document).on('click', '.btn-cancel-start-route', function() {
+    var button = $(this);
+    var route = button.data('rute');
+
+    if (!confirm('Batalkan start loading rute ' + route + '?\nStatus akan dikembalikan ke Siap Loading.')) return;
+
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+    $.ajax({
+        url: '<?= base_url("checker/so_loading/cancel") ?>',
+        type: 'POST',
+        dataType: 'json',
+        data: { kd_rute: route },
+        success: function(response) {
+            if (response.status) {
+                alert(response.message || 'Start loading berhasil dibatalkan.');
+                window.location.reload();
+                return;
+            }
+            alert(response.message || 'Gagal membatalkan loading.');
+            button.prop('disabled', false).html('<i class="fas fa-undo"></i>');
+        },
+        error: function() {
+            alert('Terjadi kesalahan koneksi saat membatalkan loading.');
+            button.prop('disabled', false).html('<i class="fas fa-undo"></i>');
         }
     });
 });

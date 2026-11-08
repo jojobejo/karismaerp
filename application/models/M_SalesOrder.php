@@ -119,6 +119,8 @@ class M_SalesOrder extends CI_Model
                 $this->db->query("ALTER TABLE `tbso_faktur_penjualan` ADD COLUMN `tanggal_selesai_do` DATE NULL DEFAULT NULL AFTER `tanggal_faktur`");
             }
         }
+
+        $this->ensure_cancel_so_request_table();
     }
 
     // ================================================================
@@ -1420,6 +1422,15 @@ class M_SalesOrder extends CI_Model
             'update_at' => date('Y-m-d H:i:s'),
         ]);
 
+        // Jika SO adalah Test Market, mutasikan fisik barang dari Gudang Asal ke Gudang Test Market
+        if (!empty($so['is_test_market'])) {
+            $this->load->model('M_TestMarket');
+            if (!$this->M_TestMarket->transfer_so_to_test_market($id_so, $update_by)) {
+                $this->db->trans_rollback();
+                return false;
+            }
+        }
+
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
@@ -2337,6 +2348,12 @@ class M_SalesOrder extends CI_Model
         ]);
 
         if ($status === 'cancelled') {
+            // Jika SO Test Market yang sudah termutasi dibatalkan, kembalikan mutasi ke Gudang Induk
+            if (!empty($so['is_test_market'])) {
+                $this->load->model('M_TestMarket');
+                $this->M_TestMarket->reverse_transfer_so_test_market($id_so, $update_by);
+            }
+
             $gudang_id = $so['gudang_id'];
             $details  = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
 
@@ -4432,6 +4449,176 @@ class M_SalesOrder extends CI_Model
             return true;
         }
         return false;
+    }
+
+    /**
+     * Memastikan tabel permintaan pembatalan SO tersedia.
+     */
+    public function ensure_cancel_so_request_table()
+    {
+        if (!$this->db->table_exists('tbso_cancel_so_request')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tbso_cancel_so_request` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `id_so` INT NOT NULL,
+                `no_so` VARCHAR(30) NOT NULL,
+                `alasan` TEXT NULL,
+                `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                `request_by` VARCHAR(50) NOT NULL,
+                `request_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `approve_by` VARCHAR(50) NULL,
+                `approve_at` DATETIME NULL,
+                `catatan_approval` TEXT NULL,
+                KEY `idx_id_so` (`id_so`),
+                KEY `idx_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
+
+    /**
+     * Mengambil permintaan pembatalan aktif/pending untuk SO tertentu.
+     */
+    public function get_pending_cancel_so_request($id_so)
+    {
+        $this->ensure_cancel_so_request_table();
+        return $this->db->where('id_so', (int)$id_so)
+            ->where('status', 'pending')
+            ->order_by('id', 'DESC')
+            ->get('tbso_cancel_so_request')
+            ->row_array();
+    }
+
+    /**
+     * Mengajukan permintaan pembatalan Sales Order ke atasan.
+     */
+    public function submit_cancel_so_request($id_so, $no_so, $alasan, $username)
+    {
+        $this->ensure_cancel_so_request_table();
+        $existing = $this->get_pending_cancel_so_request($id_so);
+        if ($existing) {
+            return ['success' => false, 'message' => 'Permintaan pembatalan untuk SO ini sudah diajukan dan sedang menunggu persetujuan atasan.'];
+        }
+
+        $inserted = $this->db->insert('tbso_cancel_so_request', [
+            'id_so'      => (int)$id_so,
+            'no_so'      => $no_so,
+            'alasan'     => $alasan,
+            'status'     => 'pending',
+            'request_by' => $username,
+            'request_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        if ($inserted) {
+            $this->M_ActivityLog->log(
+                $no_so, '', 'REQUEST_CANCEL_SO',
+                'Mengajukan permohonan pembatalan SO ke MNGSC (Manager SC). Alasan: ' . $alasan,
+                $username
+            );
+            return ['success' => true, 'message' => 'Permintaan pembatalan SO berhasil diajukan ke MNGSC (Manager SC).'];
+        }
+
+        return ['success' => false, 'message' => 'Gagal menyimpan permohonan pembatalan.'];
+    }
+
+    /**
+     * Persetujuan pembatalan SO oleh atasan (SO resmi dibatalkan).
+     */
+    public function approve_cancel_so_request($id_request, $username, $catatan = '')
+    {
+        $this->ensure_cancel_so_request_table();
+        $req = $this->db->get_where('tbso_cancel_so_request', ['id' => (int)$id_request, 'status' => 'pending'])->row_array();
+        if (!$req) {
+            return ['success' => false, 'message' => 'Permintaan pembatalan tidak ditemukan atau sudah diproses.'];
+        }
+
+        $id_so = (int)$req['id_so'];
+        $so = $this->get_so($id_so);
+        if (!$so) {
+            return ['success' => false, 'message' => 'Data Sales Order tidak ditemukan.'];
+        }
+
+        if (in_array($so['status'], ['completed', 'cancelled'], true)) {
+            return ['success' => false, 'message' => 'SO sudah dalam status ' . $so['status'] . ' dan tidak dapat dibatalkan.'];
+        }
+
+        // Cek apakah ada faktur yang sudah terbit
+        $fakturs = $this->get_faktur_by_so($id_so);
+        if (!empty($fakturs)) {
+            return ['success' => false, 'message' => 'SO tidak dapat dibatalkan karena sudah memiliki ' . count($fakturs) . ' Faktur Penjualan. Batalkan semua faktur terlebih dahulu.'];
+        }
+
+        $this->db->trans_start();
+
+        // 1. Update status request
+        $this->db->where('id', (int)$id_request)->update('tbso_cancel_so_request', [
+            'status'           => 'approved',
+            'approve_by'       => $username,
+            'approve_at'       => date('Y-m-d H:i:s'),
+            'catatan_approval' => $catatan,
+        ]);
+
+        // 2. Batalkan SO (otomatis release stock batch)
+        $this->update_status($id_so, 'cancelled', $username);
+
+        // 3. Kembalikan plafon jika pembayaran SO adalah Transfer atau BG
+        $so_cp = strtolower(trim((string)($so['cara_pembayaran'] ?? '')));
+        $is_so_potong = in_array($so_cp, ['transfer', 'bg'], true);
+        if ($is_so_potong && !empty($so['kd_customer'])) {
+            $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
+            if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                $details = $this->get_so_detail($id_so);
+                $so_total = 0;
+                foreach ($details as $d) {
+                    $so_total += (float)$d['total_harga'];
+                }
+                if ($so_total > 0) {
+                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $so_total, FALSE);
+                    $this->db->where('kd_customer', $so['kd_customer']);
+                    $this->db->update('tb_customer');
+                }
+            }
+        }
+
+        // 4. Log aktivitas
+        $this->M_ActivityLog->log(
+            $so['no_so'] ?? '', '', 'CANCEL_SO',
+            'MNGSC (Manager SC) (' . $username . ') menyetujui pembatalan SO. Catatan: ' . ($catatan ?: '-'),
+            $username
+        );
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['success' => false, 'message' => 'Terjadi kesalahan saat memproses pembatalan SO.'];
+        }
+
+        return ['success' => true, 'message' => 'Sales Order ' . htmlspecialchars($so['no_so']) . ' berhasil disetujui untuk dibatalkan.'];
+    }
+
+    /**
+     * Penolakan permohonan pembatalan SO oleh atasan.
+     */
+    public function reject_cancel_so_request($id_request, $username, $catatan = '')
+    {
+        $this->ensure_cancel_so_request_table();
+        $req = $this->db->get_where('tbso_cancel_so_request', ['id' => (int)$id_request, 'status' => 'pending'])->row_array();
+        if (!$req) {
+            return ['success' => false, 'message' => 'Permintaan pembatalan tidak ditemukan atau sudah diproses.'];
+        }
+
+        $this->db->where('id', (int)$id_request)->update('tbso_cancel_so_request', [
+            'status'           => 'rejected',
+            'approve_by'       => $username,
+            'approve_at'       => date('Y-m-d H:i:s'),
+            'catatan_approval' => $catatan,
+        ]);
+
+        $this->M_ActivityLog->log(
+            $req['no_so'] ?? '', '', 'REJECT_CANCEL_SO',
+            'MNGSC (Manager SC) (' . $username . ') menolak permohonan pembatalan SO. Alasan penolakan: ' . ($catatan ?: '-'),
+            $username
+        );
+
+        return ['success' => true, 'message' => 'Permintaan pembatalan SO telah ditolak. SO tetap aktif.'];
     }
 
 }

@@ -442,6 +442,71 @@ class M_Checker extends CI_Model
         return $this->db->where('id', $activity['id'])->update($table, $data);
     }
 
+    /**
+     * Membatalkan proses start loading rute dan mengembalikan status ke SIAP_LOADING.
+     */
+    public function cancel_route_loading($rute)
+    {
+        $activity = $this->get_route_loading_activity($rute);
+        if (!$activity) {
+            return false;
+        }
+
+        if ($activity['status'] === 'DONE') {
+            return false;
+        }
+
+        $table = $activity['loading_type'] === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        $data = [
+            'status'                   => 'SIAP_LOADING',
+            'waktu_mulai'              => null,
+            'nik_checker'              => null,
+            'nm_checker'               => null,
+            'progres'                  => 0,
+            'is_paused'                => 0,
+            'paused_at'                => null,
+            'total_pause_secs'         => 0,
+            'pernah_pause'             => 0,
+            'waktu_mulai_siapkan'      => null,
+            'waktu_selesai_siapkan'    => null,
+            'is_paused_siapkan'        => 0,
+            'paused_at_siapkan'        => null,
+            'total_pause_secs_siapkan' => 0,
+            'pernah_pause_siapkan'     => 0,
+            'progres_siapkan'          => 0
+        ];
+
+        $ok = $this->db->where('id', $activity['id'])->update($table, $data);
+
+        // Reset status trip jika saat ini PROSES_LOADING
+        if ($ok && !empty($activity['id_trip'])) {
+            $trip = $this->db->get_where('tb_delivery_trip', ['id_trip' => (int)$activity['id_trip']])->row_array();
+            if ($trip && $trip['status'] === 'PROSES_LOADING') {
+                $this->db->where('id_trip', (int)$activity['id_trip'])->update('tb_delivery_trip', [
+                    'status' => 'SIAP_LOADING'
+                ]);
+            }
+        }
+
+        // Reset item detail yang sempat diverifikasi tapi belum terbit DO
+        $rute_clean = strtoupper(trim((string)$rute));
+        $this->db->query("
+            UPDATE tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            SET sod.checker_loaded = 0, sod.qty_checker_loaded = NULL, sod.qty_tidak_terkirim = 0
+            WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM tbso_faktur_detail fd
+                  JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+                  WHERE fd.id_so_detail = sod.id
+              )
+        ", [$rute_clean]);
+
+        return $ok;
+    }
+
     public function update_route_loading_progress($rute, $tgl_transaksi = null)
     {
         $activity = $this->get_route_loading_activity($rute);

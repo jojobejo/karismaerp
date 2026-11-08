@@ -43,6 +43,15 @@
     .unloaded-row {
         transition: background-color 0.3s ease;
     }
+    /* Hilangkan spinner panah atas/bawah pada input type number */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -171,6 +180,12 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                 <?= $is_preparing_goods ? 'Selesai Siapkan' : 'Siapkan Barang' ?>
                                             </button>
                                         <?php endif; ?>
+                                        <button type="button"
+                                                id="btn-cancel-start-loading"
+                                                class="btn btn-sm btn-outline-danger ml-2"
+                                                title="Batalkan start loading">
+                                            <i class="fas fa-undo mr-1"></i>Batalkan Start Loading
+                                        </button>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -216,6 +231,11 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                             $qty_box_input = $isi_item > 1 ? floor($qty_aktual / $isi_item) : 0;
                                             $qty_pcs_input = $isi_item > 1 ? fmod($qty_aktual, $isi_item) : $qty_aktual;
                                             $qty_box_max = $isi_item > 1 ? floor($qty_maks_muat / $isi_item) : 0;
+                                            $qty_pcs_max = $isi_item > 1 ? fmod($qty_maks_muat, $isi_item) : $qty_maks_muat;
+
+                                            // Kunci kolom box jika tidak ada box, atau kunci kolom pcs jika tidak ada eceran
+                                            $is_box_disabled = ($isi_item > 1 && $qty_box_max <= 0);
+                                            $is_pcs_disabled = ($isi_item > 1 && $qty_box_max > 0 && $qty_pcs_max <= 0);
                                         ?>
                                             <tr class="<?= $row_class ?>" id="row-<?= $item['id'] ?>">
                                                 <td class="text-center"><?= $no++ ?></td>
@@ -235,7 +255,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                 </td>
                                                 <td class="text-right font-weight-bold" style="font-size: 1.05rem;">
                                                     <?php
-                                                    $qty = (float)($item['qty_siap_faktur'] !== null ? $item['qty_siap_faktur'] : $item['qty']);
+                                                     $qty = (float)($item['qty_siap_faktur'] !== null ? $item['qty_siap_faktur'] : $item['qty']);
                                                     $isi = max(1, (int)($item['isi_per_box'] ?? 1));
                                                     if ($isi > 1) {
                                                         $qty_box = floor($qty / $isi);
@@ -269,21 +289,27 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                                 <div class="input-group input-group-sm mr-1" style="width: 105px;">
                                                                     <input type="number"
                                                                            class="form-control text-right qty-loaded-box"
-                                                                           value="<?= (int)$qty_box_input ?>"
+                                                                           value="<?= $is_box_disabled ? 0 : (int)$qty_box_input ?>"
                                                                            min="0"
                                                                            max="<?= (int)$qty_box_max ?>"
                                                                            step="1"
-                                                                           <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                                           onwheel="this.blur()"
+                                                                           style="<?= $is_box_disabled ? 'background-color: #e9ecef; cursor: not-allowed; color: #6c757d;' : '' ?>"
+                                                                           title="<?= $is_box_disabled ? 'Barang ini hanya satuan eceran/pcs (tidak ada box)' : '' ?>"
+                                                                           <?= (!$can_operate_loading || $is_box_disabled) ? 'disabled readonly tabindex="-1"' : '' ?>>
                                                                     <div class="input-group-append"><span class="input-group-text">box</span></div>
                                                                 </div>
                                                                 <div class="input-group input-group-sm" style="width: 105px;">
                                                                     <input type="number"
                                                                            class="form-control text-right qty-loaded-pcs"
-                                                                           value="<?= rtrim(rtrim(number_format($qty_pcs_input, 3, '.', ''), '0'), '.') ?>"
+                                                                           value="<?= $is_pcs_disabled ? 0 : rtrim(rtrim(number_format($qty_pcs_input, 3, '.', ''), '0'), '.') ?>"
                                                                            min="0"
                                                                            max="<?= $isi_item - 1 ?>"
                                                                            step="1"
-                                                                           <?= !$can_operate_loading ? 'disabled' : '' ?>>
+                                                                           onwheel="this.blur()"
+                                                                           style="<?= $is_pcs_disabled ? 'background-color: #e9ecef; cursor: not-allowed; color: #6c757d;' : '' ?>"
+                                                                           title="<?= $is_pcs_disabled ? 'Barang ini hanya satuan box utuh (tidak ada eceran/pcs)' : '' ?>"
+                                                                           <?= (!$can_operate_loading || $is_pcs_disabled) ? 'disabled readonly tabindex="-1"' : '' ?>>
                                                                     <div class="input-group-append"><span class="input-group-text">pcs</span></div>
                                                                 </div>
                                                             </div>
@@ -295,6 +321,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                                        min="0"
                                                                        max="<?= number_format($qty_maks_muat, 3, '.', '') ?>"
                                                                        step="0.001"
+                                                                       onwheel="this.blur()"
                                                                        <?= !$can_operate_loading ? 'disabled' : '' ?>>
                                                                 <div class="input-group-append"><span class="input-group-text"><?= htmlspecialchars($item['satuan']) ?></span></div>
                                                             </div>
@@ -465,6 +492,43 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Tombol Batalkan Start Loading (jika salah mulai)
+    $('#btn-cancel-start-loading').on('click', function() {
+        if (!confirm('Apakah Anda yakin ingin membatalkan Start Loading untuk rute ' + kdRute + '?\n\nStatus rute akan dikembalikan ke Siap Loading, waktu mulai akan di-reset, dan status muat akan dikembalikan.')) {
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Membatalkan...');
+
+        $.ajax({
+            url: '<?= base_url("checker/so_loading/cancel") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { kd_rute: kdRute },
+            success: function(response) {
+                if (response.status) {
+                    alert(response.message || 'Start loading berhasil dibatalkan.');
+                    window.location.reload();
+                } else {
+                    alert(response.message || 'Gagal membatalkan loading.');
+                    btn.prop('disabled', false).html('<i class="fas fa-undo mr-1"></i>Batalkan Start Loading');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Terjadi kesalahan koneksi: ' + error);
+                btn.prop('disabled', false).html('<i class="fas fa-undo mr-1"></i>Batalkan Start Loading');
+            }
+        });
+    });
+
+    // Mencegah perubahan nilai input number saat scroll mouse
+    document.addEventListener('wheel', function(e) {
+        if (e.target && e.target.matches && e.target.matches('input[type="number"]')) {
+            e.target.blur();
+        }
+    }, { passive: true });
 
     // Tombol ✅ / ❌ per baris
     $(document).on('click', '.btn-load-yes, .btn-load-no', function() {

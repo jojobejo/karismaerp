@@ -768,6 +768,7 @@ $route['checker']                                   = 'logistik/C_Checker/index'
 $route['checker/so_loading']                        = 'logistik/C_Checker/so_loading';
 $route['checker/so_loading/detail/(:any)']          = 'logistik/C_Checker/so_loading_detail/$1';
 $route['checker/so_loading/start']                  = 'logistik/C_Checker/start_so_loading_rute';
+$route['checker/so_loading/cancel']                 = 'logistik/C_Checker/cancel_so_loading_rute';
 $route['checker/so_loading/pause']                  = 'logistik/C_Checker/pause_so_loading_rute';
 $route['checker/so_loading/prepare']                = 'logistik/C_Checker/prepare_so_loading_rute';
 $route['checker/so_loading/open_additional']         = 'logistik/C_Checker/open_additional_load';
@@ -1115,6 +1116,11 @@ $route['sales_order/request_cancel_partial']               = 'sales/C_SalesOrder
 $route['sales_order/admin_sc_get_pending_cancel_requests'] = 'sales/C_SalesOrder/admin_sc_get_pending_cancel_requests';
 $route['sales_order/admin_sc_approve_cancel_partial']      = 'sales/C_SalesOrder/admin_sc_approve_cancel_partial';
 $route['sales_order/admin_sc_reject_cancel_partial']       = 'sales/C_SalesOrder/admin_sc_reject_cancel_partial';
+
+// Pembatalan Sales Order (Cancel SO dengan Approval Atasan)
+$route['sales_order/request_cancel_so']                     = 'sales/C_SalesOrder/request_cancel_so';
+$route['sales_order/approve_cancel_so']                     = 'sales/C_SalesOrder/approve_cancel_so';
+$route['sales_order/reject_cancel_so']                      = 'sales/C_SalesOrder/reject_cancel_so';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

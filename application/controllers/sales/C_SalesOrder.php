@@ -495,6 +495,14 @@ class C_SalesOrder extends CI_Controller
         redirect('sales_order');
     }
 
+    private function _isAtasanSc()
+    {
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        $role    = strtoupper((string)$this->session->userdata('role'));
+        return in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN', 'KADEPSC', 'DIREKSI'], true)
+            || in_array($role, ['ADMIN', 'SUPERADMIN', 'DIREKSI'], true);
+    }
+
     private function _getFakturUserPrefix()
     {
         $this->_ensureFakturPrefixColumn();
@@ -1337,6 +1345,8 @@ class C_SalesOrder extends CI_Controller
         $data['details']        = [];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
+        $data['is_atasan']              = $this->_isAtasanSc();
+        $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_form.php', $data);
@@ -1457,8 +1467,9 @@ class C_SalesOrder extends CI_Controller
         $id_so = $this->M_SalesOrder->simpan_so($header, $details);
 
         if ($id_so) {
-            // Deduct plafon customer
-            if (!empty($post['customer_id'])) {
+            // Pengurangan plafon customer: HANYA jika pembayaran Transfer atau BG (Cash tidak mengurangi plafon)
+            $is_potong_plafon = in_array(strtolower(trim((string)$cara_pembayaran_so)), ['transfer', 'bg'], true);
+            if ($is_potong_plafon && !empty($post['customer_id'])) {
                 $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
                 if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
                     $so_total = 0;
@@ -1548,6 +1559,8 @@ class C_SalesOrder extends CI_Controller
         $data['total_faktur']      = $total_faktur;
         $data['total_outstanding'] = $total_outstanding;
         $data['total_available_faktur'] = $total_available_faktur;
+        $data['is_atasan']              = $this->_isAtasanSc();
+        $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -1628,6 +1641,8 @@ class C_SalesOrder extends CI_Controller
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
+        $data['is_atasan']              = $this->_isAtasanSc();
+        $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_form.php', $data);
@@ -1758,9 +1773,11 @@ class C_SalesOrder extends CI_Controller
         $result = $this->M_SalesOrder->update_so($id_so, $header, $details);
 
         if ($result) {
-            // Plafon adjustments
-            // 1. Refund old total to old customer
-            if ($old_total > 0 && !empty($old_customer)) {
+            // Penyesuaian plafon
+            // 1. Kembalikan plafon transaksi lama HANYA jika metode pembayaran sebelumnya Transfer atau BG
+            $old_cp = strtolower(trim((string)($so['cara_pembayaran'] ?? '')));
+            $is_old_potong = in_array($old_cp, ['transfer', 'bg'], true);
+            if ($is_old_potong && $old_total > 0 && !empty($old_customer)) {
                 $old_cust_check = $this->db->get_where('tb_customer', ['kd_customer' => $old_customer])->row_array();
                 if ($old_cust_check && isset($old_cust_check['plafon_aktif']) && (float)$old_cust_check['plafon_aktif'] != 1000) {
                     $this->db->set('plafon_aktif', 'plafon_aktif + ' . $old_total, FALSE);
@@ -1769,8 +1786,10 @@ class C_SalesOrder extends CI_Controller
                 }
             }
             
-            // 2. Deduct new total from new customer
-            if (!empty($post['customer_id'])) {
+            // 2. Potong plafon customer baru HANYA jika metode pembayaran baru adalah Transfer atau BG
+            $new_cp = strtolower(trim((string)$cara_pembayaran_so));
+            $is_new_potong = in_array($new_cp, ['transfer', 'bg'], true);
+            if ($is_new_potong && !empty($post['customer_id'])) {
                 $new_total = 0;
                 foreach ($details as $d) {
                     $new_total += (float)$d['total_harga'];
@@ -1875,18 +1894,22 @@ class C_SalesOrder extends CI_Controller
 
         $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->_getUsername());
 
-        // Restore plafon
-        $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
-        if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
-            $details = $this->M_SalesOrder->get_so_detail($id_so);
-            $so_total = 0;
-            foreach ($details as $d) {
-                $so_total += (float)$d['total_harga'];
-            }
-            if ($so_total > 0) {
-                $this->db->set('plafon_aktif', 'plafon_aktif + ' . $so_total, FALSE);
-                $this->db->where('kd_customer', $so['kd_customer']);
-                $this->db->update('tb_customer');
+        // Kembalikan plafon jika pembayaran SO yang dibatalkan adalah Transfer atau BG (karena Cash tidak memotong plafon)
+        $so_cp = strtolower(trim((string)($so['cara_pembayaran'] ?? '')));
+        $is_so_potong = in_array($so_cp, ['transfer', 'bg'], true);
+        if ($is_so_potong) {
+            $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
+            if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                $details = $this->M_SalesOrder->get_so_detail($id_so);
+                $so_total = 0;
+                foreach ($details as $d) {
+                    $so_total += (float)$d['total_harga'];
+                }
+                if ($so_total > 0) {
+                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $so_total, FALSE);
+                    $this->db->where('kd_customer', $so['kd_customer']);
+                    $this->db->update('tb_customer');
+                }
             }
         }
 
@@ -1898,6 +1921,154 @@ class C_SalesOrder extends CI_Controller
 
         $this->session->set_flashdata('success', 'Sales Order <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil dibatalkan.');
         redirect('sales_order');
+    }
+
+    // ================================================================
+    // PEMBATALAN SALES ORDER DENGAN APPROVAL ATASAN
+    // ================================================================
+
+    /**
+     * Mengajukan permohonan pembatalan Sales Order ke atasan
+     */
+    public function request_cancel_so()
+    {
+        while (ob_get_level()) ob_end_clean();
+        $id_so  = (int)$this->input->post('id_so');
+        $alasan = trim((string)$this->input->post('alasan'));
+
+        if (!$id_so) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'ID Sales Order tidak valid.'
+            ]));
+            return;
+        }
+
+        if (empty($alasan)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Alasan pembatalan wajib diisi.'
+            ]));
+            return;
+        }
+
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Sales Order tidak ditemukan.'
+            ]));
+            return;
+        }
+
+        if (in_array($so['status'], ['completed', 'cancelled'], true)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'SO sudah dalam status ' . $so['status'] . ' dan tidak dapat dibatalkan.'
+            ]));
+            return;
+        }
+
+        // Cek apakah sudah ada faktur penjualan yang terbit
+        $fakturs = $this->M_SalesOrder->get_faktur_by_so($id_so);
+        if (!empty($fakturs)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'SO tidak dapat dibatalkan karena sudah memiliki ' . count($fakturs) . ' Faktur Penjualan. Batalkan semua faktur terlebih dahulu.'
+            ]));
+            return;
+        }
+
+        // Jika user adalah Atasan dan memilih opsi eksekusi langsung
+        $is_atasan = $this->_isAtasanSc();
+        $auto_approve = $is_atasan && ($this->input->post('direct_cancel') == '1');
+
+        if ($auto_approve) {
+            $res = $this->M_SalesOrder->submit_cancel_so_request($id_so, $so['no_so'], $alasan, $this->_getUsername());
+            if ($res['success']) {
+                $pending = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
+                $app_res = $this->M_SalesOrder->approve_cancel_so_request($pending['id'], $this->_getUsername(), 'Disetujui langsung oleh Atasan: ' . $alasan);
+                $this->output->set_content_type('application/json')->set_output(json_encode($app_res));
+                return;
+            }
+        }
+
+        $res = $this->M_SalesOrder->submit_cancel_so_request($id_so, $so['no_so'], $alasan, $this->_getUsername());
+        $this->output->set_content_type('application/json')->set_output(json_encode($res));
+    }
+
+    /**
+     * Persetujuan pembatalan Sales Order oleh Atasan
+     */
+    public function approve_cancel_so()
+    {
+        while (ob_get_level()) ob_end_clean();
+        if (!$this->_isAtasanSc()) {
+            $this->output->set_status_header(403)->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya MNGSC (Manager SC) atau Admin yang dapat menyetujui pembatalan SO.'
+            ]));
+            return;
+        }
+
+        $id_request = (int)$this->input->post('id_request');
+        $id_so      = (int)$this->input->post('id_so');
+        $catatan    = trim((string)$this->input->post('catatan'));
+
+        if (!$id_request && $id_so) {
+            $pending = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
+            if ($pending) {
+                $id_request = (int)$pending['id'];
+            }
+        }
+
+        if (!$id_request) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'ID permohonan pembatalan tidak ditemukan.'
+            ]));
+            return;
+        }
+
+        $res = $this->M_SalesOrder->approve_cancel_so_request($id_request, $this->_getUsername(), $catatan);
+        $this->output->set_content_type('application/json')->set_output(json_encode($res));
+    }
+
+    /**
+     * Penolakan permohonan pembatalan Sales Order oleh Atasan
+     */
+    public function reject_cancel_so()
+    {
+        while (ob_get_level()) ob_end_clean();
+        if (!$this->_isAtasanSc()) {
+            $this->output->set_status_header(403)->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya MNGSC (Manager SC) atau Admin yang dapat menolak pembatalan SO.'
+            ]));
+            return;
+        }
+
+        $id_request = (int)$this->input->post('id_request');
+        $id_so      = (int)$this->input->post('id_so');
+        $catatan    = trim((string)$this->input->post('catatan'));
+
+        if (!$id_request && $id_so) {
+            $pending = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
+            if ($pending) {
+                $id_request = (int)$pending['id'];
+            }
+        }
+
+        if (!$id_request) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'ID permohonan pembatalan tidak ditemukan.'
+            ]));
+            return;
+        }
+
+        $res = $this->M_SalesOrder->reject_cancel_so_request($id_request, $this->_getUsername(), $catatan);
+        $this->output->set_content_type('application/json')->set_output(json_encode($res));
     }
 
     // ================================================================

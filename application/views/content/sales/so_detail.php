@@ -149,14 +149,40 @@ $format_payment = function($value) {
                        data-confirm-text="Status akan berubah menjadi Open dan SO tidak dapat diedit lagi.">
                         <i class="fas fa-check"></i> Rekam SO
                     </a>
-                    <a href="<?= base_url('sales_order/cancel/' . $so['id_so']) ?>"
-                       class="btn btn-danger btn-sm"
-                       data-confirm-title="Batalkan SO?"
-                       data-confirm-text="Sales Order ini akan dibatalkan.">
-                        <i class="fas fa-times"></i> Batalkan SO
-                    </a>
+                <?php endif; ?>
+
+                <?php if (!in_array($so['status'], ['completed', 'cancelled'], true) && empty($cancel_request_pending) && empty($fakturs)): ?>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="openModalCancelSo(<?= (int)$so['id_so'] ?>, '<?= htmlspecialchars($so['no_so'], ENT_QUOTES) ?>')">
+                        <i class="fas fa-times-circle mr-1"></i> Batalkan SO
+                    </button>
                 <?php endif; ?>
             </div>
+
+            <?php if (!empty($cancel_request_pending)): ?>
+                <div class="alert alert-warning shadow-sm border-warning d-flex align-items-center justify-content-between p-3 mb-3 flex-wrap" style="border-left: 5px solid #f39c12;">
+                    <div class="mb-2 mb-md-0">
+                        <h6 class="font-weight-bold text-dark mb-1">
+                            <i class="fas fa-exclamation-triangle text-warning mr-1"></i> Permintaan Pembatalan SO Menunggu Persetujuan MNGSC (Manager SC)
+                        </h6>
+                        <div class="text-muted small">
+                            Diajukan oleh: <b><?= htmlspecialchars($cancel_request_pending['request_by']) ?></b> pada <?= date('d/m/Y H:i', strtotime($cancel_request_pending['request_at'])) ?><br>
+                            Alasan: <em>"<?= htmlspecialchars($cancel_request_pending['alasan'] ?? '-') ?>"</em>
+                        </div>
+                    </div>
+                    <?php if (!empty($is_atasan)): ?>
+                        <div class="d-flex align-items-center" style="gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold" onclick="handleApproveCancelSo(<?= (int)$cancel_request_pending['id'] ?>, <?= (int)$so['id_so'] ?>)">
+                                <i class="fas fa-check mr-1"></i> Setujui Pembatalan
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger font-weight-bold" onclick="handleRejectCancelSo(<?= (int)$cancel_request_pending['id'] ?>, <?= (int)$so['id_so'] ?>)">
+                                <i class="fas fa-times mr-1"></i> Tolak
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <span class="badge badge-warning px-3 py-2 text-dark font-weight-bold"><i class="fas fa-clock mr-1"></i> Menunggu Approval MNGSC</span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
 
             <?php
             $badge_map = [
@@ -738,4 +764,166 @@ $(document).ready(function () {
     });
     <?php endif; ?>
 });
+
+var IS_ATASAN_USER = <?= !empty($is_atasan) ? 'true' : 'false' ?>;
+
+function openModalCancelSo(idSo, noSo) {
+    if (!window.Swal) {
+        var reason = prompt('Masukkan alasan pembatalan Sales Order ' + (noSo || '') + ':');
+        if (!reason) return;
+        submitCancelSoRequest(idSo, reason, '0');
+        return;
+    }
+
+    var directHtml = IS_ATASAN_USER 
+        ? '<div class="text-left mt-3 p-2 bg-light border rounded"><label class="small font-weight-bold text-dark mb-0" style="cursor:pointer;"><input type="checkbox" id="swal-direct-cancel" value="1" class="mr-1"> Sebagai MNGSC (Manager SC), langsung setujui pembatalan sekarang (Auto-Approve)</label></div>' 
+        : '';
+
+    Swal.fire({
+        title: 'Batalkan Sales Order?',
+        html: '<div class="text-left mb-2 text-muted small">Pembatalan Sales Order ' + (noSo ? '<b>' + noSo + '</b>' : '') + ' memerlukan persetujuan dari <b>MNGSC (Manager SC)</b>. Harap masukkan alasan pembatalan:</div>' +
+              '<textarea id="swal-cancel-reason" class="swal2-textarea m-0 w-100" placeholder="Tuliskan alasan pembatalan secara jelas..." style="box-sizing:border-box; font-size:14px; min-height:80px;"></textarea>' +
+              directHtml,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane mr-1"></i> Ajukan Pembatalan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc3545',
+        focusConfirm: false,
+        preConfirm: function() {
+            var el = document.getElementById('swal-cancel-reason');
+            var reason = el ? el.value.trim() : '';
+            if (!reason) {
+                Swal.showValidationMessage('Alasan pembatalan wajib diisi!');
+                return false;
+            }
+            var direct = document.getElementById('swal-direct-cancel') ? (document.getElementById('swal-direct-cancel').checked ? '1' : '0') : '0';
+            return { alasan: reason, direct_cancel: direct };
+        }
+    }).then(function(result) {
+        if (!result.isConfirmed || !result.value) return;
+        submitCancelSoRequest(idSo, result.value.alasan, result.value.direct_cancel);
+    });
+}
+
+function submitCancelSoRequest(idSo, alasan, directCancel) {
+    if (window.Swal) {
+        Swal.fire({ title: 'Memproses...', text: 'Mengirim permohonan pembatalan...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+    }
+    $.ajax({
+        url: BASE_URL + 'sales_order/request_cancel_so',
+        type: 'POST',
+        data: {
+            id_so: idSo,
+            alasan: alasan,
+            direct_cancel: directCancel || '0'
+        },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: res.message || 'Permintaan pembatalan berhasil diproses.',
+                        confirmButtonText: 'OK'
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    alert(res.message);
+                    window.location.reload();
+                }
+            } else {
+                if (window.Swal) {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message || 'Terjadi kesalahan.' });
+                } else {
+                    alert(res.message || 'Gagal');
+                }
+            }
+        },
+        error: function(xhr) {
+            var msg = 'Terjadi kesalahan koneksi server.';
+            try { var err = JSON.parse(xhr.responseText); if (err && err.message) msg = err.message; } catch(e){}
+            if (window.Swal) {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
+            } else {
+                alert(msg);
+            }
+        }
+    });
+}
+
+function handleApproveCancelSo(idRequest, idSo) {
+    Swal.fire({
+        title: 'Setujui Pembatalan SO?',
+        text: 'Sales Order ini akan resmi DIBATALKAN dan alokasi stok akan dilepas.',
+        icon: 'question',
+        input: 'text',
+        inputPlaceholder: 'Catatan approval (opsional)...',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-check mr-1"></i> Ya, Setujui',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#28a745'
+    }).then(function(result) {
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'Menyetujui...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+        $.ajax({
+            url: BASE_URL + 'sales_order/approve_cancel_so',
+            type: 'POST',
+            data: { id_request: idRequest, id_so: idSo, catatan: result.value || '' },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    Swal.fire({ icon: 'success', title: 'Disetujui', text: res.message }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+                }
+            },
+            error: function() {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan saat menyetujui pembatalan.' });
+            }
+        });
+    });
+}
+
+function handleRejectCancelSo(idRequest, idSo) {
+    Swal.fire({
+        title: 'Tolak Pembatalan SO?',
+        text: 'Permintaan pembatalan akan ditolak dan Sales Order akan tetap berjalan.',
+        icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'Alasan penolakan wajib diisi...',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-times mr-1"></i> Tolak Permintaan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#dc3545',
+        inputValidator: function(val) {
+            if (!val || !val.trim()) return 'Alasan penolakan wajib diisi!';
+        }
+    }).then(function(result) {
+        if (!result.isConfirmed || !result.value) return;
+        Swal.fire({ title: 'Menolak...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+        $.ajax({
+            url: BASE_URL + 'sales_order/reject_cancel_so',
+            type: 'POST',
+            data: { id_request: idRequest, id_so: idSo, catatan: result.value },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    Swal.fire({ icon: 'success', title: 'Ditolak', text: res.message }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+                }
+            },
+            error: function() {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan saat menolak pembatalan.' });
+            }
+        });
+    });
+}
 </script>

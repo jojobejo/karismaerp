@@ -1236,6 +1236,41 @@ class C_Checker extends CI_Controller
         exit;
     }
 
+    public function cancel_so_loading_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post' || !$this->canOperateSoLoading()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        if ($kd_rute === '') {
+            echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid.']);
+            exit;
+        }
+
+        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        if (!$activity) {
+            echo json_encode(['status' => false, 'message' => 'Aktivitas loading untuk rute ini tidak ditemukan.']);
+            exit;
+        }
+
+        if ($activity['status'] === 'DONE') {
+            echo json_encode(['status' => false, 'message' => 'Loading rute ini sudah selesai (DONE) dan tidak dapat dibatalkan.']);
+            exit;
+        }
+
+        $ok = $this->M_Checker->cancel_route_loading($kd_rute);
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok ? 'Start loading rute ' . $kd_rute . ' berhasil dibatalkan dan dikembalikan ke status Siap Loading.' : 'Gagal membatalkan loading.'
+        ]);
+        exit;
+    }
+
     public function pause_so_loading_rute()
     {
         while (ob_get_level()) ob_end_clean();
