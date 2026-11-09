@@ -3049,6 +3049,10 @@ class M_SalesOrder extends CI_Model
                 'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
             ]);
 
+            // Terbitkan Jurnal Penjualan resmi untuk Faktur Pecahan H
+            $this->load->model('M_Journal');
+            $this->M_Journal->post_jurnal_penjualan_faktur_h($child_id_pecah);
+
             $this->M_ActivityLog->log(
                 $parent_faktur['no_so'],
                 $no_faktur_child,
@@ -3270,6 +3274,10 @@ class M_SalesOrder extends CI_Model
                 'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
             ]);
 
+            // Terbitkan Jurnal Penjualan resmi untuk Faktur Pecahan H
+            $this->load->model('M_Journal');
+            $this->M_Journal->post_jurnal_penjualan_faktur_h($child_id_pecah);
+
             $this->M_ActivityLog->log(
                 $slot_parent['no_so'] ?? '-',
                 $no_faktur_child,
@@ -3309,6 +3317,11 @@ class M_SalesOrder extends CI_Model
                     'update_by'       => $username,
                     'update_at'       => date('Y-m-d H:i:s')
                 ]);
+
+                // Void jurnal Faktur Z Induk agar tidak dobel di laporan keuangan
+                if (!empty($parent_fakturs[$pid]['no_faktur'])) {
+                    $this->M_Journal->void_jurnal_faktur_z_induk($parent_fakturs[$pid]['no_faktur']);
+                }
             }
         }
 
@@ -3683,6 +3696,9 @@ class M_SalesOrder extends CI_Model
                 'update_at'       => date('Y-m-d H:i:s')
             ]);
 
+            // Void jurnal Faktur Z Induk agar tidak dobel di laporan keuangan (digantikan oleh Faktur H)
+            $this->M_Journal->void_jurnal_faktur_z_induk($parent_faktur['no_faktur']);
+
             $processed_parent_fakturs[] = $parent_faktur['no_faktur'];
         }
 
@@ -3785,8 +3801,12 @@ class M_SalesOrder extends CI_Model
                 'nominal_potongan'  => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nominal_potongan` DECIMAL(18,2) DEFAULT 0 AFTER `nominal_bruto`",
                 'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
                 'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
-                'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
-                'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+                'id_jurnal_a'            => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
+                'nomor_jurnal_a'         => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+                'id_jurnal_penjualan'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_penjualan` BIGINT UNSIGNED DEFAULT NULL AFTER `nomor_jurnal_a`",
+                'nomor_jurnal_penjualan' => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_penjualan` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_penjualan`",
+                'id_jurnal_hpp'          => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_hpp` BIGINT UNSIGNED DEFAULT NULL AFTER `nomor_jurnal_penjualan`",
+                'nomor_jurnal_hpp'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_hpp` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_hpp`",
             ];
             foreach ($cols as $colName => $sql) {
                 if (!$this->db->field_exists($colName, 'tbso_faktur_z_pecah')) {
