@@ -1431,12 +1431,12 @@ class C_Laporan extends CI_Controller
         $startDate = trim((string)$this->input->get('start_date', true));
         $endDate   = trim((string)$this->input->get('end_date', true));
 
-        // Default jika belum ada filter
+        // Default jika belum ada filter: 1 bulan berjalan (awal s/d akhir bulan)
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
-            $startDate = date('Y-01-01');
+            $startDate = date('Y-m-01');
         }
         if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
-            $endDate = date('Y-m-d');
+            $endDate = date('Y-m-t');
         }
 
         $this->load->model('M_Journal');
@@ -1469,10 +1469,10 @@ class C_Laporan extends CI_Controller
         $endDate   = trim((string)$this->input->get('end_date', true));
 
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
-            $startDate = date('Y-01-01');
+            $startDate = date('Y-m-01');
         }
         if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
-            $endDate = date('Y-m-d');
+            $endDate = date('Y-m-t');
         }
 
         $this->load->model('M_Journal');
@@ -1505,10 +1505,10 @@ class C_Laporan extends CI_Controller
         $endDate   = trim((string)$this->input->get('end_date', true));
 
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
-            $startDate = date('Y-01-01');
+            $startDate = date('Y-m-01');
         }
         if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
-            $endDate = date('Y-m-d');
+            $endDate = date('Y-m-t');
         }
 
         $this->load->model('M_Journal');

@@ -3,8 +3,8 @@
  * _modal_filter_zahir.php
  * Dialog Filter Data bergaya Zahir Accounting.
  */
-$defaultStart = isset($start_date) && !empty($start_date) ? $start_date : date('Y-01-01');
-$defaultEnd   = isset($end_date) && !empty($end_date) ? $end_date : date('Y-m-d');
+$defaultStart = isset($start_date) && !empty($start_date) ? $start_date : date('Y-m-01');
+$defaultEnd   = isset($end_date) && !empty($end_date) ? $end_date : date('Y-m-t');
 $actionUrl    = isset($filter_action_url) && !empty($filter_action_url) ? $filter_action_url : base_url('laporan/keuangan/arus-kas-rangkuman');
 ?>
 <style>
