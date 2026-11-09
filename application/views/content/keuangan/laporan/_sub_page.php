@@ -165,6 +165,10 @@
                     <?php endforeach; ?>
                 </div>
 
+                <?php if (isset($extra_modal) && !empty($extra_modal) && file_exists($extra_modal)) : ?>
+                    <?php include $extra_modal; ?>
+                <?php endif; ?>
+
             </section>
         </div>
 

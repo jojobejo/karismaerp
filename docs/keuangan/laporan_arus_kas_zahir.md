@@ -82,3 +82,4 @@ Format tampilan dan interaksi dirancang mengacu pada standar laporan **Zahir Acc
    - Klik **Filter Data** untuk mengubah periode tanggal sewaktu-waktu.
    - Klik **Cetak / PDF** untuk mencetak dengan layout dokumen cetak resmi.
    - Klik **Excel** untuk mengunduh laporan ke format Excel.
+

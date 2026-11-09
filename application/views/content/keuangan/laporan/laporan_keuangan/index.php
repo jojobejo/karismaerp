@@ -21,11 +21,11 @@ $menus = [
         'desc'    => 'Laporan rincian per akun atas arus kas masuk dan keluar.',
     ],
 ];
-$back_url   = base_url('laporan');
-$page_title = 'Laporan Keuangan';
-$page_icon  = 'fas fa-chart-pie';
-$page_color = '#1788b8';
+$back_url    = base_url('laporan');
+$page_title  = 'Laporan Keuangan';
+$page_icon   = 'fas fa-chart-pie';
+$page_color  = '#1788b8';
+$extra_modal = APPPATH . 'views/content/keuangan/laporan/laporan_keuangan/_modal_filter_zahir.php';
 include APPPATH . 'views/content/keuangan/laporan/_sub_page.php';
-include APPPATH . 'views/content/keuangan/laporan/laporan_keuangan/_modal_filter_zahir.php';
 
 

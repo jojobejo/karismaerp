@@ -354,3 +354,4 @@ $filter_action_url = base_url('laporan/keuangan/arus-kas-rangkuman');
 include APPPATH . 'views/content/keuangan/laporan/laporan_keuangan/_modal_filter_zahir.php'; 
 ?>
 </body>
+
