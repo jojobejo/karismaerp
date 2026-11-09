@@ -1535,4 +1535,301 @@ class C_Laporan extends CI_Controller
         $this->load->view('content/keuangan/laporan/laporan_keuangan/arus_kas_excel.php', $data);
     }
 
+    // =========================================================================
+    // LAPORAN LABA RUGI (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * 1. Laba Rugi Standar (1 Kolom Saldo)
+     */
+    public function laba_rugi_standar()
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-m-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-t');
+        }
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_laba_rugi($startDate, $endDate, false);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laporan Laba Rugi',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Laba Rugi',
+            'report_mode'      => 'standar',
+            'start_date'       => $startDate,
+            'end_date'         => $endDate,
+            'period_label'     => date('F Y', strtotime($startDate)),
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/laba-rugi'),
+            'export_url'       => base_url('laporan/keuangan/laba-rugi-export/standar?start_date=' . $startDate . '&end_date=' . $endDate),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 2. Laba Rugi (Saldo & Year to Date)
+     */
+    public function laba_rugi_ytd()
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-m-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-t');
+        }
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_laba_rugi($startDate, $endDate, true);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laporan Laba Rugi (Saldo & YTD)',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Laba Rugi',
+            'report_mode'      => 'ytd',
+            'start_date'       => $startDate,
+            'end_date'         => $endDate,
+            'period_label'     => date('F Y', strtotime($startDate)),
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/laba-rugi-ytd'),
+            'export_url'       => base_url('laporan/keuangan/laba-rugi-export/ytd?start_date=' . $startDate . '&end_date=' . $endDate),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 3. Laba Rugi - Perbandingan 2 Kolom
+     */
+    public function laba_rugi_perbandingan_2()
+    {
+        $this->_ensure_access();
+
+        $p1Start = trim((string)$this->input->get('p1_start', true));
+        $p1End   = trim((string)$this->input->get('p1_end', true));
+        $p2Start = trim((string)$this->input->get('p2_start', true));
+        $p2End   = trim((string)$this->input->get('p2_end', true));
+
+        // Default: Periode 1 = Bulan berjalan, Periode 2 = Bulan lalu
+        if (empty($p1Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1Start)) {
+            $p1Start = date('Y-m-01');
+        }
+        if (empty($p1End) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1End)) {
+            $p1End = date('Y-m-t');
+        }
+        if (empty($p2Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p2Start)) {
+            $p2Start = date('Y-m-01', strtotime('-1 month', strtotime($p1Start)));
+        }
+        if (empty($p2End) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p2End)) {
+            $p2End = date('Y-m-t', strtotime('-1 month', strtotime($p1Start)));
+        }
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_laba_rugi_perbandingan($p1Start, $p1End, $p2Start, $p2End);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laba Rugi - Perbandingan 2 Kolom',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Laba Rugi - Perbandingan 2 Kolom',
+            'report_mode'      => 'perbandingan_2',
+            'p1_start'         => $p1Start,
+            'p1_end'           => $p1End,
+            'p2_start'         => $p2Start,
+            'p2_end'           => $p2End,
+            'p1_label'         => date('F Y', strtotime($p1Start)),
+            'p2_label'         => date('F Y', strtotime($p2Start)),
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/laba-rugi-perbandingan-2'),
+            'export_url'       => base_url("laporan/keuangan/laba-rugi-export/perbandingan_2?p1_start={$p1Start}&p1_end={$p1End}&p2_start={$p2Start}&p2_end={$p2End}"),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 4. Laba Rugi - Anggaran vs Realisasi
+     */
+    public function laba_rugi_anggaran()
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-m-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-t');
+        }
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_laba_rugi($startDate, $endDate, false);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laba Rugi - Anggaran vs Realisasi',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Laba Rugi - Anggaran vs Realisasi',
+            'report_mode'      => 'anggaran',
+            'start_date'       => $startDate,
+            'end_date'         => $endDate,
+            'period_label'     => date('F Y', strtotime($startDate)),
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/laba-rugi-anggaran'),
+            'export_url'       => base_url('laporan/keuangan/laba-rugi-export/anggaran?start_date=' . $startDate . '&end_date=' . $endDate),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 5. Laba Rugi - Perbandingan 4 Kolom
+     */
+    public function laba_rugi_perbandingan_4()
+    {
+        $this->_ensure_access();
+
+        $p1Start = trim((string)$this->input->get('p1_start', true));
+        $p1End   = trim((string)$this->input->get('p1_end', true));
+        $p2Start = trim((string)$this->input->get('p2_start', true));
+        $p2End   = trim((string)$this->input->get('p2_end', true));
+
+        if (empty($p1Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1Start)) {
+            $p1Start = date('Y-m-01');
+        }
+        if (empty($p1End) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1End)) {
+            $p1End = date('Y-m-t');
+        }
+        if (empty($p2Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p2Start)) {
+            $p2Start = date('Y-m-01', strtotime('-1 month', strtotime($p1Start)));
+        }
+        if (empty($p2End) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p2End)) {
+            $p2End = date('Y-m-t', strtotime('-1 month', strtotime($p1Start)));
+        }
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_laba_rugi_perbandingan($p1Start, $p1End, $p2Start, $p2End);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laba Rugi - Perbandingan 4 Kolom',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Laba Rugi - Perbandingan 4 Kolom',
+            'report_mode'      => 'perbandingan_4',
+            'p1_start'         => $p1Start,
+            'p1_end'           => $p1End,
+            'p2_start'         => $p2Start,
+            'p2_end'           => $p2End,
+            'p1_label'         => date('F Y', strtotime($p1Start)),
+            'p2_label'         => date('F Y', strtotime($p2Start)),
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/laba-rugi-perbandingan-4'),
+            'export_url'       => base_url("laporan/keuangan/laba-rugi-export/perbandingan_4?p1_start={$p1Start}&p1_end={$p1End}&p2_start={$p2Start}&p2_end={$p2End}"),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Export Laporan Laba Rugi ke format Excel
+     */
+    public function laba_rugi_export($type = 'standar')
+    {
+        $this->_ensure_access();
+
+        $this->load->model('M_Journal');
+
+        $isComparison = in_array($type, ['perbandingan_2', 'perbandingan_4'], true);
+
+        if ($isComparison) {
+            $p1Start = trim((string)$this->input->get('p1_start', true));
+            $p1End   = trim((string)$this->input->get('p1_end', true));
+            $p2Start = trim((string)$this->input->get('p2_start', true));
+            $p2End   = trim((string)$this->input->get('p2_end', true));
+
+            if (empty($p1Start)) $p1Start = date('Y-m-01');
+            if (empty($p1End))   $p1End   = date('Y-m-t');
+            if (empty($p2Start)) $p2Start = date('Y-m-01', strtotime('-1 month', strtotime($p1Start)));
+            if (empty($p2End))   $p2End   = date('Y-m-t', strtotime('-1 month', strtotime($p1Start)));
+
+            $reportData = $this->M_Journal->get_laporan_laba_rugi_perbandingan($p1Start, $p1End, $p2Start, $p2End);
+            $filename = 'Laporan_Laba_Rugi_' . ($type === 'perbandingan_2' ? 'Perbandingan_2_Kolom_' : 'Perbandingan_4_Kolom_') . $p1Start . '_vs_' . $p2Start . '.xls';
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => $type === 'perbandingan_2' ? 'Laba Rugi - Perbandingan 2 Kolom' : 'Laba Rugi - Perbandingan 4 Kolom',
+                'report_mode'  => $type,
+                'p1_start'     => $p1Start,
+                'p1_end'       => $p1End,
+                'p2_start'     => $p2Start,
+                'p2_end'       => $p2End,
+                'p1_label'     => date('F Y', strtotime($p1Start)),
+                'p2_label'     => date('F Y', strtotime($p2Start)),
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        } else {
+            $startDate = trim((string)$this->input->get('start_date', true));
+            $endDate   = trim((string)$this->input->get('end_date', true));
+
+            if (empty($startDate)) $startDate = date('Y-m-01');
+            if (empty($endDate))   $endDate   = date('Y-m-t');
+
+            $calcYtd = ($type === 'ytd');
+            $reportData = $this->M_Journal->get_laporan_laba_rugi($startDate, $endDate, $calcYtd);
+
+            $titles = [
+                'standar'  => 'Laba Rugi',
+                'ytd'      => 'Laba Rugi (Saldo & YTD)',
+                'anggaran' => 'Laba Rugi - Anggaran vs Realisasi',
+            ];
+            $title = $titles[$type] ?? 'Laba Rugi';
+            $filename = 'Laporan_Laba_Rugi_' . ucfirst($type) . '_' . $startDate . '_sd_' . $endDate . '.xls';
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => $title,
+                'report_mode'  => $type,
+                'start_date'   => $startDate,
+                'end_date'     => $endDate,
+                'period_label' => date('F Y', strtotime($startDate)),
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        }
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_excel.php', $data);
+    }
+
 }

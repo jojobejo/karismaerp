@@ -2909,4 +2909,252 @@ class M_Journal extends CI_Model
         return $kode;
     }
 
+    // =========================================================================
+    // MODUL LAPORAN LABA RUGI (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * Menghitung data Laporan Laba Rugi bergaya Zahir Accounting.
+     *
+     * @param string $startDate 'YYYY-MM-DD'
+     * @param string $endDate   'YYYY-MM-DD'
+     * @param bool   $calcYtd   Hitung juga Year-to-Date (awal tahun fiskal s/d $endDate)
+     * @return array
+     */
+    public function get_laporan_laba_rugi($startDate, $endDate, $calcYtd = false)
+    {
+        $yearStart = date('Y-01-01', strtotime($endDate));
+
+        // 1. Ambil data transaksi mutasi jurnal POSTED pada rentang tanggal
+        $sql = "SELECT 
+                    a.id_akun,
+                    a.kode_akun,
+                    a.nama_akun,
+                    a.saldo_normal,
+                    COALESCE(SUM(CASE WHEN j.tanggal_transaksi >= " . $this->db->escape($startDate) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . " THEN d.debit ELSE 0 END), 0) AS cur_debit,
+                    COALESCE(SUM(CASE WHEN j.tanggal_transaksi >= " . $this->db->escape($startDate) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . " THEN d.kredit ELSE 0 END), 0) AS cur_kredit,
+                    COALESCE(SUM(CASE WHEN j.tanggal_transaksi >= " . $this->db->escape($yearStart) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . " THEN d.debit ELSE 0 END), 0) AS ytd_debit,
+                    COALESCE(SUM(CASE WHEN j.tanggal_transaksi >= " . $this->db->escape($yearStart) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . " THEN d.kredit ELSE 0 END), 0) AS ytd_kredit
+                FROM tbkeu_akun a
+                JOIN tbkeu_jurnal_detail d ON d.id_akun = a.id_akun
+                JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED'
+                WHERE (a.kode_akun >= '40000' AND a.kode_akun <= '99999')
+                  AND j.tanggal_transaksi >= " . ($calcYtd ? $this->db->escape($yearStart) : $this->db->escape($startDate)) . "
+                  AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . "
+                GROUP BY a.id_akun
+                ORDER BY a.kode_akun ASC";
+
+        $rows = $this->db->query($sql)->result_array();
+
+        // Siapkan kerangka pos laporan sesuai Zahir
+        $groups = [
+            'pendapatan_usaha'          => [],
+            'pendapatan_lain'           => [],
+            'beban_atas_pendapatan'     => [],
+            'beban_pemasaran_penjualan' => [],
+            'biaya_adm_umum'            => [],
+            'beban_non_operasional'     => [],
+            'pendapatan_luar_usaha'     => [],
+            'beban_luar_usaha'          => [],
+            'beban_pajak'               => [],
+        ];
+
+        $totals = [
+            'pendapatan_usaha'          => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'pendapatan_lain'           => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'beban_atas_pendapatan'     => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'beban_pemasaran_penjualan' => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'biaya_adm_umum'            => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'beban_non_operasional'     => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'pendapatan_luar_usaha'     => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'beban_luar_usaha'          => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+            'beban_pajak'               => ['cur' => 0.0, 'ytd' => 0.0, 'budget' => 0.0],
+        ];
+
+        foreach ($rows as $r) {
+            $kode = trim($r['kode_akun']);
+            $num  = (int)preg_replace('/\D/', '', $kode);
+            $p2   = substr($kode, 0, 2);
+            $p3   = substr($kode, 0, 3);
+
+            $isRevenue = in_array(substr($kode, 0, 1), ['4', '8'], true);
+            $curAmount = $isRevenue 
+                ? ((float)$r['cur_kredit'] - (float)$r['cur_debit']) 
+                : ((float)$r['cur_debit'] - (float)$r['cur_kredit']);
+            $ytdAmount = $isRevenue 
+                ? ((float)$r['ytd_kredit'] - (float)$r['ytd_debit']) 
+                : ((float)$r['ytd_debit'] - (float)$r['ytd_kredit']);
+
+            // Abaikan jika kedua saldo 0
+            if (abs($curAmount) < 0.0001 && abs($ytdAmount) < 0.0001) {
+                continue;
+            }
+
+            // Tentukan target sub-group Zahir
+            $targetGroup = null;
+            if ($p2 === '41') {
+                $targetGroup = 'pendapatan_usaha';
+            } elseif ($p2 === '49') {
+                $targetGroup = 'pendapatan_lain';
+            } elseif (substr($kode, 0, 1) === '5') {
+                $targetGroup = 'beban_atas_pendapatan';
+            } elseif ($num >= 61000 && $num < 66000) {
+                $targetGroup = 'beban_pemasaran_penjualan';
+            } elseif ($num >= 66000 && $num < 70000) {
+                $targetGroup = 'biaya_adm_umum';
+            } elseif (substr($kode, 0, 1) === '7') {
+                $targetGroup = 'beban_non_operasional';
+            } elseif (substr($kode, 0, 1) === '8') {
+                $targetGroup = 'pendapatan_luar_usaha';
+            } elseif ($num >= 99000) {
+                $targetGroup = 'beban_pajak';
+            } elseif (substr($kode, 0, 1) === '9') {
+                $targetGroup = 'beban_luar_usaha';
+            }
+
+            if ($targetGroup && isset($groups[$targetGroup])) {
+                $item = [
+                    'id_akun'      => $r['id_akun'],
+                    'kode_akun'    => $kode,
+                    'kode_tampil'  => $this->format_kode_akun_zahir($kode),
+                    'nama_akun'    => $r['nama_akun'],
+                    'saldo'        => $curAmount,
+                    'ytd'          => $ytdAmount,
+                    'budget'       => 0.0, // Default 0.00 jika belum ada master anggaran
+                ];
+                $groups[$targetGroup][] = $item;
+                $totals[$targetGroup]['cur']    += $curAmount;
+                $totals[$targetGroup]['ytd']    += $ytdAmount;
+                $totals[$targetGroup]['budget'] += 0.0;
+            }
+        }
+
+        // Kalkulasi Summary & Laba Rugi Bersih
+        $calcSummary = function($key) use ($totals) {
+            $totalPendapatanUsaha = $totals['pendapatan_usaha'][$key];
+            $totalPendapatanLain  = $totals['pendapatan_lain'][$key];
+            $totalPendapatan      = $totalPendapatanUsaha + $totalPendapatanLain;
+
+            $totalBebanPokok      = $totals['beban_atas_pendapatan'][$key];
+            $labaRugiKotor        = $totalPendapatan - $totalBebanPokok;
+
+            $totalBebanPemasaran  = $totals['beban_pemasaran_penjualan'][$key];
+            $totalBiayaAdmUmum    = $totals['biaya_adm_umum'][$key];
+            $totalBebanOperasional = $totalBebanPemasaran + $totalBiayaAdmUmum;
+
+            $labaRugiOperasi1     = $labaRugiKotor - $totalBebanOperasional;
+            $totalBebanNonOps     = $totals['beban_non_operasional'][$key];
+            $labaRugiOperasi      = $labaRugiOperasi1 - $totalBebanNonOps;
+
+            $totalPendapatanLuarUsaha = $totals['pendapatan_luar_usaha'][$key];
+            $totalPendapatanLainAll   = $totalPendapatanLuarUsaha;
+
+            $totalBebanLuarUsaha  = $totals['beban_luar_usaha'][$key];
+            $totalBebanPajak      = $totals['beban_pajak'][$key];
+            $totalBebanLainAll    = $totalBebanLuarUsaha + $totalBebanPajak;
+
+            $labaRugiBersih       = $labaRugiOperasi + $totalPendapatanLainAll - $totalBebanLainAll;
+
+            return [
+                'total_pendapatan_usaha'    => $totalPendapatanUsaha,
+                'total_pendapatan_lain'     => $totalPendapatanLain,
+                'total_pendapatan'          => $totalPendapatan,
+                'total_beban_pokok'         => $totalBebanPokok,
+                'laba_rugi_kotor'           => $labaRugiKotor,
+                'total_beban_pemasaran'     => $totalBebanPemasaran,
+                'total_biaya_adm_umum'      => $totalBiayaAdmUmum,
+                'total_beban_operasional'   => $totalBebanOperasional,
+                'laba_rugi_operasi'         => $labaRugiOperasi,
+                'total_beban_non_ops'       => $totalBebanNonOps,
+                'total_pendapatan_luar'     => $totalPendapatanLuarUsaha,
+                'total_pendapatan_lain_all' => $totalPendapatanLainAll,
+                'total_beban_luar'          => $totalBebanLuarUsaha,
+                'total_beban_pajak'         => $totalBebanPajak,
+                'total_beban_lain_all'      => $totalBebanLainAll,
+                'laba_rugi_bersih'          => $labaRugiBersih,
+            ];
+        };
+
+        return [
+            'groups'       => $groups,
+            'totals'       => $totals,
+            'summary_cur'  => $calcSummary('cur'),
+            'summary_ytd'  => $calcSummary('ytd'),
+            'summary_bud'  => $calcSummary('budget'),
+        ];
+    }
+
+    /**
+     * Menggabungkan dua set data Laba Rugi untuk komparasi 2 Periode.
+     *
+     * @param string $p1Start
+     * @param string $p1End
+     * @param string $p2Start
+     * @param string $p2End
+     * @return array
+     */
+    public function get_laporan_laba_rugi_perbandingan($p1Start, $p1End, $p2Start, $p2End)
+    {
+        $data1 = $this->get_laporan_laba_rugi($p1Start, $p1End, false);
+        $data2 = $this->get_laporan_laba_rugi($p2Start, $p2End, false);
+
+        $mergedGroups = [];
+        $groupKeys = [
+            'pendapatan_usaha',
+            'pendapatan_lain',
+            'beban_atas_pendapatan',
+            'beban_pemasaran_penjualan',
+            'biaya_adm_umum',
+            'beban_non_operasional',
+            'pendapatan_luar_usaha',
+            'beban_luar_usaha',
+            'beban_pajak',
+        ];
+
+        foreach ($groupKeys as $gKey) {
+            $items1 = [];
+            foreach ($data1['groups'][$gKey] as $it) {
+                $items1[$it['kode_akun']] = $it;
+            }
+            $items2 = [];
+            foreach ($data2['groups'][$gKey] as $it) {
+                $items2[$it['kode_akun']] = $it;
+            }
+
+            $allCodes = array_unique(array_merge(array_keys($items1), array_keys($items2)));
+            sort($allCodes);
+
+            $mergedList = [];
+            foreach ($allCodes as $code) {
+                $row1 = $items1[$code] ?? null;
+                $row2 = $items2[$code] ?? null;
+                $nama = $row1 ? $row1['nama_akun'] : ($row2 ? $row2['nama_akun'] : '');
+                $tampil = $this->format_kode_akun_zahir($code);
+
+                $mergedList[] = [
+                    'kode_akun'    => $code,
+                    'kode_tampil'  => $tampil,
+                    'nama_akun'    => $nama,
+                    'saldo_p1'     => $row1 ? $row1['saldo'] : 0.0,
+                    'budget_p1'    => $row1 ? $row1['budget'] : 0.0,
+                    'saldo_p2'     => $row2 ? $row2['saldo'] : 0.0,
+                    'budget_p2'    => $row2 ? $row2['budget'] : 0.0,
+                ];
+            }
+            $mergedGroups[$gKey] = $mergedList;
+        }
+
+        return [
+            'p1_start'     => $p1Start,
+            'p1_end'       => $p1End,
+            'p2_start'     => $p2Start,
+            'p2_end'       => $p2End,
+            'data1'        => $data1,
+            'data2'        => $data2,
+            'groups'       => $mergedGroups,
+            'summary_p1'   => $data1['summary_cur'],
+            'summary_p2'   => $data2['summary_cur'],
+        ];
+    }
+
 }
