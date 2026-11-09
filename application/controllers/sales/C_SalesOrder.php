@@ -78,6 +78,8 @@ class C_SalesOrder extends CI_Controller
                 'unpost_pelunasan_faktur_z_pecah',
                 'unpost_pelunasan_faktur_z_pecah_batch',
                 'jurnal_pelunasan_faktur_z_pecah_json',
+                'jurnal_penjualan_faktur_z_pecah_json',
+                'sinkronkan_jurnal_penjualan_faktur_h',
                 'export_faktur_z_pecah_lunas',
             ];
             $currentMethod = strtolower((string)$this->router->fetch_method());
@@ -4866,12 +4868,18 @@ class C_SalesOrder extends CI_Controller
         $no_pecah  = $faktur_pecah['no_faktur'];
         $username  = $this->_getUsername();
 
+        $this->load->model('M_Journal');
+        $this->M_Journal->delete_jurnal_penjualan_faktur_h($id_pecah);
+
         $this->db->delete('tbso_faktur_z_pecah_detail', ['id_pecah' => $id_pecah]);
         $this->db->delete('tbso_faktur_z_pecah', ['id_pecah' => $id_pecah]);
 
         $remaining_child = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $parent_id])->num_rows();
         if ($remaining_child === 0) {
             $this->db->where('id_faktur', $parent_id)->update('tbso_faktur_penjualan', ['is_split_parent' => 0]);
+            if (!empty($faktur_pecah['parent_no_faktur'])) {
+                $this->M_Journal->restore_jurnal_faktur_z_induk($faktur_pecah['parent_no_faktur']);
+            }
         }
 
         // Catat aktivitas unpost
@@ -4947,11 +4955,16 @@ class C_SalesOrder extends CI_Controller
 
         $username = $this->_getUsername();
         $this->load->model('M_ActivityLog');
+        $this->load->model('M_Journal');
 
         $parent_ids = [];
         $unposted_numbers = [];
 
         $this->db->trans_start();
+
+        foreach ($fakturs as $f) {
+            $this->M_Journal->delete_jurnal_penjualan_faktur_h($f['id_pecah']);
+        }
 
         $target_ids = array_column($fakturs, 'id_pecah');
         $this->db->where_in('id_pecah', $target_ids)->delete('tbso_faktur_z_pecah_detail');
@@ -4975,6 +4988,10 @@ class C_SalesOrder extends CI_Controller
                 $remaining = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $parentId])->num_rows();
                 if ($remaining === 0) {
                     $this->db->where('id_faktur', $parentId)->update('tbso_faktur_penjualan', ['is_split_parent' => 0]);
+                    $pRow = $this->db->select('no_faktur')->where('id_faktur', $parentId)->get('tbso_faktur_penjualan')->row_array();
+                    if ($pRow && !empty($pRow['no_faktur'])) {
+                        $this->M_Journal->restore_jurnal_faktur_z_induk($pRow['no_faktur']);
+                    }
                 }
             }
         }
@@ -5196,13 +5213,18 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $this->load->model('M_Journal');
         $children = $this->db->get_where('tbso_faktur_z_pecah', ['parent_id_faktur' => $id_faktur])->result_array();
         foreach ($children as $c) {
+            $this->M_Journal->delete_jurnal_penjualan_faktur_h($c['id_pecah']);
             $this->db->delete('tbso_faktur_z_pecah_detail', ['id_pecah' => $c['id_pecah']]);
             $this->db->delete('tbso_faktur_z_pecah', ['id_pecah' => $c['id_pecah']]);
         }
 
         $this->db->where('id_faktur', $id_faktur)->update('tbso_faktur_penjualan', ['is_split_parent' => 0]);
+        if (!empty($faktur['no_faktur'])) {
+            $this->M_Journal->restore_jurnal_faktur_z_induk($faktur['no_faktur']);
+        }
 
         $this->session->set_flashdata('success', "Seluruh pecahan untuk Faktur Z <strong>" . htmlspecialchars($faktur['no_faktur']) . "</strong> berhasil di-reset. Faktur Z kembali berstatus Belum Dipecah.");
         if (!empty($faktur['kd_customer'])) {
@@ -10464,6 +10486,102 @@ class C_SalesOrder extends CI_Controller
                 'message' => 'Gagal memuat jurnal pelunasan: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Mengambil detail Jurnal Penjualan (SJ) dan Jurnal HPP (Goods Issue) milik Faktur Pecahan H dalam format JSON.
+     */
+    public function jurnal_penjualan_faktur_z_pecah_json($id_pecah)
+    {
+        $this->output->set_content_type('application/json');
+
+        if (!$this->session->userdata('logged_in')) {
+            echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+            return;
+        }
+
+        try {
+            $faktur = $this->db->select('p.*, ca.kontak_person, ca.nama_toko')
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+                ->where('p.id_pecah', (int)$id_pecah)
+                ->get()->row_array();
+
+            if (!$faktur) {
+                echo json_encode(['status' => 'error', 'message' => 'Faktur Pecahan H tidak ditemukan.']);
+                return;
+            }
+
+            $this->load->model('M_Journal');
+            // Jika belum punya id_jurnal_penjualan, generate otomatis
+            if (empty($faktur['id_jurnal_penjualan'])) {
+                $this->M_Journal->post_jurnal_penjualan_faktur_h((int)$id_pecah);
+                if (!empty($faktur['parent_no_faktur'])) {
+                    $this->M_Journal->void_jurnal_faktur_z_induk($faktur['parent_no_faktur']);
+                }
+                $faktur = $this->db->select('p.*, ca.kontak_person, ca.nama_toko')
+                    ->from('tbso_faktur_z_pecah p')
+                    ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+                    ->where('p.id_pecah', (int)$id_pecah)
+                    ->get()->row_array();
+            }
+
+            $jurnal_penjualan = !empty($faktur['id_jurnal_penjualan'])
+                ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_penjualan'])
+                : null;
+            $jurnal_hpp = !empty($faktur['id_jurnal_hpp'])
+                ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_hpp'])
+                : null;
+
+            echo json_encode([
+                'status'           => 'success',
+                'faktur'           => $faktur,
+                'jurnal_penjualan' => $jurnal_penjualan,
+                'jurnal_hpp'       => $jurnal_hpp,
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Gagal memuat jurnal penjualan: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Menjalankan sinkronisasi massal Jurnal Penjualan untuk seluruh Faktur Pecahan H
+     * dan memastikan seluruh Faktur Z Induk terkait status jurnalnya di-void (digantikan oleh H).
+     */
+    public function sinkronkan_jurnal_penjualan_faktur_h()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        $this->load->model('M_SalesOrder');
+        $this->M_SalesOrder->ensure_faktur_z_pecah_tables();
+
+        $fakturs = $this->db->select('id_pecah, no_faktur, parent_no_faktur')
+            ->from('tbso_faktur_z_pecah')
+            ->where('status !=', 'cancelled')
+            ->get()->result_array();
+
+        $count = 0;
+        $parentsVoided = [];
+        foreach ($fakturs as $fh) {
+            $this->M_Journal->post_jurnal_penjualan_faktur_h((int)$fh['id_pecah']);
+            $count++;
+            if (!empty($fh['parent_no_faktur']) && !isset($parentsVoided[$fh['parent_no_faktur']])) {
+                $this->M_Journal->void_jurnal_faktur_z_induk($fh['parent_no_faktur']);
+                $parentsVoided[$fh['parent_no_faktur']] = true;
+            }
+        }
+
+        $this->session->set_flashdata('success', "Berhasil mensinkronkan Jurnal Penjualan untuk <strong>{$count}</strong> Faktur Pecahan H. Seluruh jurnal penjualan resmi telah diakui dan siap masuk ke Laporan Neraca & Laba Rugi.");
+
+        $redirect = $this->input->server('HTTP_REFERER') ?: 'sales_order/pecah_faktur#content-faktur-h';
+        redirect($redirect);
     }
 
     /**

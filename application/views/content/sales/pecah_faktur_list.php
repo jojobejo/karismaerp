@@ -581,6 +581,14 @@
                                             Belum: <strong><?= $belumH ?></strong>
                                         </span>
 
+                                        <a href="<?= base_url('sales_order/sinkronkan_jurnal_penjualan_faktur_h') ?>" 
+                                           class="btn btn-outline-info btn-sm font-weight-bold shadow-sm mr-2"
+                                           id="btnSyncJurnalPenjualanH"
+                                           title="Sinkronkan Jurnal Penjualan resmi Faktur Pecahan H dan sesuaikan status Jurnal Faktur Z Induk agar masuk Neraca & Laba Rugi"
+                                           onclick="return confirm('Apakah Anda ingin memproses dan memastikan seluruh Faktur Pecahan H memiliki Jurnal Penjualan resmi yang diakui di Laporan Keuangan?')">
+                                            <i class="fas fa-sync-alt mr-1"></i> Sinkron Jurnal Penjualan H
+                                        </a>
+
                                         <a href="<?= base_url('sales_order/export_faktur_z_pecah_lunas') ?>" 
                                            class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2"
                                            id="btnExportFakturZLunas"
@@ -613,6 +621,7 @@
                                                 <th class="text-center">Total Item</th>
                                                 <th class="text-right">Total Nilai</th>
                                                 <th class="text-center">Status Bayar</th>
+                                                <th class="text-center">Jurnal Penjualan</th>
                                                 <th class="text-center">Jurnal Pelunasan</th>
                                                 <th>Dibuat Oleh</th>
                                                 <th width="120" class="text-center no-sort">Aksi</th>
@@ -621,7 +630,7 @@
                                         <tbody>
                                             <?php if (empty($fakturs_h)): ?>
                                                 <tr>
-                                                    <td colspan="13" class="text-center py-5 text-muted">
+                                                    <td colspan="14" class="text-center py-5 text-muted">
                                                         <i class="fas fa-inbox fa-2x mb-2 text-warning"></i><br>
                                                         Belum ada faktur pecahan (kode H) yang dibuat.
                                                     </td>
@@ -684,6 +693,31 @@
                                                                 <span class="badge badge-secondary px-2 py-1" title="Faktur H belum lunas">
                                                                     <i class="fas fa-clock mr-1"></i> Belum Lunas
                                                                 </span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <?php if (!empty($fh['nomor_jurnal_penjualan'])): ?>
+                                                                <a href="javascript:void(0)" 
+                                                                   class="badge badge-info text-white font-weight-bold shadow-sm d-block mb-1 btn-view-jurnal-penjualan-h" 
+                                                                   data-id-pecah="<?= (int)$fh['id_pecah'] ?>"
+                                                                   title="Klik untuk melihat Jurnal Penjualan (SJ)">
+                                                                    <i class="fas fa-file-invoice mr-1"></i> <?= htmlspecialchars($fh['nomor_jurnal_penjualan']) ?>
+                                                                </a>
+                                                                <?php if (!empty($fh['nomor_jurnal_hpp'])): ?>
+                                                                    <a href="javascript:void(0)" 
+                                                                       class="badge badge-secondary font-weight-bold shadow-sm d-block btn-view-jurnal-penjualan-h" 
+                                                                       data-id-pecah="<?= (int)$fh['id_pecah'] ?>"
+                                                                       title="Klik untuk melihat Jurnal HPP & Persediaan">
+                                                                        <i class="fas fa-boxes mr-1"></i> <?= htmlspecialchars($fh['nomor_jurnal_hpp']) ?>
+                                                                    </a>
+                                                                <?php endif; ?>
+                                                            <?php else: ?>
+                                                                <a href="javascript:void(0)" 
+                                                                   class="badge badge-outline-info text-info border font-weight-bold btn-view-jurnal-penjualan-h" 
+                                                                   data-id-pecah="<?= (int)$fh['id_pecah'] ?>"
+                                                                   title="Klik untuk membuat Jurnal Penjualan">
+                                                                    <i class="fas fa-plus-circle mr-1"></i> Buat Jurnal
+                                                                </a>
                                                             <?php endif; ?>
                                                         </td>
                                                         <td class="text-center align-middle">
@@ -911,6 +945,29 @@
                     <div class="text-center py-4 text-muted">
                         <i class="fas fa-spinner fa-spin fa-2x mb-2 text-purple"></i><br>
                         Memuat rincian jurnal...
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Jurnal Penjualan Faktur Pecahan H (Sistem) -->
+    <div class="modal fade" id="modalDetailJurnalPenjualanH" tabindex="-1" role="dialog" aria-labelledby="modalDetailJurnalPenjualanHLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title font-weight-bold text-dark" id="modalDetailJurnalPenjualanHLabel">
+                        <i class="fas fa-file-invoice text-info mr-2"></i> Jurnal Penjualan Resmi Faktur Pecahan: <span id="jurnalPenjualanPecahNoFaktur" class="badge badge-info text-white font-weight-bold ml-1"></span>
+                    </h5>
+                    <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body p-3" id="bodyDetailJurnalPenjualanH">
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2 text-info"></i><br>
+                        Memuat rincian jurnal penjualan...
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -2294,6 +2351,103 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }).fail(function() {
                 $('#bodyDetailJurnalPelunasanH').html('<div class="alert alert-danger"><i class="fas fa-times-circle mr-1"></i> Gagal menghubungi server.</div>');
+            });
+        });
+
+        // Handler klik Badge Nomor Jurnal Penjualan untuk melihat Rincian Jurnal Penjualan & HPP Faktur H
+        $(document).on('click', '.btn-view-jurnal-penjualan-h', function(e) {
+            e.preventDefault();
+            var idPecah = $(this).attr('data-id-pecah');
+            if (!idPecah) return;
+
+            $('#jurnalPenjualanPecahNoFaktur').text('Memuat...');
+            $('#bodyDetailJurnalPenjualanH').html('<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-info"></i><br>Memuat rincian jurnal penjualan...</div>');
+            $('#modalDetailJurnalPenjualanH').modal('show');
+
+            $.getJSON('<?= base_url("sales_order/jurnal_penjualan_faktur_z_pecah_json/") ?>' + idPecah, function(res) {
+                if (res.status === 'success') {
+                    var f = res.faktur;
+                    $('#jurnalPenjualanPecahNoFaktur').text(f.no_faktur);
+
+                    var renderJournalCard = function(j, badgeClass, title, icon) {
+                        if (!j || !j.header) return '';
+                        var h = j.header;
+                        var rowsHtml = '';
+                        var totD = 0, totK = 0;
+
+                        if (j.details && j.details.length > 0) {
+                            $.each(j.details, function(i, d) {
+                                var deb = parseFloat(d.debit || 0);
+                                var kre = parseFloat(d.kredit || 0);
+                                totD += deb;
+                                totK += kre;
+                                rowsHtml += '<tr>' +
+                                    '<td class="text-center align-middle">' + (i + 1) + '</td>' +
+                                    '<td class="text-center align-middle font-weight-bold text-monospace" style="font-size: 11px;">' + (d.kode_akun || '-') + '</td>' +
+                                    '<td class="align-middle font-weight-bold">' + (d.nama_akun || '-') + '</td>' +
+                                    '<td class="align-middle small text-muted">' + (d.keterangan || '-') + '</td>' +
+                                    '<td class="text-right align-middle text-success font-weight-bold">' + (deb > 0 ? ('Rp ' + deb.toLocaleString('id-ID')) : '-') + '</td>' +
+                                    '<td class="text-right align-middle text-danger font-weight-bold">' + (kre > 0 ? ('Rp ' + kre.toLocaleString('id-ID')) : '-') + '</td>' +
+                                '</tr>';
+                            });
+                        } else {
+                            rowsHtml = '<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada baris ayat jurnal.</td></tr>';
+                        }
+
+                        return '' +
+                            '<div class="card mb-3 shadow-sm border">' +
+                                '<div class="card-header bg-light d-flex justify-content-between align-items-center py-2">' +
+                                    '<span class="font-weight-bold ' + badgeClass + ' px-2 py-1 rounded" style="font-size: 12px;">' +
+                                        '<i class="' + icon + ' mr-1"></i> ' + title + ' — ' + (h.nomor_jurnal || '-') +
+                                    '</span>' +
+                                    '<span class="small text-muted">' +
+                                        'Tanggal: <strong>' + (h.tanggal_transaksi || '-') + '</strong> | Ref: <strong>' + (h.source_no || '-') + '</strong> | Status: <span class="badge badge-success">' + (h.status || 'POSTED') + '</span>' +
+                                    '</span>' +
+                                '</div>' +
+                                '<div class="card-body p-0">' +
+                                    '<div class="table-responsive">' +
+                                        '<table class="table table-sm table-striped table-hover mb-0" style="font-size: 12px;">' +
+                                            '<thead class="thead-light">' +
+                                                '<tr>' +
+                                                    '<th width="35" class="text-center">#</th>' +
+                                                    '<th width="90" class="text-center">Kode Akun</th>' +
+                                                    '<th>Nama Akun</th>' +
+                                                    '<th>Keterangan</th>' +
+                                                    '<th width="140" class="text-right">Debit</th>' +
+                                                    '<th width="140" class="text-right">Kredit</th>' +
+                                                '</tr>' +
+                                            '</thead>' +
+                                            '<tbody>' + rowsHtml + '</tbody>' +
+                                            '<tfoot class="bg-light font-weight-bold">' +
+                                                '<tr>' +
+                                                    '<td colspan="4" class="text-right">TOTAL:</td>' +
+                                                    '<td class="text-right text-success">Rp ' + totD.toLocaleString('id-ID') + '</td>' +
+                                                    '<td class="text-right text-danger">Rp ' + totK.toLocaleString('id-ID') + '</td>' +
+                                                '</tr>' +
+                                            '</tfoot>' +
+                                        '</table>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>';
+                    };
+
+                    var contentHtml = '';
+                    if (res.jurnal_penjualan && res.jurnal_penjualan.header) {
+                        contentHtml += renderJournalCard(res.jurnal_penjualan, 'badge-info text-white', 'Jurnal Penjualan Resmi (SJ)', 'fas fa-file-invoice');
+                    }
+                    if (res.jurnal_hpp && res.jurnal_hpp.header) {
+                        contentHtml += renderJournalCard(res.jurnal_hpp, 'badge-secondary text-white', 'Jurnal HPP & Persediaan (Goods Issue)', 'fas fa-boxes');
+                    }
+                    if (!contentHtml) {
+                        contentHtml = '<div class="alert alert-warning text-center"><i class="fas fa-exclamation-triangle mr-1"></i> Data jurnal penjualan belum tersedia untuk faktur pecahan ini.</div>';
+                    }
+
+                    $('#bodyDetailJurnalPenjualanH').html(contentHtml);
+                } else {
+                    $('#bodyDetailJurnalPenjualanH').html('<div class="alert alert-danger"><i class="fas fa-times-circle mr-1"></i> ' + (res.message || 'Gagal memuat jurnal penjualan.') + '</div>');
+                }
+            }).fail(function() {
+                $('#bodyDetailJurnalPenjualanH').html('<div class="alert alert-danger"><i class="fas fa-times-circle mr-1"></i> Gagal menghubungi server.</div>');
             });
         });
     }
