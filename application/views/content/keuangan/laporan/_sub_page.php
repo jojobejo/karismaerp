@@ -154,7 +154,7 @@
 
                 <div class="lpsub-menu-grid">
                     <?php foreach ($menus as $m) : ?>
-                        <a href="<?= $m['url'] ?>" class="lpsub-card">
+                        <a href="<?= $m['url'] ?>" class="lpsub-card" <?= !empty($m['onclick']) ? 'onclick="' . $m['onclick'] . '"' : '' ?>>
                             <div class="lpsub-card-icon"><i class="<?= $m['icon'] ?>"></i></div>
                             <div class="lpsub-card-body">
                                 <div class="lpsub-card-title"><?= html_escape($m['title']) ?></div>

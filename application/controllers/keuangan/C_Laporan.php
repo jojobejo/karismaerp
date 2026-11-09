@@ -1416,5 +1416,123 @@ class C_Laporan extends CI_Controller
             echo json_encode(['success' => true, 'processed' => $count]);
         }
     }
-}
 
+    // =========================================================================
+    // LAPORAN ARUS KAS (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * Halaman Laporan Arus Kas - Rangkuman
+     */
+    public function arus_kas_rangkuman()
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        // Default jika belum ada filter
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-01-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-d');
+        }
+
+        $this->load->model('M_Journal');
+        $cashFlowData = $this->M_Journal->get_laporan_arus_kas($startDate, $endDate);
+
+        $data = [
+            'page_title'   => 'KARISMA - Laporan Arus Kas (Rangkuman)',
+            'company_name' => 'KARISMA 2025',
+            'report_title' => 'Laporan Arus Kas',
+            'report_type'  => 'rangkuman',
+            'start_date'   => $startDate,
+            'end_date'     => $endDate,
+            'data'         => $cashFlowData,
+            'print_time'   => date('H:i   d F, Y'),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/arus_kas_rangkuman.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Halaman Laporan Arus Kas - Rincian
+     */
+    public function arus_kas_rincian()
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-01-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-d');
+        }
+
+        $this->load->model('M_Journal');
+        $cashFlowData = $this->M_Journal->get_laporan_arus_kas($startDate, $endDate);
+
+        $data = [
+            'page_title'   => 'KARISMA - Laporan Arus Kas (Rincian)',
+            'company_name' => 'KARISMA 2025',
+            'report_title' => 'Laporan Arus Kas',
+            'report_type'  => 'rincian',
+            'start_date'   => $startDate,
+            'end_date'     => $endDate,
+            'data'         => $cashFlowData,
+            'print_time'   => date('H:i   d F, Y'),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/arus_kas_rincian.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Export Laporan Arus Kas ke format Excel
+     */
+    public function arus_kas_export($type = 'rangkuman')
+    {
+        $this->_ensure_access();
+
+        $startDate = trim((string)$this->input->get('start_date', true));
+        $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+            $startDate = date('Y-01-01');
+        }
+        if (empty($endDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+            $endDate = date('Y-m-d');
+        }
+
+        $this->load->model('M_Journal');
+        $cashFlowData = $this->M_Journal->get_laporan_arus_kas($startDate, $endDate);
+
+        $isRincian = ($type === 'rincian');
+        $filename = 'Laporan_Arus_Kas_' . ($isRincian ? 'Rincian_' : 'Rangkuman_') . $startDate . '_sd_' . $endDate . '.xls';
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $data = [
+            'company_name' => 'KARISMA 2025',
+            'report_title' => 'Laporan Arus Kas',
+            'report_type'  => $type,
+            'start_date'   => $startDate,
+            'end_date'     => $endDate,
+            'data'         => $cashFlowData,
+            'is_rincian'   => $isRincian,
+            'print_time'   => date('H:i   d F, Y'),
+        ];
+
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/arus_kas_excel.php', $data);
+    }
+
+}

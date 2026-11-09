@@ -2654,4 +2654,259 @@ class M_Journal extends CI_Model
         return $result;
     }
 
+
+    // =========================================================================
+    // MODUL LAPORAN ARUS KAS (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * Menghitung data Laporan Arus Kas (Metode Langsung / Kontra Akun Kas & Bank)
+     * untuk periode tertentu.
+     *
+     * @param string $startDate 'YYYY-MM-DD'
+     * @param string $endDate 'YYYY-MM-DD'
+     * @return array
+     */
+    public function get_laporan_arus_kas($startDate, $endDate)
+    {
+        // 1. Ambil seluruh akun Kas & Bank (110xx dan 120xx)
+        $cashAccounts = $this->db->select('id_akun, kode_akun, nama_akun')
+            ->from('tbkeu_akun')
+            ->group_start()
+                ->like('kode_akun', '110', 'after')
+                ->or_like('kode_akun', '120', 'after')
+            ->group_end()
+            ->get()->result_array();
+
+        $cashIdList = array_column($cashAccounts, 'id_akun');
+        if (empty($cashIdList)) {
+            return [
+                'top_items'          => [],
+                'operating'          => [],
+                'investing'          => [],
+                'financing'          => [],
+                'total_operating'    => 0,
+                'total_investing'    => 0,
+                'total_financing'    => 0,
+                'total_keluar_masuk' => 0,
+                'saldo_awal'         => 0,
+                'saldo_akhir'        => 0,
+            ];
+        }
+
+        // 2. Hitung Saldo Awal (semua jurnal kas posted sebelum tanggal mulai)
+        $saldoAwalRow = $this->db->select('COALESCE(SUM(d.debit - d.kredit), 0) AS saldo_awal', false)
+            ->from('tbkeu_jurnal_detail d')
+            ->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal')
+            ->where('j.status', 'POSTED')
+            ->where('j.tanggal_transaksi <', $startDate)
+            ->where_in('d.id_akun', $cashIdList)
+            ->get()->row_array();
+        $saldoAwal = (float)($saldoAwalRow['saldo_awal'] ?? 0);
+
+        // 3. Cari seluruh id_jurnal POSTED yang melibatkan kas dalam periode ini
+        $jurnalKasRows = $this->db->select('j.id_jurnal')
+            ->from('tbkeu_jurnal j')
+            ->join('tbkeu_jurnal_detail d', 'd.id_jurnal = j.id_jurnal')
+            ->where('j.status', 'POSTED')
+            ->where('j.tanggal_transaksi >=', $startDate)
+            ->where('j.tanggal_transaksi <=', $endDate)
+            ->where_in('d.id_akun', $cashIdList)
+            ->group_by('j.id_jurnal')
+            ->get()->result_array();
+
+        if (empty($jurnalKasRows)) {
+            return [
+                'top_items'          => [],
+                'operating'          => [],
+                'investing'          => [],
+                'financing'          => [],
+                'total_operating'    => 0,
+                'total_investing'    => 0,
+                'total_financing'    => 0,
+                'total_keluar_masuk' => 0,
+                'saldo_awal'         => $saldoAwal,
+                'saldo_akhir'        => $saldoAwal,
+            ];
+        }
+
+        $jurnalIds = array_column($jurnalKasRows, 'id_jurnal');
+
+        // 4. Ambil detail baris NON-KAS dari jurnal-jurnal tersebut
+        $lines = [];
+        $chunks = array_chunk($jurnalIds, 500);
+        foreach ($chunks as $chunk) {
+            $chunkLines = $this->db->select('d.id_jurnal, d.id_akun, d.debit, d.kredit, a.kode_akun, a.nama_akun')
+                ->from('tbkeu_jurnal_detail d')
+                ->join('tbkeu_akun a', 'a.id_akun = d.id_akun')
+                ->where_in('d.id_jurnal', $chunk)
+                ->where_not_in('d.id_akun', $cashIdList)
+                ->get()->result_array();
+            if (!empty($chunkLines)) {
+                $lines = array_merge($lines, $chunkLines);
+            }
+        }
+
+        $categories = [];
+        $totalKeluarMasuk = 0.0;
+
+        foreach ($lines as $line) {
+            $kodeAkun = trim((string)$line['kode_akun']);
+            $namaAkun = trim((string)$line['nama_akun']);
+            // Efek kas: kredit - debit
+            $cashAmount = (float)$line['kredit'] - (float)$line['debit'];
+            $totalKeluarMasuk += $cashAmount;
+
+            $map = $this->map_account_to_cash_flow_category($kodeAkun);
+            $group = $map['group'];
+            $catName = $map['category'];
+            $order = $map['order'];
+
+            if (!isset($categories[$group])) {
+                $categories[$group] = [];
+            }
+            if (!isset($categories[$group][$catName])) {
+                $categories[$group][$catName] = [
+                    'name'     => $catName,
+                    'order'    => $order,
+                    'total'    => 0.0,
+                    'accounts' => []
+                ];
+            }
+
+            $categories[$group][$catName]['total'] += $cashAmount;
+
+            $formattedKode = $this->format_kode_akun_zahir($kodeAkun);
+            if (!isset($categories[$group][$catName]['accounts'][$formattedKode])) {
+                $categories[$group][$catName]['accounts'][$formattedKode] = [
+                    'kode_akun' => $formattedKode,
+                    'nama_akun' => $namaAkun,
+                    'total'     => 0.0
+                ];
+            }
+            $categories[$group][$catName]['accounts'][$formattedKode]['total'] += $cashAmount;
+        }
+
+        // Urutkan kategori dan akun di dalamnya
+        foreach ($categories as $grp => &$catList) {
+            uasort($catList, function($a, $b) {
+                return $a['order'] <=> $b['order'];
+            });
+            foreach ($catList as &$cItem) {
+                ksort($cItem['accounts']);
+            }
+        }
+        unset($catList, $cItem);
+
+        // Subtotal per grup aktivitas
+        $totalOperating = 0.0;
+        if (!empty($categories['OPERATING'])) {
+            foreach ($categories['OPERATING'] as $c) {
+                $totalOperating += $c['total'];
+            }
+        }
+
+        $totalInvesting = 0.0;
+        if (!empty($categories['INVESTING'])) {
+            foreach ($categories['INVESTING'] as $c) {
+                $totalInvesting += $c['total'];
+            }
+        }
+
+        $totalFinancing = 0.0;
+        if (!empty($categories['FINANCING'])) {
+            foreach ($categories['FINANCING'] as $c) {
+                $totalFinancing += $c['total'];
+            }
+        }
+
+        $saldoAkhir = $saldoAwal + $totalKeluarMasuk;
+
+        return [
+            'top_items'          => $categories['TOP'] ?? [],
+            'operating'          => $categories['OPERATING'] ?? [],
+            'investing'          => $categories['INVESTING'] ?? [],
+            'financing'          => $categories['FINANCING'] ?? [],
+            'total_operating'    => $totalOperating,
+            'total_investing'    => $totalInvesting,
+            'total_financing'    => $totalFinancing,
+            'total_keluar_masuk' => $totalKeluarMasuk,
+            'saldo_awal'         => $saldoAwal,
+            'saldo_akhir'        => $saldoAkhir,
+        ];
+    }
+
+    /**
+     * Memetakan kode akun ke kategori Arus Kas sesuai standar Zahir Accounting Karisma.
+     */
+    public function map_account_to_cash_flow_category($kode_akun)
+    {
+        $c = preg_replace('/[^0-9]/', '', (string)$kode_akun);
+        $prefix3 = substr($c, 0, 3);
+        $prefix2 = substr($c, 0, 2);
+        $prefix1 = substr($c, 0, 1);
+        $num = (int)$c;
+
+        if ($prefix3 === '150' || $prefix2 === '15') {
+            return ['group' => 'TOP', 'category' => 'Biaya Dibayar Dimuka', 'order' => 1];
+        }
+        if ($num >= 66000 && $num <= 69999) {
+            return ['group' => 'TOP', 'category' => 'Biaya Adm & Umum', 'order' => 2];
+        }
+        if ($prefix2 === '13') {
+            return ['group' => 'OPERATING', 'category' => 'Piutang Usaha', 'order' => 3];
+        }
+        if ($prefix2 === '14') {
+            return ['group' => 'OPERATING', 'category' => 'Persediaan', 'order' => 4];
+        }
+        if ($prefix2 === '21') {
+            return ['group' => 'OPERATING', 'category' => 'Utang Usaha', 'order' => 5];
+        }
+        if ($prefix1 === '5') {
+            return ['group' => 'OPERATING', 'category' => 'Beban atas Pendapatan', 'order' => 6];
+        }
+        if ($num >= 61000 && $num <= 65999) {
+            return ['group' => 'OPERATING', 'category' => 'Beban Pemasaran Dan Penjualan', 'order' => 7];
+        }
+        if ($prefix1 === '4') {
+            return ['group' => 'OPERATING', 'category' => 'Pendapatan Usaha', 'order' => 8];
+        }
+        if ($prefix1 === '8') {
+            return ['group' => 'OPERATING', 'category' => 'Pendapatan Luar Usaha', 'order' => 9];
+        }
+        if ($num >= 91000 && $num <= 98999) {
+            return ['group' => 'OPERATING', 'category' => 'Beban Luar Usaha', 'order' => 10];
+        }
+        if ($num >= 99000 && $num <= 99999) {
+            return ['group' => 'OPERATING', 'category' => 'Beban Pajak', 'order' => 11];
+        }
+        if ($prefix2 === '16') {
+            return ['group' => 'INVESTING', 'category' => 'Investasi Jangka Panjang', 'order' => 12];
+        }
+        if ($prefix2 === '17' || $prefix2 === '18') {
+            return ['group' => 'INVESTING', 'category' => 'Harta Tetap Berwujud', 'order' => 13];
+        }
+        if ($prefix1 === '3') {
+            return ['group' => 'FINANCING', 'category' => 'Modal', 'order' => 14];
+        }
+        if ($prefix1 === '2') {
+            return ['group' => 'FINANCING', 'category' => 'Kewajiban Jangka Panjang', 'order' => 15];
+        }
+
+        return ['group' => 'OPERATING', 'category' => 'Lain-Lain', 'order' => 99];
+    }
+
+    /**
+     * Memformat kode akun gaya Zahir (misal 15012 menjadi 150-12).
+     */
+    public function format_kode_akun_zahir($kode)
+    {
+        $kode = trim((string)$kode);
+        if (strpos($kode, '-') !== false) return $kode;
+        if (strlen($kode) >= 5) {
+            return substr($kode, 0, 3) . '-' . substr($kode, 3);
+        }
+        return $kode;
+    }
+
 }
