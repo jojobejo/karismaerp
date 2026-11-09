@@ -71,12 +71,23 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
         white-space: nowrap;
     }
 
+    .dashboard-nav-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
     .dashboard-tabs {
         display: flex;
         gap: 8px;
         overflow-x: auto;
-        padding-bottom: 10px;
-        margin-bottom: 18px;
+        padding-bottom: 4px;
+        margin-bottom: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        scrollbar-width: thin;
     }
 
     .dashboard-tab {
@@ -330,6 +341,17 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
             width: min(100% - 28px, 960px);
         }
 
+        .dashboard-nav-bar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .dashboard-search-wrapper {
+            flex: 1 1 100%;
+            width: 100%;
+        }
+
         .dashboard-menu-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             grid-auto-rows: 204px;
@@ -371,6 +393,138 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
             height: 190px;
             min-height: 190px;
         }
+
+        .dashboard-search-input {
+            font-size: 14px;
+        }
+
+        .dashboard-tile-badge {
+            max-width: 120px;
+        }
+    }
+
+    /* Menu Search Styling */
+    .dashboard-search-wrapper {
+        position: relative;
+        flex: 0 0 350px;
+        max-width: 100%;
+        margin-bottom: 0;
+    }
+
+    .dashboard-search-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid rgba(18, 127, 173, .18);
+        border-radius: 8px;
+        min-height: 50px;
+        padding: 0 16px;
+        box-shadow: 0 8px 18px rgba(23, 32, 42, .05);
+        transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+
+    .dashboard-search-box:focus-within {
+        border-color: #127fad;
+        box-shadow: 0 10px 22px rgba(18, 127, 173, .18);
+        transform: translateY(-2px);
+    }
+
+    .dashboard-search-icon {
+        font-size: 16px;
+        color: #127fad;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+
+    .dashboard-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--dash-ink);
+        padding: 8px 0;
+        min-width: 0;
+    }
+
+    .dashboard-search-input::placeholder {
+        color: #8c9ba5;
+        font-weight: 400;
+        font-size: 14px;
+    }
+
+    .dashboard-search-clear {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: color .2s ease, transform .2s ease;
+    }
+
+    .dashboard-search-clear:hover {
+        color: #dc2626;
+        transform: scale(1.1);
+    }
+
+    .dashboard-search-shortcut {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 10px;
+        user-select: none;
+    }
+
+    .dashboard-search-shortcut kbd {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 3px 7px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: inherit;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+    }
+
+    .dashboard-tile-badge {
+        display: inline-block;
+        max-width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background: rgba(255, 255, 255, .24);
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, .3);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+    }
+
+    .dashboard-search-panel {
+        display: none;
+    }
+
+    .dashboard-search-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 999px;
     }
 </style>
 
@@ -406,12 +560,106 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                         </div>
                     </div>
 
-                    <div class="dashboard-tabs" role="tablist">
-                        <?php foreach ($sections as $key => $section) : ?>
-                            <button type="button" class="dashboard-tab <?= $key === $activeKey ? 'active' : '' ?>" data-target="<?= html_escape($key) ?>" role="tab">
-                                <i class="<?= html_escape($section['icon']) ?>"></i><?= html_escape($section['label']) ?>
+                    <?php
+                    // Kumpulkan daftar modul unik untuk pencarian cepat lintas departemen
+                    $uniqueSearchMenus = array();
+                    foreach ($sections as $sKey => $sVal) {
+                        if (empty($sVal['menus']) || !is_array($sVal['menus'])) {
+                            continue;
+                        }
+                        foreach ($sVal['menus'] as $menu) {
+                            $routeKey = trim((string)$menu['route']);
+                            if (!isset($uniqueSearchMenus[$routeKey])) {
+                                $uniqueSearchMenus[$routeKey] = $menu;
+                                $uniqueSearchMenus[$routeKey]['section_labels'] = array($sVal['label']);
+                            } else {
+                                if (!in_array($sVal['label'], $uniqueSearchMenus[$routeKey]['section_labels'], true)) {
+                                    $uniqueSearchMenus[$routeKey]['section_labels'][] = $sVal['label'];
+                                }
+                            }
+                        }
+                    }
+                    ?>
+
+                    <!-- Baris Navigasi: Tabs Modul (Kiri) & Menu Search (Kanan) -->
+                    <div class="dashboard-nav-bar">
+                        <div class="dashboard-tabs" role="tablist">
+                            <?php foreach ($sections as $key => $section) : ?>
+                                <button type="button" class="dashboard-tab <?= $key === $activeKey ? 'active' : '' ?>" data-target="<?= html_escape($key) ?>" role="tab">
+                                    <i class="<?= html_escape($section['icon']) ?>"></i><?= html_escape($section['label']) ?>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Menu Search Cepat Modul Dashboard Sejajar Sisi Kanan -->
+                        <div class="dashboard-search-wrapper">
+                            <div class="dashboard-search-box">
+                                <i class="fas fa-search dashboard-search-icon"></i>
+                                <input type="text" id="dashboardModuleSearch" class="dashboard-search-input" placeholder="Cari modul..." autocomplete="off">
+                                <button type="button" id="dashboardSearchClear" class="dashboard-search-clear" title="Hapus pencarian (Esc)" style="display: none;">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Hasil Pencarian Modul -->
+                    <div id="dashboardSearchPanel" class="dashboard-search-panel">
+                        <div class="dashboard-panel-head">
+                            <div>
+                                <h2>Hasil Pencarian Modul</h2>
+                                <div class="dashboard-search-meta">
+                                    <span class="dashboard-search-tag" id="dashboardSearchBadgeCount">
+                                        <i class="fas fa-layer-group mr-1"></i> <span id="dashboardSearchCountText">0 modul</span>
+                                    </span>
+                                    <p id="dashboardSearchResultDesc" class="mb-0 text-muted small"></p>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnResetSearch">
+                                    <i class="fas fa-times mr-1"></i> Tutup Pencarian
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-menu-grid" id="dashboardSearchGrid">
+                            <?php foreach ($uniqueSearchMenus as $menu) : 
+                                $secLabelStr = implode(' · ', $menu['section_labels']);
+                                $searchKeywords = strtolower($menu['title'] . ' ' . $menu['description'] . ' ' . $menu['route'] . ' ' . implode(' ', $menu['section_labels']));
+                            ?>
+                                <a href="<?= base_url($menu['route']) ?>" 
+                                   class="dashboard-menu-tile dashboard-tone-<?= html_escape($menu['tone']) ?> dashboard-search-item" 
+                                   data-keywords="<?= html_escape($searchKeywords) ?>"
+                                   data-title="<?= html_escape(strtolower($menu['title'])) ?>"
+                                   style="display: none;">
+                                    <span class="dashboard-menu-content">
+                                        <span class="d-flex justify-content-between align-items-start">
+                                            <span class="dashboard-tile-icon"><i class="<?= html_escape($menu['icon']) ?>"></i></span>
+                                            <span class="dashboard-tile-badge" title="<?= html_escape($secLabelStr) ?>"><?= html_escape($secLabelStr) ?></span>
+                                        </span>
+                                        <span>
+                                            <h3 class="dashboard-menu-title"><?= html_escape($menu['title']) ?></h3>
+                                            <p class="dashboard-menu-desc"><?= html_escape($menu['description']) ?></p>
+                                        </span>
+                                        <span class="dashboard-menu-action">Buka modul <i class="fas fa-arrow-right"></i></span>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Tampilan Jika Modul Tidak Ditemukan -->
+                        <div id="dashboardSearchEmpty" class="text-center py-5" style="display: none; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; margin-top: 10px;">
+                            <div class="mb-3">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background: rgba(18, 127, 173, .1); color: #127fad; font-size: 32px;">
+                                    <i class="fas fa-search-minus"></i>
+                                </span>
+                            </div>
+                            <h4 class="font-weight-bold text-dark">Modul Tidak Ditemukan</h4>
+                            <p class="text-muted mb-3" id="dashboardSearchEmptyMsg">Tidak ada modul yang cocok dengan kata kunci pencarian Anda.</p>
+                            <button type="button" class="btn btn-primary btn-sm px-3" id="btnSearchClearEmpty">
+                                <i class="fas fa-undo mr-1"></i> Bersihkan Pencarian
                             </button>
-                        <?php endforeach; ?>
+                        </div>
                     </div>
 
                     <?php foreach ($sections as $key => $section) : ?>
@@ -456,21 +704,131 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
 
     <script>
         $(function() {
+            // Navigasi Tab Dashboard Normal
             $('.dashboard-tab').on('click', function() {
                 const target = $(this).data('target');
+                resetSearch();
                 $('.dashboard-tab').removeClass('active');
                 $(this).addClass('active');
                 $('.dashboard-panel').removeClass('active');
                 $('.dashboard-panel[data-panel="' + target + '"]').addClass('active');
             });
 
-            $('.dashboard-menu-tile')
-                .on('mouseenter focus', function() {
-                    $(this).addClass('is-active');
-                })
-                .on('mouseleave blur', function() {
-                    $(this).removeClass('is-active');
+            // Efek hover tile menu
+            $(document).on('mouseenter focus', '.dashboard-menu-tile', function() {
+                $(this).addClass('is-active');
+            }).on('mouseleave blur', '.dashboard-menu-tile', function() {
+                $(this).removeClass('is-active');
+            });
+
+            // ELEMEN PENCARIAN MODUL
+            const $searchInput = $('#dashboardModuleSearch');
+            const $searchClear = $('#dashboardSearchClear');
+            const $searchPanel = $('#dashboardSearchPanel');
+            const $searchGrid = $('#dashboardSearchGrid');
+            const $searchEmpty = $('#dashboardSearchEmpty');
+            const $searchEmptyMsg = $('#dashboardSearchEmptyMsg');
+            const $searchCountText = $('#dashboardSearchCountText');
+            const $searchResultDesc = $('#dashboardSearchResultDesc');
+            const $searchItems = $('.dashboard-search-item');
+            const $dashboardPanels = $('.dashboard-panel');
+
+            // Fungsi eksekusi pencarian real-time
+            function executeSearch(query) {
+                query = (query || '').trim().toLowerCase();
+
+                if (query.length === 0) {
+                    resetSearch();
+                    return;
+                }
+
+                $searchClear.show();
+                $dashboardPanels.hide();
+                $searchPanel.show();
+
+                let visibleCount = 0;
+                $searchItems.each(function() {
+                    const keywords = ($(this).data('keywords') || '').toString().toLowerCase();
+                    if (keywords.indexOf(query) !== -1) {
+                        $(this).css('display', 'flex');
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
                 });
+
+                $searchCountText.text(visibleCount + ' modul');
+                $searchResultDesc.text('Menampilkan hasil pencarian untuk "' + query + '"');
+
+                if (visibleCount === 0) {
+                    $searchGrid.hide();
+                    $searchEmpty.show();
+                    $searchEmptyMsg.text('Tidak ada modul yang cocok dengan kata kunci "' + query + '". Coba kata kunci lainnya.');
+                } else {
+                    $searchEmpty.hide();
+                    $searchGrid.show();
+                }
+            }
+
+            // Fungsi reset pencarian dan kembali ke tampilan dashboard normal
+            function resetSearch() {
+                $searchInput.val('');
+                $searchClear.hide();
+                $searchPanel.hide();
+                $searchEmpty.hide();
+                $searchItems.hide();
+                $('.dashboard-panel.active').show();
+            }
+
+            // Event input realtime
+            $searchInput.on('input', function() {
+                executeSearch($(this).val());
+            });
+
+            // Tombol Bersihkan / Reset Pencarian
+            $searchClear.on('click', function() {
+                resetSearch();
+                $searchInput.focus();
+            });
+
+            $('#btnResetSearch, #btnSearchClearEmpty').on('click', function() {
+                resetSearch();
+            });
+
+            // Shortcut Keyboard:
+            // 1. Enter pada input pencarian: langsung buka modul hasil pencarian pertama
+            $searchInput.on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const $firstMatch = $searchItems.filter(':visible').first();
+                    if ($firstMatch.length > 0) {
+                        const targetUrl = $firstMatch.attr('href');
+                        if (targetUrl) {
+                            window.location.href = targetUrl;
+                        }
+                    }
+                } else if (e.key === 'Escape') {
+                    resetSearch();
+                    $searchInput.blur();
+                }
+            });
+
+            // 2. Global Shortcut: Ctrl+K / Cmd+K atau tombol '/' untuk fokus ke input search
+            $(document).on('keydown', function(e) {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                const isFormInput = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    $searchInput.focus().select();
+                } else if (e.key === '/' && !isFormInput) {
+                    e.preventDefault();
+                    $searchInput.focus().select();
+                } else if (e.key === 'Escape' && isFormInput && document.activeElement === $searchInput[0]) {
+                    resetSearch();
+                    $searchInput.blur();
+                }
+            });
         });
     </script>
 

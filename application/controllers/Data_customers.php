@@ -16,7 +16,10 @@ class Data_customers extends CI_Controller
     {
         $data['page_title'] = 'KARISMA ERP - Data Customers';
 
-        // Ambil semua customer, urutkan berdasarkan nama_kios atau nama_customer
+        // Hitung total customer secara cepat tanpa memuat seluruh baris
+        $data['total_customers'] = (int)$this->db->count_all('tb_customer');
+
+        // Initial load dibatasi 50 data pertama agar halaman terbuka instan dan ringan
         $data['customers'] = $this->db->query("
             SELECT
                 id,
@@ -25,22 +28,64 @@ class Data_customers extends CI_Controller
                 COALESCE(nama_kios, '') AS nama_kios,
                 COALESCE(nama_sales, '') AS nama_sales,
                 COALESCE(kd_rute, '') AS kd_rute,
-                COALESCE(telp1, '') AS telp1,
-                COALESCE(telp2, '') AS telp2,
-                COALESCE(regional, '') AS regional,
-                COALESCE(jam_buka_tutup, '') AS jam_buka_tutup,
-                COALESCE(karakteristik_kios, '') AS karakteristik_kios,
-                COALESCE(alamat_kios, '') AS alamat_kios,
-                COALESCE(plafon_aktif, 0) AS plafon_aktif
+                COALESCE(telp1, '') AS telp1
             FROM tb_customer
             ORDER BY
                 CASE WHEN COALESCE(nama_kios, '') = '' THEN 1 ELSE 0 END,
                 COALESCE(nama_kios, nama_customer, '') ASC
+            LIMIT 50
         ")->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/data_customers/index.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Endpoint AJAX untuk search dan pagination (infinite scroll) data customer
+     */
+    public function get_list()
+    {
+        $search = trim((string)$this->input->get('q'));
+        $offset = max(0, (int)$this->input->get('offset'));
+        $limit  = min(100, max(10, (int)($this->input->get('limit') ?: 50)));
+
+        $this->db->select("
+            id,
+            COALESCE(kd_customer, '') AS kd_customer,
+            COALESCE(nama_customer, '') AS nama_customer,
+            COALESCE(nama_kios, '') AS nama_kios,
+            COALESCE(nama_sales, '') AS nama_sales,
+            COALESCE(kd_rute, '') AS kd_rute,
+            COALESCE(telp1, '') AS telp1
+        ");
+        $this->db->from('tb_customer');
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('nama_kios', $search);
+            $this->db->or_like('nama_customer', $search);
+            $this->db->or_like('kd_customer', $search);
+            $this->db->or_like('kd_rute', $search);
+            $this->db->or_like('nama_sales', $search);
+            $this->db->or_like('telp1', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by("CASE WHEN COALESCE(nama_kios, '') = '' THEN 1 ELSE 0 END", "ASC", false);
+        $this->db->order_by("COALESCE(nama_kios, nama_customer, '')", "ASC", false);
+        $this->db->limit($limit, $offset);
+
+        $data = $this->db->get()->result();
+
+        echo json_encode([
+            'status'   => 'success',
+            'data'     => $data,
+            'count'    => count($data),
+            'offset'   => $offset,
+            'limit'    => $limit,
+            'has_more' => count($data) >= $limit
+        ]);
     }
 
     public function get_detail()
