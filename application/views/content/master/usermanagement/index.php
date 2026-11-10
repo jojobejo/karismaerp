@@ -30,8 +30,8 @@
                     <div class="erp-panel-header">
                         <div class="d-grid filter-grid gap-2" style="grid-template-columns:repeat(5,minmax(0,1fr));">
                             <select id="filter_departemen" class="form-select"><option value="">Departemen</option><?php foreach($departemen as $d): ?><option value="<?= html_escape($d['id']) ?>"><?= html_escape($d['text']) ?></option><?php endforeach ?></select>
-                            <select id="filter_jobdesk" class="form-select"><option value="">Jobdesk</option><?php foreach($jobdesk as $j): ?><option value="<?= html_escape($j['nama_jobdesk']) ?>"><?= html_escape($j['nama_jobdesk']) ?></option><?php endforeach ?></select>
-                            <select id="filter_akses" class="form-select"><option value="">Akses</option><?php foreach($akses_level as $a): ?><option value="<?= html_escape($a['nama_akses_level']) ?>"><?= html_escape($a['nama_akses_level']) ?></option><?php endforeach ?></select>
+                            <select id="filter_jobdesk" class="form-select"><option value="">Bagian / Jobdesk</option><?php foreach($jobdesk as $j): ?><option value="<?= html_escape($j['nama_jobdesk']) ?>"><?= html_escape($j['nama_jobdesk']) ?></option><?php endforeach ?></select>
+                            <select id="filter_akses" class="form-select"><option value="">Level Akses</option><?php foreach($akses_level as $a): ?><option value="<?= html_escape($a['id_akses_level']) ?>"><?= html_escape($a['nama_akses_level']) ?></option><?php endforeach ?></select>
                             <select id="filter_status" class="form-select"><option value="">Status</option><option value="1">Aktif</option><option value="0">Nonaktif</option></select>
                             <button class="btn btn-outline-secondary" id="btnResetFilter"><i class="fas fa-undo me-1"></i> Reset</button>
                         </div>
@@ -87,18 +87,20 @@
 <script>
 $(function(){
     const modal = new bootstrap.Modal(document.getElementById('modalUser'));
-    $('.select2').select2({width:'100%', dropdownParent: $('#modalUser')});
+    $('.select2').select2({width:'100%', tags:true, dropdownParent: $('#modalUser')});
     $('.js-close-user-modal').on('click', function(e){
         e.preventDefault();
         modal.hide();
     });
     function selectedText(id){ return $('#' + id + ' option:selected').data('text') || $('#' + id + ' option:selected').text(); }
+    const levelLabels = {1:'1 - Karyawan', 2:'2 - Koordinator', 3:'3 - Manager', 4:'4 - Kadep', 5:'5 - Direktur', 99:'99 - Super Admin'};
     const table = $('#tableUsers').DataTable({
         processing:true, serverSide:true, responsive:true, searchDelay:350,
         ajax:{url:'<?= base_url('master/user-management/list') ?>', type:'POST', data:function(d){d.departemen=$('#filter_departemen').val();d.jobdesk=$('#filter_jobdesk').val();d.akses_lv=$('#filter_akses').val();d.status=$('#filter_status').val();}},
         columns:[
             {data:null, render:r=>`<div class="d-flex align-items-center gap-2"><img class="avatar" src="${r.foto ? '<?= base_url() ?>'+r.foto : '<?= base_url('assets/images/Karisma.png') ?>'}"><div><div class="fw-semibold">${r.nm_karyawan||'-'}</div><small class="text-muted">${r.username||'-'}</small></div></div>`},
-            {data:'nik'}, {data:'departemen'}, {data:'jobdesk'}, {data:'akses_lv'},
+            {data:'nik'}, {data:'departemen'}, {data:'jobdesk'},
+            {data:'akses_lv', render:v=>`<span class="badge bg-light text-dark border">${levelLabels[parseInt(v)] || ('Lv ' + (v||1))}</span>`},
             {data:null, render:r=> r.status === undefined ? '<span class="badge bg-secondary">Legacy</span>' : (parseInt(r.status)===1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>')},
             {data:null, orderable:false, searchable:false, render:r=>`<div class="action-group"><button class="btn btn-sm btn-outline-primary btn-edit" data-id="${r.id}"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-warning btn-reset" data-id="${r.id}"><i class="fas fa-key"></i></button><button class="btn btn-sm btn-outline-secondary btn-toggle" data-id="${r.id}"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-outline-danger btn-delete" data-id="${r.id}"><i class="fas fa-trash"></i></button></div>`}
         ],
@@ -108,9 +110,9 @@ $(function(){
     $('#btnResetFilter').on('click',function(){ $('.filter-grid select').val(''); table.ajax.reload(); });
     $('#btnAdd').on('click',function(){ $('#formUser')[0].reset(); $('#id').val(''); $('.select2').val('').trigger('change'); modal.show(); });
     $('#jobdesk_id').on('change',()=>$('#jobdesk').val(selectedText('jobdesk_id')));
-    $('#akses_lv_id').on('change',()=>$('#akses_lv').val(selectedText('akses_lv_id')));
-    $('#tableUsers').on('click','.btn-edit',function(){ $.getJSON('<?= base_url('master/user-management/detail/') ?>'+$(this).data('id'),function(res){ if(!res.status){toastr.error(res.message);return;} $.each(res.data,function(k,v){$('#'+k).val(v);}); $('#jobdesk_id').val(res.data.jobdesk_id || '').trigger('change'); $('#akses_lv_id').val(res.data.akses_lv_id || '').trigger('change'); $('#password').val(''); modal.show(); }); });
-    $('#formUser').on('submit',function(e){ e.preventDefault(); $('#jobdesk').val(selectedText('jobdesk_id')); $('#akses_lv').val(selectedText('akses_lv_id')); const id=$('#id').val(); const url=id?'<?= base_url('master/user-management/update/') ?>'+id:'<?= base_url('master/user-management/save') ?>'; $.ajax({url:url,type:'POST',data:new FormData(this),processData:false,contentType:false,dataType:'json',success:function(res){res.status?toastr.success(res.message):toastr.error(res.message); if(res.status){modal.hide(); table.ajax.reload(null,false);}},error:function(){toastr.error('Server tidak merespons.');}}); });
+    $('#akses_lv_id').on('change',()=>$('#akses_lv').val($('#akses_lv_id').val() || selectedText('akses_lv_id')));
+    $('#tableUsers').on('click','.btn-edit',function(){ $.getJSON('<?= base_url('master/user-management/detail/') ?>'+$(this).data('id'),function(res){ if(!res.status){toastr.error(res.message);return;} $.each(res.data,function(k,v){$('#'+k).val(v);}); const jdVal = res.data.jobdesk || res.data.jobdesk_id || ''; if(jdVal && $('#jobdesk_id option[value="'+jdVal+'"]').length===0){ $('#jobdesk_id').append(new Option(jdVal, jdVal, true, true)); } $('#jobdesk_id').val(jdVal).trigger('change'); $('#akses_lv_id').val(String(res.data.akses_lv || res.data.akses_lv_id || '1')).trigger('change'); $('#password').val(''); modal.show(); }); });
+    $('#formUser').on('submit',function(e){ e.preventDefault(); $('#jobdesk').val(selectedText('jobdesk_id')); $('#akses_lv').val($('#akses_lv_id').val() || selectedText('akses_lv_id')); const id=$('#id').val(); const url=id?'<?= base_url('master/user-management/update/') ?>'+id:'<?= base_url('master/user-management/save') ?>'; $.ajax({url:url,type:'POST',data:new FormData(this),processData:false,contentType:false,dataType:'json',success:function(res){res.status?toastr.success(res.message):toastr.error(res.message); if(res.status){modal.hide(); table.ajax.reload(null,false);}},error:function(){toastr.error('Server tidak merespons.');}}); });
     $('#tableUsers').on('click','.btn-delete',function(){ const id=$(this).data('id'); Swal.fire({title:'Hapus user?',icon:'warning',showCancelButton:true,confirmButtonText:'Hapus'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/delete/') ?>'+id,function(res){res.status?toastr.success(res.message):toastr.error(res.message); table.ajax.reload(null,false);},'json'); }); });
     $('#tableUsers').on('click','.btn-toggle',function(){ $.post('<?= base_url('master/user-management/toggle-status/') ?>'+$(this).data('id'),function(res){res.status?toastr.success(res.message):toastr.warning(res.message); table.ajax.reload(null,false);},'json'); });
     $('#tableUsers').on('click','.btn-reset',function(){ const id=$(this).data('id'); Swal.fire({title:'Reset Password',input:'password',inputPlaceholder:'Password baru minimal 6 karakter',showCancelButton:true,confirmButtonText:'Reset'}).then(r=>{ if(r.isConfirmed) $.post('<?= base_url('master/user-management/reset-password/') ?>'+id,{password:r.value},function(res){res.status?toastr.success(res.message):toastr.error(res.message);},'json'); }); });

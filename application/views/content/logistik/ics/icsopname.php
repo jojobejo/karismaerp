@@ -20,7 +20,7 @@
                 <section class="content">
                     <div class="container-fluid">
                         <div class="row align-items-start">
-                            <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                            <?php if (in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['ADMINICS', 'ADMIN GUDANG', 'MT MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT KADEP LOGISTIK', 'ADMIN'], true) || (bool) $this->session->userdata('is_admin_dashboard')) : ?>
                                 <div class="col-12 col-sm-6 col-md-2">
                                     <a href="<?= base_url('admstocktracking'); ?>" class="btn btn-primary w-10"><i class="fas fa-home"></i></a>
                                 </div>

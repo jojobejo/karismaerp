@@ -35,8 +35,24 @@ class C_ReturPenjualan extends CI_Controller
 
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
-        if (!in_array($jobdesk, $allowed_jobdesks)) {
+        $allowed_jobdesks = [
+            'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
+            'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
+            'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER',
+            'ADMRETUR', 'ADMSTOCK', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN',
+            'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
+            'KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR',
+            'ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH',
+            'LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'MT ADMIN LOGISTIK',
+            'COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION',
+            'KASIR', 'ADMIN', 'SUPER ADMIN', 'SUPERADMIN',
+            'MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC',
+            'MANAGERSE', 'MANAGER SALES EXECUTIVE',
+            'DIREKTUROP', 'MT DIREKTUR OPERASIONAL',
+            'DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA',
+            'KIUKEU', 'KEUANGAN', 'ADMIN JURNAL PAJAK', 'ADMIN KEUANGAN'
+        ];
+        if (!in_array($jobdesk, $allowed_jobdesks) && (int)$this->session->userdata('lv') < 99) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
     }
@@ -66,49 +82,55 @@ class C_ReturPenjualan extends CI_Controller
     {
         $jobdesk = strtoupper((string) ($this->session->userdata('jobdesk') ?? ''));
         $allowed = array_map('strtoupper', $allowed);
+        if (in_array('ADMIN', $allowed, true) && ((int)$this->session->userdata('lv') >= 99 || strtolower((string)$this->session->userdata('username')) === 'admin')) {
+            return true;
+        }
         return in_array($jobdesk, $allowed, true);
     }
 
     /** SC / Sales Counter — pembuat SPR */
     private function _isSC()
     {
-        return $this->_isJobdesk(['SC', 'ADMIN']);
+        return $this->_isJobdesk(['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMIN']);
     }
 
-    /** Koordinator SC */
+    /** Koordinator / Manager SC */
     private function _isKoorSC()
     {
-        return $this->_isJobdesk(['MANAGERSC', 'ADMIN']);
+        return $this->_isJobdesk(['MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER', 'ADMIN']);
     }
 
     /** Admin Retur */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMRETUR', 'ADMIN']);
+        return $this->_isJobdesk(['ADMRETUR', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
     }
 
     /** Admin Penjualan */
     private function _isAdmstock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMPNJ', 'ADMIN']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
     }
 
-    /** Kepala Departemen SC */
+    /** Kepala Departemen SC / Keuangan & Sales */
     private function _isKadepSC()
     {
-        return $this->_isJobdesk(['KADEPSC', 'KADEPUB', 'ADMIN']);
+        return $this->_isJobdesk(['KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES', 'KADEPUB', 'KEPALA UNIT BISNIS', 'ADMIN']);
     }
 
     /** Kadep Unit Bisnis */
     private function _isKadepub()
     {
-        return $this->_isJobdesk(['KADEPUB', 'ADMIN']);
+        return $this->_isJobdesk(['KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR', 'ADMIN']);
     }
 
     /** Logistik */
     private function _isLogistik()
     {
-        return $this->_isAdmlpb() || $this->_isJobdesk(['LOGISTIC', 'LOGISTIK', 'ADMIN']);
+        $username = strtolower((string)($this->session->userdata('username') ?? ''));
+        return $this->_isAdmlpb()
+            || in_array($username, ['sprlog', 'kurniawan'], true)
+            || $this->_isJobdesk(['LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'ADMIN']);
     }
 
     /** Cek apakah boleh lihat semua SPR (bukan SC biasa) */
@@ -155,8 +177,8 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user   = $this->_getUser();
         
-        // ADMRETUR is not allowed to see SPR list anymore (separated to ADMSTOCK)
-        if ($this->_isJobdesk(['ADMRETUR']) && !$this->_isJobdesk(['ADMIN'])) {
+        // ADMRETUR murni tidak melihat daftar SPR (tetapi akun gabungan ADMIN PRICELIST & RETUR PENJUALAN boleh melihat keduanya)
+        if ($this->_isJobdesk(['ADMRETUR']) && !$this->_isAdmstock() && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan/retur');
             return;
         }
@@ -229,14 +251,14 @@ class C_ReturPenjualan extends CI_Controller
         $user = $this->_getUser();
 
         // Cek akses: SC atau admin
-        if (!$this->_isSC() && !$this->_isJobdesk(['ADMIN','MANAGERSC','ADMINSC'])) {
+        if (!$this->_isSC() && !$this->_isKoorSC() && !$this->_isJobdesk(['ADMIN', 'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'])) {
             $this->_denyAccess('Hanya SC yang dapat membuat SPR.');
             return;
         }
 
         $data['page_title']  = 'KARISMA — Buat SPR Baru';
         $jobdesk_raw         = strtoupper((string) ($this->session->userdata('jobdesk') ?? ''));
-        $nama_sales_filter   = ($jobdesk_raw === 'SC') ? $user['nama'] : null;
+        $nama_sales_filter   = in_array($jobdesk_raw, ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER'], true) ? $user['nama'] : null;
         $customers           = $this->M_ReturPenjualan->get_customers($nama_sales_filter);
         // Jika SC ini belum ada customer ter-assign atau user adalah Admin, tampilkan semua customer
         if (empty($customers)) {
@@ -1047,9 +1069,12 @@ class C_ReturPenjualan extends CI_Controller
         } elseif ($this->_isKoorSC()) {
             $role = 'mngsc';
             $role_label = 'Manager SC';
-        } elseif ($this->_isAdminStock()) {
+        } elseif ($this->_isAdminStock() || $this->_isAdmstock()) {
             $role = 'admretur';
-            $role_label = 'Admin Retur';
+            $role_label = 'Admin Retur / Penjualan';
+        } elseif ($this->_isKadepub()) {
+            $role = 'kadepub';
+            $role_label = 'Kadep UB';
         } elseif ($this->_isKadepSC()) {
             $role = 'kadep_sc';
             $role_label = 'Kadep SC';
@@ -1093,34 +1118,34 @@ class C_ReturPenjualan extends CI_Controller
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
         $role_label = 'Riwayat';
         
-        if (in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN'])) {
+        if ($this->_isAdminStock() || $this->_isAdmstock()) {
             $role_label = 'Admin Retur';
             $role = 'admretur';
-        } elseif (in_array($jobdesk, ['MANAGERACC','ADMIN'])) {
+        } elseif ($this->_isMngacc()) {
             $role_label = 'Manager Account';
             $role = 'mngacc';
-        } elseif (in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN'])) {
+        } elseif ($this->_isKoorSC() || $this->_isJobdesk(['ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'])) {
             $role_label = 'Manager SC';
             $role = 'mngsc';
-        } elseif (in_array($jobdesk, ['KADEPUB','ADMIN'])) {
+        } elseif ($this->_isKadepub()) {
             $role_label = 'Kadep UB';
             $role = 'kadepub';
-        } elseif (in_array($jobdesk, ['MANAGERSE','ADMIN'])) {
+        } elseif ($this->_isMngse()) {
             $role_label = 'Manager SE';
             $role = 'mngse';
-        } elseif (in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB'])) {
+        } elseif ($this->_isKadepSC()) {
             $role_label = 'Kadep SC';
             $role = 'kadep_sc';
-        } elseif (in_array($jobdesk, ['DIREKTUROP','ADMIN'])) {
+        } elseif ($this->_isDirop()) {
             $role_label = 'Direktur Operasional';
             $role = 'dirop';
-        } elseif (in_array($jobdesk, ['DIREKTURUTAMA','ADMIN'])) {
+        } elseif ($this->_isDirut()) {
             $role_label = 'Direktur Utama';
             $role = 'dirut';
-        } elseif (in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN'])) {
+        } elseif ($this->_isCollection()) {
             $role_label = 'Collection';
             $role = 'collection';
-        } elseif (in_array($jobdesk, ['KASIR','ADMIN'])) {
+        } elseif ($this->_isKasir()) {
             $role_label = 'Kasir';
             $role = 'kasir';
         }
@@ -1155,12 +1180,13 @@ class C_ReturPenjualan extends CI_Controller
     private function _isAdmlpb()
     {
         $username = strtolower((string)($this->session->userdata('username') ?? ''));
-        return $username === 'admlpb' || $this->_isJobdesk(['ADMLPB', 'ADMINLOGLPB', 'ADMIN']);
+        return in_array($username, ['admlpb', 'yunika'], true)
+            || $this->_isJobdesk(['ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH', 'ADMIN']);
     }
 
     private function _isCollection()
     {
-        return $this->_isJobdesk(['COLLECTION', 'ADMIN']);
+        return $this->_isJobdesk(['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION', 'ADMIN']);
     }
 
     private function _isKasir()
@@ -1170,22 +1196,22 @@ class C_ReturPenjualan extends CI_Controller
 
     private function _isMngacc()
     {
-        return $this->_isJobdesk(['MANAGERACC', 'ADMIN']);
+        return $this->_isJobdesk(['MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC', 'ADMIN']);
     }
 
     private function _isMngse()
     {
-        return $this->_isJobdesk(['MANAGERSE', 'ADMIN']);
+        return $this->_isJobdesk(['MANAGERSE', 'MANAGER SALES EXECUTIVE', 'ADMIN']);
     }
 
     private function _isDirop()
     {
-        return $this->_isJobdesk(['DIREKTUROP', 'ADMIN']);
+        return $this->_isJobdesk(['DIREKTUROP', 'MT DIREKTUR OPERASIONAL', 'ADMIN']);
     }
 
     private function _isDirut()
     {
-        return $this->_isJobdesk(['DIREKTURUTAMA', 'ADMIN']);
+        return $this->_isJobdesk(['DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'ADMIN']);
     }
 
     /** ADMLPB: daftar SPR disetujui Kadep yang siap dibuat retur. */
@@ -1221,8 +1247,8 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user    = $this->_getUser();
         
-        // ADMSTOCK is not allowed to see Retur list (separated to ADMRETUR)
-        if ($this->_isJobdesk(['ADMSTOCK']) && !$this->_isJobdesk(['ADMIN'])) {
+        // ADMSTOCK murni tidak melihat daftar Retur (tetapi akun gabungan ADMIN PRICELIST & RETUR PENJUALAN boleh melihat keduanya)
+        if ($this->_isJobdesk(['ADMSTOCK']) && !$this->_isAdminStock() && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan');
             return;
         }
@@ -1264,7 +1290,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['user']        = $user;
 
         $this->load->view('partial/main/header.php', $data);
-        if (in_array(strtoupper((string)($user['jobdesk'] ?? '')), ['COLLECTION', 'KOLEKTOR'])) {
+        if (in_array(strtoupper((string)($user['jobdesk'] ?? '')), ['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION'], true)) {
             $this->load->view('content/sales/retur/retur_list_collection.php', $data);
         } else {
             $this->load->view('content/sales/retur/retur_list.php', $data);
@@ -1571,19 +1597,19 @@ class C_ReturPenjualan extends CI_Controller
         // Check if this retur is waiting for the logged in user's role approval
         $st = $retur['status_retur'];
         $allowed = false;
-        if ($st === 'retur_menunggu_mngacc' && in_array($jobdesk, ['MANAGERACC', 'ADMIN'])) {
+        if ($st === 'retur_menunggu_mngacc' && $this->_isMngacc()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_mngsc' && in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_mngsc' && $this->_isKoorSC()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_kadepub' && in_array($jobdesk, ['KADEPUB', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_kadepub' && $this->_isKadepub()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_mngse' && in_array($jobdesk, ['MANAGERSE', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_mngse' && $this->_isMngse()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_kadepsc' && in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_kadepsc' && $this->_isKadepSC()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_dirop' && in_array($jobdesk, ['DIREKTUROP', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_dirop' && $this->_isDirop()) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_dirut' && in_array($jobdesk, ['DIREKTURUTAMA', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_dirut' && $this->_isDirut()) {
             $allowed = true;
         }
 
@@ -2052,7 +2078,7 @@ class C_ReturPenjualan extends CI_Controller
         $pending_items = [];
         
         // 1. Manager SC
-        if (in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
+        if ($this->_isKoorSC()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diajukan'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2065,7 +2091,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 1.5. KADEPUB
-        if (in_array($jobdesk, ['KADEPUB', 'ADMIN'])) {
+        if ($this->_isKadepub()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'menunggu_kadepub'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2077,8 +2103,8 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 2. Admin Retur
-        if (in_array($jobdesk, ['ADMRETUR', 'ADMIN'])) {
+        // 2. Admin Retur / Admin Penjualan
+        if ($this->_isAdminStock() || $this->_isAdmstock()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diverifikasi_koor'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2101,7 +2127,7 @@ class C_ReturPenjualan extends CI_Controller
         }
         
         // 3. Kadep SC
-        if (in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
+        if ($this->_isKadepSC()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'dicek_admretur'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2113,10 +2139,8 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 4. Logistik / ADMLPB / LOGISTIC (sprlog)
-        $user_info = $this->_getUser();
-        $username = strtoupper((string)$user_info['username']);
-        if (in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'ADMIN'], true) || in_array(strtolower($username), ['admlpb', 'sprlog'], true)) {
+        // 4. Logistik / ADMLPB / LOGISTIC
+        if ($this->_isLogistik()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'disetujui_kadep'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
@@ -2129,7 +2153,7 @@ class C_ReturPenjualan extends CI_Controller
         }
         
         // 5. Collection
-        if (in_array($jobdesk, ['COLLECTION', 'ADMIN'])) {
+        if ($this->_isCollection()) {
             $returs = $this->db->query("SELECT * FROM tbrp_retur_penjualan_header WHERE status_retur = 'menunggu_collection' OR (status_retur = 'selesai' AND tipe_retur = 'biasa' AND sisa_saldo_retur > 0)")->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2142,7 +2166,7 @@ class C_ReturPenjualan extends CI_Controller
         }
         
         // 6. Kasir
-        if (in_array($jobdesk, ['KASIR', 'ADMIN'])) {
+        if ($this->_isKasir()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'menunggu_kasir'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2155,7 +2179,7 @@ class C_ReturPenjualan extends CI_Controller
         }
         
         // 6.5. Kadep UB (Retur Jagung)
-        if (in_array($jobdesk, ['KADEPUB', 'ADMIN'])) {
+        if ($this->_isKadepub()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_kadepub'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2168,7 +2192,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.6. Manager Account (Retur)
-        if (in_array($jobdesk, ['MANAGERACC', 'ADMIN'])) {
+        if ($this->_isMngacc()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_mngacc'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2181,7 +2205,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.7. Manager SC (Retur)
-        if (in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
+        if ($this->_isKoorSC()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_mngsc'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2194,7 +2218,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.8. Manager SE (Retur)
-        if (in_array($jobdesk, ['MANAGERSE', 'ADMIN'])) {
+        if ($this->_isMngse()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_mngse'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2207,7 +2231,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.9. Kadep SC (Retur)
-        if (in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
+        if ($this->_isKadepSC()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_kadepsc'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2220,7 +2244,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.10. Direktur Operasional (Retur)
-        if (in_array($jobdesk, ['DIREKTUROP', 'ADMIN'])) {
+        if ($this->_isDirop()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_dirop'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2233,7 +2257,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         // 6.11. Direktur Utama (Retur)
-        if (in_array($jobdesk, ['DIREKTURUTAMA', 'ADMIN'])) {
+        if ($this->_isDirut()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_dirut'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
@@ -2271,13 +2295,13 @@ class C_ReturPenjualan extends CI_Controller
 
         // Map status to required role check and database column prefix
         $status_map = [
-            'retur_menunggu_mngacc'   => ['role' => 'MANAGERACC',   'prefix' => 'mngacc',   'label' => 'Manager Account'],
-            'retur_menunggu_mngsc'   => ['role' => 'MANAGERSC',       'prefix' => 'mngsc',   'label' => 'Manager SC'],
-            'retur_menunggu_kadepub'  => ['role' => 'KADEPUB',      'prefix' => 'kadepub',  'label' => 'Kadep UB'],
-            'retur_menunggu_mngse'    => ['role' => 'MANAGERSE',    'prefix' => 'mngse',    'label' => 'Manager SE'],
-            'retur_menunggu_kadepsc'  => ['role' => 'KADEPSC',      'prefix' => 'kadepsc',  'label' => 'Kadep SC'],
-            'retur_menunggu_dirop'    => ['role' => 'DIREKTUROP',   'prefix' => 'dirop',    'label' => 'Direktur Operasional'],
-            'retur_menunggu_dirut'    => ['role' => 'DIREKTURUTAMA', 'prefix' => 'dirut',    'label' => 'Direktur Utama'],
+            'retur_menunggu_mngacc'   => ['check' => $this->_isMngacc(),  'prefix' => 'mngacc',   'label' => 'Manager Account'],
+            'retur_menunggu_mngsc'    => ['check' => $this->_isKoorSC(),  'prefix' => 'mngsc',    'label' => 'Manager SC'],
+            'retur_menunggu_kadepub'  => ['check' => $this->_isKadepub(), 'prefix' => 'kadepub',  'label' => 'Kadep UB'],
+            'retur_menunggu_mngse'    => ['check' => $this->_isMngse(),   'prefix' => 'mngse',    'label' => 'Manager SE'],
+            'retur_menunggu_kadepsc'  => ['check' => $this->_isKadepSC(), 'prefix' => 'kadepsc',  'label' => 'Kadep SC'],
+            'retur_menunggu_dirop'    => ['check' => $this->_isDirop(),   'prefix' => 'dirop',    'label' => 'Direktur Operasional'],
+            'retur_menunggu_dirut'    => ['check' => $this->_isDirut(),   'prefix' => 'dirut',    'label' => 'Direktur Utama'],
         ];
 
         if (!isset($status_map[$st])) {
@@ -2289,7 +2313,7 @@ class C_ReturPenjualan extends CI_Controller
         $cfg = $status_map[$st];
 
         // Check permission
-        if (!$this->_isJobdesk([$cfg['role'], 'ADMIN'])) {
+        if (empty($cfg['check'])) {
             $this->session->set_flashdata('error', 'Anda tidak memiliki hak akses untuk menyetujui tahap ini.');
             redirect('retur_penjualan/retur/detail/' . $id_retur);
             return;

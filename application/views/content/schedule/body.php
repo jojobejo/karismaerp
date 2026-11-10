@@ -34,7 +34,11 @@
                                 <div class="col ">
                                     <h3 class="">Schedule Direktur</h3>
                                 </div>
-                                <?php if ($this->session->userdata('lv') != '5') : ?>
+                                <?php
+                                $jobdeskSched = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                                $isDirekturReadonly = ($this->session->userdata('lv') == '5' && in_array($jobdeskSched, ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true) && !(bool) $this->session->userdata('is_admin_dashboard'));
+                                ?>
+                                <?php if (!$isDirekturReadonly) : ?>
                                     <div>
                                         <a class="btn btn-primary ml-4 text-center" data-toggle="modal" data-target="#addschedule"><i class="fas fa-plus"></i><b style="text-transform: uppercase;"> Add Schedule</b></a>
                                     </div>
@@ -55,7 +59,11 @@
                                         <td>Tujuan</td>
                                         <td>Status</td>
                                         <td>Keterangan</td>
-                                        <?php if ($this->session->userdata('lv') != '5') : ?>
+                                        <?php
+                                $jobdeskSched = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                                $isDirekturReadonly = ($this->session->userdata('lv') == '5' && in_array($jobdeskSched, ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true) && !(bool) $this->session->userdata('is_admin_dashboard'));
+                                ?>
+                                <?php if (!$isDirekturReadonly) : ?>
                                             <td>#</td>
                                         <?php else : ?>
                                         <?php endif; ?>
@@ -96,7 +104,11 @@
                                                 <?php endif; ?>
                                             </th>
                                             <th><?= $get->keterangan ?></th>
-                                            <?php if ($this->session->userdata('lv') != '5') : ?>
+                                            <?php
+                                $jobdeskSched = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                                $isDirekturReadonly = ($this->session->userdata('lv') == '5' && in_array($jobdeskSched, ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true) && !(bool) $this->session->userdata('is_admin_dashboard'));
+                                ?>
+                                <?php if (!$isDirekturReadonly) : ?>
                                                 <th style="width: 13%;text-align: center;">
                                                     <?php if ($status == '1') : ?>
                                                         <a href="#" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editedschedule<?= $get->id ?>"><i class="fas fa-pencil-alt"></i></a>

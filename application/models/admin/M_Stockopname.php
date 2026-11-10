@@ -52,8 +52,8 @@ class M_Stockopname extends CI_Model
     public function supervisor_opname_profile($karyawanId)
     {
         return $this->db
-            ->select('id, nm_karyawan, tim, wilayah, wilayah_id')
-            ->from('tb_karyawan')
+            ->select('id, nama_lngkp AS nm_karyawan, tim, wilayah, wilayah_id')
+            ->from('tb_users')
             ->where('id', (int)$karyawanId)
             ->get()
             ->row_array();

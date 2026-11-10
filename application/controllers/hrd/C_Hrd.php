@@ -24,7 +24,7 @@ class C_Hrd extends CI_Controller
     {
         $akses = intval($this->session->userdata('lv'));
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
-        if ($akses === 1 || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)) {
+        if ($akses >= 99 || $akses === 1 || (bool) $this->session->userdata('is_admin_dashboard') || in_array($jobdesk, array('ADMIN', 'SUPERADMIN', 'HRD', 'MT ADMIN HRD'), true)) {
             return;
         }
 

@@ -82,19 +82,34 @@ class M_Kasbon extends CI_Model
     {
         $code = strtoupper(trim((string)$jobdesk));
         $map = [
-            'MANAGERSC'   => 'MNGSC',
-            'MANAGER_SC'  => 'MNGSC',
-            'MANAGERACC'  => 'MNGACC',
-            'MANAGER_ACC' => 'MNGACC',
-            'MANAGERSE'   => 'MNGSE',
-            'MANAGER_SE'  => 'MNGSE',
-            'MANAGERWH'   => 'MNGWH',
-            'MANAGER_WH'  => 'MNGWH',
-            'ADMINSC'     => 'ADMSC',
-            'ADMIN_SC'    => 'ADMSC',
-            'KADEP_SC'    => 'KADEPSC',
-            'KADEP_UB'    => 'KADEPUB',
-            'KADEP_KS'    => 'KADEPKS',
+            'MANAGERSC'                 => 'MNGSC',
+            'MANAGER_SC'                => 'MNGSC',
+            'MANAGER SALES COUNTER'     => 'MNGSC',
+            'MANAGERACC'                => 'MNGACC',
+            'MANAGER_ACC'               => 'MNGACC',
+            'MT MANAGER ACCOUNTING & TAX' => 'MNGACC',
+            'MANAGER ACCOUNTING & TAX'  => 'MNGACC',
+            'MANAGERSE'                 => 'MNGSE',
+            'MANAGER_SE'                => 'MNGSE',
+            'MANAGER SALES EXECUTIVE'   => 'MNGSE',
+            'MANAGERWH'                 => 'MNGWH',
+            'MANAGER_WH'                => 'MNGWH',
+            'MT MANAGER WAREHOUSE'      => 'MNGWH',
+            'ADMIN DISTRIBUSI & MANAGER WAREHOUSE' => 'MNGWH',
+            'ADMINSC'                   => 'ADMSC',
+            'ADMIN_SC'                  => 'ADMSC',
+            'ADMIN SALES COUNTER'       => 'ADMSC',
+            'SALES COUNTER'             => 'SC',
+            'MT SALES COUNTER'          => 'SC',
+            'SALESCOUNTER'              => 'SC',
+            'KADEP_SC'                  => 'KADEPSC',
+            'MT KADEP KEUANGAN & SALES' => 'KADEPSC',
+            'KADEP KEUANGAN & SALES'    => 'KADEPSC',
+            'KADEP_UB'                  => 'KADEPUB',
+            'KEPALA UNIT BISNIS'        => 'KADEPUB',
+            'KADEP_KS'                  => 'KADEPKS',
+            'MT KADEP HRGA'             => 'HRD',
+            'ADMIN HRGA'                => 'HRD',
         ];
         return $map[$code] ?? $code;
     }
@@ -109,14 +124,15 @@ class M_Kasbon extends CI_Model
         $raw  = strtoupper(trim((string)$jobdesk));
 
         $aliasMap = [
-            'MNGSC'   => ['MNGSC', 'MANAGERSC', 'MANAGER_SC', 'MANAGER SC'],
-            'MNGACC'  => ['MNGACC', 'MANAGERACC', 'MANAGER_ACC', 'MANAGER ACC'],
-            'MNGSE'   => ['MNGSE', 'MANAGERSE', 'MANAGER_SE', 'MANAGER SE'],
-            'MNGWH'   => ['MNGWH', 'MANAGERWH', 'MANAGER_WH', 'MANAGER WH'],
-            'ADMSC'   => ['ADMSC', 'ADMINSC', 'ADMIN_SC', 'ADMIN SC'],
-            'KADEPSC' => ['KADEPSC', 'KADEP_SC', 'KADEP SC'],
-            'KADEPUB' => ['KADEPUB', 'KADEP_UB', 'KADEP UB'],
-            'KADEPKS' => ['KADEPKS', 'KADEP_KS', 'KADEP KS'],
+            'MNGSC'   => ['MNGSC', 'MANAGERSC', 'MANAGER_SC', 'MANAGER SC', 'MANAGER SALES COUNTER'],
+            'MNGACC'  => ['MNGACC', 'MANAGERACC', 'MANAGER_ACC', 'MANAGER ACC', 'MT MANAGER ACCOUNTING & TAX', 'MANAGER ACCOUNTING & TAX'],
+            'MNGSE'   => ['MNGSE', 'MANAGERSE', 'MANAGER_SE', 'MANAGER SE', 'MANAGER SALES EXECUTIVE'],
+            'MNGWH'   => ['MNGWH', 'MANAGERWH', 'MANAGER_WH', 'MANAGER WH', 'MT MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE'],
+            'ADMSC'   => ['ADMSC', 'ADMINSC', 'ADMIN_SC', 'ADMIN SC', 'ADMIN SALES COUNTER'],
+            'SC'      => ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER'],
+            'KADEPSC' => ['KADEPSC', 'KADEP_SC', 'KADEP SC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES'],
+            'KADEPUB' => ['KADEPUB', 'KADEP_UB', 'KADEP UB', 'KEPALA UNIT BISNIS'],
+            'KADEPKS' => ['KADEPKS', 'KADEP_KS', 'KADEP KS', 'MT KADEP KEUANGAN & SALES'],
         ];
 
         if (isset($aliasMap[$norm])) {

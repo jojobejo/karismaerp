@@ -17,7 +17,7 @@ class M_Dashboard extends CI_Model
             'departemen' => $departemen,
             'lv' => $lv,
             'jobdesk' => $jobdesk,
-            'is_admin' => (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || ($lv === 1 && in_array($jobdesk, array('ADMIN', 'ADMINICS'), true)),
+            'is_admin' => (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || $lv >= 99 || in_array($jobdesk, array('ADMIN', 'SUPER ADMIN', 'SUPERADMIN', 'ADMINICS'), true),
         );
     }
 
@@ -168,69 +168,155 @@ class M_Dashboard extends CI_Model
 
         $jobdesk = $context['jobdesk'];
         $map = array(
+            // Keuangan & Accounting
             'ADMINKEU' => 'keuangan',
             'ADMINKEUTC' => 'keuangan',
+            'ADMIN JURNAL PAJAK' => 'keuangan',
+            'ADMIN KEUANGAN' => 'keuangan',
+            'ADMIN JURNAL' => 'keuangan',
+            'MT ADMIN ACCOUNTING' => 'keuangan',
+            'MT MANAGER ACCOUNTING & TAX' => 'keuangan',
+            'MT MANAGER KEUANGAN' => 'keuangan',
+            'TEAM COLLECTION' => 'keuangan',
+            'MT TEAM COLLECTION' => 'keuangan',
+            'COLLECTION' => 'keuangan',
+            'KOLEKTOR' => 'keuangan',
+            'KASIR' => 'keuangan',
             'DIREKTUR' => 'keuangan',
+            'DIREKSI' => 'keuangan',
+            'DIREKTUR UTAMA' => 'keuangan',
+            'DIREKTURUTAMA' => 'keuangan',
+            'MT DIREKTUR OPERASIONAL' => 'keuangan',
+            'DIREKTUROP' => 'keuangan',
+
+            // HRD & GA
             'ADMINGA' => 'hrd',
             'SUPERADMIN' => 'hrd',
+            'HRD & GA' => 'hrd',
+            'MT HRD & GA' => 'hrd',
+            'MANAGER HRD & GA' => 'hrd',
+            'GENERAL AFFAIR' => 'hrd',
+            'ADMIN GA' => 'hrd',
+
+            // Logistik & Gudang
             'LOGISTIK' => 'logistik',
+            'LOGISTIC' => 'logistik',
+            'ADMIN GUDANG' => 'logistik',
+            'MT KADEP LOGISTIK' => 'logistik',
+            'ADMIN LPB & GUDANG BENIH' => 'logistik',
+            'MT ADMIN LOGISTIK' => 'logistik',
+            'MT MANAGER WAREHOUSE' => 'logistik',
+            'MT MANAGER DISTRIBUSI' => 'logistik',
+            'ADMIN DISTRIBUSI & MANAGER WAREHOUSE' => 'logistik',
+            'CHECKER' => 'logistik',
+            'MT CHECKER' => 'logistik',
+            'DRIVER' => 'logistik',
+            'HELPER' => 'logistik',
             'ADMINICS' => 'logistik',
             'DISTRIBUSI' => 'logistik',
             'STOCKOPNAME' => 'logistik',
+            'ADMRETUR' => 'logistik',
+            'ADMLPB' => 'logistik',
+            'ADMINLOGLPB' => 'logistik',
+
+            // Purchasing
             'ADMINPURCHASING' => 'purchasing',
+            'ADMIN PURCHASING' => 'purchasing',
+            'MT KADEP PURCHASING' => 'purchasing',
             'ADMIN PO' => 'purchasing',
             'PURCHASING' => 'purchasing',
+
+            // IT
             'IT' => 'it',
+            'IT HARDWARE' => 'it',
+            'IT SOFTWARE' => 'it',
+            'MT IT SOFTWARE' => 'it',
             'ADMINIT' => 'it',
             'ADMIN IT' => 'it',
             'PROGRAMMER' => 'it',
+
+            // Sales & Unit Bisnis
             'SALES' => 'sales',
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
+            'SALES COUNTER' => 'sales',
+            'MT SALES COUNTER' => 'sales',
             'SC' => 'sales',
             'ADMINSC' => 'sales',
             'ADMSC' => 'sales',
+            'ADMIN SALES COUNTER' => 'sales',
+            'MT ADMIN SALES COUNTER' => 'sales',
             'LOBY' => 'sales',
             'SALESLOBY' => 'sales',
             'ADMINLOBY' => 'sales',
             'MNGSC' => 'sales',
             'MANAGER SC' => 'sales',
             'MANAGERSC' => 'sales',
+            'MANAGER SALES COUNTER' => 'sales',
+            'MANAGER SALES EXECUTIVE' => 'sales',
+            'MANAGERSE' => 'sales',
             'KADEPSC' => 'sales',
+            'KADEPKS' => 'sales',
+            'MT KADEP KEUANGAN & SALES' => 'sales',
             'MANAGERTC' => 'sales',
             'MNGTC' => 'sales',
             'KADEPUB' => 'sales',
+            'KEPALA UNIT BISNIS' => 'sales',
+            'MT ABM SEED JATIM TIMUR' => 'sales',
             'ADMPNJ' => 'sales',
-            'ADMRETUR' => 'logistik',
-            'LOGISTIC' => 'logistik',
-            'ADMLPB' => 'logistik',
-            'ADMINLOGLPB' => 'logistik',
-            'COLLECTION' => 'keuangan',
-            'KOLEKTOR' => 'keuangan',
-            'KASIR' => 'keuangan',
+            'ADMIN PRICELIST & RETUR PENJUALAN' => 'sales',
         );
 
         if (isset($map[$jobdesk]) && isset($sections[$map[$jobdesk]])) {
             return $map[$jobdesk];
         }
 
+        $departemen = $context['departemen'] ?? '';
+        if (strpos($departemen, 'LOGISTI') !== false && isset($sections['logistik'])) return 'logistik';
+        if (strpos($departemen, 'PURCHAS') !== false && isset($sections['purchasing'])) return 'purchasing';
+        if (strpos($departemen, 'IT') !== false && isset($sections['it'])) return 'it';
+        if (strpos($departemen, 'HRD') !== false && isset($sections['hrd'])) return 'hrd';
+        if ((strpos($departemen, 'SALES') !== false || strpos($departemen, 'BISNIS') !== false) && isset($sections['sales'])) return 'sales';
+        if (strpos($departemen, 'KEUANGAN') !== false && isset($sections['keuangan'])) return 'keuangan';
+
         return key($sections);
     }
 
     private function apply_access_rules(array $sections, array $context)
     {
-        $allowed_retur_pj = array('SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB', 'ADMINLOGLPB', 'LOGISTIC', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA');
+        $allowed_retur_pj = array(
+            'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
+            'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
+            'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER',
+            'ADMRETUR', 'ADMPNJ', 'ADMSTOCK', 'ADMIN PRICELIST & RETUR PENJUALAN',
+            'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
+            'ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH',
+            'LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG',
+            'COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION',
+            'KASIR', 'ADMIN',
+            'KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR',
+            'MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC',
+            'MANAGERSE', 'MANAGER SALES EXECUTIVE',
+            'DIREKTUROP', 'MT DIREKTUR OPERASIONAL',
+            'DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA'
+        );
         $has_retur_pj = in_array(strtoupper((string)($context['jobdesk'] ?? '')), $allowed_retur_pj, true)
-            || strtolower((string)($context['username'] ?? '')) === 'admlpb'
+            || in_array(strtolower((string)($context['username'] ?? '')), array('admlpb', 'yunika'), true)
             || !empty($context['is_admin']);
 
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
         $username = strtolower((string)($context['username'] ?? ''));
-        $allowed_admin_sc = array('ADMINSC', 'ADMSC', 'SC', 'SALESCOUNTER', 'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC');
+        $allowed_admin_sc = array(
+            'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
+            'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
+            'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER',
+            'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES'
+        );
         $has_admin_sc = in_array($jobdesk, $allowed_admin_sc, true)
-            || in_array($username, array('admsc', 'admin'), true)
+            || in_array($username, array('admsc', 'nina', 'admin'), true)
             || !empty($context['is_admin']);
-        $is_admin_sc_only = in_array($jobdesk, array('ADMINSC', 'ADMSC', 'SALESCOUNTER'), true) || $username === 'admsc';
+        $is_admin_sc_only = in_array($jobdesk, array('ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'), true)
+            || in_array($username, array('admsc', 'nina'), true);
 
         foreach ($sections as $key => $section) {
             if (empty($section['menus']) || !is_array($section['menus'])) {
@@ -273,9 +359,9 @@ class M_Dashboard extends CI_Model
         $username = strtolower((string)($context['username'] ?? ''));
         $departemen = strtoupper((string)($context['departemen'] ?? ''));
 
-        if (in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB'), true)
-            || in_array($username, array('admlpb', 'adminloglpb'), true)
-            || ($departemen === 'LOGISTIK' && strpos($jobdesk, 'LPB') !== false)) {
+        if (in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'), true)
+            || in_array($username, array('admlpb', 'adminloglpb', 'yunika'), true)
+            || (in_array($departemen, array('LOGISTIK', 'LOGISTIC'), true) && strpos($jobdesk, 'LPB') !== false)) {
             return 'ics/retur/pembelian/monitoring';
         }
         return 'ics/retur';
@@ -285,11 +371,17 @@ class M_Dashboard extends CI_Model
     {
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
         $username = strtolower((string)($context['username'] ?? ''));
-        if ($jobdesk === 'LOGISTIC') {
+        if (in_array($jobdesk, array('LOGISTIC', 'MT KADEP LOGISTIK'), true) || in_array($username, array('sprlog', 'kurniawan'), true)) {
             return 'retur_penjualan/logistik';
-        } elseif ($username === 'admlpb' || in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB'), true)) {
+        } elseif (in_array($username, array('admlpb', 'yunika'), true) || in_array($jobdesk, array('ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'), true)) {
             return 'retur_penjualan/admlpb';
-        } elseif (in_array($jobdesk, array('ADMRETUR', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'), true)) {
+        } elseif (in_array($jobdesk, array(
+            'ADMRETUR', 'COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION',
+            'KASIR', 'MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN',
+            'MANAGERSE', 'MANAGER SALES EXECUTIVE',
+            'DIREKTUROP', 'MT DIREKTUR OPERASIONAL',
+            'DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR UTAMA'
+        ), true)) {
             return 'retur_penjualan/retur';
         }
         return 'retur_penjualan';
@@ -300,6 +392,9 @@ class M_Dashboard extends CI_Model
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
         if ($jobdesk === 'KASIR') {
             return 'keuangan/pembayaran/kasir';
+        }
+        if (in_array($jobdesk, array('COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION'), true)) {
+            return 'keuangan/pembayaran/collection';
         }
         return 'keuangan/pembayaran';
     }
@@ -313,7 +408,7 @@ class M_Dashboard extends CI_Model
         $departemen = strtoupper(trim((string)($context['departemen'] ?? '')));
         $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
 
-        foreach (array('LOGISTIK', 'PURCHASING', 'KEUANGAN', 'FINANCE', 'ACCOUNTING', 'IT') as $allowed) {
+        foreach (array('LOGISTIK', 'LOGISTIC', 'PURCHASING', 'KEUANGAN', 'FINANCE', 'ACCOUNTING', 'IT', 'DIREKSI') as $allowed) {
             if ($departemen === $allowed || strpos($departemen, $allowed) !== false) {
                 return true;
             }
@@ -321,24 +416,47 @@ class M_Dashboard extends CI_Model
 
         return in_array($jobdesk, array(
             'LOGISTIK',
+            'LOGISTIC',
+            'ADMIN GUDANG',
+            'MT KADEP LOGISTIK',
+            'ADMIN LPB & GUDANG BENIH',
+            'MT ADMIN LOGISTIK',
+            'MT MANAGER WAREHOUSE',
+            'MT MANAGER DISTRIBUSI',
+            'ADMIN DISTRIBUSI & MANAGER WAREHOUSE',
             'ADMLPB',
             'ADMINLOGLPB',
             'ADMINICS',
             'ADMLOG',
             'ADMINPURCHASING',
+            'ADMIN PURCHASING',
+            'MT KADEP PURCHASING',
             'ADMIN PO',
             'PURCHASING',
             'ADMINKEU',
             'ADMINKEUTC',
+            'ADMIN JURNAL PAJAK',
+            'ADMIN KEUANGAN',
+            'ADMIN JURNAL',
+            'MT ADMIN ACCOUNTING',
+            'MT MANAGER ACCOUNTING & TAX',
+            'MT MANAGER KEUANGAN',
+            'MT KADEP KEUANGAN & SALES',
             'KIUKEU',
             'KEUANGAN',
             'ACCOUNTING',
             'FINANCE',
             'IT',
+            'IT HARDWARE',
+            'IT SOFTWARE',
+            'MT IT SOFTWARE',
             'ADMINIT',
             'ADMIN IT',
             'PROGRAMMER',
-            'DEVELOPMENT'
+            'DEVELOPMENT',
+            'DIREKSI',
+            'DIREKTUR',
+            'MT DIREKTUR OPERASIONAL'
         ), true);
     }
 

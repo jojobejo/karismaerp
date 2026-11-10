@@ -30,7 +30,7 @@ class C_pembayaran extends CI_Controller
     public function index()
     {
         $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
-        if ($jobdesk === 'COLLECTION') {
+        if (in_array($jobdesk, ['COLLECTION', 'TEAM COLLECTION'], true)) {
             redirect('keuangan/pembayaran/collection');
         }
 

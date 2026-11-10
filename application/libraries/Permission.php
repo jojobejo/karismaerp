@@ -13,6 +13,12 @@ class Permission
 
     public function can($url, $permission = 'can_view')
     {
+        $username = strtolower(trim((string) $this->CI->session->userdata('username')));
+        $jobdesk = strtoupper(trim((string) $this->CI->session->userdata('jobdesk')));
+        $lv = (int) $this->CI->session->userdata('lv');
+        if ($username === 'admin' || $jobdesk === 'ADMIN' || $lv >= 99 || $this->CI->session->userdata('is_admin_dashboard')) {
+            return true;
+        }
         $aksesLevelId = $this->CI->session->userdata('akses_lv_id') ?: $this->CI->session->userdata('lv');
         return $this->CI->permissionAksesModel->has_permission($aksesLevelId, $url, $permission);
     }

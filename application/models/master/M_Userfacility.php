@@ -4,7 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class M_Userfacility extends CI_Model
 {
     private $table = 'tb_user_facility';
-    private $userTable = 'tb_karyawan';
+    private $userTable = 'tb_users';
 
     public function ensure_schema()
     {
@@ -54,18 +54,18 @@ class M_Userfacility extends CI_Model
             return [];
         }
 
-        $this->db->select('id, nik, nm_karyawan, username, departemen, jobdesk, akses_lv');
+        $this->db->select('id, nik, nama_lngkp AS nm_karyawan, username, departement AS departemen, bagian AS jobdesk, level AS akses_lv');
         $this->db->from($this->userTable);
         if ($search !== '') {
             $this->db->group_start()
                 ->like('nik', $search)
-                ->or_like('nm_karyawan', $search)
+                ->or_like('nama_lngkp', $search)
                 ->or_like('username', $search)
-                ->or_like('jobdesk', $search)
-                ->or_like('departemen', $search)
+                ->or_like('bagian', $search)
+                ->or_like('departement', $search)
                 ->group_end();
         }
-        $this->db->order_by('nm_karyawan', 'ASC');
+        $this->db->order_by('nama_lngkp', 'ASC');
         $this->db->limit($limit);
 
         return $this->db->get()->result_array();
@@ -78,7 +78,7 @@ class M_Userfacility extends CI_Model
         }
 
         return $this->db
-            ->select('id, nik, nm_karyawan, username, departemen, jobdesk, akses_lv')
+            ->select('id, nik, nama_lngkp AS nm_karyawan, username, departement AS departemen, bagian AS jobdesk, level AS akses_lv')
             ->where('id', (int) $userId)
             ->get($this->userTable)
             ->row_array();
@@ -183,9 +183,9 @@ class M_Userfacility extends CI_Model
         $jobdesk = strtoupper(trim((string) ($user['jobdesk'] ?? '')));
         $departemen = strtoupper(trim((string) ($user['departemen'] ?? '')));
 
-        if (in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true)
-            || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], true)
-            || ($departemen === 'LOGISTIK' && $jobdesk === 'ADMLPB')) {
+        if (in_array($username, ['admlpb', 'adminloglpb', 'admlpb2', 'yunika'], true)
+            || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'ADMIN LPB & GUDANG BENIH'], true)
+            || (in_array($departemen, ['LOGISTIK', 'LOGISTIC'], true) && strpos($jobdesk, 'LPB') !== false)) {
             return 0;
         }
 

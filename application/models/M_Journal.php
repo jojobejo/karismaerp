@@ -938,11 +938,12 @@ class M_Journal extends CI_Model
         $this->db->select("
             j.*,
             jj.kode_jenis_jurnal,
-            COALESCE(NULLIF(k.nm_karyawan, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
+            COALESCE(NULLIF(tu.nama_lngkp, ''), NULLIF(k.nm_karyawan, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+        $this->db->join('tb_users tu', 'tu.id = j.created_by', 'left');
         $this->db->join('tb_karyawan k', 'k.id = j.created_by', 'left');
         $this->db->where('j.id_jurnal', (int)$idJurnal);
         $journal = $this->db->get()->row();
@@ -978,6 +979,7 @@ class M_Journal extends CI_Model
             COALESCE(f.no_so, '') AS no_so,
             COALESCE(f.customer_name, '') AS pelanggan,
             COALESCE(
+                NULLIF(tu.nama_lngkp, ''),
                 NULLIF(k.nm_karyawan, ''), 
                 NULLIF(p.create_by, ''), 
                 NULLIF(f.create_by, ''), 
@@ -988,6 +990,7 @@ class M_Journal extends CI_Model
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbso_faktur_penjualan f', '(j.source_module = "SALES" AND f.no_faktur = j.source_id) OR (j.source_module = "KEUANGAN" AND f.no_faktur = j.source_no)', 'left');
+        $this->db->join('tb_users tu', 'j.created_by = tu.id', 'left');
         $this->db->join('tb_karyawan k', 'j.created_by = k.id', 'left');
         $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');
         $this->db->where('j.id_jurnal', (int)$idJurnal);

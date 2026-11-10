@@ -3502,8 +3502,13 @@ LEFT JOIN tb_customer c
         JOIN tb_gudang c ON c.id_gudang = a.gudang_mutasi
         LEFT JOIN (
             SELECT nik, MIN(nm_karyawan) AS nm_karyawan
-            FROM tb_karyawan
-            WHERE nik IS NOT NULL AND nik <> ''
+            FROM (
+                SELECT nik, nama_lngkp AS nm_karyawan FROM tb_users WHERE nik IS NOT NULL AND nik <> ''
+                UNION ALL
+                SELECT username AS nik, nama_lngkp AS nm_karyawan FROM tb_users WHERE username IS NOT NULL AND username <> ''
+                UNION ALL
+                SELECT nik, nm_karyawan FROM tb_karyawan WHERE nik IS NOT NULL AND nik <> ''
+            ) u_all
             GROUP BY nik
         ) d ON " . $this->karyawan_nik_match_sql() . "
         ORDER BY a.tgl_transaksi DESC, a.id DESC
@@ -3523,7 +3528,7 @@ LEFT JOIN tb_customer c
         $this->db->join('(SELECT noreff, MAX(id) AS id FROM tb_mutasi GROUP BY noreff) latest_mutasi', 'latest_mutasi.id = a.id', 'inner', false);
         $this->db->join('tb_gudang b', 'b.id_gudang=a.gudang_asal');
         $this->db->join('tb_gudang c', 'c.id_gudang=a.gudang_mutasi');
-        $this->db->join("(SELECT nik, MIN(nm_karyawan) AS nm_karyawan FROM tb_karyawan WHERE nik IS NOT NULL AND nik <> '' GROUP BY nik) d", $this->karyawan_nik_match_sql(), 'left', false);
+        $this->db->join("(SELECT nik, MIN(nm_karyawan) AS nm_karyawan FROM (SELECT nik, nama_lngkp AS nm_karyawan FROM tb_users WHERE nik IS NOT NULL AND nik <> '' UNION ALL SELECT username AS nik, nama_lngkp AS nm_karyawan FROM tb_users WHERE username IS NOT NULL AND username <> '' UNION ALL SELECT nik, nm_karyawan FROM tb_karyawan WHERE nik IS NOT NULL AND nik <> '') u_all GROUP BY nik) d", $this->karyawan_nik_match_sql(), 'left', false);
 
         if ($gudang) $this->db->where('a.gudang_asal', $gudang);
         if ($status) $this->db->where('a.status', $status);

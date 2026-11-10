@@ -363,25 +363,55 @@ class M_SalesOrder extends CI_Model
     // MASTER DATA
     // ================================================================
 
+    private function _resolveSalesNames($nama_sales)
+    {
+        $nama_sales = trim((string)$nama_sales);
+        if ($nama_sales === '') return [];
+
+        $names = [strtolower($nama_sales)];
+        $first = strtolower(trim(explode(' ', $nama_sales)[0] ?? ''));
+        if ($first !== '') $names[] = $first;
+
+        if ($this->db->table_exists('tb_users')) {
+            $uQuery = $this->db->query(
+                "SELECT nama_lngkp, username FROM tb_users WHERE username = ? OR nama_lngkp = ? LIMIT 1",
+                [$nama_sales, $nama_sales]
+            );
+            $u = ($uQuery && is_object($uQuery)) ? $uQuery->row() : null;
+            if ($u) {
+                if (!empty($u->nama_lngkp)) {
+                    $full = strtolower(trim((string)$u->nama_lngkp));
+                    $names[] = $full;
+                    $firstU = strtolower(trim(explode(' ', $full)[0] ?? ''));
+                    if ($firstU !== '') $names[] = $firstU;
+                }
+                if (!empty($u->username)) {
+                    $names[] = strtolower(trim((string)$u->username));
+                }
+            }
+        }
+
+        if ($this->db->table_exists('tb_karyawan')) {
+            $kQuery = $this->db->query(
+                "SELECT nm_karyawan, username FROM tb_karyawan WHERE username = ? OR nm_karyawan = ? LIMIT 1",
+                [$nama_sales, $nama_sales]
+            );
+            $karyawan = ($kQuery && is_object($kQuery)) ? $kQuery->row() : null;
+            if ($karyawan) {
+                if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
+                if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
+            }
+        }
+
+        return array_values(array_unique(array_filter($names)));
+    }
+
     public function get_customers($nama_sales = null)
     {
         $nama_sales = trim((string)$nama_sales);
 
         if ($nama_sales !== '' && $this->db->field_exists('nama_sales', 'tb_customer')) {
-            $names = [strtolower($nama_sales)];
-
-            // Cari mapping nama karyawan dan username dari tb_karyawan
-            $karyawan = $this->db->select('nm_karyawan, username')
-                ->where('username', $nama_sales)
-                ->or_where('nm_karyawan', $nama_sales)
-                ->get('tb_karyawan')
-                ->row();
-
-            if ($karyawan) {
-                if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
-                if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
-            }
-            $names = array_values(array_unique(array_filter($names)));
+            $names = $this->_resolveSalesNames($nama_sales);
 
             $this->db->group_start();
             foreach ($names as $idx => $n) {
@@ -413,18 +443,7 @@ class M_SalesOrder extends CI_Model
             return true;
         }
 
-        $names = [strtolower($nama_sales)];
-        $karyawan = $this->db->select('nm_karyawan, username')
-            ->where('username', $nama_sales)
-            ->or_where('nm_karyawan', $nama_sales)
-            ->get('tb_karyawan')
-            ->row();
-
-        if ($karyawan) {
-            if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
-            if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
-        }
-        $names = array_values(array_unique(array_filter($names)));
+        $names = $this->_resolveSalesNames($nama_sales);
 
         $this->db->where('kd_customer', $kd_customer);
         $this->db->group_start();
@@ -728,6 +747,9 @@ class M_SalesOrder extends CI_Model
 
     public function get_all_so($filter = [])
     {
+        if (!empty($filter['create_by'])) {
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+        }
         $this->db->select('
             so.*,
             c.nama_customer,
@@ -753,7 +775,21 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
-        if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
+        if (!empty($filter['create_by'])) {
+            if (!empty($salesNames)) {
+                $this->db->group_start();
+                foreach ($salesNames as $idx => $sn) {
+                    if ($idx === 0) {
+                        $this->db->where('LOWER(TRIM(so.create_by)) = ' . $this->db->escape($sn), null, false);
+                    } else {
+                        $this->db->or_where('LOWER(TRIM(so.create_by)) = ' . $this->db->escape($sn), null, false);
+                    }
+                }
+                $this->db->group_end();
+            } else {
+                $this->db->where('so.create_by', $filter['create_by']);
+            }
+        }
 
         $this->db->group_by(['so.id_so', 'c.nama_customer', 'c.regional', 'c.kd_rute']);
         $this->db->order_by('so.tanggal_transaksi', 'DESC');
@@ -764,6 +800,9 @@ class M_SalesOrder extends CI_Model
 
     public function get_admin_sc_ready_so($filter = [])
     {
+        if (!empty($filter['create_by'])) {
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+        }
         $this->db->select('
             so.*,
             c.nama_customer,
@@ -803,7 +842,21 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
-        if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
+        if (!empty($filter['create_by'])) {
+            if (!empty($salesNames)) {
+                $this->db->group_start();
+                foreach ($salesNames as $idx => $sn) {
+                    if ($idx === 0) {
+                        $this->db->where('LOWER(TRIM(so.create_by)) = ' . $this->db->escape($sn), null, false);
+                    } else {
+                        $this->db->or_where('LOWER(TRIM(so.create_by)) = ' . $this->db->escape($sn), null, false);
+                    }
+                }
+                $this->db->group_end();
+            } else {
+                $this->db->where('so.create_by', $filter['create_by']);
+            }
+        }
         if (!empty($filter['kd_rute'])) {
             $this->db->where(
                 "COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = " . $this->db->escape($filter['kd_rute']),
@@ -843,6 +896,9 @@ class M_SalesOrder extends CI_Model
             GROUP BY id_so
         ";
 
+        if (!empty($filter['create_by'])) {
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+        }
         $this->db->select('
             f.*,
             so.id_so,
@@ -869,7 +925,21 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['date1']))       $this->db->where('f.tanggal_faktur >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('f.tanggal_faktur <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
-        if (!empty($filter['create_by']))   $this->db->where('f.create_by', $filter['create_by']);
+        if (!empty($filter['create_by'])) {
+            if (!empty($salesNames)) {
+                $this->db->group_start();
+                foreach ($salesNames as $idx => $sn) {
+                    if ($idx === 0) {
+                        $this->db->where('LOWER(TRIM(f.create_by)) = ' . $this->db->escape($sn), null, false);
+                    } else {
+                        $this->db->or_where('LOWER(TRIM(f.create_by)) = ' . $this->db->escape($sn), null, false);
+                    }
+                }
+                $this->db->group_end();
+            } else {
+                $this->db->where('f.create_by', $filter['create_by']);
+            }
+        }
         if (!empty($filter['kd_rute'])) {
             $this->db->where(
                 "COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = " . $this->db->escape($filter['kd_rute']),
@@ -891,8 +961,14 @@ class M_SalesOrder extends CI_Model
         $params = [];
 
         if (!empty($filter['create_by'])) {
-            $where .= " AND so.create_by = ?";
-            $params[] = $filter['create_by'];
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+            if (!empty($salesNames)) {
+                $escaped = array_map([$this->db, 'escape'], $salesNames);
+                $where .= " AND LOWER(TRIM(so.create_by)) IN (" . implode(',', $escaped) . ")";
+            } else {
+                $where .= " AND so.create_by = ?";
+                $params[] = $filter['create_by'];
+            }
         }
 
         $sql = "
@@ -960,8 +1036,14 @@ class M_SalesOrder extends CI_Model
         $where = "WHERE (so.so_source IS NULL OR so.so_source != 'LOBY') AND so.kd_rute = ? AND so.status IN ('open', 'partial')";
 
         if (!empty($filter['create_by'])) {
-            $where .= " AND so.create_by = ?";
-            $params[] = $filter['create_by'];
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+            if (!empty($salesNames)) {
+                $escaped = array_map([$this->db, 'escape'], $salesNames);
+                $where .= " AND LOWER(TRIM(so.create_by)) IN (" . implode(',', $escaped) . ")";
+            } else {
+                $where .= " AND so.create_by = ?";
+                $params[] = $filter['create_by'];
+            }
         }
 
         $sql = "
@@ -1025,8 +1107,14 @@ class M_SalesOrder extends CI_Model
         $params = [];
 
         if (!empty($filter['create_by'])) {
-            $where .= " AND so.create_by = ?";
-            $params[] = $filter['create_by'];
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+            if (!empty($salesNames)) {
+                $escaped = array_map([$this->db, 'escape'], $salesNames);
+                $where .= " AND LOWER(TRIM(so.create_by)) IN (" . implode(',', $escaped) . ")";
+            } else {
+                $where .= " AND so.create_by = ?";
+                $params[] = $filter['create_by'];
+            }
         }
         if (!empty($filter['customer_kd_rute'])) {
             $where .= " AND c.kd_rute = ?";
@@ -1096,8 +1184,14 @@ class M_SalesOrder extends CI_Model
         )";
         $params = [];
         if (!empty($filter['create_by'])) {
-            $where .= " AND so.create_by = ?";
-            $params[] = $filter['create_by'];
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+            if (!empty($salesNames)) {
+                $escaped = array_map([$this->db, 'escape'], $salesNames);
+                $where .= " AND LOWER(TRIM(so.create_by)) IN (" . implode(',', $escaped) . ")";
+            } else {
+                $where .= " AND so.create_by = ?";
+                $params[] = $filter['create_by'];
+            }
         }
         if (!empty($filter['customer_kd_rute'])) {
             $where .= " AND c.kd_rute = ?";
@@ -1129,8 +1223,14 @@ class M_SalesOrder extends CI_Model
         $params = [];
 
         if (!empty($filter['create_by'])) {
-            $where .= " AND so.create_by = ?";
-            $params[] = $filter['create_by'];
+            $salesNames = $this->_resolveSalesNames($filter['create_by']);
+            if (!empty($salesNames)) {
+                $escaped = array_map([$this->db, 'escape'], $salesNames);
+                $where .= " AND LOWER(TRIM(so.create_by)) IN (" . implode(',', $escaped) . ")";
+            } else {
+                $where .= " AND so.create_by = ?";
+                $params[] = $filter['create_by'];
+            }
         }
 
         $sql = "

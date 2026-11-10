@@ -24,12 +24,17 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-header">
-                            <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                            <?php
+                            $jobdeskMc = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                            $deptMc = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+                            $isLogMc = in_array($jobdeskMc, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT MANAGER WAREHOUSE', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH'], true) || strpos($deptMc, 'LOGISTIK') !== false;
+                            ?>
+                            <?php if ($isLogMc) : ?>
                                 <div class="row">
                                     <a href="<?= base_url('logistik') ?>" class="btn btn-sm btn-primary mr-2"><i class="fas fa-home "></i></a>
                                     <h3 class="card-title">Master Customer</h3>
                                 </div>
-                            <?php elseif ($this->session->userdata('jobdesk') != 'LOGISTIK') : ?>
+                            <?php else : ?>
                                 <div class="row">
                                     <a href="<?= base_url('') ?>" class="btn btn-sm btn-primary mr-2"><i class="fas fa-home "></i></a>
                                     <h3 class="card-title">Master Customer</h3>

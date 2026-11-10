@@ -77,7 +77,7 @@ class M_Jobdesk extends CI_Model
             $this->db->order_by($this->nameField(), 'ASC');
             return array_map([$this, 'normalize'], $this->db->get($this->table)->result_array());
         }
-        return $this->db->select('jobdesk AS nama_jobdesk')->distinct()->where('jobdesk IS NOT NULL', null, false)->order_by('jobdesk', 'ASC')->get('tb_karyawan')->result_array();
+        return $this->db->select('bagian AS nama_jobdesk')->distinct()->where('bagian IS NOT NULL', null, false)->order_by('bagian', 'ASC')->get('tb_users')->result_array();
     }
 
     public function find($id)

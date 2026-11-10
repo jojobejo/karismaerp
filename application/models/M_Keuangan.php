@@ -1279,6 +1279,7 @@ class M_Keuangan extends CI_Model
             COALESCE(f.no_so, '') AS no_so,
             COALESCE(f.customer_name, '') AS pelanggan,
             COALESCE(
+                NULLIF(tu.nama_lngkp, ''),
                 NULLIF(k.nm_karyawan, ''),
                 NULLIF(u.nama_user, ''),
                 NULLIF(p.create_by, ''),
@@ -1290,6 +1291,7 @@ class M_Keuangan extends CI_Model
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbso_faktur_penjualan f', '(j.source_module = "SALES" AND f.no_faktur = j.source_id) OR (j.source_module = "KEUANGAN" AND f.no_faktur = j.source_no)', 'left');
+        $this->db->join('tb_users tu', 'j.created_by = tu.id', 'left');
         $this->db->join('tb_karyawan k', 'j.created_by = k.id', 'left');
         $this->db->join('tb_user u', 'j.created_by = u.id', 'left');
         $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');

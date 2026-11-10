@@ -21,14 +21,14 @@ class M_Auth extends CI_Model
 
     function cek_username($username)
     {
-        $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan');
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
+        return $this->db->get('tb_users');
     }
 
     function cek_password($username)
     {
-        $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan')->result();
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
+        return $this->db->get('tb_users')->result();
     }
 
     public function get_auth_user($username)
@@ -44,27 +44,13 @@ class M_Auth extends CI_Model
             return [];
         }
 
-        $candidates = [];
-        $seen = [];
-
+        // Autentikasi utama menggunakan tabel tb_users
         $tbUsers = $this->get_tb_users_user($username);
         if ($tbUsers) {
-            $key = $tbUsers->auth_source . ':' . $tbUsers->id;
-            $candidates[] = $tbUsers;
-            $seen[$key] = true;
+            return [$tbUsers];
         }
 
-        $tbKaryawan = $this->get_tb_karyawan_user($username);
-        if ($tbKaryawan) {
-            $this->apply_tb_users_hrd_access($tbKaryawan);
-            $key = $tbKaryawan->auth_source . ':' . $tbKaryawan->id;
-            if (!isset($seen[$key])) {
-                $candidates[] = $tbKaryawan;
-                $seen[$key] = true;
-            }
-        }
-
-        return $candidates;
+        return [];
     }
 
     public function get_tb_users_user($username)
@@ -73,7 +59,7 @@ class M_Auth extends CI_Model
             return null;
         }
 
-        $this->db->where('username', $username);
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
         $row = $this->db->get('tb_users')->row();
         if (!$row) {
             return null;
@@ -173,7 +159,7 @@ class M_Auth extends CI_Model
             ->update($table, ['password' => password_hash((string) $plainPassword, PASSWORD_DEFAULT)]);
     }
 
-    public function update_last_login($id, $table = 'tb_karyawan')
+    public function update_last_login($id, $table = 'tb_users')
     {
         if (!$this->has($table, 'last_login')) {
             return true;

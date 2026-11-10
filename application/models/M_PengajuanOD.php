@@ -22,11 +22,11 @@ class M_PengajuanOD extends CI_Model
 
         if (isset($filters['only_history']) && $filters['only_history']) {
             // HISTORY PAGE: Show requests already processed/approved by this role or completed
-            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC'])) {
+            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC', 'MANAGER SALES COUNTER'])) {
                 $this->db->where_in('po.status', ['pending_mngtc', 'pending_kadepsc', 'approved', 'rejected']);
-            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC'])) {
+            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN'])) {
                 $this->db->where_in('po.status', ['pending_kadepsc', 'approved', 'rejected']);
-            } elseif ($jobdesk === 'KADEPSC') {
+            } elseif (in_array($jobdesk, ['KADEPSC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES'])) {
                 $this->db->where_in('po.status', ['approved', 'rejected']);
                 $this->db->having('max_tempo_baru >', 90);
             } else {
@@ -34,11 +34,11 @@ class M_PengajuanOD extends CI_Model
             }
         } elseif (isset($filters['exclude_approved']) && $filters['exclude_approved']) {
             // ACTIVE / PENDING INBOX PAGE: Show requests waiting for action from this role
-            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC'])) {
+            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC', 'MANAGER SALES COUNTER'])) {
                 $this->db->where('po.status', 'pending_mngsc');
-            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC'])) {
+            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN'])) {
                 $this->db->where('po.status', 'pending_mngtc');
-            } elseif ($jobdesk === 'KADEPSC') {
+            } elseif (in_array($jobdesk, ['KADEPSC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES'])) {
                 $this->db->where('po.status', 'pending_kadepsc');
                 $this->db->having('max_tempo_baru >', 90);
             } else {

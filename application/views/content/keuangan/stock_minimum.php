@@ -24,7 +24,7 @@
             <section class="content">
                 <div class="container-fluid">
 
-                    <?php if ($this->session->userdata('lv') == 1) : ?>
+                    <?php if (!in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                         <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
                         <?php if ($gudangid == '1') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>

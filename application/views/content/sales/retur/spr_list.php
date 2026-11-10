@@ -59,16 +59,16 @@
                 <div class="row mb-3">
                     <?php
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
-                    $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
-                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
-                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
-                    $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
-                    $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','SALES COUNTER','MT SALES COUNTER','ADMIN']);
+                    $is_koor = in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
+                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                    $is_kadep = in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
+                    $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','MT KADEP LOGISTIK','MT ADMIN LOGISTIK','ADMIN']);
+                    $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','TEAM COLLECTION','ADMIN']);
                     $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                    $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
-                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
-                    $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                    $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','ADMIN LPB & GUDANG BENIH','LOGISTIK','MT KADEP LOGISTIK','ADMIN'], true) || in_array(strtolower((string)($user['username'] ?? '')), ['admlpb', 'yunika'], true);
+                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                    $is_kadepub     = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
                     $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
                     ?>
                     <div class="col-auto">
@@ -84,7 +84,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MANAGERSE','DIREKTUROP','DIREKTURUTAMA'])): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','MANAGERSE','MANAGER SALES EXECUTIVE','DIREKTUROP','MT DIREKTUR OPERASIONAL','DIREKTURUTAMA','DIREKSI'])): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>

@@ -1739,9 +1739,6 @@ function openModalCancelSo(idSo, noSo) {
 }
 
 function submitCancelSoRequest(idSo, alasan, directCancel) {
-    if (window.Swal) {
-        Swal.fire({ title: 'Memproses...', text: 'Mengirim permohonan pembatalan...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
-    }
     $.ajax({
         url: BASE_URL + 'sales_order/request_cancel_so',
         type: 'POST',
@@ -1755,9 +1752,9 @@ function submitCancelSoRequest(idSo, alasan, directCancel) {
             if (res.success) {
                 if (window.Swal) {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: res.message || 'Permintaan pembatalan berhasil diproses.',
+                        icon: 'info',
+                        title: 'Menunggu Approval Atasan',
+                        text: res.message || 'Permintaan pembatalan SO berhasil diajukan dan sedang menunggu persetujuan atasan.',
                         confirmButtonText: 'OK'
                     }).then(function() {
                         window.location.reload();

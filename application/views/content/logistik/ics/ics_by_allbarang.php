@@ -12,12 +12,16 @@
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <div class="content-header">
-                <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') :
+                <?php
+                $jobdeskAllBr = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                $deptAllBr = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+                if (in_array($jobdeskAllBr, ['ADMINICS', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'MT MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'LOGISTIK', 'ADMIN'], true) || strpos($deptAllBr, 'LOGISTIK') !== false || (bool) $this->session->userdata('is_admin_dashboard')) :
                     $pic = $this->session->userdata('nama');
+                    $tim = $this->session->userdata('tim');
                 ?>
                     <section class="content">
                         <div class="row">
-                            <?php if ($pic == 'Admin ICS') : ?>
+                            <?php if ($pic == 'Admin ICS' || empty($tim)) : ?>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-boxes"></i> By All Barang</a>
                                 </div>

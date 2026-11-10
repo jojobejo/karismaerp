@@ -66,7 +66,7 @@ class C_PengajuanOD extends CI_Controller
     public function create()
     {
         $user = $this->_getUser();
-        if (!in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) {
+        if (!in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) {
             $this->session->set_flashdata('error', 'Hanya SC yang dapat membuat pengajuan OD.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -168,7 +168,7 @@ class C_PengajuanOD extends CI_Controller
     public function store()
     {
         $user = $this->_getUser();
-        if (!in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) {
+        if (!in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) {
             $this->session->set_flashdata('error', 'Akses ditolak.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -259,7 +259,7 @@ class C_PengajuanOD extends CI_Controller
     public function edit($id)
     {
         $user = $this->_getUser();
-        if (!in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) {
+        if (!in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) {
             $this->session->set_flashdata('error', 'Akses ditolak.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -294,7 +294,7 @@ class C_PengajuanOD extends CI_Controller
     public function update($id)
     {
         $user = $this->_getUser();
-        if (!in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) {
+        if (!in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) {
             $this->session->set_flashdata('error', 'Akses ditolak.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -454,13 +454,13 @@ class C_PengajuanOD extends CI_Controller
         $status_baru = $pengajuan['status'];
 
         if ($action == 'approve') {
-            if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'ADMIN'])) {
+            if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'MANAGER SALES COUNTER', 'ADMIN'])) {
                 $status_baru = 'pending_mngtc';
                 $update_data['approval_mngsc_by'] = $user['nama'];
                 $update_data['approval_mngsc_at'] = date('Y-m-d H:i:s');
                 $update_data['catatan_mngsc'] = $catatan_approval;
             } 
-            elseif ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'ADMIN'])) {
+            elseif ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN', 'ADMIN'])) {
                 // Upload lampiran Mng TC (Optional)
                 $lampiran_mngtc = '';
                 if (!empty($_FILES['lampiran_mngtc']['name'])) {
@@ -502,7 +502,7 @@ class C_PengajuanOD extends CI_Controller
                 $update_data['approval_mngtc_at'] = date('Y-m-d H:i:s');
                 $update_data['catatan_mngtc'] = $catatan_approval;
             }
-            elseif ($pengajuan['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'ADMIN'])) {
+            elseif ($pengajuan['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES', 'ADMIN'])) {
                 $status_baru = 'approved';
                 $update_data['approval_kadepsc_by'] = $user['nama'];
                 $update_data['approval_kadepsc_at'] = date('Y-m-d H:i:s');

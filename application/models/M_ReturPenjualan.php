@@ -339,16 +339,37 @@ class M_ReturPenjualan extends CI_Model
         $nama_sales = trim((string) $nama_sales);
         if ($nama_sales !== '' && $this->db->field_exists('nama_sales', 'tb_customer')) {
             $names = [strtolower($nama_sales)];
+            $first = strtolower(trim(explode(' ', $nama_sales)[0] ?? ''));
+            if ($first !== '') $names[] = $first;
 
-            $karyawan = $this->db->select('nm_karyawan, username')
-                ->where('username', $nama_sales)
-                ->or_where('nm_karyawan', $nama_sales)
-                ->get('tb_karyawan')
-                ->row();
+            if ($this->db->table_exists('tb_users')) {
+                $u = $this->db->select('nama_lngkp, username')
+                    ->where('username', $nama_sales)
+                    ->or_where('nama_lngkp', $nama_sales)
+                    ->get('tb_users')
+                    ->row();
+                if ($u) {
+                    if (!empty($u->nama_lngkp)) {
+                        $full = strtolower(trim((string)$u->nama_lngkp));
+                        $names[] = $full;
+                        $firstU = strtolower(trim(explode(' ', $full)[0] ?? ''));
+                        if ($firstU !== '') $names[] = $firstU;
+                    }
+                    if (!empty($u->username)) $names[] = strtolower(trim((string)$u->username));
+                }
+            }
 
-            if ($karyawan) {
-                if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
-                if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
+            if ($this->db->table_exists('tb_karyawan')) {
+                $karyawan = $this->db->select('nm_karyawan, username')
+                    ->where('username', $nama_sales)
+                    ->or_where('nm_karyawan', $nama_sales)
+                    ->get('tb_karyawan')
+                    ->row();
+
+                if ($karyawan) {
+                    if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
+                    if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
+                }
             }
             $names = array_values(array_unique(array_filter($names)));
 

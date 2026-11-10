@@ -39,8 +39,8 @@ class C_Usermanagement extends CI_Controller
     public function index()
     {
         $data['page_title'] = 'KARISMA ERP - User Management';
-        $data['jobdesk'] = $this->jobdeskModel->options();
-        $data['akses_level'] = $this->aksesModel->options();
+        $data['jobdesk'] = $this->users->bagian_options();
+        $data['akses_level'] = $this->users->level_options();
         $data['departemen'] = $this->users->distinct_options('departemen');
         $data['tim'] = $this->users->distinct_options('tim');
         $data['wilayah'] = $this->users->distinct_options('wilayah');
@@ -62,14 +62,13 @@ class C_Usermanagement extends CI_Controller
 
     private function validate_user($input, $id = null)
     {
-        foreach (['nik' => 'NIK', 'nm_karyawan' => 'Nama karyawan', 'username' => 'Username', 'jobdesk' => 'Jobdesk', 'akses_lv' => 'Akses level'] as $field => $label) {
+        foreach (['nik' => 'NIK', 'nm_karyawan' => 'Nama lengkap', 'username' => 'Username', 'jobdesk' => 'Bagian / Jobdesk', 'akses_lv' => 'Level akses'] as $field => $label) {
             if (trim((string)($input[$field] ?? '')) === '' && trim((string)($input[$field . '_id'] ?? '')) === '') {
                 return $label . ' wajib diisi.';
             }
         }
         if (!$id && strlen((string)($input['password'] ?? '')) < 6) return 'Password minimum 6 karakter.';
         if (!$this->users->unique('username', $input['username'] ?? '', $id)) return 'Username sudah digunakan.';
-        if (!$this->users->unique('nik', $input['nik'] ?? '', $id)) return 'NIK sudah digunakan.';
         return true;
     }
 
@@ -140,8 +139,8 @@ class C_Usermanagement extends CI_Controller
     public function select_options()
     {
         $data = [
-            'jobdesk' => $this->jobdeskModel->options(),
-            'akses_level' => $this->aksesModel->options(),
+            'jobdesk' => $this->users->bagian_options(),
+            'akses_level' => $this->users->level_options(),
             'departemen' => $this->users->distinct_options('departemen'),
             'tim' => $this->users->distinct_options('tim'),
             'wilayah' => $this->users->distinct_options('wilayah'),

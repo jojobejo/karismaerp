@@ -17,7 +17,7 @@
                         <div class="col-auto">
                             <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                         </div>
-                        <?php if ($this->session->userdata('lv') == '1') : ?>
+                        <?php if ((int) $this->session->userdata('lv') >= 1) : ?>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Out Today</a>
                             </div>

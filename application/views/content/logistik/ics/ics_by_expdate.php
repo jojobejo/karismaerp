@@ -14,7 +14,7 @@
             <div class="content-header">
                 <section class="content">
                     <div class="row">
-                        <?php if ($this->session->userdata('lv') == '1') : ?>
+                        <?php if ((int) $this->session->userdata('lv') >= 1 && empty($this->session->userdata('tim'))) : ?>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-boxes"></i> By All Barang</a>
                             </div>

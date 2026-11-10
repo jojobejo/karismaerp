@@ -21,7 +21,10 @@
 
         <div class="content-wrapper">
             <div class="content-header">
-                <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                <?php
+                $jobdeskPic = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                $deptPic = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+                if (in_array($jobdeskPic, ['ADMINICS', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'MT MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'LOGISTIK', 'ADMIN'], true) || strpos($deptPic, 'LOGISTIK') !== false || (bool) $this->session->userdata('is_admin_dashboard')) : ?>
                     <section class="content">
                         <?php
 
@@ -30,10 +33,10 @@
 
                         $pic = $this->session->userdata('nama');
 
-                        if ($lv == 1) {
-                            $akses = 'admin';
-                        } elseif ($lv == 2) {
+                        if (!empty($tim) && $lv == 2) {
                             $akses = 'ics';
+                        } else {
+                            $akses = 'admin';
                         }
                         ?>
                         <div class="row">

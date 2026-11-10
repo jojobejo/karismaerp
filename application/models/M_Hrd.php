@@ -314,11 +314,12 @@ class M_Hrd extends CI_Model
     public function get_issue_list($filters = array())
     {
         $this->db->select('e.*, e.created_by AS created_by_id, COALESCE(e.star_rating, 0) AS star_rating, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
-            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by", false)
+            ->select("COALESCE(NULLIF(tu.nama_lngkp, ''), NULLIF(tu.username, ''), NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->join('tb_users tu', 'e.created_by = tu.id', 'left')
             ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left');
 
@@ -330,11 +331,12 @@ class M_Hrd extends CI_Model
     public function get_issue_by_id($id)
     {
         return $this->db->select('e.*, e.created_by AS created_by_id, COALESCE(e.star_rating, 0) AS star_rating, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
-            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by_name", false)
+            ->select("COALESCE(NULLIF(tu.nama_lngkp, ''), NULLIF(tu.username, ''), NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by_name", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->join('tb_users tu', 'e.created_by = tu.id', 'left')
             ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left')
             ->where('e.id', $id)
@@ -355,9 +357,10 @@ class M_Hrd extends CI_Model
     public function get_issue_logs($issue_id)
     {
         return $this->db->select('l.*, s.name AS status_name')
-            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', l.changed_by)) AS changed_by_name", false)
+            ->select("COALESCE(NULLIF(tu.nama_lngkp, ''), NULLIF(tu.username, ''), NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', l.changed_by)) AS changed_by_name", false)
             ->from('tbhrd_issue_logs l')
             ->join('tbhrd_issue_status s', 'l.status_id = s.id', 'left')
+            ->join('tb_users tu', 'l.changed_by = tu.id', 'left')
             ->join('tb_karyawan k', 'l.changed_by = k.id', 'left')
             ->join('tb_user u', 'l.changed_by = u.id', 'left')
             ->where('l.issue_id', $issue_id)

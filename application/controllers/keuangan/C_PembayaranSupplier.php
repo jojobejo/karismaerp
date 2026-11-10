@@ -271,13 +271,17 @@ class C_PembayaranSupplier extends CI_Controller
     private function can_access()
     {
         $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $username = strtolower(trim((string)$this->session->userdata('username')));
         $level = (int)$this->session->userdata('lv');
 
         return $username === 'admin'
             || (bool)$this->session->userdata('is_admin_dashboard')
-            || in_array($jobdesk, ['KIUKEU', 'ADMINKEU', 'ADMINKEUTC', 'ACCOUNTING', 'FINANCE'], true)
-            || ($level === 1 && in_array($jobdesk, ['ADMIN', 'ADMINKEU', 'ADMINKEUTC'], true));
+            || $level >= 99
+            || strpos($departemen, 'KEUANGAN') !== false
+            || strpos($departemen, 'ACCOUNTING') !== false
+            || strpos($departemen, 'FINANCE') !== false
+            || in_array($jobdesk, ['ADMIN', 'KIUKEU', 'ADMINKEU', 'ADMINKEUTC', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ACCOUNTING', 'FINANCE'], true);
     }
 
     private function user_id()

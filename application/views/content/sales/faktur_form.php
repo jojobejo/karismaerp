@@ -1,7 +1,7 @@
 <!-- views/content/sales/faktur_form.php -->
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
-$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true);
+$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER', 'SALESCOUNTER'], true);
 $so_rute = trim((string)($so['kd_rute'] ?? ($so['customer_kd_rute'] ?? '')));
 $faktur_back_url = $is_admin_sc_context
     ? base_url('sales_order/admin_sc' . ($so_rute !== '' ? '?rute=' . rawurlencode($so_rute) : ''))

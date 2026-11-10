@@ -2,7 +2,7 @@
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
 $from_page = strtolower((string)$this->input->get('from', true));
-$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true) || $from_page === 'admin_sc';
+$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER', 'SALESCOUNTER'], true) || $from_page === 'admin_sc';
 $faktur_list_url = $is_admin_sc_context ? base_url('sales_order/admin_sc/faktur') : base_url('sales_order');
 $faktur_list_label = $is_admin_sc_context ? 'Faktur Selesai' : 'Sales Order';
 $so_detail_url = base_url('sales_order/detail/' . $so['id_so']);

@@ -213,9 +213,15 @@
                     <div class="container-fluid">
                         <div class="row mb-2">
                             <div class="col-sm-6 d-flex align-items-center">
-                                <?php if ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+                                <?php
+                                $jobdeskDo = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                                $deptDo = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+                                $isKeuDo = in_array($jobdeskDo, ['ADMINKEUTC', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'MT MANAGER ACCOUNTING & TAX', 'ADMIN JURNAL PAJAK', 'KASIR', 'TEAM COLLECTION'], true);
+                                $isLogDo = !$isKeuDo && (in_array($jobdeskDo, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT MANAGER WAREHOUSE', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'CHECKER', 'MT CHECKER', 'ADMIN'], true) || strpos($deptDo, 'LOGISTIK') !== false || (bool) $this->session->userdata('is_admin_dashboard'));
+                                ?>
+                                <?php if ($isKeuDo) : ?>
                                     <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mr-2"><i class="fas fa-arrow-circle-left"></i></a>
-                                <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                                <?php elseif ($isLogDo) : ?>
                                     <a href="<?= base_url('logistik') ?>" class="btn btn-primary mr-2"><i class="fas fa-arrow-circle-left"></i></a>
                                 <?php endif; ?>
                                 <h1 class="m-0">Detail Delivery Order</h1>
@@ -240,7 +246,7 @@
                             </div>
 
                             <div class="card-body">
-                                <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                                <?php if ($isLogDo) : ?>
                                     <?php
                                         $status_meta = [
                                             '1' => ['label' => 'Draft', 'icon' => 'fas fa-file-alt', 'class' => 'is-warning'],
@@ -271,7 +277,7 @@
                                             </div>
                                         </div>
                                     <?php endif; ?>
-                                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+                                <?php elseif ($isKeuDo) : ?>
                                 <?php endif; ?>
                                 <?php foreach ($kdo as $k) : ?>
                                     <input type="hidden" id="do_isi" name="do_isi" value="<?= $k->kd_do ?>">
@@ -467,7 +473,7 @@
 
                                 <?php endforeach; ?>
                                 <!-- END FORM -->
-                                <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                                <?php if ($isLogDo) : ?>
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
                                             <tr>
@@ -597,7 +603,7 @@
                                     <!-- LOGISTIK END -->
 
                                     <!-- TC START -->
-                                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+                                <?php elseif ($isKeuDo) : ?>
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
                                             <tr>

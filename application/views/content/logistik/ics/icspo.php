@@ -6,7 +6,9 @@ $lastSyncUpdated = isset($last_sync['updated']) ? (int) $last_sync['updated'] : 
 $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 0;
 $isAdminPo = !empty($is_admin_po);
 $canSyncPo = !empty($can_sync_po);
-$showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS';
+$jobdeskUpper = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+$lvInt = (int) $this->session->userdata('lv');
+$showLpbActions = !$isAdminPo && ($lvInt >= 1) && $jobdeskUpper !== 'ADMINICS';
 $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel);
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
 $canLpbManual = !empty($can_lpb_manual);
@@ -232,7 +234,7 @@ $formatDate = function ($dateStr) {
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-                    <?php if (!$isDataLpbPage && !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
+                    <?php if (!$isDataLpbPage && !$isAdminPo && ($lvInt >= 1) && !in_array($jobdeskUpper, ['ADMINLOGLPB', 'ADMLPB', 'ADMLPB2', 'ADMIN LPB & GUDANG BENIH'], true)) : ?>
                         <div class="row">
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3">

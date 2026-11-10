@@ -57,29 +57,36 @@ class Auth extends CI_Controller
             return;
         }
 
-        $auth_source = $key->auth_source ?? 'tb_karyawan';
-        $akses_lv = (int)($key->akses_lv ?? $key->level ?? 0);
+        $auth_source = $key->auth_source ?? 'tb_users';
+        // Di tb_users semakin tinggi angka level maka semakin tinggi jabatan (Admin = 99, Direksi = 5, Kadep = 4, Manager = 3, Koordinator = 2, Karyawan = 1)
+        $akses_lv = (int)($key->level ?? $key->akses_lv ?? 1);
         $jobdesk_hrd = strtolower(trim((string)($key->jobdesk_hrd ?? '')));
-        $jobdesk = strtoupper(trim((string)($key->jobdesk ?? $key->jabatan ?? '')));
+        // Jobdesk mengikuti kolom bagian pada tb_users
+        $jobdesk = strtoupper(trim((string)($key->bagian ?? $key->jobdesk ?? $key->jabatan ?? '')));
+        $jabatan = strtoupper(trim((string)($key->jabatan ?? '')));
         $username_login = strtolower(trim((string)($key->username ?? '')));
-        $is_admin_dashboard = ($username_login === 'admin' || ($akses_lv === 1 && $jobdesk === 'ADMIN'));
-        $nama = $key->nm_karyawan ?? $key->nama_lngkp ?? $key->nama_user ?? $key->username;
-        $departemen = $key->departemen ?? $key->departement ?? null;
+        $is_admin_dashboard = ($username_login === 'admin' || $jobdesk === 'ADMIN' || $akses_lv >= 99);
+        $nama = $key->nama_lngkp ?? $key->nm_karyawan ?? $key->nama_user ?? $key->username;
+        $departemen = trim((string)($key->departement ?? $key->departemen ?? ''));
 
         $data_session = array(
             'id'            => $key->id,
-            'id_karyawan'   => $auth_source === 'tb_karyawan' ? $key->id : null,
+            'id_karyawan'   => $key->id,
             'auth_source'   => $auth_source,
             'nik'           => $key->nik ?? null,
             'username'      => $key->username,
             'departemen'    => $departemen,
+            'departement'   => $departemen,
             'lv'            => $akses_lv,
             'akses_lv'      => $akses_lv,
             'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
             'jobdesk'       => $jobdesk,
+            'bagian'        => $jobdesk,
+            'jabatan'       => $jabatan,
             'jobdesk_hrd'   => $jobdesk_hrd,
             'jobdesk_id'    => $key->jobdesk_id ?? null,
             'nama'          => $nama,
+            'nm_karyawan'   => $nama,
             'nama_user'     => $nama,
             'tim'           => $key->tim ?? null,
             'wilayah'       => $key->wilayah ?? null,
@@ -94,57 +101,45 @@ class Auth extends CI_Controller
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        // Redirect based on jobdesk / username
+        // Redirect berdasarkan jobdesk (bagian di tb_users) / username
         if ($username_login === 'admkeu') {
             redirect('sales_order/pecah_faktur');
+        } else if ($is_admin_dashboard || $jobdesk === 'ADMIN') {
+            redirect('dashboard');
+        } else if (in_array($jobdesk, ['DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'DIREKTURUTAMA', 'MT DIREKTUR OPERASIONAL', 'DIREKTUROP', 'DIREKTURCK', 'WAKIL DIREKTUR UTAMA'], true) || $akses_lv >= 5) {
+            redirect('dashboard');
         } else if ($jobdesk_hrd === 'direksi_readonly') {
             redirect('dashboard_penilaian');
-        } else if ($jobdesk == 'LOGISTIK') {
+        } else if (in_array($jobdesk, ['LOGISTIK', 'LOGISTIC', 'ADMIN GUDANG', 'MT KADEP LOGISTIK'], true)) {
             redirect('logistik');
-        } else if ($jobdesk == 'ADMINICS') {
+        } else if (in_array($jobdesk, ['ADMINICS', 'ADMIN ICS'], true)) {
             redirect('ics/ics_diffrent');
-        } else if ($jobdesk == 'ADMINKEU') {
+        } else if (in_array($jobdesk, ['ADMINKEU', 'ADMIN KEUANGAN', 'ADMIN JURNAL'], true)) {
             redirect('keuangan');
-        } else if ($jobdesk == 'KIUKEU') {
+        } else if (in_array($jobdesk, ['KIUKEU', 'ADMKEU', 'ADMIN JURNAL PAJAK', 'MT ADMIN PIUTANG'], true)) {
             redirect('keuangan/pembayaran');
-        } else if ($jobdesk == 'ADMINPURCHASING') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'DIREKTUR') {
+        } else if (in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PURCHASING', 'MT KADEP PURCHASING', 'PURCHASING', 'ADMIN PO KOMERSIL', 'MT ADMIN PO NON KOMERSIL'], true)) {
             redirect('dashboard');
-        } else if ($jobdesk == 'ADMINGA') {
+        } else if (in_array($jobdesk, ['ADMINGA', 'ADMIN GA', 'KADEP GA'], true)) {
             redirect('schedule_direktur');
-        } else if ($jobdesk == 'ADMINKEUTC') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'STOCKOPNAME') {
-            redirect('stockopname');
-        } else if ($jobdesk == 'ADMIN') {
+        } else if (in_array($jobdesk, ['ADMINKEUTC', 'ADMIN PEMBAYARAN HUTANG', 'MT MANAGER KEUANGAN'], true)) {
             redirect('dashboard');
-        } else if ($jobdesk == 'SALESONLINE') {
+        } else if (in_array($jobdesk, ['STOCKOPNAME', 'ADMIN_STOCKOPNAME'], true)) {
+            redirect('stockopname');
+        } else if (in_array($jobdesk, ['SALESONLINE', 'MT SALES ONLINE'], true)) {
             redirect('stock');
-        } else if ($jobdesk == 'SALESCOUNTER') {
-            redirect('sales_report');
-        } else if ($jobdesk == 'SALES') {
-            redirect('kiu_katalog');
-        } else if ($jobdesk == 'DISTRIBUSI') {
-            redirect('logistik/distibusi');
-        } else if ($jobdesk == 'ADMINLOGLPB') {
+        } else if (in_array($jobdesk, ['DISTRIBUSI', 'ADMIN DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE'], true)) {
+            redirect('checker');
+        } else if (in_array($jobdesk, ['ADMINLOGLPB', 'ADMLPB', 'ADMIN LPB & GUDANG BENIH'], true)) {
             redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMLOG') {
+        } else if (in_array($jobdesk, ['ADMLOG', 'CHECKER', 'MT CHECKER', 'MT ADMIN LOGISTIK', 'MANAGERWH', 'MT MANAGER WAREHOUSE', 'MT MANAGER DISTRIBUSI', 'SALESCK', 'MANAGERCK'], true)) {
             redirect('checker');
-        } else if ($jobdesk == 'CHECKER') {
-            redirect('checker');
-        } else if ($jobdesk == 'MANAGERWH') {
-            redirect('checker');
-        } else if ($jobdesk == 'SALESCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard');
-        } else if ($jobdesk == 'MANAGERCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'ADMINSC') {
+        } else if (in_array($jobdesk, ['ADMINSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'], true)) {
             redirect('sales_order/admin_sc');
-        } else if ($jobdesk == 'SC') {
+        } else if (in_array($jobdesk, ['SC', 'MT SALES COUNTER', 'SALES COUNTER', 'SALESCOUNTER'], true)) {
             redirect('sales_order');
+        } else if (in_array($jobdesk, ['SALES', 'SALES EXECUTIVE', 'MT ADMIN SALES'], true)) {
+            redirect('dashboard');
         } else {
             redirect('dashboard');
         }

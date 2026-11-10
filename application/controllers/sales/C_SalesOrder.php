@@ -123,14 +123,24 @@ class C_SalesOrder extends CI_Controller
         }
 
         $row = null;
-        if (!empty($id))  $row = $this->db->get_where('tb_karyawan', ['id'       => $id])->row_array();
-        if (!$row && !empty($usn)) $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
+        if (!empty($id) && $this->db->table_exists('tb_users')) {
+            $row = $this->db->get_where('tb_users', ['id' => $id])->row_array();
+        }
+        if (!$row && !empty($usn) && $this->db->table_exists('tb_users')) {
+            $row = $this->db->get_where('tb_users', ['username' => $usn])->row_array();
+        }
+        if (!$row && !empty($id) && $this->db->table_exists('tb_karyawan')) {
+            $row = $this->db->get_where('tb_karyawan', ['id' => $id])->row_array();
+        }
+        if (!$row && !empty($usn) && $this->db->table_exists('tb_karyawan')) {
+            $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
+        }
 
         if ($row) {
             return [
-                'nm_karyawan' => $row['nm_karyawan'] ?? ($nama ?? 'system'),
-                'wilayah'     => $row['wilayah']     ?? ($wil ?? ''),
-                'username'    => $row['username']    ?? ($usn ?? 'system'),
+                'nm_karyawan' => $row['nama_lngkp'] ?? $row['nm_karyawan'] ?? ($nama ?? 'system'),
+                'wilayah'     => $row['wilayah']    ?? $row['wilayah_id']  ?? ($wil ?? ''),
+                'username'    => $row['username']   ?? ($usn ?? 'system'),
             ];
         }
         return ['nm_karyawan' => $nama ?? 'system', 'wilayah' => $wil ?? '', 'username' => $usn ?? 'system'];
@@ -464,17 +474,24 @@ class C_SalesOrder extends CI_Controller
 
     private function _isRestrictedSalesUser()
     {
-        return strtoupper((string)$this->session->userdata('jobdesk')) === 'SC';
+        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['SC', 'SALES COUNTER', 'MT SALES COUNTER'], true);
     }
 
     private function _canAccessAdminSc()
     {
-        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC', 'SC', 'SALESCOUNTER', 'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC'], true);
+        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), [
+            'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
+            'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
+            'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER',
+            'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES'
+        ], true);
     }
 
     private function _isAdminScOnlyUser()
     {
-        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC', 'SALESCOUNTER'], true);
+        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), [
+            'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'
+        ], true);
     }
 
     private function _denyAdminScAccess()
@@ -488,7 +505,13 @@ class C_SalesOrder extends CI_Controller
         if (!$this->_isRestrictedSalesUser()) return true;
         if (empty($so)) return false;
 
-        return (string)($so['create_by'] ?? '') === (string)$this->_getUsername();
+        $createBy = strtolower(trim((string)($so['create_by'] ?? '')));
+        $user = $this->_getCurrentUser();
+        $fullName = strtolower(trim((string)($user['nm_karyawan'] ?? '')));
+        $username = strtolower(trim((string)($user['username'] ?? '')));
+        $firstName = strtolower(trim(explode(' ', $fullName)[0] ?? ''));
+
+        return in_array($createBy, array_filter([$fullName, $username, $firstName]), true);
     }
 
     private function _denySoAccess()
@@ -501,8 +524,15 @@ class C_SalesOrder extends CI_Controller
     {
         $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
         $role    = strtoupper((string)$this->session->userdata('role'));
-        return in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN', 'KADEPSC', 'DIREKSI'], true)
-            || in_array($role, ['ADMIN', 'SUPERADMIN', 'DIREKSI'], true);
+        $lv      = (int)$this->session->userdata('lv');
+        return in_array($jobdesk, [
+            'MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER',
+            'ADMIN', 'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
+            'KADEPUB', 'KEPALA UNIT BISNIS',
+            'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'MT DIREKTUR OPERASIONAL'
+        ], true)
+            || in_array($role, ['ADMIN', 'SUPERADMIN', 'DIREKSI'], true)
+            || $lv >= 99;
     }
 
     private function _getFakturUserPrefix()
@@ -523,10 +553,13 @@ class C_SalesOrder extends CI_Controller
             ?? null;
 
         $users = $this->db
-            ->select('id, username, nm_karyawan, faktur_prefix')
-            ->where_in('jobdesk', ['ADMINSC', 'SC', 'SALES', 'SALESCOUNTER', 'SALESONLINE'])
+            ->select('id, username, nama_lngkp AS nm_karyawan, faktur_prefix')
+            ->where_in('bagian', [
+                'ADMIN', 'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
+                'SC', 'SALES', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'SALESONLINE'
+            ])
             ->order_by('id', 'ASC')
-            ->get('tb_karyawan')
+            ->get('tb_users')
             ->result_array();
         $users = $this->_seedMissingFakturPrefixes($users);
 
@@ -535,9 +568,9 @@ class C_SalesOrder extends CI_Controller
 
         if ($index === null) {
             $users = $this->db
-                ->select('id, username, nm_karyawan, faktur_prefix')
+                ->select('id, username, nama_lngkp AS nm_karyawan, faktur_prefix')
                 ->order_by('id', 'ASC')
-                ->get('tb_karyawan')
+                ->get('tb_users')
                 ->result_array();
             $users = $this->_seedMissingFakturPrefixes($users);
             $index = $this->_findUserPrefixIndex($users, $current_id, $current_username, $current_name);
@@ -558,7 +591,7 @@ class C_SalesOrder extends CI_Controller
 
         $this->db
             ->where('id', $current_user['id'])
-            ->update('tb_karyawan', ['faktur_prefix' => $prefix]);
+            ->update('tb_users', ['faktur_prefix' => $prefix]);
 
         return $prefix;
     }
@@ -576,7 +609,7 @@ class C_SalesOrder extends CI_Controller
             $prefix = $this->_getAvailableFakturPrefix($legacy_prefix, $user['id']);
             $this->db
                 ->where('id', $user['id'])
-                ->update('tb_karyawan', ['faktur_prefix' => $prefix]);
+                ->update('tb_users', ['faktur_prefix' => $prefix]);
 
             $user['faktur_prefix'] = $prefix;
         }
@@ -587,12 +620,12 @@ class C_SalesOrder extends CI_Controller
 
     private function _ensureFakturPrefixColumn()
     {
-        if ($this->db->field_exists('faktur_prefix', 'tb_karyawan')) {
+        if ($this->db->field_exists('faktur_prefix', 'tb_users')) {
             return;
         }
 
         $this->load->dbforge();
-        $this->dbforge->add_column('tb_karyawan', [
+        $this->dbforge->add_column('tb_users', [
             'faktur_prefix' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 4,
@@ -875,7 +908,7 @@ class C_SalesOrder extends CI_Controller
         return $this->db
             ->where('faktur_prefix', $prefix)
             ->where('id !=', $current_user_id)
-            ->count_all_results('tb_karyawan') > 0;
+            ->count_all_results('tb_users') > 0;
     }
 
     private function _findUserPrefixIndex(array $users, $current_id, $current_username, $current_name)

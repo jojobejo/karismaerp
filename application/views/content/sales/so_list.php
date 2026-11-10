@@ -114,7 +114,7 @@
             <!-- Panel Approval Harga Manager SC (Button-only Mode) -->
             <?php 
             $user_jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
-            $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true);
+            $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER', 'ADMIN', 'KADEPSC', 'MT KADEP KEUANGAN & SALES', 'DIREKSI'], true);
             ?>
 
             <?php if ($is_manager_sc): ?>

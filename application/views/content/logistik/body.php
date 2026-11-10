@@ -12,7 +12,12 @@
         <div class="content-wrapper">
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
-            <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+            <?php
+            $jobdeskLog = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+            $deptLog = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+            $isLogistikView = in_array($jobdeskLog, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT MANAGER WAREHOUSE', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'ADMIN'], true) || strpos($deptLog, 'LOGISTIK') !== false || (bool) $this->session->userdata('is_admin_dashboard');
+            ?>
+            <?php if ($isLogistikView) : ?>
 
                 <div class="content-header">
                     <div class="container-fluid">

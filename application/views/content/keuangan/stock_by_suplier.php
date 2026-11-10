@@ -23,7 +23,7 @@
             <!-- /.content-header -->
             <section class="content">
                 <div class="container-fluid">
-                    <?php if ($this->session->userdata('lv') == 1) : ?>
+                    <?php if (!in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                         <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
                         <?php if ($gudangs == '1') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
@@ -72,7 +72,7 @@
                                         <h2>Last Updated : <?= format_indo($date) ?></h2>
                                     </div>
                                     <div class="col">
-                                        <?php if ($this->session->userdata('lv') == 1) : ?>
+                                        <?php if (!in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                                             <a href="<?= base_url('truncateitm/' . $u->kd . '/' . $u->gdgid) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
                                             <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
                                         <?php else : ?>
@@ -83,7 +83,7 @@
                                 </div>
                             <?php endforeach; ?>
                             <div class="row">
-                                <?php if ($this->session->userdata('lv') == 1) : ?>
+                                <?php if (!in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                                 <?php elseif ($this->session->userdata('lv') == 5) : ?>
                                     <?php if ($gudangs == '1') : ?>
                                         <?php if ($gudangid == '1') : ?>

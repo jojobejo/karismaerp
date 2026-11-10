@@ -30,7 +30,18 @@ class Dashboard extends CI_Controller
 
         // Ambil notifikasi request revisi harga LPB khusus untuk ADMPNJ & Admin
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
-        $is_admpnj = !empty($context['is_admin']) || in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true);
+        $is_admpnj = !empty($context['is_admin']) || in_array($jobdesk, [
+            'ADMPNJ',
+            'ADMIN PRICELIST & RETUR PENJUALAN',
+            'SC',
+            'SALESCOUNTER',
+            'SALES COUNTER',
+            'MT SALES COUNTER',
+            'MANAGERSC',
+            'MANAGER SALES COUNTER',
+            'KADEPSC',
+            'MT KADEP KEUANGAN & SALES'
+        ], true);
         $data['is_admpnj'] = $is_admpnj;
         $data['lpb_notifications'] = [];
         $data['lpb_notification_count'] = 0;

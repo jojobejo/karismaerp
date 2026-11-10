@@ -110,7 +110,7 @@ if (!function_exists('retur_dashboard_format_money')) {
                                         </a>
                                     </div>
                                 </div>
-                                <?php if ($this->session->userdata('jobdesk') == 'ADMINLOGLPB') : ?>
+                                <?php if (in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['ADMINLOGLPB', 'ADMLPB', 'ADMLPB2', 'ADMIN LPB & GUDANG BENIH'], true)) : ?>
                                     <div class="row">
                                         <div class="col-auto">
                                             <a class="btn btn-secondary mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">

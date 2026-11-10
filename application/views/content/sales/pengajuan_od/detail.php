@@ -203,9 +203,9 @@
                                 <div class="mt-4">
                                     <?php
                                     $show_approve = false;
-                                    if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'ADMIN'])) $show_approve = true;
-                                    if ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'ADMIN'])) $show_approve = true;
-                                    if ($pengajuan['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'ADMIN'])) $show_approve = true;
+                                    if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'MANAGER SALES COUNTER', 'ADMIN'])) $show_approve = true;
+                                    if ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN', 'ADMIN'])) $show_approve = true;
+                                    if ($pengajuan['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES', 'ADMIN'])) $show_approve = true;
                                     ?>
 
                                     <?php if ($show_approve) : ?>
@@ -214,7 +214,7 @@
                                         </a>
                                     <?php endif; ?>
 
-                                    <?php if (in_array($pengajuan['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
+                                    <?php if (in_array($pengajuan['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) : ?>
                                         <a href="<?= base_url('sales/C_PengajuanOD/edit/'.$pengajuan['id']) ?>" class="btn btn-warning mr-2">
                                             <i class="fas fa-edit"></i> Edit Pengajuan
                                         </a>
