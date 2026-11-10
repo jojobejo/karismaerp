@@ -1832,4 +1832,329 @@ class C_Laporan extends CI_Controller
         $this->load->view('content/keuangan/laporan/laporan_keuangan/laba_rugi_excel.php', $data);
     }
 
+    // =========================================================================
+    // MODUL LAPORAN NERACA (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * 1. Neraca (Standar)
+     */
+    public function neraca_standar()
+    {
+        $this->_ensure_access();
+
+        $month = (int)($this->input->get('p1_month', true) ?: $this->input->get('month', true) ?: date('n'));
+        $year  = (int)($this->input->get('p1_year', true) ?: $this->input->get('year', true) ?: date('Y'));
+
+        if ($month < 1 || $month > 12) $month = (int)date('n');
+        if ($year < 2000 || $year > 2100) $year = (int)date('Y');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca($month, $year);
+
+        $data = [
+            'page_title'       => 'KARISMA - Laporan Neraca',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca',
+            'report_mode'      => 'standar',
+            'month'            => $month,
+            'year'             => $year,
+            'period_label'     => $reportData['period_label'],
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/standar?month=' . $month . '&year=' . $year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 2. Neraca Saldo (Trial Balance)
+     */
+    public function neraca_saldo()
+    {
+        $this->_ensure_access();
+
+        $month = (int)($this->input->get('p1_month', true) ?: $this->input->get('month', true) ?: date('n'));
+        $year  = (int)($this->input->get('p1_year', true) ?: $this->input->get('year', true) ?: date('Y'));
+
+        if ($month < 1 || $month > 12) $month = (int)date('n');
+        if ($year < 2000 || $year > 2100) $year = (int)date('Y');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca_saldo($month, $year);
+
+        $data = [
+            'page_title'       => 'KARISMA - Neraca Saldo',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca Saldo',
+            'report_mode'      => 'saldo',
+            'month'            => $month,
+            'year'             => $year,
+            'period_label'     => $reportData['period_label'],
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca-saldo'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/saldo?month=' . $month . '&year=' . $year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_saldo_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 3. Neraca - 12 Bulan
+     */
+    public function neraca_12_bulan()
+    {
+        $this->_ensure_access();
+
+        $month = (int)($this->input->get('p1_month', true) ?: $this->input->get('month', true) ?: date('n'));
+        $year  = (int)($this->input->get('p1_year', true) ?: $this->input->get('year', true) ?: date('Y'));
+
+        if ($month < 1 || $month > 12) $month = (int)date('n');
+        if ($year < 2000 || $year > 2100) $year = (int)date('Y');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca_12_bulan($year);
+
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        $data = [
+            'page_title'       => 'KARISMA - Neraca - 12 Bulan',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca - 12 Bulan',
+            'report_mode'      => '12_bulan',
+            'month'            => $month,
+            'year'             => $year,
+            'period_label'     => "{$monthName} {$year}",
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca-12-bulan'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/12_bulan?month=' . $month . '&year=' . $year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 4. Neraca - Perbandingan 2 Kolom
+     */
+    public function neraca_perbandingan_2()
+    {
+        $this->_ensure_access();
+
+        $p1Month = (int)($this->input->get('p1_month', true) ?: date('n'));
+        $p1Year  = (int)($this->input->get('p1_year', true) ?: date('Y'));
+        $p2Month = (int)($this->input->get('p2_month', true) ?: (($p1Month > 1) ? $p1Month - 1 : 12));
+        $p2Year  = (int)($this->input->get('p2_year', true) ?: (($p1Month > 1) ? $p1Year : $p1Year - 1));
+
+        if ($p1Month < 1 || $p1Month > 12) $p1Month = (int)date('n');
+        if ($p2Month < 1 || $p2Month > 12) $p2Month = (int)date('n');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca_perbandingan($p1Month, $p1Year, $p2Month, $p2Year);
+
+        $data = [
+            'page_title'       => 'KARISMA - Neraca - Perbandingan 2 Kolom',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca - Perbandingan 2 Kolom',
+            'report_mode'      => 'perbandingan_2',
+            'p1_month'         => $p1Month,
+            'p1_year'          => $p1Year,
+            'p2_month'         => $p2Month,
+            'p2_year'          => $p2Year,
+            'p1_label'         => $reportData['p1_label'],
+            'p2_label'         => $reportData['p2_label'],
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca-perbandingan-2'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/perbandingan_2?p1_month=' . $p1Month . '&p1_year=' . $p1Year . '&p2_month=' . $p2Month . '&p2_year=' . $p2Year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 5. Neraca - Anggaran vs Realisasi
+     */
+    public function neraca_anggaran()
+    {
+        $this->_ensure_access();
+
+        $month = (int)($this->input->get('p1_month', true) ?: $this->input->get('month', true) ?: date('n'));
+        $year  = (int)($this->input->get('p1_year', true) ?: $this->input->get('year', true) ?: date('Y'));
+
+        if ($month < 1 || $month > 12) $month = (int)date('n');
+        if ($year < 2000 || $year > 2100) $year = (int)date('Y');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca($month, $year);
+
+        $data = [
+            'page_title'       => 'KARISMA - Neraca - Anggaran vs Realisasi',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca - Anggaran vs Realisasi',
+            'report_mode'      => 'anggaran',
+            'month'            => $month,
+            'year'             => $year,
+            'period_label'     => $reportData['period_label'],
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca-anggaran'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/anggaran?month=' . $month . '&year=' . $year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * 6. Neraca - Perbandingan 4 Kolom
+     */
+    public function neraca_perbandingan_4()
+    {
+        $this->_ensure_access();
+
+        $p1Month = (int)($this->input->get('p1_month', true) ?: date('n'));
+        $p1Year  = (int)($this->input->get('p1_year', true) ?: date('Y'));
+        $p2Month = (int)($this->input->get('p2_month', true) ?: (($p1Month > 1) ? $p1Month - 1 : 12));
+        $p2Year  = (int)($this->input->get('p2_year', true) ?: (($p1Month > 1) ? $p1Year : $p1Year - 1));
+
+        if ($p1Month < 1 || $p1Month > 12) $p1Month = (int)date('n');
+        if ($p2Month < 1 || $p2Month > 12) $p2Month = (int)date('n');
+
+        $this->load->model('M_Journal');
+        $reportData = $this->M_Journal->get_laporan_neraca_perbandingan($p1Month, $p1Year, $p2Month, $p2Year);
+
+        $data = [
+            'page_title'       => 'KARISMA - Neraca - Perbandingan 4 kolom',
+            'company_name'     => 'KARISMA 2025',
+            'report_title'     => 'Neraca - Perbandingan 4 kolom',
+            'report_mode'      => 'perbandingan_4',
+            'p1_month'         => $p1Month,
+            'p1_year'          => $p1Year,
+            'p2_month'         => $p2Month,
+            'p2_year'          => $p2Year,
+            'p1_label'         => $reportData['p1_label'],
+            'p2_label'         => $reportData['p2_label'],
+            'data'             => $reportData,
+            'print_time'       => date('H:i   d F, Y'),
+            'filter_action'    => base_url('laporan/keuangan/neraca-perbandingan-4'),
+            'export_url'       => base_url('laporan/keuangan/neraca-export/perbandingan_4?p1_month=' . $p1Month . '&p1_year=' . $p1Year . '&p2_month=' . $p2Month . '&p2_year=' . $p2Year),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_view.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Export Neraca ke format Excel
+     */
+    public function neraca_export($type = 'standar')
+    {
+        $this->_ensure_access();
+
+        $this->load->model('M_Journal');
+
+        $isComparison = in_array($type, ['perbandingan_2', 'perbandingan_4'], true);
+
+        if ($isComparison) {
+            $p1Month = (int)($this->input->get('p1_month', true) ?: date('n'));
+            $p1Year  = (int)($this->input->get('p1_year', true) ?: date('Y'));
+            $p2Month = (int)($this->input->get('p2_month', true) ?: (($p1Month > 1) ? $p1Month - 1 : 12));
+            $p2Year  = (int)($this->input->get('p2_year', true) ?: (($p1Month > 1) ? $p1Year : $p1Year - 1));
+
+            $reportData = $this->M_Journal->get_laporan_neraca_perbandingan($p1Month, $p1Year, $p2Month, $p2Year);
+            $filename = 'Laporan_Neraca_' . ($type === 'perbandingan_2' ? 'Perbandingan_2_Kolom_' : 'Perbandingan_4_Kolom_') . "{$p1Year}_{$p1Month}_vs_{$p2Year}_{$p2Month}.xls";
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => $type === 'perbandingan_2' ? 'Neraca - Perbandingan 2 Kolom' : 'Neraca - Perbandingan 4 kolom',
+                'report_mode'  => $type,
+                'p1_month'     => $p1Month,
+                'p1_year'      => $p1Year,
+                'p2_month'     => $p2Month,
+                'p2_year'      => $p2Year,
+                'p1_label'     => $reportData['p1_label'],
+                'p2_label'     => $reportData['p2_label'],
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        } elseif ($type === 'saldo') {
+            $month = (int)($this->input->get('month', true) ?: date('n'));
+            $year  = (int)($this->input->get('year', true) ?: date('Y'));
+
+            $reportData = $this->M_Journal->get_laporan_neraca_saldo($month, $year);
+            $filename = "Laporan_Neraca_Saldo_{$year}_{$month}.xls";
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => 'Neraca Saldo',
+                'report_mode'  => 'saldo',
+                'month'        => $month,
+                'year'         => $year,
+                'period_label' => $reportData['period_label'],
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        } elseif ($type === '12_bulan') {
+            $month = (int)($this->input->get('month', true) ?: date('n'));
+            $year  = (int)($this->input->get('year', true) ?: date('Y'));
+
+            $reportData = $this->M_Journal->get_laporan_neraca_12_bulan($year);
+            $filename = "Laporan_Neraca_12_Bulan_{$year}.xls";
+            $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => 'Neraca - 12 Bulan',
+                'report_mode'  => '12_bulan',
+                'month'        => $month,
+                'year'         => $year,
+                'period_label' => "{$monthName} {$year}",
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        } else {
+            $month = (int)($this->input->get('month', true) ?: date('n'));
+            $year  = (int)($this->input->get('year', true) ?: date('Y'));
+
+            $reportData = $this->M_Journal->get_laporan_neraca($month, $year);
+
+            $titles = [
+                'standar'  => 'Neraca',
+                'anggaran' => 'Neraca - Anggaran vs Realisasi',
+            ];
+            $title = $titles[$type] ?? 'Neraca';
+            $filename = "Laporan_Neraca_{$type}_{$year}_{$month}.xls";
+
+            $data = [
+                'company_name' => 'KARISMA 2025',
+                'report_title' => $title,
+                'report_mode'  => $type,
+                'month'        => $month,
+                'year'         => $year,
+                'period_label' => $reportData['period_label'],
+                'data'         => $reportData,
+                'print_time'   => date('H:i   d F, Y'),
+            ];
+        }
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_excel.php', $data);
+    }
 }

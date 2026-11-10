@@ -3157,4 +3157,488 @@ class M_Journal extends CI_Model
         ];
     }
 
+    // =========================================================================
+    // MODUL LAPORAN NERACA & NERACA SALDO (ZAHIR ACCOUNTING STYLE)
+    // =========================================================================
+
+    /**
+     * Helper untuk memetakan kode akun ke sub-klasifikasi neraca.
+     */
+    public function map_account_to_neraca_section($kodeAkun)
+    {
+        $clean = preg_replace('/\D/', '', (string)$kodeAkun);
+        $prefix3 = substr($clean, 0, 3);
+        $prefix5 = substr($clean, 0, 5);
+
+        // HARTA
+        if ($prefix3 === '110') return 'kas';
+        if ($prefix3 === '120' || $prefix3 === '121') return 'bank';
+        if ($prefix5 === '13022' || $prefix3 === '139') return 'piutang_lain';
+        if ($prefix3 === '130' || $prefix3 === '131') return 'piutang_usaha';
+        if ($prefix3 === '140') return 'persediaan_barang';
+        if ($prefix3 === '149') return 'persediaan_lain';
+        if ($prefix3 === '150') return 'biaya_dibayar_dimuka';
+        if ($prefix3 === '151') return 'uang_muka_dibayar';
+        if ($prefix3 === '152') return 'pajak_dibayar_dimuka';
+        if ($prefix3 === '153') return 'biaya_dibayar_dimuka_lain';
+        if ($prefix3 === '160') return 'investasi_jangka_panjang';
+        if ($prefix3 === '170') return 'harta_tetap_berwujud';
+        if ($prefix3 === '171') return 'akumulasi_penyusutan';
+        if ($prefix3 === '180') return 'harta_tetap_tidak_berwujud';
+        if ($prefix3 === '190') return 'harta_lainnya';
+
+        // KEWAJIBAN
+        if ($prefix3 === '210' || $prefix3 === '211') return 'utang_usaha';
+        if ($prefix3 === '219') return 'utang_lain';
+        if ($prefix3 === '221') return 'uang_muka_diterima';
+        if ($prefix3 === '230') return 'utang_pajak';
+        if ($prefix3 === '250') return 'utang_jangka_panjang';
+
+        // MODAL
+        if ($prefix3 === '310') return 'modal_ekuitas';
+        if ($prefix3 === '320') return 'laba_ekuitas';
+
+        return null;
+    }
+
+    /**
+     * Menghitung data Laporan Neraca Standar Zahir pada bulan dan tahun tertentu.
+     *
+     * @param int $month 1-12
+     * @param int $year 4-digit year
+     * @return array
+     */
+    public function get_laporan_neraca($month, $year)
+    {
+        $month = (int)$month;
+        $year  = (int)$year;
+        $monthPadded = str_pad($month, 2, '0', STR_PAD_LEFT);
+        $startDate   = "{$year}-{$monthPadded}-01";
+        $cutoffDate  = date('Y-m-t', strtotime($startDate));
+        $fiscalStart = "{$year}-01-01";
+
+        // Definisi Pos Neraca Zahir
+        $sectionsDef = [
+            'harta' => [
+                'kas'                       => ['title' => 'Kas', 'total_title' => 'Total Kas'],
+                'bank'                      => ['title' => 'Bank', 'total_title' => 'Total Bank'],
+                'piutang_usaha'             => ['title' => 'Piutang Usaha', 'total_title' => 'Total Piutang Usaha'],
+                'piutang_lain'              => ['title' => 'Piutang Lain', 'total_title' => 'Total Piutang Lain'],
+                'persediaan_barang'         => ['title' => 'Persediaan Barang', 'total_title' => 'Total Persediaan Barang'],
+                'persediaan_lain'           => ['title' => 'Persediaan Lain', 'total_title' => 'Total Persediaan Lain', 'force_total' => true],
+                'biaya_dibayar_dimuka'      => ['title' => 'Biaya Dibayar Dimuka', 'total_title' => 'Total Biaya Dibayar Dimuka'],
+                'uang_muka_dibayar'         => ['title' => 'Uang Muka Dibayar', 'total_title' => 'Total Uang Muka Dibayar', 'force_total' => true],
+                'pajak_dibayar_dimuka'      => ['title' => 'Pajak Dibayar Dimuka', 'total_title' => 'Total Pajak Dibayar Dimuka', 'force_total' => true],
+                'biaya_dibayar_dimuka_lain' => ['title' => 'Biaya Dibayar Dimuka', 'total_title' => 'Total Biaya Dibayar Dimuka', 'force_total' => true],
+                'investasi_jangka_panjang'  => ['title' => 'Investasi Jangka Panjang', 'total_title' => 'Total Investasi Jangka Panjang'],
+                'harta_tetap_berwujud'      => ['title' => 'Harta Tetap Berwujud', 'total_title' => 'Total Harta Tetap Berwujud'],
+                'akumulasi_penyusutan'      => ['title' => 'Akumulasi Penyusutan Harta Tetap', 'total_title' => 'Total Akumulasi Penyusutan Harta Tetap', 'force_total' => true],
+                'harta_tetap_tidak_berwujud'=> ['title' => 'Harta Tetap Tidak Berwujud', 'total_title' => 'Total Harta Tetap Tidak Berwujud', 'force_total' => true],
+            ],
+            'kewajiban' => [
+                'utang_usaha'               => ['title' => 'Utang Usaha', 'total_title' => 'Total Utang Usaha'],
+                'utang_lain'                => ['title' => 'Utang Lain', 'total_title' => 'Total Utang Lain', 'force_total' => true],
+                'uang_muka_diterima'        => ['title' => 'Uang Muka Diterima', 'total_title' => 'Total Uang Muka Diterima', 'force_total' => true],
+                'utang_pajak'               => ['title' => 'Utang Pajak', 'total_title' => 'Total Utang Pajak', 'force_total' => true],
+                'utang_jangka_panjang'      => ['title' => 'Utang Jangka Panjang', 'total_title' => 'Total Utang Jangka Panjang', 'force_total' => true],
+            ],
+            'modal' => [
+                'modal_ekuitas'             => ['title' => 'Modal', 'total_title' => 'Total Modal'],
+                'laba_ekuitas'              => ['title' => 'Laba', 'total_title' => 'Total Laba'],
+            ]
+        ];
+
+        // 1. Ambil mutasi kumulatif transaksi posted sampai dengan cutoff date
+        $sql = "SELECT 
+                    a.id_akun,
+                    a.kode_akun,
+                    a.nama_akun,
+                    a.saldo_normal,
+                    COALESCE(SUM(d.debit), 0) AS total_debit,
+                    COALESCE(SUM(d.kredit), 0) AS total_kredit
+                FROM tbkeu_akun a
+                LEFT JOIN tbkeu_jurnal_detail d ON d.id_akun = a.id_akun
+                LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED' AND j.tanggal_transaksi <= " . $this->db->escape($cutoffDate) . "
+                WHERE a.kode_akun < '40000'
+                GROUP BY a.id_akun
+                ORDER BY a.kode_akun ASC";
+
+        $rows = $this->db->query($sql)->result_array();
+
+        // 2. Hitung Laba Bersih Tahun Berjalan dari Awal Tahun Fiskal s/d Cutoff Date
+        $sqlLaba = "SELECT 
+                        COALESCE(SUM(CASE WHEN a.kode_akun >= '40000' AND a.kode_akun < '50000' THEN (d.kredit - d.debit)
+                                          WHEN a.kode_akun >= '80000' AND a.kode_akun < '90000' THEN (d.kredit - d.debit)
+                                          WHEN a.kode_akun >= '50000' AND a.kode_akun < '80000' THEN (d.debit - d.kredit)
+                                          WHEN a.kode_akun >= '90000' THEN (d.debit - d.kredit)
+                                          ELSE 0 END), 0) as net_income
+                    FROM tbkeu_akun a
+                    JOIN tbkeu_jurnal_detail d ON d.id_akun = a.id_akun
+                    JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED'
+                    WHERE a.kode_akun >= '40000'
+                      AND j.tanggal_transaksi >= " . $this->db->escape($fiscalStart) . "
+                      AND j.tanggal_transaksi <= " . $this->db->escape($cutoffDate);
+        $rowLaba = $this->db->query($sqlLaba)->row_array();
+        $labaTahunBerjalan = (float)($rowLaba['net_income'] ?? 0.0);
+
+        // Inisialisasi struktur hasil
+        $sections = [];
+        $totals   = [];
+
+        foreach ($sectionsDef as $catKey => $catItems) {
+            $sections[$catKey] = [];
+            $totals[$catKey] = 0.0;
+            foreach ($catItems as $sKey => $sConf) {
+                $sections[$catKey][$sKey] = [
+                    'title'       => $sConf['title'],
+                    'total_title' => $sConf['total_title'],
+                    'force_total' => !empty($sConf['force_total']),
+                    'items'       => [],
+                    'total'       => 0.0,
+                ];
+            }
+        }
+
+        $foundLabaBerjalan = false;
+
+        foreach ($rows as $r) {
+            $kode = trim($r['kode_akun']);
+            $nama = trim($r['nama_akun']);
+            $secKey = $this->map_account_to_neraca_section($kode);
+            if (!$secKey) continue;
+
+            $firstChar = substr($kode, 0, 1);
+            // Penghitungan saldo sesuai karakteristik pos
+            if ($firstChar === '1') {
+                $saldo = (float)$r['total_debit'] - (float)$r['total_kredit'];
+            } else {
+                $saldo = (float)$r['total_kredit'] - (float)$r['total_debit'];
+            }
+
+            // Cek apakah akun adalah 32097 / Laba Tahun Berjalan
+            $cleanCode = preg_replace('/\D/', '', $kode);
+            if ($cleanCode === '32097' || stripos($nama, 'Laba Tahun Berjalan') !== false) {
+                $saldo = $labaTahunBerjalan;
+                $foundLabaBerjalan = true;
+            }
+
+            // Jika saldo bernilai 0 dan tidak ada mutasi sama sekali, abaikan agar rapi
+            if (abs($saldo) < 0.0001 && abs((float)$r['total_debit']) < 0.0001 && abs((float)$r['total_kredit']) < 0.0001) {
+                // Kecuali akun penting di modal jika memang diperlukan
+                if ($cleanCode !== '32098' && $cleanCode !== '32097') {
+                    continue;
+                }
+            }
+
+            $cat = ($firstChar === '1') ? 'harta' : (($firstChar === '2') ? 'kewajiban' : 'modal');
+
+            $sections[$cat][$secKey]['items'][] = [
+                'id_akun'     => $r['id_akun'],
+                'kode_akun'   => $kode,
+                'kode_tampil' => $this->format_kode_akun_zahir($kode),
+                'nama_akun'   => $nama,
+                'saldo'       => $saldo,
+                'budget'      => 0.0,
+            ];
+            $sections[$cat][$secKey]['total'] += $saldo;
+        }
+
+        // Jika akun Laba Tahun Berjalan belum masuk dari baris di atas, tambahkan secara otomatis
+        if (!$foundLabaBerjalan) {
+            $sections['modal']['laba_ekuitas']['items'][] = [
+                'id_akun'     => 0,
+                'kode_akun'   => '32097',
+                'kode_tampil' => '320-97',
+                'nama_akun'   => 'Laba Tahun Berjalan',
+                'saldo'       => $labaTahunBerjalan,
+                'budget'      => 0.0,
+            ];
+            $sections['modal']['laba_ekuitas']['total'] += $labaTahunBerjalan;
+        }
+
+        // Hitung total tiap kategori
+        foreach ($sections['harta'] as $s) {
+            $totals['harta'] += $s['total'];
+        }
+        foreach ($sections['kewajiban'] as $s) {
+            $totals['kewajiban'] += $s['total'];
+        }
+
+        $totalModal310 = $sections['modal']['modal_ekuitas']['total'];
+        $totalLaba320  = $sections['modal']['laba_ekuitas']['total'];
+        $totals['modal'] = $totalModal310 + $totalLaba320;
+        $totals['kewajiban_dan_modal'] = $totals['kewajiban'] + $totals['modal'];
+
+        return [
+            'month'                 => $month,
+            'year'                  => $year,
+            'period_label'          => date('F Y', strtotime($startDate)),
+            'cutoff_date'           => $cutoffDate,
+            'sections'              => $sections,
+            'totals'                => $totals,
+            'total_modal_310'       => $totalModal310,
+            'total_laba_320'        => $totalLaba320,
+            'laba_tahun_berjalan'   => $labaTahunBerjalan,
+        ];
+    }
+
+    /**
+     * Menghitung Laporan Neraca Saldo (Trial Balance) 7 Kolom
+     *
+     * @param int $month
+     * @param int $year
+     * @return array
+     */
+    public function get_laporan_neraca_saldo($month, $year)
+    {
+        $month = (int)$month;
+        $year  = (int)$year;
+        $monthPadded = str_pad($month, 2, '0', STR_PAD_LEFT);
+        $startDate   = "{$year}-{$monthPadded}-01";
+        $endDate     = date('Y-m-t', strtotime($startDate));
+        $fiscalStart = "{$year}-01-01";
+
+        // Query seluruh akun beserta:
+        // 1. Mutasi sebelum startDate (untuk saldo awal)
+        // 2. Mutasi antara startDate dan endDate (untuk transaksi bulan ini)
+        $sql = "SELECT 
+                    a.id_akun,
+                    a.kode_akun,
+                    a.nama_akun,
+                    a.saldo_normal,
+                    -- Saldo Awal (sebelum bulan ini)
+                    COALESCE(SUM(CASE 
+                        WHEN j.status = 'POSTED' AND j.tanggal_transaksi < " . $this->db->escape($startDate) . " 
+                             AND (a.kode_akun < '40000' OR j.tanggal_transaksi >= " . $this->db->escape($fiscalStart) . ")
+                        THEN d.debit ELSE 0 END), 0) AS init_debit,
+                    COALESCE(SUM(CASE 
+                        WHEN j.status = 'POSTED' AND j.tanggal_transaksi < " . $this->db->escape($startDate) . " 
+                             AND (a.kode_akun < '40000' OR j.tanggal_transaksi >= " . $this->db->escape($fiscalStart) . ")
+                        THEN d.kredit ELSE 0 END), 0) AS init_kredit,
+                    -- Transaksi Bulan Ini
+                    COALESCE(SUM(CASE 
+                        WHEN j.status = 'POSTED' AND j.tanggal_transaksi >= " . $this->db->escape($startDate) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . "
+                        THEN d.debit ELSE 0 END), 0) AS cur_debit,
+                    COALESCE(SUM(CASE 
+                        WHEN j.status = 'POSTED' AND j.tanggal_transaksi >= " . $this->db->escape($startDate) . " AND j.tanggal_transaksi <= " . $this->db->escape($endDate) . "
+                        THEN d.kredit ELSE 0 END), 0) AS cur_kredit
+                FROM tbkeu_akun a
+                LEFT JOIN tbkeu_jurnal_detail d ON d.id_akun = a.id_akun
+                LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal
+                GROUP BY a.id_akun
+                ORDER BY a.kode_akun ASC";
+
+        $rows = $this->db->query($sql)->result_array();
+
+        $items = [];
+        $grandTotal = [
+            'awal_debet'    => 0.0,
+            'awal_kredit'   => 0.0,
+            'mutasi_debet'  => 0.0,
+            'mutasi_kredit' => 0.0,
+            'akhir_debet'   => 0.0,
+            'akhir_kredit'  => 0.0,
+        ];
+
+        foreach ($rows as $r) {
+            $kode = trim($r['kode_akun']);
+            $nama = trim($r['nama_akun']);
+
+            $initNet = (float)$r['init_debit'] - (float)$r['init_kredit'];
+            $curDeb  = (float)$r['cur_debit'];
+            $curKre  = (float)$r['cur_kredit'];
+
+            // Saldo Awal Debet/Kredit
+            $awalDeb = ($initNet > 0.0001) ? $initNet : 0.0;
+            $awalKre = ($initNet < -0.0001) ? abs($initNet) : 0.0;
+
+            // Saldo Akhir
+            $finalNet = ($initNet + $curDeb - $curKre);
+            $akhirDeb = ($finalNet > 0.0001) ? $finalNet : 0.0;
+            $akhirKre = ($finalNet < -0.0001) ? abs($finalNet) : 0.0;
+
+            // Jika semua 0, hanya tampilkan jika ada transaksi atau merupakan akun master
+            $hasActivity = (abs($awalDeb) > 0.0001 || abs($awalKre) > 0.0001 || abs($curDeb) > 0.0001 || abs($curKre) > 0.0001 || abs($akhirDeb) > 0.0001 || abs($akhirKre) > 0.0001);
+
+            $item = [
+                'id_akun'       => $r['id_akun'],
+                'kode_akun'     => $kode,
+                'kode_tampil'   => $this->format_kode_akun_zahir($kode),
+                'nama_akun'     => $nama,
+                'awal_debet'    => $awalDeb,
+                'awal_kredit'   => $awalKre,
+                'mutasi_debet'  => $curDeb,
+                'mutasi_kredit' => $curKre,
+                'akhir_debet'   => $akhirDeb,
+                'akhir_kredit'  => $akhirKre,
+                'has_activity'  => $hasActivity,
+            ];
+
+            $items[] = $item;
+
+            $grandTotal['awal_debet']    += $awalDeb;
+            $grandTotal['awal_kredit']   += $awalKre;
+            $grandTotal['mutasi_debet']  += $curDeb;
+            $grandTotal['mutasi_kredit'] += $curKre;
+            $grandTotal['akhir_debet']   += $akhirDeb;
+            $grandTotal['akhir_kredit']  += $akhirKre;
+        }
+
+        return [
+            'month'        => $month,
+            'year'         => $year,
+            'period_label' => date('F Y', strtotime($startDate)),
+            'items'        => $items,
+            'grand_total'  => $grandTotal,
+        ];
+    }
+
+    /**
+     * Menghitung Laporan Neraca 12 Bulan dalam 1 Tahun Fiskal
+     *
+     * @param int $year
+     * @return array
+     */
+    public function get_laporan_neraca_12_bulan($year)
+    {
+        $year = (int)$year;
+        $monthlyData = [];
+
+        for ($m = 1; $m <= 12; $m++) {
+            $monthlyData[$m] = $this->get_laporan_neraca($m, $year);
+        }
+
+        // Konsolidasikan daftar pos & akun dari ke-12 bulan
+        $firstMonth = $monthlyData[1];
+        $sections = $firstMonth['sections'];
+
+        foreach ($sections as $catKey => &$catSections) {
+            foreach ($catSections as $sKey => &$section) {
+                $accountMap = [];
+                for ($m = 1; $m <= 12; $m++) {
+                    $mSection = $monthlyData[$m]['sections'][$catKey][$sKey] ?? null;
+                    if ($mSection && !empty($mSection['items'])) {
+                        foreach ($mSection['items'] as $item) {
+                            $code = $item['kode_akun'];
+                            if (!isset($accountMap[$code])) {
+                                $accountMap[$code] = [
+                                    'kode_akun'   => $code,
+                                    'kode_tampil' => $item['kode_tampil'],
+                                    'nama_akun'   => $item['nama_akun'],
+                                    'monthly'     => array_fill(1, 12, 0.0),
+                                ];
+                            }
+                            $accountMap[$code]['monthly'][$m] = $item['saldo'];
+                        }
+                    }
+                }
+                ksort($accountMap);
+                $section['consolidated_items'] = array_values($accountMap);
+
+                // Hitung total bulanan untuk seksi ini
+                $section['monthly_totals'] = [];
+                for ($m = 1; $m <= 12; $m++) {
+                    $section['monthly_totals'][$m] = $monthlyData[$m]['sections'][$catKey][$sKey]['total'] ?? 0.0;
+                }
+            }
+        }
+
+        // Totals per bulan untuk Harta, Kewajiban, Modal, dll
+        $monthlyTotals = [
+            'harta'                => [],
+            'kewajiban'            => [],
+            'modal'                => [],
+            'kewajiban_dan_modal'  => [],
+        ];
+
+        for ($m = 1; $m <= 12; $m++) {
+            $monthlyTotals['harta'][$m]               = $monthlyData[$m]['totals']['harta'];
+            $monthlyTotals['kewajiban'][$m]           = $monthlyData[$m]['totals']['kewajiban'];
+            $monthlyTotals['modal'][$m]               = $monthlyData[$m]['totals']['modal'];
+            $monthlyTotals['kewajiban_dan_modal'][$m] = $monthlyData[$m]['totals']['kewajiban_dan_modal'];
+        }
+
+        return [
+            'year'           => $year,
+            'sections'       => $sections,
+            'monthly_totals' => $monthlyTotals,
+            'monthly_data'   => $monthlyData,
+        ];
+    }
+
+    /**
+     * Menggabungkan 2 Periode Neraca untuk Komparasi (2 Kolom & 4 Kolom)
+     */
+    public function get_laporan_neraca_perbandingan($p1Month, $p1Year, $p2Month, $p2Year)
+    {
+        $data1 = $this->get_laporan_neraca($p1Month, $p1Year);
+        $data2 = $this->get_laporan_neraca($p2Month, $p2Year);
+
+        $mergedSections = [];
+        $sections = $data1['sections'];
+
+        foreach ($sections as $catKey => $catSections) {
+            $mergedSections[$catKey] = [];
+            foreach ($catSections as $sKey => $section1) {
+                $items1 = [];
+                foreach ($section1['items'] as $it) {
+                    $items1[$it['kode_akun']] = $it;
+                }
+
+                $items2 = [];
+                $section2 = $data2['sections'][$catKey][$sKey] ?? null;
+                if ($section2 && !empty($section2['items'])) {
+                    foreach ($section2['items'] as $it) {
+                        $items2[$it['kode_akun']] = $it;
+                    }
+                }
+
+                $allCodes = array_unique(array_merge(array_keys($items1), array_keys($items2)));
+                sort($allCodes);
+
+                $mergedList = [];
+                foreach ($allCodes as $code) {
+                    $row1 = $items1[$code] ?? null;
+                    $row2 = $items2[$code] ?? null;
+                    $nama = $row1 ? $row1['nama_akun'] : ($row2 ? $row2['nama_akun'] : '');
+                    $tampil = $this->format_kode_akun_zahir($code);
+
+                    $mergedList[] = [
+                        'kode_akun'   => $code,
+                        'kode_tampil' => $tampil,
+                        'nama_akun'   => $nama,
+                        'saldo_p1'    => $row1 ? $row1['saldo'] : 0.0,
+                        'budget_p1'   => $row1 ? $row1['budget'] : 0.0,
+                        'saldo_p2'    => $row2 ? $row2['saldo'] : 0.0,
+                        'budget_p2'   => $row2 ? $row2['budget'] : 0.0,
+                    ];
+                }
+
+                $mergedSections[$catKey][$sKey] = [
+                    'title'       => $section1['title'],
+                    'total_title' => $section1['total_title'],
+                    'force_total' => $section1['force_total'],
+                    'items'       => $mergedList,
+                    'total_p1'    => $section1['total'],
+                    'total_p2'    => $section2 ? $section2['total'] : 0.0,
+                    'budget_p1'   => 0.0,
+                    'budget_p2'   => 0.0,
+                ];
+            }
+        }
+
+        return [
+            'p1_month'     => $p1Month,
+            'p1_year'      => $p1Year,
+            'p1_label'     => $data1['period_label'],
+            'p2_month'     => $p2Month,
+            'p2_year'      => $p2Year,
+            'p2_label'     => $data2['period_label'],
+            'data1'        => $data1,
+            'data2'        => $data2,
+            'sections'     => $mergedSections,
+            'totals_p1'    => $data1['totals'],
+            'totals_p2'    => $data2['totals'],
+        ];
+    }
 }
