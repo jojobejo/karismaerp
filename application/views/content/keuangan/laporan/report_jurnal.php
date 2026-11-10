@@ -295,11 +295,12 @@ $(document).ready(function() {
 
         dtTable = $('#tbl-report-jurnal').DataTable({
             processing: true,
-            serverSide: false,
+            serverSide: true,
+            searchDelay: 500,
             responsive: false,
             pageLength: 50,
-            lengthMenu: [[25, 50, 100, 250, -1], [25, 50, 100, 250, "Semua"]],
-            order: [[0, 'asc']],
+            lengthMenu: [[25, 50, 100, 250, 500], [25, 50, 100, 250, 500]],
+            order: [[2, 'asc']],
             createdRow: function(row, data, dataIndex) {
                 if (data.kategori_code === 'z_asli') {
                     $(row).addClass('table-row-jurnal-z');
@@ -316,6 +317,7 @@ $(document).ready(function() {
                 infoEmpty: "Menampilkan 0 baris",
                 emptyTable: "Tidak ada data jurnal transaksi pada rentang tanggal ini.",
                 loadingRecords: "Memuat data...",
+                processing: '<i class="fas fa-spinner fa-spin mr-2"></i> Memuat data jurnal...',
                 zeroRecords: "Data tidak ditemukan",
                 paginate: {
                     first: "Awal",
@@ -364,8 +366,7 @@ $(document).ready(function() {
                 { 
                     data: 'no', 
                     className: 'text-center font-weight-bold',
-                    orderable: true,
-                    type: 'num'
+                    orderable: false
                 },
                 { 
                     data: 'ref', 

@@ -1567,11 +1567,16 @@ class M_Journal extends CI_Model
 
         // Deteksi skema potongan otomatis dari faktur pecahan (tbso_faktur_z_pecah)
         $select_skema = $this->db->field_exists('skema_potongan', 'tbso_faktur_z_pecah') ? 'p.skema_potongan,' : '';
+        $has_ca_table = $this->db->table_exists('tb_customer_acak');
+        $select_kontak = $has_ca_table ? 'MAX(ca.kontak_person) AS kontak_person,' : '';
 
+        $this->db->select('p.id_pecah, p.no_faktur, ' . $select_skema . ' ' . $select_kontak . ' p.kd_customer, p.customer_name, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS total_pecahan');
+        $this->db->from('tbso_faktur_z_pecah p');
+        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+        if ($has_ca_table) {
+            $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+        }
         $pecahans = $this->db
-            ->select('p.id_pecah, p.no_faktur, ' . $select_skema . ' p.kd_customer, p.customer_name, p.tanggal_faktur, COALESCE(SUM(pd.total_harga), 0) AS total_pecahan')
-            ->from('tbso_faktur_z_pecah p')
-            ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
             ->where('p.parent_id_faktur', $id_faktur)
             ->where("p.status !=", 'cancelled')
             ->group_by('p.id_pecah')
@@ -1913,7 +1918,259 @@ class M_Journal extends CI_Model
             }
         }
 
+        // ── 3. SINKRONISASI STATUS PELUNASAN & ID JURNAL KE TABEL tbso_faktur_z_pecah ──
+        $this->sync_status_bayar_faktur_h_by_induk($id_faktur);
+
         return true;
+    }
+
+    /**
+     * Sinkronisasi status pelunasan (status_bayar, total_bayar, sisa_tagihan, nominal_bruto, nominal_potongan,
+     * id_jurnal_q, nomor_jurnal_q, id_jurnal_a, nomor_jurnal_a) pada tabel tbso_faktur_z_pecah
+     * berdasarkan akumulasi Jurnal Pembayaran (Q & A) yang berstatus POSTED dari Faktur Z Induk.
+     *
+     * Dipanggil saat:
+     * - Pembayaran Faktur Z disimpan / diposting
+     * - Pembayaran Faktur Z di-unpost / dibatalkan / dihapus draft
+     * - Saat halaman / export Faktur Pecahan H membutuhkan penyelarasan data historis
+     *
+     * @param int|null $id_faktur_induk Jika null/0, akan menyinkronkan seluruh Faktur Z Induk yang memiliki pecahan H
+     * @return void
+     */
+    public function sync_status_bayar_faktur_h_by_induk($id_faktur_induk = null)
+    {
+        if (!$this->db->table_exists('tbso_faktur_z_pecah') || !$this->db->table_exists('tbkeu_jurnal')) {
+            return;
+        }
+
+        // Pastikan kolom-kolom status pelunasan tersedia di tbso_faktur_z_pecah
+        $cols = [
+            'total_bayar'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `total_bayar` DECIMAL(18,2) DEFAULT 0 AFTER `status`",
+            'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) DEFAULT 0 AFTER `total_bayar`",
+            'status_bayar'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `status_bayar` VARCHAR(20) DEFAULT 'belum_lunas' AFTER `sisa_tagihan`",
+            'tanggal_bayar'     => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `tanggal_bayar` DATE DEFAULT NULL AFTER `status_bayar`",
+            'metode_pembayaran' => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `metode_pembayaran` VARCHAR(100) DEFAULT NULL AFTER `tanggal_bayar`",
+            'skema_potongan'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `skema_potongan` INT DEFAULT 20 AFTER `metode_pembayaran`",
+            'nominal_bruto'     => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nominal_bruto` DECIMAL(18,2) DEFAULT 0 AFTER `metode_pembayaran`",
+            'nominal_potongan'  => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nominal_potongan` DECIMAL(18,2) DEFAULT 0 AFTER `nominal_bruto`",
+            'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
+            'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
+            'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
+            'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+        ];
+        foreach ($cols as $colName => $sql) {
+            if (!$this->db->field_exists($colName, 'tbso_faktur_z_pecah')) {
+                $this->db->query($sql);
+            }
+        }
+
+        $parentIds = [];
+        if ((int)$id_faktur_induk > 0) {
+            $parentIds = [(int)$id_faktur_induk];
+        } else {
+            // Cari semua parent_id_faktur yang punya pembayaran atau jurnal di tbkeu_pembayaran_faktur
+            if ($this->db->table_exists('tbkeu_pembayaran_faktur')) {
+                $rows = $this->db->select('DISTINCT(p.parent_id_faktur) AS pid', false)
+                    ->from('tbso_faktur_z_pecah p')
+                    ->join('tbkeu_pembayaran_faktur pf', 'pf.id_faktur = p.parent_id_faktur', 'inner')
+                    ->where('p.parent_id_faktur >', 0)
+                    ->get()->result_array();
+                foreach ($rows as $r) {
+                    if ((int)$r['pid'] > 0) {
+                        $parentIds[] = (int)$r['pid'];
+                    }
+                }
+            }
+        }
+
+        if (empty($parentIds)) {
+            return;
+        }
+
+        foreach ($parentIds as $pid) {
+            $pecahans = $this->db
+                ->select('p.id_pecah, p.no_faktur, p.parent_no_faktur, p.skema_potongan, p.status_bayar, p.id_jurnal_q, COALESCE(SUM(pd.total_harga), 0) AS total_pecahan')
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+                ->where('p.parent_id_faktur', $pid)
+                ->where("p.status !=", 'cancelled')
+                ->group_by('p.id_pecah')
+                ->order_by('p.tanggal_faktur', 'ASC')
+                ->order_by('p.id_pecah', 'ASC')
+                ->get()
+                ->result_array();
+
+            if (empty($pecahans)) {
+                continue;
+            }
+
+            $parentNoFaktur = trim((string)($pecahans[0]['parent_no_faktur'] ?? ''));
+            if ($parentNoFaktur === '' && $this->db->table_exists('tbso_faktur_penjualan')) {
+                $fRow = $this->db->select('no_faktur')->where('id_faktur', $pid)->get('tbso_faktur_penjualan')->row();
+                if ($fRow) {
+                    $parentNoFaktur = trim((string)$fRow->no_faktur);
+                }
+            }
+
+            // Deteksi skema potongan
+            $skema_potongan_z = !empty($pecahans[0]['skema_potongan']) ? (int)$pecahans[0]['skema_potongan'] : 20;
+            $pembagi_bruto = ($skema_potongan_z === 40) ? 0.6 : (($skema_potongan_z === 20) ? 0.8 : 1.0);
+
+            // Ambil Jurnal A terakhir yang POSTED untuk Faktur Z Induk ini (dari pembayaran keuangan)
+            $jurnalA = null;
+            if ($parentNoFaktur !== '') {
+                $jurnalA = $this->db->select('id_jurnal, nomor_jurnal')
+                    ->from('tbkeu_jurnal')
+                    ->where('source_module', 'KEUANGAN')
+                    ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                    ->where('source_no', $parentNoFaktur)
+                    ->where('status', 'POSTED')
+                    ->like('keterangan', 'PND u/Pot')
+                    ->order_by('id_jurnal', 'DESC')
+                    ->limit(1)
+                    ->get()->row_array();
+            }
+
+            // Ambil info pembayaran terakhir yang POSTED di tbkeu_pembayaran_faktur untuk Faktur Z Induk ini
+            $lastPayment = null;
+            if ($this->db->table_exists('tbkeu_pembayaran_faktur')) {
+                $lastPayment = $this->db->select('id_pembayaran, tanggal_pembayaran, metode_pembayaran')
+                    ->from('tbkeu_pembayaran_faktur')
+                    ->where('id_faktur', $pid)
+                    ->where("COALESCE(status, 'POSTED') = 'POSTED'", null, false)
+                    ->where("COALESCE(status_bg, 'not_bg') != 'pending'", null, false)
+                    ->where("COALESCE(status_kasir, 'valid') != 'pending_kasir'", null, false)
+                    ->order_by('id_pembayaran', 'DESC')
+                    ->limit(1)
+                    ->get()->row_array();
+            }
+
+            foreach ($pecahans as $pec) {
+                $id_pecah = (int)$pec['id_pecah'];
+                $no_h = trim((string)$pec['no_faktur']);
+                $val_netto = round((float)$pec['total_pecahan'], 2);
+
+                // Cek apakah Faktur H ini dilunasi langsung via Import Pelunasan Faktur H (source_type = PEMBAYARAN_FAKTUR_PECAH)
+                $directJurnalQ = $this->db->select('id_jurnal, nomor_jurnal, tanggal_transaksi, total_debit')
+                    ->from('tbkeu_jurnal')
+                    ->where('source_module', 'KEUANGAN')
+                    ->where('source_type', 'PEMBAYARAN_FAKTUR_PECAH')
+                    ->where('source_no', $no_h)
+                    ->where('status', 'POSTED')
+                    ->not_like('keterangan', 'PND u/Pot')
+                    ->order_by('id_jurnal', 'DESC')
+                    ->limit(1)
+                    ->get()->row_array();
+
+                if ($directJurnalQ) {
+                    // Jangan timpa jika sudah lunas dari import langsung Faktur H
+                    continue;
+                }
+
+                // Ambil seluruh Jurnal Q yang POSTED dari pembayaran Faktur Z Induk untuk Faktur H ini
+                $qJournals = $this->db->select('j.id_jurnal, j.nomor_jurnal, j.tanggal_transaksi, j.source_id, j.total_debit')
+                    ->from('tbkeu_jurnal j')
+                    ->where('j.source_module', 'KEUANGAN')
+                    ->where('j.source_type', 'PEMBAYARAN_FAKTUR')
+                    ->where('j.source_no', $no_h)
+                    ->where('j.status', 'POSTED')
+                    ->order_by('j.id_jurnal', 'ASC')
+                    ->get()->result_array();
+
+                if (!empty($qJournals)) {
+                    $total_bruto_h = 0.0;
+                    $last_q = end($qJournals);
+                    foreach ($qJournals as $qj) {
+                        $total_bruto_h += (float)$qj['total_debit'];
+                    }
+                    $total_bruto_h = round($total_bruto_h, 2);
+
+                    if ($skema_potongan_z === 20) {
+                        $potongan_h = round($total_bruto_h * 0.20, 2);
+                        $netto_dibayar_h = round($total_bruto_h - $potongan_h, 2);
+                    } elseif ($skema_potongan_z === 40) {
+                        $potongan_h = round($total_bruto_h * 0.40, 2);
+                        $netto_dibayar_h = round($total_bruto_h - $potongan_h, 2);
+                    } else {
+                        $potongan_h = 0.0;
+                        $netto_dibayar_h = $total_bruto_h;
+                    }
+
+                    // Jika selisih pembulatan <= Rp 5 dari tagihan netto Faktur H, samakan dengan nilai tagihan netto penuh
+                    if ($val_netto > 0 && abs($val_netto - $netto_dibayar_h) <= 5.0) {
+                        $netto_dibayar_h = $val_netto;
+                    }
+
+                    $sisa_tagihan_h = max(0.0, round($val_netto - $netto_dibayar_h, 2));
+                    $status_bayar_h = ($sisa_tagihan_h <= 1.0 && $val_netto > 0)
+                        ? 'lunas'
+                        : (($netto_dibayar_h > 0) ? 'sebagian' : 'belum_lunas');
+
+                    // Cari metode pembayaran dari record tbkeu_pembayaran_faktur terkait
+                    $metode_h = $lastPayment['metode_pembayaran'] ?? 'Q Mandiri';
+                    $tgl_bayar_h = $last_q['tanggal_transaksi'] ?: ($lastPayment['tanggal_pembayaran'] ?? date('Y-m-d'));
+                    if (!empty($last_q['source_id']) && $this->db->table_exists('tbkeu_pembayaran_faktur')) {
+                        $payRow = $this->db->select('metode_pembayaran, tanggal_pembayaran')
+                            ->where('id_pembayaran', (int)$last_q['source_id'])
+                            ->get('tbkeu_pembayaran_faktur')->row_array();
+                        if ($payRow) {
+                            if (!empty($payRow['metode_pembayaran'])) $metode_h = $payRow['metode_pembayaran'];
+                            if (!empty($payRow['tanggal_pembayaran'])) $tgl_bayar_h = $payRow['tanggal_pembayaran'];
+                        }
+                    }
+
+                    // Cari Jurnal A yang berasal dari source_id pembayaran yang sama (atau fallback ke Jurnal A induk terakhir)
+                    $jurnalA_pecah = $jurnalA;
+                    if (!empty($last_q['source_id']) && $parentNoFaktur !== '') {
+                        $jaRow = $this->db->select('id_jurnal, nomor_jurnal')
+                            ->from('tbkeu_jurnal')
+                            ->where('source_module', 'KEUANGAN')
+                            ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                            ->where('source_id', $last_q['source_id'])
+                            ->where('source_no', $parentNoFaktur)
+                            ->where('status', 'POSTED')
+                            ->like('keterangan', 'PND u/Pot')
+                            ->limit(1)
+                            ->get()->row_array();
+                        if ($jaRow) {
+                            $jurnalA_pecah = $jaRow;
+                        }
+                    }
+
+                    $this->db->where('id_pecah', $id_pecah)->update('tbso_faktur_z_pecah', [
+                        'status_bayar'      => $status_bayar_h,
+                        'total_bayar'       => $netto_dibayar_h,
+                        'sisa_tagihan'      => $sisa_tagihan_h,
+                        'tanggal_bayar'     => $tgl_bayar_h,
+                        'metode_pembayaran' => $metode_h,
+                        'skema_potongan'    => $skema_potongan_z,
+                        'nominal_bruto'     => $total_bruto_h,
+                        'nominal_potongan'  => $potongan_h,
+                        'id_jurnal_q'       => (int)$last_q['id_jurnal'],
+                        'nomor_jurnal_q'    => $last_q['nomor_jurnal'],
+                        'id_jurnal_a'       => $jurnalA_pecah ? (int)$jurnalA_pecah['id_jurnal'] : null,
+                        'nomor_jurnal_a'    => $jurnalA_pecah ? $jurnalA_pecah['nomor_jurnal'] : null,
+                        'update_at'         => date('Y-m-d H:i:s'),
+                    ]);
+                } else {
+                    // Tidak ada Jurnal Q POSTED untuk Faktur H ini (misal belum dibayar atau sudah di-unpost)
+                    $this->db->where('id_pecah', $id_pecah)->update('tbso_faktur_z_pecah', [
+                        'status_bayar'      => 'belum_lunas',
+                        'total_bayar'       => 0,
+                        'sisa_tagihan'      => $val_netto,
+                        'tanggal_bayar'     => null,
+                        'metode_pembayaran' => null,
+                        'nominal_bruto'     => 0,
+                        'nominal_potongan'  => 0,
+                        'id_jurnal_q'       => null,
+                        'nomor_jurnal_q'    => null,
+                        'id_jurnal_a'       => null,
+                        'nomor_jurnal_a'    => null,
+                        'update_at'         => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
     }
 
     /**
