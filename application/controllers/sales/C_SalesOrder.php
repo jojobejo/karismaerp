@@ -981,6 +981,10 @@ class C_SalesOrder extends CI_Controller
         $data['so_list']    = $this->M_SalesOrder->get_all_so($filter);
         $pending = $this->M_SalesOrder->get_pending_cancel_requests();
         $data['pending_cancels'] = !empty($pending) ? array_unique(array_column($pending, 'id_so')) : [];
+        $data['is_atasan']  = $this->_isAtasanSc();
+        $pending_cancel_so  = $this->M_SalesOrder->get_pending_cancel_so_requests();
+        $data['pending_cancel_so_requests'] = $data['is_atasan'] ? $pending_cancel_so : [];
+        $data['pending_cancel_so_ids']      = !empty($pending_cancel_so) ? array_values(array_unique(array_column($pending_cancel_so, 'id_so'))) : [];
         $data['customers']  = $this->M_SalesOrder->get_customers();
         $data['filter']     = array_diff_key($filter, ['exclude_status' => true]);
         $data['show_completed'] = $show_completed;
@@ -1965,6 +1969,27 @@ class C_SalesOrder extends CI_Controller
     /**
      * Mengajukan permohonan pembatalan Sales Order ke atasan
      */
+    /**
+     * Mengambil daftar pengajuan pembatalan SO penuh yang menunggu persetujuan atasan.
+     */
+    public function get_pending_cancel_so_requests()
+    {
+        while (ob_get_level()) ob_end_clean();
+        if (!$this->_isAtasanSc()) {
+            $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'data'    => []
+            ]));
+            return;
+        }
+
+        $requests = $this->M_SalesOrder->get_pending_cancel_so_requests();
+        $this->output->set_content_type('application/json')->set_output(json_encode([
+            'success' => true,
+            'data'    => $requests
+        ]));
+    }
+
     public function request_cancel_so()
     {
         while (ob_get_level()) ob_end_clean();

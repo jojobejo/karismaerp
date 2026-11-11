@@ -1129,6 +1129,7 @@ $route['sales_order/admin_sc_approve_cancel_partial']      = 'sales/C_SalesOrder
 $route['sales_order/admin_sc_reject_cancel_partial']       = 'sales/C_SalesOrder/admin_sc_reject_cancel_partial';
 
 // Pembatalan Sales Order (Cancel SO dengan Approval Atasan)
+$route['sales_order/get_pending_cancel_so_requests']        = 'sales/C_SalesOrder/get_pending_cancel_so_requests';
 $route['sales_order/request_cancel_so']                     = 'sales/C_SalesOrder/request_cancel_so';
 $route['sales_order/approve_cancel_so']                     = 'sales/C_SalesOrder/approve_cancel_so';
 $route['sales_order/reject_cancel_so']                      = 'sales/C_SalesOrder/reject_cancel_so';

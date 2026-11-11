@@ -115,6 +115,8 @@
             <?php 
             $user_jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
             $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER', 'ADMIN', 'KADEPSC', 'MT KADEP KEUANGAN & SALES', 'DIREKSI'], true);
+            $can_approve_so = !empty($is_atasan) || $is_manager_sc;
+            $initial_cancel_so_count = isset($pending_cancel_so_requests) ? count($pending_cancel_so_requests) : 0;
             ?>
 
             <?php if ($is_manager_sc): ?>
@@ -142,6 +144,13 @@
                         <i class="fas fa-map-marked-alt"></i> SO per Rute
                     </a>
                 </div>
+                <?php if ($can_approve_so): ?>
+                <div class="col-auto" id="colPanelCancelSo" style="<?= $initial_cancel_so_count > 0 ? '' : 'display: none;' ?>">
+                    <button type="button" class="btn btn-danger font-weight-bold btn-shake-notification" id="btnBukaPanelCancelSo" style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.55);">
+                        <i class="fas fa-bell mr-1"></i> Pembatalan SO (<span id="managerCancelSoCount"><?= (int)$initial_cancel_so_count ?></span>)
+                    </button>
+                </div>
+                <?php endif; ?>
                 <?php if ($is_manager_sc): ?>
                 <div class="col-auto" id="colPanelApproval" style="display: none;">
                     <button type="button" class="btn btn-warning text-dark font-weight-bold btn-shake-notification" id="btnBukaPanelApproval">
@@ -299,13 +308,20 @@
                                         $bar_color = 'secondary';
                                     }
                                     $is_pending_cancel = isset($pending_cancels) && in_array($row['id_so'], $pending_cancels);
+                                    $is_pending_cancel_so = isset($pending_cancel_so_ids) && in_array($row['id_so'], $pending_cancel_so_ids);
+                                    $row_style = $is_pending_cancel_so
+                                        ? 'style="background-color: #f8d7da;" title="Ada permintaan pembatalan SO menunggu persetujuan atasan"'
+                                        : ($is_pending_cancel ? 'style="background-color: #ffeeba;" title="Ada permintaan pembatalan parsial menunggu persetujuan"' : '');
                                 ?>
-                                <tr <?= $is_pending_cancel ? 'style="background-color: #ffeeba;" title="Ada permintaan pembatalan parsial menunggu persetujuan"' : '' ?>>
+                                <tr <?= $row_style ?>>
                                     <td>
                                         <a href="<?= base_url('sales_order/detail/' . $row['id_so']) ?>"
                                            class="font-weight-bold">
                                             <?= htmlspecialchars($row['no_so']) ?>
                                         </a>
+                                        <?php if ($is_pending_cancel_so): ?>
+                                            <span class="badge badge-danger ml-1" title="Permintaan pembatalan SO menunggu persetujuan atasan"><i class="fas fa-bell mr-1"></i>Ajuan Batal SO</span>
+                                        <?php endif; ?>
                                         <?php if (!empty($row['is_test_market'])): ?>
                                             <span class="badge badge-info ml-1" title="Barang Test Market (Faktur T)"><i class="fas fa-flask"></i> Test Market</span>
                                         <?php endif; ?>
@@ -477,6 +493,46 @@
                                 <button type="button" class="btn btn-success btn-sm" id="btnMgrApproveCancelPartial"><i class="fas fa-check"></i> Setujui Terpilih</button>
                                 <button type="button" class="btn btn-danger btn-sm" id="btnMgrRejectCancelPartial"><i class="fas fa-times"></i> Tolak Terpilih</button>
                             </div>
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($can_approve_so): ?>
+            <!-- Modal Persetujuan Pembatalan SO (Atasan) -->
+            <div class="modal fade" id="modalPanelCancelSo" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-xl" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title font-weight-bold"><i class="fas fa-bell mr-2"></i> Persetujuan Pembatalan Sales Order (Atasan)</h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>No. SO</th>
+                                            <th>Tgl SO</th>
+                                            <th>Customer</th>
+                                            <th>Rute</th>
+                                            <th>Alasan Pembatalan</th>
+                                            <th>Diajukan Oleh</th>
+                                            <th>Waktu Pengajuan</th>
+                                            <th class="text-center" style="width: 190px;">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="panel-cancel-so-body">
+                                        <!-- Diisi melalui JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
                         </div>
                     </div>
@@ -765,6 +821,215 @@ $(document).ready(function () {
                 btn.prop('disabled', false).html(isApprove ? '<i class="fas fa-check"></i> Setujui Terpilih' : '<i class="fas fa-times"></i> Tolak Terpilih');
             });
         }
+    });
+    <?php endif; ?>
+
+    <?php if ($can_approve_so): ?>
+    // Notifikasi & Approval Pembatalan SO Penuh (Atasan)
+    function escapeHtmlCancelSo(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDateTimeId(str) {
+        if (!str) return '-';
+        var parts = String(str).split(' ');
+        var d = parts[0] ? parts[0].split('-') : [];
+        if (d.length !== 3) return str;
+        var t = parts[1] ? parts[1].substr(0, 5) : '';
+        return d[2] + '/' + d[1] + '/' + d[0] + (t ? ' ' + t : '');
+    }
+
+    function renderPendingCancelSoTable(rows) {
+        var list = Array.isArray(rows) ? rows : [];
+        if (list.length > 0) {
+            $('#managerCancelSoCount').text(list.length);
+            $('#colPanelCancelSo').fadeIn(200);
+
+            var html = '';
+            list.forEach(function(row) {
+                var detailUrl = '<?= base_url('sales_order/detail/') ?>' + encodeURIComponent(row.id_so);
+                html += '<tr>'
+                    + '<td><a href="' + detailUrl + '" class="font-weight-bold text-primary">' + escapeHtmlCancelSo(row.no_so) + '</a></td>'
+                    + '<td class="text-nowrap">' + escapeHtmlCancelSo(formatDateTimeId(row.tanggal_transaksi)) + '</td>'
+                    + '<td>' + escapeHtmlCancelSo(row.nama_customer || '-') + '</td>'
+                    + '<td>' + escapeHtmlCancelSo(row.kd_rute || '-') + '</td>'
+                    + '<td><em>' + escapeHtmlCancelSo(row.alasan || '-') + '</em></td>'
+                    + '<td>' + escapeHtmlCancelSo(row.request_by || '-') + '</td>'
+                    + '<td class="text-nowrap">' + escapeHtmlCancelSo(formatDateTimeId(row.request_at)) + '</td>'
+                    + '<td class="text-center text-nowrap">'
+                    + '  <button type="button" class="btn btn-xs btn-success btn-approve-cancel-so-mgr mr-1" data-id="' + parseInt(row.id, 10) + '" data-so="' + parseInt(row.id_so, 10) + '" data-noso="' + escapeHtmlCancelSo(row.no_so) + '"><i class="fas fa-check"></i> Setujui</button>'
+                    + '  <button type="button" class="btn btn-xs btn-danger btn-reject-cancel-so-mgr" data-id="' + parseInt(row.id, 10) + '" data-so="' + parseInt(row.id_so, 10) + '" data-noso="' + escapeHtmlCancelSo(row.no_so) + '"><i class="fas fa-times"></i> Tolak</button>'
+                    + '</td>'
+                    + '</tr>';
+            });
+            $('#panel-cancel-so-body').html(html);
+        } else {
+            $('#managerCancelSoCount').text('0');
+            $('#colPanelCancelSo').fadeOut(200);
+            $('#panel-cancel-so-body').html('<tr><td colspan="8" class="text-center text-muted py-3">Tidak ada permohonan pembatalan SO yang menunggu persetujuan.</td></tr>');
+        }
+    }
+
+    function loadPendingCancelSoRequests() {
+        $.ajax({
+            url: '<?= base_url('sales_order/get_pending_cancel_so_requests') ?>',
+            type: 'GET',
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.success) {
+                    renderPendingCancelSoTable(res.data || []);
+                }
+            }
+        });
+    }
+
+    renderPendingCancelSoTable(<?= json_encode($pending_cancel_so_requests ?? []) ?>);
+    setInterval(loadPendingCancelSoRequests, 15000);
+
+    $('#btnBukaPanelCancelSo').on('click', function() {
+        loadPendingCancelSoRequests();
+        $('#modalPanelCancelSo').modal('show');
+    });
+
+    function submitCancelSoDecision(isApprove, idRequest, idSo, catatan, btn) {
+        var url = isApprove
+            ? '<?= base_url('sales_order/approve_cancel_so') ?>'
+            : '<?= base_url('sales_order/reject_cancel_so') ?>';
+        if (btn) btn.prop('disabled', true);
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: { id_request: idRequest, id_so: idSo, catatan: catatan || '' },
+            dataType: 'json',
+            success: function(res) {
+                if (res && res.success) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: isApprove ? 'Disetujui' : 'Ditolak',
+                            text: res.message
+                        }).then(function() {
+                            window.location.reload();
+                        });
+                    } else {
+                        alert(res.message);
+                        window.location.reload();
+                    }
+                } else {
+                    var errMsg = (res && res.message) ? res.message : 'Gagal memproses permohonan pembatalan SO.';
+                    if (window.Swal) {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: errMsg });
+                    } else {
+                        alert(errMsg);
+                    }
+                    if (btn) btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                if (window.Swal) {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Terjadi kesalahan koneksi server.' });
+                } else {
+                    alert('Terjadi kesalahan koneksi server.');
+                }
+                if (btn) btn.prop('disabled', false);
+            }
+        });
+    }
+
+    // Menampilkan dialog catatan approval/penolakan tanpa terblokir focus-trap Bootstrap Modal
+    function promptCancelSoDecision(options) {
+        if (!window.Swal) {
+            if (options.isApprove) {
+                if (!confirm('Setujui pembatalan SO ' + options.noSo + '? Alokasi stok akan dilepas.')) return;
+                var catatan = prompt('Catatan approval (opsional):') || '';
+                submitCancelSoDecision(true, options.idRequest, options.idSo, catatan, options.btn);
+            } else {
+                var reason = prompt('Masukkan alasan penolakan pembatalan SO ' + options.noSo + ' (wajib diisi):');
+                if (!reason || !reason.trim()) {
+                    alert('Alasan penolakan wajib diisi!');
+                    return;
+                }
+                submitCancelSoDecision(false, options.idRequest, options.idSo, reason.trim(), options.btn);
+            }
+            return;
+        }
+
+        $('#modalPanelCancelSo').modal('hide');
+        setTimeout(function() {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: options.icon,
+                input: 'text',
+                inputPlaceholder: options.placeholder,
+                showCancelButton: true,
+                confirmButtonText: options.confirmText,
+                cancelButtonText: 'Batal',
+                confirmButtonColor: options.confirmColor,
+                focusConfirm: false,
+                didOpen: function() {
+                    $(document).off('focusin.bs.modal');
+                    var inp = Swal.getInput();
+                    if (inp) {
+                        inp.removeAttribute('readonly');
+                        inp.focus();
+                    }
+                },
+                inputValidator: options.inputValidator || undefined
+            }).then(function(result) {
+                if (!result.isConfirmed) {
+                    $('#modalPanelCancelSo').modal('show');
+                    return;
+                }
+                submitCancelSoDecision(options.isApprove, options.idRequest, options.idSo, result.value || '', options.btn);
+            });
+        }, 180);
+    }
+
+    $(document).on('click', '.btn-approve-cancel-so-mgr', function() {
+        var btn = $(this);
+        var noSo = btn.data('noso');
+        promptCancelSoDecision({
+            isApprove: true,
+            idRequest: btn.data('id'),
+            idSo: btn.data('so'),
+            noSo: noSo,
+            btn: btn,
+            title: 'Setujui Pembatalan SO ' + noSo + '?',
+            text: 'Sales Order ini akan resmi DIBATALKAN dan alokasi stok akan dilepas.',
+            icon: 'question',
+            placeholder: 'Catatan approval (opsional)...',
+            confirmText: '<i class="fas fa-check mr-1"></i> Ya, Setujui',
+            confirmColor: '#28a745'
+        });
+    });
+
+    $(document).on('click', '.btn-reject-cancel-so-mgr', function() {
+        var btn = $(this);
+        var noSo = btn.data('noso');
+        promptCancelSoDecision({
+            isApprove: false,
+            idRequest: btn.data('id'),
+            idSo: btn.data('so'),
+            noSo: noSo,
+            btn: btn,
+            title: 'Tolak Pembatalan SO ' + noSo + '?',
+            text: 'Permintaan pembatalan akan ditolak dan Sales Order akan tetap berjalan.',
+            icon: 'warning',
+            placeholder: 'Alasan penolakan wajib diisi...',
+            confirmText: '<i class="fas fa-times mr-1"></i> Tolak Permintaan',
+            confirmColor: '#dc3545',
+            inputValidator: function(val) {
+                if (!val || !val.trim()) return 'Alasan penolakan wajib diisi!';
+            }
+        });
     });
     <?php endif; ?>
 

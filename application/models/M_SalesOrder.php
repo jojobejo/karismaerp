@@ -4608,6 +4608,24 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
+     * Mengambil seluruh permintaan pembatalan SO penuh yang masih menunggu persetujuan atasan.
+     */
+    public function get_pending_cancel_so_requests()
+    {
+        $this->ensure_cancel_so_request_table();
+        return $this->db
+            ->select("csr.*, so.tanggal_transaksi, COALESCE(NULLIF(so.customer_name, ''), c.nama_customer, '-') AS nama_customer, COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), '-') AS kd_rute, so.status AS so_status", false)
+            ->from('tbso_cancel_so_request csr')
+            ->join('tbso_sales_order so', 'so.id_so = csr.id_so', 'left')
+            ->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left')
+            ->where('csr.status', 'pending')
+            ->order_by('csr.request_at', 'DESC')
+            ->order_by('csr.id', 'DESC')
+            ->get()
+            ->result_array();
+    }
+
+    /**
      * Mengajukan permintaan pembatalan Sales Order ke atasan.
      */
     public function submit_cancel_so_request($id_so, $no_so, $alasan, $username)
