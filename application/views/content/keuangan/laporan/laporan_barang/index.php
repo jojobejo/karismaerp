@@ -11,6 +11,12 @@ $menus = [
         'icon'  => 'fas fa-handshake',
         'url'   => base_url('laporan/barang/kartu-stock-konsinyasi'),
         'desc'  => 'Laporan mutasi kartu stok barang konsinyasi dengan metode FIFO per batch/lot LPB.',
+    ],
+    [
+        'title' => 'Kartu Stok Pajak',
+        'icon'  => 'fas fa-file-invoice-dollar',
+        'url'   => base_url('laporan/barang/kartu-stock-pajak'),
+        'desc'  => 'Laporan mutasi kartu stok barang pajak (BKP/BKPS): penjualan reguler, test market lunas, dan faktur pecahan H.',
     ]
 ];
 $back_url   = base_url('laporan');

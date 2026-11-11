@@ -126,6 +126,43 @@ class C_Laporan extends CI_Controller
         $this->load->view('partial/main/footergdg.php');
     }
 
+    /**
+     * Halaman Laporan Kartu Stok Pajak (khusus barang BKP & BKPS dengan filter penjualan pajak).
+     */
+    public function kartu_stock_pajak_report()
+    {
+        $data['page_title'] = 'KARISMA - KARTU STOK PAJAK';
+
+        // Kecualikan gudang konsinyasi & gudang virtual test market di kios dari pilihan lokasi stok pajak
+        $meta = $this->_getKartuStokMeta();
+        $excluded_wh = $meta['excluded_pajak_wh_ids'];
+
+        $this->db->from('tb_gudang')->where('is_active', 1);
+        if (!empty($excluded_wh)) {
+            $this->db->where_not_in('id_gudang', $excluded_wh);
+        }
+        $data['warehouses'] = $this->db->get()->result_array();
+
+        // Kelompok barang pajak: BKP (2) dan BKPS (3)
+        $data['groups'] = $this->db->select('NOINDEX as id, DESKRIPSI as kelompok')
+                                   ->from('tbkeu_kelompok_dagang')
+                                   ->where_in('NOINDEX', [2, 3])
+                                   ->order_by('NOINDEX', 'ASC')
+                                   ->get()->result_array();
+
+        // Hanya produk aktif yang termasuk kelompok pajak (BKP & BKPS)
+        $data['products'] = $this->db->select('kode_barang, nama_barang')
+                                     ->from('tbpo_barang')
+                                     ->where('is_active', 'T')
+                                     ->where("COALESCE(NULLIF(TRIM(kelompok_dagang), ''), NULLIF(TRIM(kelompok_barang), ''), '') IN ('2', '3')", null, false)
+                                     ->order_by('kode_barang', 'ASC')
+                                     ->get()->result_array();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_barang/kartu_stock_pajak.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
     public function kartu_stock_konsinyasi_report()
     {
         $data['page_title'] = 'KARISMA - KARTU STOK BARANG KONSINYASI (FIFO)';
@@ -197,15 +234,11 @@ class C_Laporan extends CI_Controller
     }
 
 
-    public function kartu_stock_gudang_data()
+    /**
+     * Mengambil metadata master gudang, kelompok barang, serta ID gudang khusus.
+     */
+    private function _getKartuStokMeta()
     {
-        $kd_barang = $this->input->post('kd_barang', true);
-        $kelompok_barang = $this->input->post('kelompok_barang', true);
-        $id_gudang = $this->input->post('id_gudang', true);
-        $start_date = $this->input->post('start_date', true);
-        $end_date = $this->input->post('end_date', true);
-
-        // Ambil ID Gudang Konsinyasi, Gudang Titipan di Kios, dan Gudang Konsinyasi Lunas
         $wh_konsinyasi = $this->db->select('id_gudang')
             ->from('tb_gudang')
             ->group_start()
@@ -240,7 +273,8 @@ class C_Laporan extends CI_Controller
                 ->or_where('nama_gudang', 'Gdg. Test Market')
             ->group_end()
             ->limit(1)->get()->row_array();
-        $id_wh_transit_tm = $wh_transit_tm ? (int)$wh_transit_tm['id_gudang'] : 17;
+        $id_wh_transit_tm = $wh_transit_tm ? (int)$wh_transit_tm['id_gudang'] : null;
+        $id_wh_transit_tm_legacy = $wh_transit_tm ? (int)$wh_transit_tm['id_gudang'] : 17;
 
         $wh_induk = $this->db->select('id_gudang')
             ->from('tb_gudang')
@@ -255,14 +289,224 @@ class C_Laporan extends CI_Controller
             $warehouses_map[(int)$w['id_gudang']] = $w['nama_gudang'];
         }
 
-        $wh_target_id = ($id_gudang && $id_gudang !== 'all') ? (int)$id_gudang : null;
-
         // Master deskripsi kelompok barang
         $groups_raw = $this->db->get('tbkeu_kelompok_dagang')->result_array();
         $groups_map = [];
         foreach ($groups_raw as $g) {
             $groups_map[$g['NOINDEX']] = $g['DESKRIPSI'];
         }
+
+        $excluded_pajak_wh_ids = array_values(array_unique(array_filter([
+            $id_wh_konsinyasi,
+            $id_wh_titipan_kios,
+            $id_wh_konsinyasi_lunas,
+            $id_wh_test_market,
+            $id_wh_transit_tm
+        ], function($id) {
+            return $id !== null && (int)$id > 0;
+        })));
+
+        return [
+            'id_wh_konsinyasi' => $id_wh_konsinyasi,
+            'id_wh_titipan_kios' => $id_wh_titipan_kios,
+            'id_wh_konsinyasi_lunas' => $id_wh_konsinyasi_lunas,
+            'id_wh_test_market' => $id_wh_test_market,
+            'id_wh_transit_tm' => $id_wh_transit_tm,
+            'id_wh_transit_tm_legacy' => $id_wh_transit_tm_legacy,
+            'id_wh_induk' => $id_wh_induk,
+            'excluded_pajak_wh_ids' => $excluded_pajak_wh_ids,
+            'warehouses_map' => $warehouses_map,
+            'groups_map' => $groups_map
+        ];
+    }
+
+    /**
+     * Mengeksekusi daftar subquery mutasi dan membentuk kartu stok Moving Average per barang & gudang.
+     */
+    private function _buildMovingAverageStockCards(array $queries, array $warehouses_map, array $groups_map, $start_date, $end_date)
+    {
+        if (empty($queries)) {
+            return [];
+        }
+
+        // Eksekusi satu batch UNION ALL query
+        $union_sql = implode(" UNION ALL ", $queries) . " ORDER BY tanggal ASC";
+        $all_tx = $this->db->query($union_sql)->result_array();
+
+        // Kelompokkan hasil per [kd_barang][gudang_id]
+        $grouped = [];
+        $product_info = [];
+
+        foreach ($all_tx as $tx) {
+            $kd = $tx['kd_barang'];
+            $wh = (int)$tx['gudang_id'];
+
+            if (!isset($product_info[$kd])) {
+                $product_info[$kd] = [
+                    'nama_barang' => $tx['nama_barang'],
+                    'satuan' => $tx['satuan'],
+                    'kelompok_dagang' => $tx['kelompok_dagang']
+                ];
+            }
+
+            $grouped[$kd][$wh][] = $tx;
+        }
+
+        $all_products_data = [];
+
+        // Urutkan berdasarkan kode produk
+        ksort($grouped);
+
+        foreach ($grouped as $kd => $byWarehouse) {
+            ksort($byWarehouse);
+
+            $prod_meta = $product_info[$kd];
+            $grp_desc = $groups_map[$prod_meta['kelompok_dagang']] ?? 'Tanpa Kelompok';
+
+            foreach ($byWarehouse as $wh_id => $txs) {
+                $wh_name = $warehouses_map[$wh_id] ?? ('Gudang ' . $wh_id);
+
+                // Urutkan transaksi dalam gudang ini
+                usort($txs, function($a, $b) {
+                    $t1 = strtotime($a['tanggal']);
+                    $t2 = strtotime($b['tanggal']);
+                    if ($t1 === $t2) {
+                        return ($a['type'] === 'IN') ? -1 : 1;
+                    }
+                    return $t1 < $t2 ? -1 : 1;
+                });
+
+                $qty_saldo = 0.0;
+                $nilai_saldo = 0.0;
+                $average_hpp = 0.0;
+
+                $opening_balance = [
+                    'tanggal' => '',
+                    'referensi' => 'O/B Opening Balance',
+                    'unit' => !empty($txs) ? $txs[0]['satuan'] : $prod_meta['satuan'],
+                    'masuk_qty' => 0.0,
+                    'masuk_harga' => 0.0,
+                    'masuk_nilai' => 0.0,
+                    'keluar_qty' => 0.0,
+                    'keluar_harga' => 0.0,
+                    'keluar_nilai' => 0.0,
+                    'saldo_qty' => 0.0,
+                    'saldo_harga' => 0.0,
+                    'saldo_nilai' => 0.0
+                ];
+
+                $report_rows = [];
+                $sub_masuk_qty = 0.0;
+                $sub_masuk_nilai = 0.0;
+                $sub_keluar_qty = 0.0;
+                $sub_keluar_nilai = 0.0;
+
+                foreach ($txs as $tx) {
+                    $qty = (float)$tx['qty'];
+                    $harga = (float)$tx['harga'];
+                    $tx_date = $tx['tanggal'];
+
+                    if ($tx['type'] === 'IN') {
+                        $in_harga = ($harga > 0) ? $harga : $average_hpp;
+                        $qty_saldo += $qty;
+                        $nilai_saldo += ($qty * $in_harga);
+                        $average_hpp = $qty_saldo > 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
+                    } else {
+                        $qty_saldo -= $qty;
+                        $nilai_saldo -= ($qty * $average_hpp);
+                    }
+
+                    if (strtotime($tx_date) < strtotime($start_date)) {
+                        // Saldo awal sebelum periode filter
+                        $opening_balance['saldo_qty'] = $qty_saldo;
+                        $opening_balance['saldo_harga'] = $average_hpp;
+                        $opening_balance['saldo_nilai'] = $nilai_saldo;
+                    } else if (strtotime($tx_date) <= strtotime($end_date)) {
+                        // Masuk ke baris transaksi periode
+                        $refPrefix = $tx['ref_prefix'] ?? ($tx['type'] === 'IN' ? 'PJ ' : 'SJ ');
+                        $row = [
+                            'tanggal' => $tx['tanggal'],
+                            'referensi' => $refPrefix . $tx['referensi'],
+                            'unit' => $tx['satuan'],
+                            'masuk_qty' => 0.0,
+                            'masuk_harga' => 0.0,
+                            'masuk_nilai' => 0.0,
+                            'keluar_qty' => 0.0,
+                            'keluar_harga' => 0.0,
+                            'keluar_nilai' => 0.0,
+                            'saldo_qty' => $qty_saldo,
+                            'saldo_harga' => $average_hpp,
+                            'saldo_nilai' => $nilai_saldo
+                        ];
+
+                        if ($tx['type'] === 'IN') {
+                            $in_harga = ($harga > 0) ? $harga : $average_hpp;
+                            $row['masuk_qty'] = $qty;
+                            $row['masuk_harga'] = $in_harga;
+                            $row['masuk_nilai'] = $qty * $in_harga;
+                            $sub_masuk_qty += $qty;
+                            $sub_masuk_nilai += ($qty * $in_harga);
+                        } else {
+                            $row['keluar_qty'] = $qty;
+                            $row['keluar_harga'] = $average_hpp;
+                            $row['keluar_nilai'] = $qty * $average_hpp;
+                            $sub_keluar_qty += $qty;
+                            $sub_keluar_nilai += ($qty * $average_hpp);
+                        }
+                        $report_rows[] = $row;
+                    }
+                }
+
+                if (!empty($report_rows)) {
+                    $opening_balance['unit'] = $report_rows[0]['unit'];
+                }
+
+                // Hanya sertakan kartu stok gudang ini jika ada mutasi dalam periode atau saldo awal/akhir != 0
+                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $qty_saldo != 0) {
+                    $all_products_data[] = [
+                        'id_gudang'         => $wh_id,
+                        'warehouse_name'    => $wh_name,
+                        'product_code'      => $kd,
+                        'product_name'      => $prod_meta['nama_barang'],
+                        'kelompok_barang'   => $grp_desc,
+                        'opening_balance'   => $opening_balance,
+                        'rows'              => $report_rows,
+                        'sub_masuk_qty'     => $sub_masuk_qty,
+                        'sub_masuk_harga'   => $sub_masuk_qty > 0 ? ($sub_masuk_nilai / $sub_masuk_qty) : 0.0,
+                        'sub_masuk_nilai'   => $sub_masuk_nilai,
+                        'sub_keluar_qty'    => $sub_keluar_qty,
+                        'sub_keluar_harga'  => $sub_keluar_qty > 0 ? ($sub_keluar_nilai / $sub_keluar_qty) : 0.0,
+                        'sub_keluar_nilai'  => $sub_keluar_nilai,
+                        'final_saldo_qty'   => $qty_saldo,
+                        'final_saldo_harga' => $average_hpp,
+                        'final_saldo_nilai' => $nilai_saldo
+                    ];
+                }
+            }
+        }
+
+        return $all_products_data;
+    }
+
+    public function kartu_stock_gudang_data()
+    {
+        $kd_barang = $this->input->post('kd_barang', true);
+        $kelompok_barang = $this->input->post('kelompok_barang', true);
+        $id_gudang = $this->input->post('id_gudang', true);
+        $start_date = $this->input->post('start_date', true);
+        $end_date = $this->input->post('end_date', true);
+
+        $meta = $this->_getKartuStokMeta();
+        $id_wh_konsinyasi = $meta['id_wh_konsinyasi'];
+        $id_wh_titipan_kios = $meta['id_wh_titipan_kios'];
+        $id_wh_konsinyasi_lunas = $meta['id_wh_konsinyasi_lunas'];
+        $id_wh_test_market = $meta['id_wh_test_market'];
+        $id_wh_transit_tm = $meta['id_wh_transit_tm_legacy'];
+        $id_wh_induk = $meta['id_wh_induk'];
+        $warehouses_map = $meta['warehouses_map'];
+        $groups_map = $meta['groups_map'];
+
+        $wh_target_id = ($id_gudang && $id_gudang !== 'all') ? (int)$id_gudang : null;
 
         // Filter produk dan kelompok untuk klausul WHERE
         $prod_filter_clause = "";
@@ -655,161 +899,348 @@ class C_Laporan extends CI_Controller
             $queries[] = "($sql_adj_out)";
         }
 
-        // Eksekusi satu batch UNION ALL query
-        $union_sql = implode(" UNION ALL ", $queries) . " ORDER BY tanggal ASC";
-        $all_tx = $this->db->query($union_sql)->result_array();
+        $all_products_data = $this->_buildMovingAverageStockCards($queries, $warehouses_map, $groups_map, $start_date, $end_date);
 
-        // Kelompokkan hasil per [kd_barang][gudang_id]
-        $grouped = [];
-        $product_info = [];
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success' => true,
+                'data' => $all_products_data
+            ]));
+    }
 
-        foreach ($all_tx as $tx) {
-            $kd = $tx['kd_barang'];
-            $wh = (int)$tx['gudang_id'];
+    /**
+     * Endpoint JSON Laporan Kartu Stok Pajak.
+     * Aturan:
+     * 1. Hanya barang pajak (kelompok BKP = '2' & BKPS = '3').
+     * 2. Semua penjualan reguler masuk KECUALI konsinyasi, test market, dan faktur Z induk.
+     * 3. Penjualan test market yang masuk hanya yang sudah lunas (realisasi POSTED & pembayaran valid).
+     * 4. Penjualan faktur Z yang dipecah diambil dari stok Faktur H hasil pemecahan.
+     */
+    public function kartu_stock_pajak_data()
+    {
+        $kd_barang = $this->input->post('kd_barang', true);
+        $kelompok_barang = $this->input->post('kelompok_barang', true);
+        $id_gudang = $this->input->post('id_gudang', true);
+        $start_date = $this->input->post('start_date', true);
+        $end_date = $this->input->post('end_date', true);
 
-            if (!isset($product_info[$kd])) {
-                $product_info[$kd] = [
-                    'nama_barang' => $tx['nama_barang'],
-                    'satuan' => $tx['satuan'],
-                    'kelompok_dagang' => $tx['kelompok_dagang']
-                ];
-            }
+        $meta = $this->_getKartuStokMeta();
+        $id_wh_transit_tm = $meta['id_wh_transit_tm'];
+        $id_wh_induk = $meta['id_wh_induk'];
+        $excluded_wh = $meta['excluded_pajak_wh_ids'];
+        $excluded_wh_sql = !empty($excluded_wh) ? implode(',', array_map('intval', $excluded_wh)) : '';
+        $warehouses_map = $meta['warehouses_map'];
+        $groups_map = $meta['groups_map'];
 
-            $grouped[$kd][$wh][] = $tx;
+        $wh_target_id = ($id_gudang && $id_gudang !== 'all') ? (int)$id_gudang : null;
+        $end_date_sql = $this->db->escape($end_date);
+
+        // Kelompok barang pajak wajib BKP ('2') & BKPS ('3')
+        $pajak_group_expr = "COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), NULLIF(TRIM(b.kelompok_barang), ''), '')";
+        $prod_filter_clause = " AND {$pajak_group_expr} IN ('2', '3')";
+        if ($kd_barang && $kd_barang !== 'all') {
+            $prod_filter_clause .= " AND b.kode_barang = " . $this->db->escape($kd_barang);
+        }
+        if ($kelompok_barang && $kelompok_barang !== 'all') {
+            $prod_filter_clause .= " AND {$pajak_group_expr} = " . $this->db->escape((string)$kelompok_barang);
         }
 
-        $all_products_data = [];
+        $queries = [];
 
-        // Urutkan berdasarkan kode produk
-        ksort($grouped);
-
-        foreach ($grouped as $kd => $byWarehouse) {
-            ksort($byWarehouse);
-
-            $prod_meta = $product_info[$kd];
-            $grp_desc = $groups_map[$prod_meta['kelompok_dagang']] ?? 'Tanpa Kelompok';
-
-            foreach ($byWarehouse as $wh_id => $txs) {
-                $wh_name = $warehouses_map[$wh_id] ?? ('Gudang ' . $wh_id);
-
-                // Urutkan transaksi dalam gudang ini
-                usort($txs, function($a, $b) {
-                    $t1 = strtotime($a['tanggal']);
-                    $t2 = strtotime($b['tanggal']);
-                    if ($t1 === $t2) {
-                        return ($a['type'] === 'IN') ? -1 : 1;
-                    }
-                    return $t1 < $t2 ? -1 : 1;
-                });
-
-                $qty_saldo = 0.0;
-                $nilai_saldo = 0.0;
-                $average_hpp = 0.0;
-
-                $opening_balance = [
-                    'tanggal' => '',
-                    'referensi' => 'O/B Opening Balance',
-                    'unit' => !empty($txs) ? $txs[0]['satuan'] : $prod_meta['satuan'],
-                    'masuk_qty' => 0.0,
-                    'masuk_harga' => 0.0,
-                    'masuk_nilai' => 0.0,
-                    'keluar_qty' => 0.0,
-                    'keluar_harga' => 0.0,
-                    'keluar_nilai' => 0.0,
-                    'saldo_qty' => 0.0,
-                    'saldo_harga' => 0.0,
-                    'saldo_nilai' => 0.0
-                ];
-
-                $report_rows = [];
-                $sub_masuk_qty = 0.0;
-                $sub_masuk_nilai = 0.0;
-                $sub_keluar_qty = 0.0;
-                $sub_keluar_nilai = 0.0;
-
-                foreach ($txs as $tx) {
-                    $qty = (float)$tx['qty'];
-                    $harga = (float)$tx['harga'];
-                    $tx_date = $tx['tanggal'];
-
-                    if ($tx['type'] === 'IN') {
-                        $in_harga = ($harga > 0) ? $harga : $average_hpp;
-                        $qty_saldo += $qty;
-                        $nilai_saldo += ($qty * $in_harga);
-                        $average_hpp = $qty_saldo > 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
-                    } else {
-                        $qty_saldo -= $qty;
-                        $nilai_saldo -= ($qty * $average_hpp);
-                    }
-
-                    if (strtotime($tx_date) < strtotime($start_date)) {
-                        // Saldo awal sebelum periode filter
-                        $opening_balance['saldo_qty'] = $qty_saldo;
-                        $opening_balance['saldo_harga'] = $average_hpp;
-                        $opening_balance['saldo_nilai'] = $nilai_saldo;
-                    } else if (strtotime($tx_date) <= strtotime($end_date)) {
-                        // Masuk ke baris transaksi periode
-                        $refPrefix = $tx['ref_prefix'] ?? ($tx['type'] === 'IN' ? 'PJ ' : 'SJ ');
-                        $row = [
-                            'tanggal' => $tx['tanggal'],
-                            'referensi' => $refPrefix . $tx['referensi'],
-                            'unit' => $tx['satuan'],
-                            'masuk_qty' => 0.0,
-                            'masuk_harga' => 0.0,
-                            'masuk_nilai' => 0.0,
-                            'keluar_qty' => 0.0,
-                            'keluar_harga' => 0.0,
-                            'keluar_nilai' => 0.0,
-                            'saldo_qty' => $qty_saldo,
-                            'saldo_harga' => $average_hpp,
-                            'saldo_nilai' => $nilai_saldo
-                        ];
-
-                        if ($tx['type'] === 'IN') {
-                            $in_harga = ($harga > 0) ? $harga : $average_hpp;
-                            $row['masuk_qty'] = $qty;
-                            $row['masuk_harga'] = $in_harga;
-                            $row['masuk_nilai'] = $qty * $in_harga;
-                            $sub_masuk_qty += $qty;
-                            $sub_masuk_nilai += ($qty * $in_harga);
-                        } else {
-                            $row['keluar_qty'] = $qty;
-                            $row['keluar_harga'] = $average_hpp;
-                            $row['keluar_nilai'] = $qty * $average_hpp;
-                            $sub_keluar_qty += $qty;
-                            $sub_keluar_nilai += ($qty * $average_hpp);
-                        }
-                        $report_rows[] = $row;
-                    }
-                }
-
-                if (!empty($report_rows)) {
-                    $opening_balance['unit'] = $report_rows[0]['unit'];
-                }
-
-                // Hanya sertakan kartu stok gudang ini jika ada mutasi dalam periode atau saldo awal/akhir != 0
-                if (!empty($report_rows) || $opening_balance['saldo_qty'] != 0 || $qty_saldo != 0) {
-                    $all_products_data[] = [
-                        'id_gudang'       => $wh_id,
-                        'warehouse_name'  => $wh_name,
-                        'product_code'    => $kd,
-                        'product_name'    => $prod_meta['nama_barang'],
-                        'kelompok_barang' => $grp_desc,
-                        'opening_balance' => $opening_balance,
-                        'rows'            => $report_rows,
-                        'sub_masuk_qty'   => $sub_masuk_qty,
-                        'sub_masuk_harga' => $sub_masuk_qty > 0 ? ($sub_masuk_nilai / $sub_masuk_qty) : 0.0,
-                        'sub_masuk_nilai' => $sub_masuk_nilai,
-                        'sub_keluar_qty'  => $sub_keluar_qty,
-                        'sub_keluar_harga'=> $sub_keluar_qty > 0 ? ($sub_keluar_nilai / $sub_keluar_qty) : 0.0,
-                        'sub_keluar_nilai'=> $sub_keluar_nilai,
-                        'final_saldo_qty' => $qty_saldo,
-                        'final_saldo_harga' => $average_hpp,
-                        'final_saldo_nilai' => $nilai_saldo
-                    ];
-                }
-            }
+        // 1. Query LPB (Penerimaan Barang / Masuk) - non konsinyasi & non virtual TM
+        $lpb_where_extra = "";
+        if ($excluded_wh_sql !== '') {
+            $lpb_where_extra .= " AND l.gudang_id NOT IN ({$excluded_wh_sql})";
         }
+        if ($this->db->field_exists('is_konsinyasi', 'tb_lpb')) {
+            $lpb_where_extra .= " AND COALESCE(l.is_konsinyasi, 0) = 0";
+        }
+        $sql_lpb = "SELECT 
+                        ld.kd_barang,
+                        l.gudang_id,
+                        l.tgl_sj AS tanggal,
+                        l.nomor_lpb AS referensi,
+                        ld.qty_diterima AS qty,
+                        ld.harga_satuan AS harga,
+                        'IN' AS type,
+                        'PJ ' AS ref_prefix,
+                        b.satuan,
+                        b.nama_barang,
+                        {$pajak_group_expr} AS kelompok_dagang
+                    FROM tb_lpb l
+                    JOIN tb_lpb_detail ld ON l.id_lpb = ld.id_lpb
+                    JOIN tbpo_barang b ON ld.kd_barang = b.kode_barang
+                    WHERE l.status_lpb = 1 AND l.tgl_sj <= {$end_date_sql}
+                    {$lpb_where_extra}
+                    {$prod_filter_clause}";
+        if ($wh_target_id) {
+            $sql_lpb .= " AND l.gudang_id = {$wh_target_id}";
+        }
+        $queries[] = "($sql_lpb)";
+
+        // 2. Query Retur Penjualan (Masuk) - kecualikan retur konsinyasi, faktur T/K, dan gudang konsinyasi/TM
+        $retur_where_extra = " AND COALESCE(LOWER(r.tipe_retur), '') != 'konsinyasi'
+                               AND UPPER(LEFT(TRIM(COALESCE(rd.no_faktur, '')), 1)) NOT IN ('K', 'T')";
+        if ($excluded_wh_sql !== '') {
+            $retur_where_extra .= " AND r.gudang_id NOT IN ({$excluded_wh_sql})";
+        }
+        $sql_retur = "SELECT 
+                        b.kode_barang AS kd_barang,
+                        r.gudang_id,
+                        r.tanggal_retur AS tanggal,
+                        r.no_retur AS referensi,
+                        rd.qty_retur AS qty,
+                        COALESCE((
+                            SELECT fd.hrg_pokok
+                            FROM tbso_faktur_detail fd
+                            WHERE fd.no_faktur = rd.no_faktur
+                              AND fd.kd_barang = b.kode_barang
+                              AND (fd.no_lot = rd.no_batch OR rd.no_batch IS NULL OR rd.no_batch = '')
+                            ORDER BY fd.id DESC
+                            LIMIT 1
+                        ), 0) AS harga,
+                        'IN' AS type,
+                        'RJ ' AS ref_prefix,
+                        b.satuan,
+                        b.nama_barang,
+                        {$pajak_group_expr} AS kelompok_dagang
+                    FROM tbrp_retur_penjualan_header r
+                    JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
+                    JOIN tbpo_barang b ON (
+                        (rd.kd_barang IS NOT NULL AND rd.kd_barang != '' AND rd.kd_barang = b.kode_barang) OR
+                        (TRIM(LOWER(rd.nama_barang)) = TRIM(LOWER(b.nama_barang)))
+                    )
+                    WHERE r.status_retur NOT IN ('ditolak', 'batal') AND r.tanggal_retur <= {$end_date_sql}
+                    {$retur_where_extra}
+                    {$prod_filter_clause}";
+        if ($wh_target_id) {
+            $sql_retur .= " AND r.gudang_id = {$wh_target_id}";
+        }
+        $queries[] = "($sql_retur)";
+
+        // 3. Query Faktur Penjualan Reguler (Keluar)
+        // Kecualikan konsinyasi (K & gudang konsinyasi), Test Market (T & is_test_market), dan Faktur Z (Z & is_split_parent)
+        $faktur_where_extra = " AND UPPER(LEFT(TRIM(f.no_faktur), 1)) NOT IN ('K', 'T', 'Z')";
+        if ($excluded_wh_sql !== '') {
+            $faktur_where_extra .= " AND f.gudang_id NOT IN ({$excluded_wh_sql})";
+        }
+        if ($this->db->field_exists('is_test_market', 'tbso_faktur_penjualan')) {
+            $faktur_where_extra .= " AND COALESCE(f.is_test_market, 0) = 0";
+        }
+        if ($this->db->field_exists('is_split_parent', 'tbso_faktur_penjualan')) {
+            $faktur_where_extra .= " AND COALESCE(f.is_split_parent, 0) = 0";
+        }
+        if ($this->db->field_exists('is_konsinyasi', 'tbso_faktur_penjualan')) {
+            $faktur_where_extra .= " AND COALESCE(f.is_konsinyasi, 0) = 0";
+        }
+        $sql_faktur = "SELECT 
+                        fd.kd_barang,
+                        f.gudang_id,
+                        f.tanggal_faktur AS tanggal,
+                        f.no_faktur AS referensi,
+                        fd.qty,
+                        fd.hrg_pokok AS harga,
+                        'OUT' AS type,
+                        'SJ ' AS ref_prefix,
+                        b.satuan,
+                        b.nama_barang,
+                        {$pajak_group_expr} AS kelompok_dagang
+                    FROM tbso_faktur_penjualan f
+                    JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
+                    JOIN tbpo_barang b ON fd.kd_barang = b.kode_barang
+                    WHERE f.status NOT IN ('draft', 'cancelled') AND f.tanggal_faktur <= {$end_date_sql}
+                    {$faktur_where_extra}
+                    {$prod_filter_clause}";
+        if ($wh_target_id) {
+            $sql_faktur .= " AND f.gudang_id = {$wh_target_id}";
+        }
+        $queries[] = "($sql_faktur)";
+
+        // 4. Query Penjualan Faktur H (hasil pemecahan Faktur Z yang masuk ke kartu stok pajak)
+        if ($this->db->table_exists('tbso_faktur_z_pecah') && $this->db->table_exists('tbso_faktur_z_pecah_detail')) {
+            $h_wh_expr = "CASE
+                            WHEN pd.gudang_id REGEXP '^[0-9]+$' AND CAST(pd.gudang_id AS UNSIGNED) > 0 THEN CAST(pd.gudang_id AS UNSIGNED)
+                            WHEN p.gudang_id REGEXP '^[0-9]+$' AND CAST(p.gudang_id AS UNSIGNED) > 0 THEN CAST(p.gudang_id AS UNSIGNED)
+                            WHEN fp.gudang_id IS NOT NULL AND fp.gudang_id > 0 THEN CAST(fp.gudang_id AS UNSIGNED)
+                            ELSE {$id_wh_induk}
+                          END";
+            $h_date_expr = "COALESCE(NULLIF(p.tanggal_faktur, '0000-00-00'), fp.tanggal_faktur)";
+
+            $h_where_extra = "";
+            if ($excluded_wh_sql !== '') {
+                $h_where_extra .= " AND ({$h_wh_expr}) NOT IN ({$excluded_wh_sql})";
+            }
+            if ($wh_target_id) {
+                $h_where_extra .= " AND ({$h_wh_expr}) = {$wh_target_id}";
+            }
+
+            $sql_faktur_h = "SELECT 
+                                pd.kd_barang,
+                                ({$h_wh_expr}) AS gudang_id,
+                                ({$h_date_expr}) AS tanggal,
+                                CONCAT(p.no_faktur, IF(COALESCE(p.parent_no_faktur, fp.no_faktur, '') != '', CONCAT(' (Ref Z: ', COALESCE(p.parent_no_faktur, fp.no_faktur), ')'), '')) AS referensi,
+                                pd.qty,
+                                COALESCE(NULLIF(pd.hrg_pokok, 0), fdp.hrg_pokok, 0) AS harga,
+                                'OUT' AS type,
+                                'SJ-H ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tbso_faktur_z_pecah p
+                            JOIN tbso_faktur_z_pecah_detail pd ON p.id_pecah = pd.id_pecah
+                            JOIN tbpo_barang b ON pd.kd_barang = b.kode_barang
+                            LEFT JOIN tbso_faktur_penjualan fp ON fp.id_faktur = p.parent_id_faktur
+                            LEFT JOIN tbso_faktur_detail fdp ON fdp.id = pd.id_faktur_detail_parent
+                            WHERE LOWER(COALESCE(p.status, 'confirmed')) NOT IN ('draft', 'cancelled')
+                              AND (fp.id_faktur IS NULL OR LOWER(COALESCE(fp.status, '')) NOT IN ('draft', 'cancelled'))
+                              AND ({$h_date_expr}) <= {$end_date_sql}
+                              {$h_where_extra}
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_faktur_h)";
+        }
+
+        // 5. Query Penjualan Test Market yang sudah lunas (dari realisasi pembayaran POSTED & valid)
+        if ($this->db->table_exists('tb_test_market_realisasi') && $this->db->table_exists('tb_test_market_position')) {
+            $tm_wh_expr = ($id_wh_transit_tm && $id_wh_transit_tm > 0)
+                ? "IF(p.gudang_asal_id REGEXP '^[0-9]+$' AND CAST(p.gudang_asal_id AS UNSIGNED) > 0 AND CAST(p.gudang_asal_id AS UNSIGNED) != {$id_wh_transit_tm}, CAST(p.gudang_asal_id AS UNSIGNED), {$id_wh_induk})"
+                : "IF(p.gudang_asal_id REGEXP '^[0-9]+$' AND CAST(p.gudang_asal_id AS UNSIGNED) > 0, CAST(p.gudang_asal_id AS UNSIGNED), {$id_wh_induk})";
+
+            $has_pay_table = $this->db->table_exists('tbkeu_pembayaran_faktur');
+            $pay_join = $has_pay_table ? "LEFT JOIN tbkeu_pembayaran_faktur pay ON pay.id_pembayaran = r.id_pembayaran" : "";
+            $tm_date_expr = $has_pay_table ? "COALESCE(NULLIF(pay.tanggal_pembayaran, '0000-00-00'), r.tanggal_realisasi)" : "r.tanggal_realisasi";
+
+            $tm_where_extra = "";
+            if ($has_pay_table) {
+                $pay_valid = "COALESCE(UPPER(pay.status), '') NOT IN ('CANCELLED', 'UNPOST', 'DRAFT')";
+                if ($this->db->field_exists('status_bg', 'tbkeu_pembayaran_faktur')) {
+                    $pay_valid .= " AND COALESCE(LOWER(pay.status_bg), '') != 'pending'";
+                }
+                if ($this->db->field_exists('status_kasir', 'tbkeu_pembayaran_faktur')) {
+                    $pay_valid .= " AND COALESCE(LOWER(pay.status_kasir), '') != 'pending_kasir'";
+                }
+                $tm_where_extra .= " AND (pay.id_pembayaran IS NULL OR ({$pay_valid}))";
+            }
+            if ($excluded_wh_sql !== '') {
+                $tm_where_extra .= " AND ({$tm_wh_expr}) NOT IN ({$excluded_wh_sql})";
+            }
+            if ($wh_target_id) {
+                $tm_where_extra .= " AND ({$tm_wh_expr}) = {$wh_target_id}";
+            }
+
+            $sql_tm_lunas = "SELECT 
+                                r.kd_barang,
+                                ({$tm_wh_expr}) AS gudang_id,
+                                ({$tm_date_expr}) AS tanggal,
+                                CONCAT(r.no_faktur, ' (TM Lunas - ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
+                                r.qty,
+                                COALESCE(p.harga_pokok, 0) AS harga,
+                                'OUT' AS type,
+                                'TM-LUNAS ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tb_test_market_realisasi r
+                            JOIN tb_test_market_position p ON p.id_position = r.id_position
+                            JOIN tbpo_barang b ON b.kode_barang = r.kd_barang
+                            {$pay_join}
+                            WHERE r.status = 'POSTED'
+                              AND p.status != 'DIBATALKAN'
+                              AND ({$tm_date_expr}) <= {$end_date_sql}
+                              {$tm_where_extra}
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_tm_lunas)";
+        }
+
+        // 6. Query Retur Pembelian (Keluar) - non konsinyasi & non virtual TM
+        if ($this->db->table_exists('tb_retur_pembelian') && $this->db->table_exists('tb_retur_pembelian_detail')) {
+            $rb_where_extra = "";
+            if ($excluded_wh_sql !== '') {
+                $rb_where_extra .= " AND rb.gudang_id NOT IN ({$excluded_wh_sql})";
+            }
+            if ($this->db->field_exists('is_konsinyasi', 'tb_retur_pembelian')) {
+                $rb_where_extra .= " AND COALESCE(rb.is_konsinyasi, 0) = 0";
+            }
+            $sql_retur_beli = "SELECT 
+                                rbd.kd_barang,
+                                rb.gudang_id,
+                                rb.tanggal_retur AS tanggal,
+                                rb.no_retur_pembelian AS referensi,
+                                rbd.qty_retur AS qty,
+                                rbd.harga_satuan AS harga,
+                                'OUT' AS type,
+                                'RB ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tb_retur_pembelian rb
+                            JOIN tb_retur_pembelian_detail rbd ON rb.id_retur_pembelian = rbd.id_retur_pembelian
+                            JOIN tbpo_barang b ON rbd.kd_barang = b.kode_barang
+                            WHERE rb.status NOT IN ('DRAFT', 'REJECTED', 'BATAL') AND rb.tanggal_retur <= {$end_date_sql}
+                            {$rb_where_extra}
+                            {$prod_filter_clause}";
+            if ($wh_target_id) {
+                $sql_retur_beli .= " AND rb.gudang_id = {$wh_target_id}";
+            }
+            $queries[] = "($sql_retur_beli)";
+        }
+
+        // 7. Query Penyesuaian Barang - non konsinyasi & non virtual TM
+        if ($this->db->table_exists('tbkeu_penyesuaian_barang') && $this->db->table_exists('tbkeu_penyesuaian_barang_detail')) {
+            $adj_in_wh_expr = "IF(pb.id_gudang_ke IS NOT NULL AND pb.id_gudang_ke > 0, pb.id_gudang_ke, pb.id_gudang_dari)";
+            $adj_out_wh_expr = "IF(pb.id_gudang_dari IS NOT NULL AND pb.id_gudang_dari > 0, pb.id_gudang_dari, pb.id_gudang_ke)";
+
+            $adj_in_extra = ($excluded_wh_sql !== '') ? " AND {$adj_in_wh_expr} NOT IN ({$excluded_wh_sql})" : "";
+            $adj_out_extra = ($excluded_wh_sql !== '') ? " AND {$adj_out_wh_expr} NOT IN ({$excluded_wh_sql})" : "";
+
+            $sql_adj_in = "SELECT 
+                                pbd.kd_barang,
+                                {$adj_in_wh_expr} AS gudang_id,
+                                pb.tanggal,
+                                pb.no_referensi AS referensi,
+                                ABS(pbd.jumlah) AS qty,
+                                0 AS harga,
+                                'IN' AS type,
+                                'PB ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tbkeu_penyesuaian_barang pb
+                            JOIN tbkeu_penyesuaian_barang_detail pbd ON pb.id_penyesuaian = pbd.id_penyesuaian
+                            JOIN tbpo_barang b ON pbd.kd_barang = b.kode_barang
+                            WHERE pb.status = 'POSTED' AND pbd.jumlah > 0 AND pb.tanggal <= {$end_date_sql}
+                            {$adj_in_extra}
+                            {$prod_filter_clause}";
+            if ($wh_target_id) {
+                $sql_adj_in .= " AND {$adj_in_wh_expr} = {$wh_target_id}";
+            }
+            $queries[] = "($sql_adj_in)";
+
+            $sql_adj_out = "SELECT 
+                                pbd.kd_barang,
+                                {$adj_out_wh_expr} AS gudang_id,
+                                pb.tanggal,
+                                pb.no_referensi AS referensi,
+                                ABS(pbd.jumlah) AS qty,
+                                0 AS harga,
+                                'OUT' AS type,
+                                'PB ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tbkeu_penyesuaian_barang pb
+                            JOIN tbkeu_penyesuaian_barang_detail pbd ON pb.id_penyesuaian = pbd.id_penyesuaian
+                            JOIN tbpo_barang b ON pbd.kd_barang = b.kode_barang
+                            WHERE pb.status = 'POSTED' AND pbd.jumlah < 0 AND pb.tanggal <= {$end_date_sql}
+                            {$adj_out_extra}
+                            {$prod_filter_clause}";
+            if ($wh_target_id) {
+                $sql_adj_out .= " AND {$adj_out_wh_expr} = {$wh_target_id}";
+            }
+            $queries[] = "($sql_adj_out)";
+        }
+
+        $all_products_data = $this->_buildMovingAverageStockCards($queries, $warehouses_map, $groups_map, $start_date, $end_date);
 
         return $this->output
             ->set_content_type('application/json')
