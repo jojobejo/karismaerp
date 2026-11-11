@@ -257,7 +257,7 @@
                     </div>
                     <div class="d-flex align-items-center flex-wrap">
                         <span class="badge badge-warning p-2 mr-2" style="font-size: 12.5px;">
-                            Total: <strong><?= count($fakturs_h_import ?? []) ?></strong> Faktur H Import
+                            Total: <strong><?= number_format((int)($stat['total_faktur'] ?? 0)) ?></strong> Faktur H Import
                         </span>
                         <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" 
                            class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1"
@@ -295,167 +295,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($fakturs_h_import)): ?>
-                                    <tr>
-                                        <td colspan="12" class="text-center py-5 text-muted">
-                                            <i class="fas fa-file-invoice fa-3x mb-3 text-purple" style="color: #6f42c1;"></i><br>
-                                            <span class="font-weight-bold" style="font-size: 15px;">Belum Ada Data Faktur H Hasil Import</span><br>
-                                            <span class="small text-muted">Silakan unduh template Excel resmi dan unggah data faktur H Anda melalui tombol <strong>Import Excel Faktur H</strong> di atas.</span>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php $no = 1; foreach ($fakturs_h_import as $fhi): ?>
-                                        <?php
-                                            $gt = (float)($fhi['grand_total'] ?? 0);
-                                            $bayar = (float)($fhi['total_bayar'] ?? 0);
-                                            $stBayar = strtolower(trim((string)($fhi['status_bayar'] ?? 'belum_lunas')));
-                                            $isLunas = ($stBayar === 'lunas');
-                                        ?>
-                                        <tr data-id-import-h="<?= (int)$fhi['id_import_h'] ?>">
-                                            <td class="text-center align-middle">
-                                                <input type="checkbox" class="check-item-faktur-h-import" value="<?= (int)$fhi['id_import_h'] ?>" data-no-faktur="<?= htmlspecialchars($fhi['no_faktur']) ?>" data-grand-total="<?= $gt ?>" style="cursor:pointer; width:16px; height:16px;">
-                                            </td>
-                                            <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
-                                            <td class="align-middle">
-                                                <a href="javascript:void(0)" onclick="lihatDetailFakturHImport(<?= (int)$fhi['id_import_h'] ?>)"
-                                                   class="badge badge-purple font-weight-bold text-white shadow-sm" style="background-color: #6f42c1; font-size: 12px; padding: 5px 9px;"
-                                                   title="Klik untuk melihat rincian barang & jurnal faktur ini">
-                                                    <i class="fas fa-tag mr-1"></i> <?= htmlspecialchars($fhi['no_faktur']) ?>
-                                                </a>
-                                            </td>
-                                            <td class="align-middle">
-                                                <span class="badge badge-secondary font-weight-bold" style="font-size: 11px;">
-                                                    <?= !empty($fhi['parent_no_faktur']) ? htmlspecialchars($fhi['parent_no_faktur']) : '-' ?>
-                                                </span>
-                                            </td>
-                                            <td class="align-middle font-weight-bold text-dark">
-                                                <?= !empty($fhi['tanggal_faktur']) ? date('d/m/Y', strtotime($fhi['tanggal_faktur'])) : '-' ?>
-                                            </td>
-                                            <td class="align-middle">
-                                                <span class="font-weight-bold text-dark d-block">
-                                                    <?= htmlspecialchars($fhi['customer_name'] ?? '-') ?>
-                                                </span>
-                                                <?php if (!empty($fhi['kontak_person']) && $fhi['kontak_person'] !== $fhi['customer_name']): ?>
-                                                    <span class="text-muted small d-block">
-                                                        Kontak: <?= htmlspecialchars($fhi['kontak_person']) ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                                <span class="badge badge-light border small text-muted"><?= htmlspecialchars($fhi['kota'] ?? '-') ?> (<?= htmlspecialchars($fhi['kd_rute'] ?? 'SBY') ?>)</span>
-                                            </td>
-                                            <td class="text-center align-middle">
-                                                <span class="badge badge-light border font-weight-bold">
-                                                    <?= (int)$fhi['total_item'] ?> item (<?= number_format((float)$fhi['total_qty']) ?> pcs)
-                                                </span>
-                                            </td>
-                                            <td class="text-right align-middle">
-                                                <span class="font-weight-bold text-dark d-block" style="font-size: 13px;">
-                                                    Rp <?= number_format($gt, 0, ',', '.') ?>
-                                                </span>
-                                                <?php if ($isLunas && !empty($fhi['nominal_bruto']) && (float)$fhi['nominal_bruto'] > $gt): ?>
-                                                    <span class="small text-muted" style="font-size: 10.5px;">
-                                                        Bruto: Rp <?= number_format((float)$fhi['nominal_bruto'], 0, ',', '.') ?> (Pot <?= (int)($fhi['skema_potongan'] ?? 20) ?>%)
-                                                    </span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center align-middle">
-                                                <?php if ($isLunas): ?>
-                                                    <span class="badge badge-success px-2 py-1 shadow-sm" style="font-size: 11px;">
-                                                        <i class="fas fa-check-circle mr-1"></i> LUNAS
-                                                    </span>
-                                                    <div class="small text-success font-weight-bold mt-1" style="font-size: 11px;">
-                                                        Rp <?= number_format($bayar > 0 ? $bayar : $gt, 0, ',', '.') ?>
-                                                    </div>
-                                                    <?php if (!empty($fhi['tanggal_bayar'])): ?>
-                                                        <div class="small text-muted" style="font-size: 10px;">
-                                                            <?= date('d/m/Y', strtotime($fhi['tanggal_bayar'])) ?> &bull; <?= htmlspecialchars($fhi['metode_pembayaran'] ?? '') ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php elseif ($stBayar === 'sebagian'): ?>
-                                                    <span class="badge badge-warning px-2 py-1" style="font-size: 11px;">
-                                                        <i class="fas fa-adjust mr-1"></i> SEBAGIAN
-                                                    </span>
-                                                    <div class="small text-dark font-weight-bold mt-1" style="font-size: 11px;">
-                                                        Dibayar: Rp <?= number_format($bayar, 0, ',', '.') ?>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <span class="badge badge-secondary px-2 py-1" style="font-size: 11px;">
-                                                        <i class="far fa-clock mr-1"></i> BELUM LUNAS
-                                                    </span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="align-middle">
-                                                <?php if (!empty($fhi['nomor_jurnal_q']) || !empty($fhi['nomor_jurnal_a'])): ?>
-                                                    <?php if (!empty($fhi['nomor_jurnal_q'])): ?>
-                                                        <div class="mb-1">
-                                                            <a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)"
-                                                               class="badge badge-primary font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;"
-                                                               title="Klik untuk melihat rincian Jurnal Pembayaran Acak (Q)">
-                                                                <i class="fas fa-book mr-1"></i> Q: <?= htmlspecialchars($fhi['nomor_jurnal_q']) ?>
-                                                            </a>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($fhi['nomor_jurnal_a'])): ?>
-                                                        <div>
-                                                            <a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)"
-                                                               class="badge badge-info font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;"
-                                                               title="Klik untuk melihat rincian Jurnal Kas Masuk (A)">
-                                                                <i class="fas fa-file-invoice-dollar mr-1"></i> A: <?= htmlspecialchars($fhi['nomor_jurnal_a']) ?>
-                                                            </a>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted small"><i class="fas fa-minus-circle mr-1"></i> Belum ada jurnal</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="align-middle small text-muted">
-                                                <?= htmlspecialchars($fhi['create_by'] ?? '-') ?><br>
-                                                <span style="font-size: 10px;"><?= !empty($fhi['create_at']) ? date('d/m/y H:i', strtotime($fhi['create_at'])) : '' ?></span>
-                                            </td>
-                                            <td class="text-center align-middle">
-                                                <div class="btn-group btn-group-sm">
-                                                    <button type="button" class="btn btn-default btn-sm border" onclick="lihatDetailFakturHImport(<?= (int)$fhi['id_import_h'] ?>)" title="Lihat Rincian Barang & Jurnal">
-                                                        <i class="fas fa-eye text-primary"></i>
-                                                    </button>
-                                                    <?php if ($isLunas): ?>
-                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="lihatJurnalPelunasanFakturH(<?= (int)$fhi['id_import_h'] ?>)" title="Lihat Jurnal Pembayaran Acak (Q) & Jurnal (A)">
-                                                            <i class="fas fa-book"></i>
-                                                        </button>
-                                                        <a href="<?= base_url('sales_order/unpost_pelunasan_faktur_h_import/' . $fhi['id_import_h'] . '?from=page') ?>"
-                                                           class="btn btn-outline-warning btn-sm"
-                                                           title="Batalkan (Unpost) Pelunasan & Hapus Jurnal Q/A"
-                                                           onclick="return confirm('Batalkan (Unpost) pelunasan Faktur <?= htmlspecialchars($fhi['no_faktur']) ?> beserta Jurnal Acak (Q) dan Jurnal (A)?')">
-                                                            <i class="fas fa-undo"></i>
-                                                        </a>
-                                                    <?php else: ?>
-                                                        <button type="button"
-                                                                class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-single"
-                                                                data-id="<?= (int)$fhi['id_import_h'] ?>"
-                                                                data-no-faktur="<?= htmlspecialchars($fhi['no_faktur']) ?>"
-                                                                data-parent-no="<?= htmlspecialchars($fhi['parent_no_faktur'] ?? '') ?>"
-                                                                data-customer="<?= htmlspecialchars($fhi['customer_name'] ?? '') ?>"
-                                                                data-tanggal="<?= htmlspecialchars($fhi['tanggal_faktur'] ?? date('Y-m-d')) ?>"
-                                                                data-nominal="<?= $gt ?>"
-                                                                title="Lunasi Faktur H ini & Buat Jurnal Q + A">
-                                                            <i class="fas fa-check mr-1"></i> Lunasi
-                                                        </button>
-                                                    <?php endif; ?>
-                                                    <a href="<?= base_url('sales_order/cetak_faktur_h_import/' . $fhi['id_import_h']) ?>"
-                                                       target="_blank"
-                                                       class="btn btn-outline-info btn-sm"
-                                                       title="Cetak Faktur (Printer Dot-Matrix LX-310)">
-                                                        <i class="fas fa-print"></i>
-                                                    </a>
-                                                    <a href="<?= base_url('sales_order/hapus_faktur_h_import/' . $fhi['id_import_h'] . '?from=page') ?>"
-                                                       class="btn btn-outline-danger btn-sm"
-                                                       title="Hapus Faktur H Import ini"
-                                                       onclick="return confirm('Apakah Anda yakin ingin menghapus Faktur H Import <?= htmlspecialchars($fhi['no_faktur']) ?>?\n\nData import beserta jurnal pelunasannya akan dihapus secara permanen.')">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                    </a>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -809,23 +648,264 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 60);
         });
 
-        // Setup DataTables
+        // Helper format HTML, angka Rupiah, dan tanggal tampilan tabel
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatRupiah(val) {
+            var num = parseFloat(val || 0);
+            if (isNaN(num)) num = 0;
+            return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+        }
+
+        function formatNumberId(val) {
+            var num = parseFloat(val || 0);
+            if (isNaN(num)) num = 0;
+            return num.toLocaleString('id-ID');
+        }
+
+        function formatDateIndo(dateStr) {
+            if (!dateStr) return '-';
+            var clean = String(dateStr).trim().substring(0, 10);
+            var parts = clean.split('-');
+            if (parts.length !== 3) return escapeHtml(dateStr);
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
+        function formatDateTimeShort(dtStr) {
+            if (!dtStr) return '';
+            var parts = String(dtStr).trim().split(' ');
+            var d = parts[0] ? parts[0].split('-') : [];
+            if (d.length !== 3) return escapeHtml(dtStr);
+            var t = parts[1] ? parts[1].substring(0, 5) : '';
+            return d[2] + '/' + d[1] + '/' + d[0].substring(2) + (t ? ' ' + t : '');
+        }
+
+        // Penyimpan status pilihan checkbox lintas halaman pada DataTables server-side
+        var selectedFakturHMap = {};
+
+        // Setup DataTables Server-Side untuk ribuan data Faktur H Import
+        var dtFakturH = null;
         if ($.fn.DataTable && !$.fn.DataTable.isDataTable('#tableFakturHImportPage')) {
-            $('#tableFakturHImportPage').DataTable({
+            dtFakturH = $('#tableFakturHImportPage').DataTable({
+                processing: true,
+                serverSide: true,
+                deferRender: true,
+                searchDelay: 400,
                 responsive: false,
                 scrollX: true,
                 autoWidth: false,
                 ordering: true,
-                order: [[4, 'desc']], // Urutkan tanggal faktur desc
+                order: [[4, 'desc']], // Urutkan tanggal faktur terbaru
                 pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, 250, 500, -1], [10, 25, 50, 100, 250, 500, "Semua"]],
+                lengthMenu: [[10, 25, 50, 100, 250, 500], [10, 25, 50, 100, 250, 500]],
+                ajax: {
+                    url: '<?= base_url("sales_order/faktur_h_import_datatable") ?>',
+                    type: 'POST',
+                    data: function(d) {
+                        d.date1 = $('input[name="date1"]').val() || '';
+                        d.date2 = $('input[name="date2"]').val() || '';
+                        d.status_bayar = $('select[name="status_bayar"]').val() || '';
+                        d.filter_search = $('input[name="search"]').val() || '';
+                    }
+                },
+                createdRow: function(row, data) {
+                    $(row).attr('data-id-import-h', data.id_import_h);
+                },
+                columns: [
+                    {
+                        data: 'id_import_h',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center align-middle',
+                        render: function(data, type, row) {
+                            var idStr = String(row.id_import_h);
+                            var checkedAttr = selectedFakturHMap[idStr] ? ' checked' : '';
+                            var gt = parseFloat(row.grand_total || 0);
+                            return '<input type="checkbox" class="check-item-faktur-h-import" value="' + parseInt(row.id_import_h, 10) + '" data-no-faktur="' + escapeHtml(row.no_faktur) + '" data-grand-total="' + gt + '"' + checkedAttr + ' style="cursor:pointer; width:16px; height:16px;">';
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center align-middle font-weight-bold text-muted',
+                        render: function(data, type, row, meta) {
+                            return meta.row + meta.settings._iDisplayStart + 1;
+                        }
+                    },
+                    {
+                        data: 'no_faktur',
+                        className: 'align-middle',
+                        render: function(data, type, row) {
+                            var id = parseInt(row.id_import_h, 10);
+                            return '<a href="javascript:void(0)" onclick="lihatDetailFakturHImport(' + id + ')" ' +
+                                'class="badge badge-purple font-weight-bold text-white shadow-sm" style="background-color: #6f42c1; font-size: 12px; padding: 5px 9px;" ' +
+                                'title="Klik untuk melihat rincian barang & jurnal faktur ini">' +
+                                '<i class="fas fa-tag mr-1"></i> ' + escapeHtml(row.no_faktur) + '</a>';
+                        }
+                    },
+                    {
+                        data: 'parent_no_faktur',
+                        className: 'align-middle',
+                        render: function(data, type, row) {
+                            var parentNo = row.parent_no_faktur ? escapeHtml(row.parent_no_faktur) : '-';
+                            return '<span class="badge badge-secondary font-weight-bold" style="font-size: 11px;">' + parentNo + '</span>';
+                        }
+                    },
+                    {
+                        data: 'tanggal_faktur',
+                        className: 'align-middle font-weight-bold text-dark',
+                        render: function(data, type, row) {
+                            return formatDateIndo(row.tanggal_faktur);
+                        }
+                    },
+                    {
+                        data: 'customer_name',
+                        className: 'align-middle',
+                        render: function(data, type, row) {
+                            var custName = row.customer_name || '-';
+                            var html = '<span class="font-weight-bold text-dark d-block">' + escapeHtml(custName) + '</span>';
+                            if (row.kontak_person && row.kontak_person !== custName) {
+                                html += '<span class="text-muted small d-block">Kontak: ' + escapeHtml(row.kontak_person) + '</span>';
+                            }
+                            html += '<span class="badge badge-light border small text-muted">' + escapeHtml(row.kota || '-') + ' (' + escapeHtml(row.kd_rute || 'SBY') + ')</span>';
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'total_item',
+                        className: 'text-center align-middle',
+                        render: function(data, type, row) {
+                            return '<span class="badge badge-light border font-weight-bold">' +
+                                parseInt(row.total_item || 0, 10) + ' item (' + formatNumberId(row.total_qty) + ' pcs)</span>';
+                        }
+                    },
+                    {
+                        data: 'grand_total',
+                        className: 'text-right align-middle',
+                        render: function(data, type, row) {
+                            var gt = parseFloat(row.grand_total || 0);
+                            var stBayar = String(row.status_bayar || 'belum_lunas').trim().toLowerCase();
+                            var isLunas = (stBayar === 'lunas');
+                            var bruto = parseFloat(row.nominal_bruto || 0);
+                            var html = '<span class="font-weight-bold text-dark d-block" style="font-size: 13px;">' + formatRupiah(gt) + '</span>';
+                            if (isLunas && bruto > gt) {
+                                html += '<span class="small text-muted" style="font-size: 10.5px;">Bruto: ' + formatRupiah(bruto) + ' (Pot ' + parseInt(row.skema_potongan || 20, 10) + '%)</span>';
+                            }
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'status_bayar',
+                        className: 'text-center align-middle',
+                        render: function(data, type, row) {
+                            var gt = parseFloat(row.grand_total || 0);
+                            var bayar = parseFloat(row.total_bayar || 0);
+                            var stBayar = String(row.status_bayar || 'belum_lunas').trim().toLowerCase();
+                            if (stBayar === 'lunas') {
+                                var html = '<span class="badge badge-success px-2 py-1 shadow-sm" style="font-size: 11px;"><i class="fas fa-check-circle mr-1"></i> LUNAS</span>';
+                                html += '<div class="small text-success font-weight-bold mt-1" style="font-size: 11px;">' + formatRupiah(bayar > 0 ? bayar : gt) + '</div>';
+                                if (row.tanggal_bayar) {
+                                    html += '<div class="small text-muted" style="font-size: 10px;">' + formatDateIndo(row.tanggal_bayar) + ' &bull; ' + escapeHtml(row.metode_pembayaran || '') + '</div>';
+                                }
+                                return html;
+                            }
+                            if (stBayar === 'sebagian') {
+                                return '<span class="badge badge-warning px-2 py-1" style="font-size: 11px;"><i class="fas fa-adjust mr-1"></i> SEBAGIAN</span>' +
+                                    '<div class="small text-dark font-weight-bold mt-1" style="font-size: 11px;">Dibayar: ' + formatRupiah(bayar) + '</div>';
+                            }
+                            return '<span class="badge badge-secondary px-2 py-1" style="font-size: 11px;"><i class="far fa-clock mr-1"></i> BELUM LUNAS</span>';
+                        }
+                    },
+                    {
+                        data: 'nomor_jurnal_q',
+                        className: 'align-middle',
+                        render: function(data, type, row) {
+                            var id = parseInt(row.id_import_h, 10);
+                            if (!row.nomor_jurnal_q && !row.nomor_jurnal_a) {
+                                return '<span class="text-muted small"><i class="fas fa-minus-circle mr-1"></i> Belum ada jurnal</span>';
+                            }
+                            var html = '';
+                            if (row.nomor_jurnal_q) {
+                                html += '<div class="mb-1"><a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(' + id + ')" ' +
+                                    'class="badge badge-primary font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;" ' +
+                                    'title="Klik untuk melihat rincian Jurnal Pembayaran Acak (Q)">' +
+                                    '<i class="fas fa-book mr-1"></i> Q: ' + escapeHtml(row.nomor_jurnal_q) + '</a></div>';
+                            }
+                            if (row.nomor_jurnal_a) {
+                                html += '<div><a href="javascript:void(0)" onclick="lihatJurnalPelunasanFakturH(' + id + ')" ' +
+                                    'class="badge badge-info font-weight-bold shadow-sm" style="font-size: 11px; padding: 4px 7px;" ' +
+                                    'title="Klik untuk melihat rincian Jurnal Kas Masuk (A)">' +
+                                    '<i class="fas fa-file-invoice-dollar mr-1"></i> A: ' + escapeHtml(row.nomor_jurnal_a) + '</a></div>';
+                            }
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'create_by',
+                        className: 'align-middle small text-muted',
+                        render: function(data, type, row) {
+                            return escapeHtml(row.create_by || '-') + '<br><span style="font-size: 10px;">' + formatDateTimeShort(row.create_at) + '</span>';
+                        }
+                    },
+                    {
+                        data: 'id_import_h',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center align-middle',
+                        render: function(data, type, row) {
+                            var id = parseInt(row.id_import_h, 10);
+                            var gt = parseFloat(row.grand_total || 0);
+                            var stBayar = String(row.status_bayar || 'belum_lunas').trim().toLowerCase();
+                            var noFakturEsc = escapeHtml(row.no_faktur || '');
+                            var html = '<div class="btn-group btn-group-sm">';
+
+                            html += '<button type="button" class="btn btn-default btn-sm border" onclick="lihatDetailFakturHImport(' + id + ')" title="Lihat Rincian Barang & Jurnal"><i class="fas fa-eye text-primary"></i></button>';
+
+                            if (stBayar === 'lunas') {
+                                html += '<button type="button" class="btn btn-outline-primary btn-sm" onclick="lihatJurnalPelunasanFakturH(' + id + ')" title="Lihat Jurnal Pembayaran Acak (Q) & Jurnal (A)"><i class="fas fa-book"></i></button>';
+                                html += '<a href="<?= base_url("sales_order/unpost_pelunasan_faktur_h_import/") ?>' + id + '?from=page" ' +
+                                    'class="btn btn-outline-warning btn-sm btn-unpost-single-faktur-h" data-no-faktur="' + noFakturEsc + '" ' +
+                                    'title="Batalkan (Unpost) Pelunasan & Hapus Jurnal Q/A"><i class="fas fa-undo"></i></a>';
+                            } else {
+                                html += '<button type="button" class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-single" ' +
+                                    'data-id="' + id + '" ' +
+                                    'data-no-faktur="' + noFakturEsc + '" ' +
+                                    'data-parent-no="' + escapeHtml(row.parent_no_faktur || '') + '" ' +
+                                    'data-customer="' + escapeHtml(row.customer_name || '') + '" ' +
+                                    'data-tanggal="' + escapeHtml(row.tanggal_faktur || '<?= date("Y-m-d") ?>') + '" ' +
+                                    'data-nominal="' + gt + '" ' +
+                                    'title="Lunasi Faktur H ini & Buat Jurnal Q + A">' +
+                                    '<i class="fas fa-check mr-1"></i> Lunasi</button>';
+                            }
+
+                            html += '<a href="<?= base_url("sales_order/cetak_faktur_h_import/") ?>' + id + '" target="_blank" class="btn btn-outline-info btn-sm" title="Cetak Faktur (Printer Dot-Matrix LX-310)"><i class="fas fa-print"></i></a>';
+                            html += '<a href="<?= base_url("sales_order/hapus_faktur_h_import/") ?>' + id + '?from=page" ' +
+                                'class="btn btn-outline-danger btn-sm btn-hapus-single-faktur-h" data-no-faktur="' + noFakturEsc + '" ' +
+                                'title="Hapus Faktur H Import ini"><i class="fas fa-trash-alt"></i></a>';
+
+                            html += '</div>';
+                            return html;
+                        }
+                    }
+                ],
                 language: {
+                    processing: '<i class="fas fa-spinner fa-spin mr-1 text-primary"></i> Memuat data...',
                     search: "Cari Faktur H Import:",
                     lengthMenu: "Tampilkan _MENU_ data",
                     info: "Menampilkan _START_ s/d _END_ dari _TOTAL_ faktur",
                     infoEmpty: "Tidak ada data faktur H import",
                     infoFiltered: "(disaring dari _MAX_ total faktur)",
                     zeroRecords: "Tidak ada faktur H import yang cocok dengan pencarian",
+                    emptyTable: "Belum ada data Faktur H Hasil Import.",
                     paginate: {
                         first: "Awal",
                         last: "Akhir",
@@ -834,23 +914,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 columnDefs: [
-                    { orderable: false, targets: 'no-sort' }
+                    { orderable: false, targets: [0, 1, 11] }
                 ]
             });
         }
 
-        // Checkbox status handler
+        // Konfirmasi delegated untuk tombol unpost & hapus satuan agar aman dari karakter khusus no_faktur
+        $(document).on('click', '.btn-unpost-single-faktur-h', function(e) {
+            var noFaktur = $(this).data('no-faktur') || '';
+            if (!confirm('Batalkan (Unpost) pelunasan Faktur ' + noFaktur + ' beserta Jurnal Acak (Q) dan Jurnal (A)?')) {
+                e.preventDefault();
+            }
+        });
+
+        $(document).on('click', '.btn-hapus-single-faktur-h', function(e) {
+            var noFaktur = $(this).data('no-faktur') || '';
+            if (!confirm('Apakah Anda yakin ingin menghapus Faktur H Import ' + noFaktur + '?\n\nData import beserta jurnal pelunasannya akan dihapus secara permanen.')) {
+                e.preventDefault();
+            }
+        });
+
+        // Handler sinkronisasi status checkbox terpilih lintas halaman
         function updateSelectedState() {
-            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
+            var dt = dtFakturH || ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null);
             var currentNodes = dt ? dt.rows({ page: 'current' }).nodes() : $('#tableFakturHImportPage tbody tr');
             var currentCheckboxes = $(currentNodes).find('.check-item-faktur-h-import');
+
+            // Sinkronkan status checked di halaman saat ini sesuai map
+            currentCheckboxes.each(function() {
+                var idStr = String($(this).val());
+                $(this).prop('checked', !!selectedFakturHMap[idStr]);
+            });
+
             var totalCurrent = currentCheckboxes.length;
             var checkedCurrent = currentCheckboxes.filter(':checked').length;
 
             $('#checkAllFakturHImport').prop('checked', totalCurrent > 0 && totalCurrent === checkedCurrent);
 
-            var allChecked = dt ? $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked') : $('.check-item-faktur-h-import:checked');
-            var totalCheckedAll = allChecked.length;
+            var totalCheckedAll = Object.keys(selectedFakturHMap).length;
 
             $('#countSelectedFakturHImport').text(totalCheckedAll);
             $('.countSelectedFakturHImport').text(totalCheckedAll);
@@ -871,48 +972,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $(document).on('change', '#checkAllFakturHImport', function() {
             var isChecked = $(this).is(':checked');
-            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
-            if (dt) {
-                var currentNodes = dt.rows({ page: 'current' }).nodes();
-                $(currentNodes).find('.check-item-faktur-h-import').prop('checked', isChecked);
-            } else {
-                $('.check-item-faktur-h-import:visible').prop('checked', isChecked);
-            }
+            var dt = dtFakturH || ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null);
+            var currentCheckboxes = dt ? $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h-import') : $('.check-item-faktur-h-import:visible');
+            currentCheckboxes.each(function() {
+                var idStr = String($(this).val());
+                $(this).prop('checked', isChecked);
+                if (isChecked) {
+                    selectedFakturHMap[idStr] = true;
+                } else {
+                    delete selectedFakturHMap[idStr];
+                }
+            });
             updateSelectedState();
         });
 
         $(document).on('click', '#btnToggleSelectAllFakturHImport', function(e) {
             e.preventDefault();
-            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
+            var dt = dtFakturH || ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null);
             var currentCheckboxes = dt ? $(dt.rows({ page: 'current' }).nodes()).find('.check-item-faktur-h-import') : $('.check-item-faktur-h-import:visible');
             var isAllChecked = currentCheckboxes.length > 0 && currentCheckboxes.length === currentCheckboxes.filter(':checked').length;
-            currentCheckboxes.prop('checked', !isAllChecked);
+            var targetChecked = !isAllChecked;
+            currentCheckboxes.each(function() {
+                var idStr = String($(this).val());
+                $(this).prop('checked', targetChecked);
+                if (targetChecked) {
+                    selectedFakturHMap[idStr] = true;
+                } else {
+                    delete selectedFakturHMap[idStr];
+                }
+            });
             updateSelectedState();
         });
 
         $(document).on('change', '.check-item-faktur-h-import', function() {
+            var idStr = String($(this).val());
+            if ($(this).is(':checked')) {
+                selectedFakturHMap[idStr] = true;
+            } else {
+                delete selectedFakturHMap[idStr];
+            }
             updateSelectedState();
         });
 
-        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage')) {
-            $('#tableFakturHImportPage').DataTable().on('draw', function() {
+        if (dtFakturH) {
+            dtFakturH.on('draw', function() {
                 updateSelectedState();
             });
         }
 
         function getSelectedIds() {
-            var dt = $.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturHImportPage') ? $('#tableFakturHImportPage').DataTable() : null;
-            var selectedIds = [];
-            if (dt) {
-                $(dt.rows().nodes()).find('.check-item-faktur-h-import:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-            } else {
-                $('.check-item-faktur-h-import:checked').each(function() {
-                    selectedIds.push($(this).val());
-                });
-            }
-            return selectedIds;
+            return Object.keys(selectedFakturHMap);
         }
 
         // Tombol Lunasi Batch

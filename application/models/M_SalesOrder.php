@@ -93,6 +93,7 @@ class M_SalesOrder extends CI_Model
     const BATAS_TONASE   = 7;
     const BATAS_KUBIKASI = 9;
     const LIMIT_KONTAK_PERSON_FAKTUR_H = 250000000; // Maksimal akumulasi nominal Faktur H per Kontak Person (Rp 250.000.000)
+    private static $fakturHImportTablesEnsured = false;
 
     public function __construct()
     {
@@ -4462,6 +4463,19 @@ class M_SalesOrder extends CI_Model
      */
     public function ensure_faktur_h_import_tables()
     {
+        if (self::$fakturHImportTablesEnsured) {
+            return;
+        }
+
+        // Fast-path: bila seluruh tabel dan kolom terbaru sudah ada, lewati pengecekan 12 kolom berulang
+        if ($this->db->table_exists('tbso_faktur_h_import')
+            && $this->db->table_exists('tbso_faktur_h_import_detail')
+            && $this->db->table_exists('tbso_faktur_h_import_pembayaran')
+            && $this->db->field_exists('nomor_jurnal_a', 'tbso_faktur_h_import')) {
+            self::$fakturHImportTablesEnsured = true;
+            return;
+        }
+
         if (!$this->db->table_exists('tbso_faktur_h_import')) {
             $this->db->query("
                 CREATE TABLE IF NOT EXISTS `tbso_faktur_h_import` (
@@ -4494,6 +4508,8 @@ class M_SalesOrder extends CI_Model
                     `update_at` DATETIME DEFAULT NULL,
                     INDEX `idx_no_faktur` (`no_faktur`),
                     INDEX `idx_tanggal_faktur` (`tanggal_faktur`),
+                    INDEX `idx_tgl_id` (`tanggal_faktur`, `id_import_h`),
+                    INDEX `idx_status_bayar` (`status_bayar`),
                     INDEX `idx_kd_customer` (`kd_customer`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             ");
@@ -4582,17 +4598,15 @@ class M_SalesOrder extends CI_Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             ");
         }
+
+        self::$fakturHImportTablesEnsured = true;
     }
 
     /**
-     * Mengambil daftar Faktur H hasil import dengan filter tanggal, status pelunasan & pencarian
+     * Menerapkan filter tanggal, status pelunasan, pembuat, dan pencarian pada query tbso_faktur_h_import.
      */
-    public function get_all_faktur_h_import($filter = [])
+    private function _apply_faktur_h_import_filter($filter = [])
     {
-        $this->ensure_faktur_h_import_tables();
-        $this->db->select('*');
-        $this->db->from('tbso_faktur_h_import');
-
         if (!empty($filter['date1'])) {
             $this->db->where('tanggal_faktur >=', $filter['date1']);
         }
@@ -4627,6 +4641,116 @@ class M_SalesOrder extends CI_Model
             $this->db->or_like('nomor_jurnal_a', $q);
             $this->db->group_end();
         }
+    }
+
+    /**
+     * Mengambil ringkasan statistik Faktur H Import menggunakan agregasi SQL langsung.
+     */
+    public function get_faktur_h_import_summary($filter = [])
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->select("
+            COUNT(*) AS total_faktur,
+            COALESCE(SUM(total_qty), 0) AS total_qty,
+            COALESCE(SUM(total_item), 0) AS total_item,
+            COALESCE(SUM(grand_total), 0) AS grand_total,
+            COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(status_bayar, 'belum_lunas'))) = 'lunas' THEN 1 ELSE 0 END), 0) AS total_lunas,
+            COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(status_bayar, 'belum_lunas'))) = 'lunas' THEN 0 ELSE 1 END), 0) AS total_belum,
+            COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(status_bayar, 'belum_lunas'))) = 'lunas' THEN (CASE WHEN total_bayar > 0 THEN total_bayar ELSE grand_total END) ELSE COALESCE(total_bayar, 0) END), 0) AS nominal_lunas,
+            COALESCE(SUM(CASE WHEN LOWER(TRIM(COALESCE(status_bayar, 'belum_lunas'))) = 'lunas' THEN 0 ELSE GREATEST(0, COALESCE(grand_total, 0) - COALESCE(total_bayar, 0)) END), 0) AS nominal_sisa
+        ", false);
+        $this->db->from('tbso_faktur_h_import');
+        $this->_apply_faktur_h_import_filter($filter);
+        $row = $this->db->get()->row_array();
+
+        return [
+            'total_faktur'  => (int)($row['total_faktur'] ?? 0),
+            'total_qty'     => (float)($row['total_qty'] ?? 0),
+            'total_item'    => (int)($row['total_item'] ?? 0),
+            'grand_total'   => (float)($row['grand_total'] ?? 0),
+            'total_lunas'   => (int)($row['total_lunas'] ?? 0),
+            'total_belum'   => (int)($row['total_belum'] ?? 0),
+            'nominal_lunas' => (float)($row['nominal_lunas'] ?? 0),
+            'nominal_sisa'  => (float)($row['nominal_sisa'] ?? 0),
+        ];
+    }
+
+    /**
+     * Mengambil data Faktur H Import untuk DataTables server-side pagination.
+     */
+    public function get_faktur_h_import_datatable($filter = [], $dtSearch = '', $orderCol = 'tanggal_faktur', $orderDir = 'DESC', $start = 0, $length = 25)
+    {
+        $this->ensure_faktur_h_import_tables();
+
+        $this->db->from('tbso_faktur_h_import');
+        $this->_apply_faktur_h_import_filter($filter);
+        $recordsTotal = (int)$this->db->count_all_results();
+
+        $applyDtSearch = function($q) {
+            $q = trim((string)$q);
+            if ($q === '') return;
+            $this->db->group_start();
+            $this->db->like('no_faktur', $q);
+            $this->db->or_like('parent_no_faktur', $q);
+            $this->db->or_like('customer_name', $q);
+            $this->db->or_like('kontak_person', $q);
+            $this->db->or_like('nama_toko', $q);
+            $this->db->or_like('kota', $q);
+            $this->db->or_like('kd_rute', $q);
+            $this->db->or_like('salesman', $q);
+            $this->db->or_like('nomor_jurnal_q', $q);
+            $this->db->or_like('nomor_jurnal_a', $q);
+            $this->db->or_like('create_by', $q);
+            $this->db->group_end();
+        };
+
+        $dtSearch = trim((string)$dtSearch);
+        if ($dtSearch !== '') {
+            $this->db->from('tbso_faktur_h_import');
+            $this->_apply_faktur_h_import_filter($filter);
+            $applyDtSearch($dtSearch);
+            $recordsFiltered = (int)$this->db->count_all_results();
+        } else {
+            $recordsFiltered = $recordsTotal;
+        }
+
+        $allowedOrderCols = [
+            'no_faktur', 'parent_no_faktur', 'tanggal_faktur', 'customer_name',
+            'total_item', 'grand_total', 'status_bayar', 'nomor_jurnal_q', 'create_by', 'id_import_h'
+        ];
+        if (!in_array($orderCol, $allowedOrderCols, true)) {
+            $orderCol = 'tanggal_faktur';
+        }
+        $orderDir = strtoupper((string)$orderDir) === 'ASC' ? 'ASC' : 'DESC';
+
+        $this->db->select('id_import_h, no_faktur, parent_no_faktur, tanggal_faktur, customer_name, kontak_person, kota, kd_rute, total_item, total_qty, grand_total, total_bayar, nominal_bruto, skema_potongan, status_bayar, tanggal_bayar, metode_pembayaran, nomor_jurnal_q, nomor_jurnal_a, create_by, create_at');
+        $this->db->from('tbso_faktur_h_import');
+        $this->_apply_faktur_h_import_filter($filter);
+        $applyDtSearch($dtSearch);
+        $this->db->order_by($orderCol, $orderDir);
+        if ($orderCol !== 'id_import_h') {
+            $this->db->order_by('id_import_h', 'DESC');
+        }
+        if ($length > 0) {
+            $this->db->limit((int)$length, max(0, (int)$start));
+        }
+
+        return [
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'rows'            => $this->db->get()->result_array(),
+        ];
+    }
+
+    /**
+     * Mengambil daftar Faktur H hasil import dengan filter tanggal, status pelunasan & pencarian
+     */
+    public function get_all_faktur_h_import($filter = [])
+    {
+        $this->ensure_faktur_h_import_tables();
+        $this->db->select('*');
+        $this->db->from('tbso_faktur_h_import');
+        $this->_apply_faktur_h_import_filter($filter);
 
         $this->db->order_by('tanggal_faktur', 'DESC');
         $this->db->order_by('id_import_h', 'DESC');

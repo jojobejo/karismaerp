@@ -591,8 +591,8 @@
                                                 style="background-color: #6f42c1; border-color: #6f42c1;" 
                                                 data-toggle="modal" 
                                                 data-target="#modalImportPelunasanFakturZ" 
-                                                title="Import file pelunasan Faktur Pecahan H dari Excel / CSV sekaligus membuat Jurnal Q dan A">
-                                            <i class="fas fa-file-invoice-dollar mr-1"></i> Import Pelunasan Faktur H
+                                                title="Import file pelunasan berdasarkan Nomor Faktur Z Induk dari Excel / CSV (otomatis mengalokasikan ke Faktur Pecahan H & membuat Jurnal Q/A)">
+                                            <i class="fas fa-file-invoice-dollar mr-1"></i> Import Pelunasan Faktur Z
                                         </button>
 
                                         <a href="<?= base_url('sales_order/sinkronkan_jurnal_penjualan_faktur_h') ?>" 
@@ -930,26 +930,27 @@
                     <input type="hidden" name="redirect_to" value="sales_order/pecah_faktur#content-faktur-h">
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title font-weight-bold" id="modalImportPelunasanFakturZLabel">
-                            <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Otomatis Jurnal Acak Q & Jurnal A)
+                            <i class="fas fa-check-double mr-1"></i> Import Pelunasan Berdasarkan Faktur Z (Otomatis Alokasi ke Faktur H & Jurnal Q/A)
                         </h5>
                         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
+                        <div class="alert alert-info py-2 px-3 small mb-3">
+                            <strong>Cara Kerja:</strong> Pelunasan diinput per <strong>Nomor Faktur Z (Induk)</strong>. Nominal yang dibayarkan akan dialokasikan ke Faktur Pecahan H di bawah Faktur Z tersebut secara berurutan.<br>
+                            <span class="text-muted">Contoh: Faktur Z senilai Rp 2.000.000 dipecah menjadi 2 Faktur H (@ Rp 1.000.000). Jika Faktur Z dibayar Rp 1.000.000, maka sistem melunasi dan membuat Jurnal Q &amp; A hanya untuk <strong>1 Faktur H</strong>.</span>
+                        </div>
                         <div class="form-group mb-0">
-                            <label for="filePelunasanZ" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur H (.xlsx / .xls / .csv)</label>
+                            <label for="filePelunasanZ" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur Z (.xlsx / .xls / .csv)</label>
                             <div class="custom-file">
                                 <input type="file" name="file_pelunasan_h" id="filePelunasanZ" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
-                                <label class="custom-file-label" for="filePelunasanZ" id="labelFilePelunasanZ">Pilih file Excel / CSV Pelunasan Faktur H...</label>
+                                <label class="custom-file-label" for="filePelunasanZ" id="labelFilePelunasanZ">Pilih file Excel / CSV Pelunasan Faktur Z...</label>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer bg-light d-flex justify-content-between">
                         <div>
-                            <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm mr-1">
-                                <i class="fas fa-download mr-1"></i> Unduh Template Terisi Faktur Belum Lunas (.xlsx)
-                            </a>
-                            <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=all') ?>" class="btn btn-outline-secondary btn-sm font-weight-bold shadow-sm">
-                                Semua Faktur
+                            <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_z_pecah?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm">
+                                <i class="fas fa-download mr-1"></i> Unduh Template Faktur Z Belum Lunas (.xlsx)
                             </a>
                         </div>
                         <div>

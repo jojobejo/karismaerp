@@ -900,6 +900,7 @@ $route['sales_order/pecah_faktur']                  = 'sales/C_SalesOrder/pecah_
 $route['sales_order/import_faktur_z']                = 'sales/C_SalesOrder/import_faktur_z';
 $route['sales_order/template_import_faktur_z']       = 'sales/C_SalesOrder/template_import_faktur_z';
 $route['sales_order/faktur_h_import']                = 'sales/C_SalesOrder/faktur_h_import';
+$route['sales_order/faktur_h_import_datatable']      = 'sales/C_SalesOrder/faktur_h_import_datatable';
 $route['faktur_h_import']                            = 'sales/C_SalesOrder/faktur_h_import';
 $route['sales_order/import_faktur_h']                = 'sales/C_SalesOrder/import_faktur_h';
 $route['sales_order/template_import_faktur_h']       = 'sales/C_SalesOrder/template_import_faktur_h';
