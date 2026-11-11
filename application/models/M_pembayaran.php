@@ -142,6 +142,19 @@ class M_pembayaran extends CI_Model
                     'null' => true,
                     'after' => 'unpost_by',
                 ],
+                'no_faktur_konsinyasi' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'no_faktur',
+                ],
+                'skema_potongan_z' => [
+                    'type'       => 'INT',
+                    'constraint' => 11,
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'jumlah_diskon',
+                ],
                 'unpost_reason' => [
                     'type'       => 'VARCHAR',
                     'constraint' => 255,
@@ -176,6 +189,11 @@ class M_pembayaran extends CI_Model
                 'type'       => 'VARCHAR',
                 'constraint' => 30,
             ],
+            'no_faktur_konsinyasi' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
+                'null'       => true,
+            ],
             'tanggal_pembayaran' => [
                 'type' => 'DATE',
             ],
@@ -187,6 +205,11 @@ class M_pembayaran extends CI_Model
             'jumlah_diskon' => [
                 'type'       => 'DECIMAL',
                 'constraint' => '16,2',
+                'default'    => 0,
+            ],
+            'skema_potongan_z' => [
+                'type'       => 'INT',
+                'constraint' => 11,
                 'default'    => 0,
             ],
             'metode_pembayaran' => [
@@ -346,10 +369,14 @@ class M_pembayaran extends CI_Model
             : "'' AS cara_pembayaran";
         $is_test_market_select = $this->db->field_exists('is_test_market', 'tbso_faktur_penjualan')
             ? 'f.is_test_market'
-            : '0 AS is_test_market';
+            : '(0) AS is_test_market';
         $is_split_parent_select = $this->db->field_exists('is_split_parent', 'tbso_faktur_penjualan')
             ? 'COALESCE(f.is_split_parent, 0) AS is_split_parent'
-            : '0 AS is_split_parent';
+            : '(0) AS is_split_parent';
+        // Hitung jumlah faktur pecahan H untuk faktur Z induk
+        $total_pecahan_h_select = $this->db->table_exists('tbso_faktur_z_pecah')
+            ? "(SELECT COUNT(*) FROM tbso_faktur_z_pecah pzh WHERE pzh.parent_id_faktur = f.id_faktur AND pzh.status != 'cancelled') AS total_pecahan_h"
+            : '(0) AS total_pecahan_h';
         $has_pengajuan_od = $this->db->table_exists('tb_pengajuan_od_faktur') && $this->db->table_exists('tb_pengajuan_od');
         $tempo_lama_select = $has_pengajuan_od
             ? "(
@@ -360,7 +387,7 @@ class M_pembayaran extends CI_Model
                 ORDER BY po.id DESC
                 LIMIT 1
             ) AS tempo_lama"
-            : "NULL AS tempo_lama";
+            : "(NULL) AS tempo_lama";
 
         $this->db->select("
             f.id_faktur,
@@ -612,10 +639,22 @@ class M_pembayaran extends CI_Model
             ->row_array();
     }
 
+    private function _filter_payment_columns(array $data)
+    {
+        if (!$this->db->table_exists($this->payment_table)) {
+            return $data;
+        }
+        $valid_fields = array_flip($this->db->list_fields($this->payment_table));
+        return array_intersect_key($data, $valid_fields);
+    }
+
     public function insert_payment($data)
     {
+        $this->_ensure_payment_table();
+        $insert_data = $this->_filter_payment_columns($data);
+
         $this->db->trans_start();
-        $this->db->insert($this->payment_table, $data);
+        $this->db->insert($this->payment_table, $insert_data);
         $id_pembayaran = $this->db->insert_id();
 
         $is_pending_bg = (($data['status_bg'] ?? '') === 'pending');
@@ -910,6 +949,12 @@ class M_pembayaran extends CI_Model
                     'reversed_by' => $user_id > 0 ? $user_id : null,
                     'reversed_at' => date('Y-m-d H:i:s'),
                 ]);
+
+            // Sinkronisasi ulang status bayar Faktur Pecahan H jika Faktur Z Induk di-unpost
+            if (!empty($payment['id_faktur'])) {
+                $this->load->model('M_Journal');
+                $this->M_Journal->sync_status_bayar_faktur_h_by_induk((int)$payment['id_faktur']);
+            }
         }
 
         // 3. Reversal Plafon Customer (kurangi kembali plafon yang bertambah saat pembayaran)
@@ -1087,6 +1132,11 @@ class M_pembayaran extends CI_Model
                         'posted_at'  => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s'),
                     ]);
+
+                if (!empty($payment['id_faktur'])) {
+                    $this->load->model('M_Journal');
+                    $this->M_Journal->sync_status_bayar_faktur_h_by_induk((int)$payment['id_faktur']);
+                }
             } else {
                 $this->load->model('M_Journal');
                 $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $payment);
@@ -1243,7 +1293,8 @@ class M_pembayaran extends CI_Model
         $data['unpost_at'] = null;
         $data['unpost_reason'] = null;
 
-        $this->db->where('id_pembayaran', $id_pembayaran)->update($this->payment_table, $data);
+        $update_data = $this->_filter_payment_columns($data);
+        $this->db->where('id_pembayaran', $id_pembayaran)->update($this->payment_table, $update_data);
 
         $is_pending_bg = (($data['status_bg'] ?? '') === 'pending');
         $is_pending_kasir = (($data['status_kasir'] ?? 'valid') === 'pending_kasir');
@@ -1254,18 +1305,21 @@ class M_pembayaran extends CI_Model
                 return false;
             }
             $this->load->model('M_Journal');
-            // Hapus jurnal lama jika pernah ada agar tidak duplikat
-            $old_journal = $this->db->where('source_module', 'KEUANGAN')
+            // Hapus seluruh jurnal lama milik id_pembayaran ini (Jurnal Z, Q, dan A) jika pernah ada agar tidak duplikat
+            $old_journals = $this->db->select('id_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR')
                 ->group_start()
                     ->where('source_id', (string)$id_pembayaran)
                     ->or_where('source_id', $id_pembayaran)
                 ->group_end()
                 ->get('tbkeu_jurnal')
-                ->row_array();
+                ->result_array();
 
-            if ($old_journal) {
-                $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal_detail');
-                $this->db->where('id_jurnal', $old_journal['id_jurnal'])->delete('tbkeu_jurnal');
+            if (!empty($old_journals)) {
+                $old_j_ids = array_column($old_journals, 'id_jurnal');
+                $this->db->where_in('id_jurnal', $old_j_ids)->delete('tbkeu_jurnal_detail');
+                $this->db->where_in('id_jurnal', $old_j_ids)->delete('tbkeu_jurnal');
             }
             $this->M_Journal->post_jurnal_penjualan_konsinyasi($id_pembayaran, $data);
             $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
@@ -1338,6 +1392,12 @@ class M_pembayaran extends CI_Model
 
         // 2. Hapus record pembayaran
         $this->db->where('id_pembayaran', $id_pembayaran)->delete($this->payment_table);
+
+        // 3. Sinkronisasi ulang status bayar Faktur Pecahan H jika Faktur Z Induk terkait
+        if (!empty($payment['id_faktur'])) {
+            $this->load->model('M_Journal');
+            $this->M_Journal->sync_status_bayar_faktur_h_by_induk((int)$payment['id_faktur']);
+        }
 
         $this->db->trans_complete();
 

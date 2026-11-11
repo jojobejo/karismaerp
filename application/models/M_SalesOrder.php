@@ -3834,6 +3834,10 @@ class M_SalesOrder extends CI_Model
     {
         $this->ensure_faktur_z_pecah_tables();
         $this->ensure_customer_acak_table();
+        if ($this->db->table_exists('tbkeu_pembayaran_faktur')) {
+            $this->load->model('M_Journal');
+            $this->M_Journal->sync_status_bayar_faktur_h_by_induk();
+        }
         $this->db->select('p.*, 
             COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
             COALESCE(fp.tanggal_jatuh_tempo, p.tanggal_jatuh_tempo) AS tanggal_jatuh_tempo,

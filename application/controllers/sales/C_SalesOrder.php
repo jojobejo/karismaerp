@@ -75,6 +75,8 @@ class C_SalesOrder extends CI_Controller
                 'export_faktur_h_lunas',
                 'template_import_pelunasan_faktur_z_pecah',
                 'import_pelunasan_faktur_z_pecah',
+                'lunasi_faktur_z_pecah',
+                'lunasi_faktur_z_pecah_batch',
                 'unpost_pelunasan_faktur_z_pecah',
                 'unpost_pelunasan_faktur_z_pecah_batch',
                 'jurnal_pelunasan_faktur_z_pecah_json',
@@ -2371,7 +2373,6 @@ class C_SalesOrder extends CI_Controller
 
         $fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
         $fakturs_h = $this->M_SalesOrder->get_all_faktur_pecah_h($filter);
-        $fakturs_h_import = $this->M_SalesOrder->get_all_faktur_h_import($filter);
 
         // Ringkasan statistik untuk widget
         $stat = [
@@ -2379,7 +2380,6 @@ class C_SalesOrder extends CI_Controller
             'belum_dipecah'  => 0,
             'sudah_dipecah'  => 0,
             'turunan'        => count($fakturs_h),
-            'import_h'       => count($fakturs_h_import ?? []),
             'total_nilai'    => 0,
         ];
 
@@ -2452,7 +2452,6 @@ class C_SalesOrder extends CI_Controller
         $data['fakturs_belum_dipecah'] = $fakturs_belum_dipecah;
         $data['fakturs_sudah_dipecah'] = $fakturs_sudah_dipecah;
         $data['fakturs_h']             = $fakturs_h;
-        $data['fakturs_h_import']      = $fakturs_h_import;
         $data['kios_grouped']          = $kios_grouped;
         $data['kios_grouped_belum']    = $kios_grouped_belum;
         $data['stat']                  = $stat;
@@ -9518,6 +9517,9 @@ class C_SalesOrder extends CI_Controller
 
         $this->_loadPhpSpreadsheetForFakturZ();
 
+        $this->load->model('M_Journal');
+        $this->M_Journal->sync_status_bayar_faktur_h_by_induk();
+
         $rawIds = $this->input->post('ids') ?: $this->input->get('ids');
         $ids = [];
         if (is_array($rawIds)) {
@@ -10316,6 +10318,241 @@ class C_SalesOrder extends CI_Controller
     }
 
     /**
+     * Melunasi 1 Faktur Pecahan H (Sistem) secara manual beserta pembuatan Jurnal Acak Q dan Jurnal A.
+     */
+    public function lunasi_faktur_z_pecah()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $id_pecah           = (int)$this->input->post('id_pecah');
+        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
+        $jumlah_bayar       = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
+        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $skema_potongan     = (int)($this->input->post('skema_potongan', true) !== null && $this->input->post('skema_potongan', true) !== '' ? $this->input->post('skema_potongan', true) : 20);
+        $skema_potongan     = ($skema_potongan === 40) ? 40 : (($skema_potongan === 0) ? 0 : 20);
+        $parent_no_faktur   = trim((string)$this->input->post('parent_no_faktur', true));
+        $keterangan         = trim((string)$this->input->post('keterangan', true));
+        $redirectTo         = $this->input->post('redirect_to') ?: 'sales_order/pecah_faktur#content-faktur-h';
+
+        // Ambil data faktur pecahan H
+        $faktur = $this->db->select('
+            p.*,
+            COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+            COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+            MAX(ca.nama_toko) AS nama_toko,
+            COALESCE(SUM(pd.total_harga), 0) AS grand_total
+        ')
+        ->from('tbso_faktur_z_pecah p')
+        ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
+        ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+        ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+        ->where('p.id_pecah', $id_pecah)
+        ->group_by('p.id_pecah')
+        ->get()->row_array();
+
+        if (!$faktur) {
+            $this->session->set_flashdata('error', 'Faktur Pecahan H tidak ditemukan.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $grand_total = (float)$faktur['grand_total'];
+        if ($jumlah_bayar <= 0) {
+            $jumlah_bayar = $grand_total;
+        }
+
+        if ($jumlah_bayar <= 0) {
+            $this->session->set_flashdata('error', 'Nominal pelunasan untuk Faktur ' . $faktur['no_faktur'] . ' harus lebih dari 0.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $pembagi = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
+        $bruto   = round($jumlah_bayar / $pembagi, 2);
+        $pot     = max(0, round($bruto - $jumlah_bayar, 2));
+
+        $paymentData = [
+            'tanggal_pembayaran' => $tanggal_pembayaran,
+            'metode_pembayaran'  => $metode_pembayaran,
+            'jumlah_bayar'       => $jumlah_bayar,
+            'skema_potongan'     => $skema_potongan,
+            'nominal_bruto'      => $bruto,
+            'nominal_potongan'   => $pot,
+            'parent_no_faktur'   => $parent_no_faktur ?: ($faktur['parent_no_faktur'] ?: ''),
+            'keterangan'         => $keterangan ?: ('Pelunasan Faktur Pecahan ' . $faktur['no_faktur']),
+        ];
+
+        $this->load->model('M_Journal');
+        $this->db->trans_start();
+
+        // Hapus jurnal lama jika ada
+        if (!empty($faktur['id_jurnal_q'])) {
+            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+        }
+        if (!empty($faktur['id_jurnal_a'])) {
+            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+        }
+
+        $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
+
+        $updateData = [
+            'status_bayar'      => 'lunas',
+            'total_bayar'       => $jumlah_bayar,
+            'sisa_tagihan'      => 0,
+            'tanggal_bayar'     => $tanggal_pembayaran,
+            'metode_pembayaran' => $metode_pembayaran,
+            'skema_potongan'    => $skema_potongan,
+            'nominal_bruto'     => $bruto,
+            'nominal_potongan'  => $pot,
+            'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
+            'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
+            'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
+            'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
+            'update_by'         => $this->_getUsername(),
+            'update_at'         => date('Y-m-d H:i:s'),
+        ];
+        if (!empty($parent_no_faktur)) {
+            $updateData['parent_no_faktur'] = $parent_no_faktur;
+        }
+
+        $this->db->where('id_pecah', $id_pecah)->update('tbso_faktur_z_pecah', $updateData);
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            $this->session->set_flashdata('error', 'Gagal melunasi Faktur Pecahan ' . $faktur['no_faktur']);
+        } else {
+            $jurnalInfo = "Jurnal Q: <strong>" . ($jurnalRes['nomor_jurnal_q'] ?: '-') . "</strong>";
+            if (!empty($jurnalRes['nomor_jurnal_a'])) {
+                $jurnalInfo .= " | Jurnal A: <strong>" . $jurnalRes['nomor_jurnal_a'] . "</strong>";
+            }
+            $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dilunasi. ({$jurnalInfo})");
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
+     * Melunasi banyak Faktur Pecahan H (Sistem) sekaligus (Batch Pelunasan via Checkbox).
+     */
+    public function lunasi_faktur_z_pecah_batch()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            return;
+        }
+
+        $rawIds = $this->input->post('ids');
+        $ids = [];
+        if (is_array($rawIds)) {
+            $ids = array_filter(array_map('intval', $rawIds));
+        } elseif (is_string($rawIds) && trim($rawIds) !== '') {
+            $ids = array_filter(array_map('intval', explode(',', trim($rawIds))));
+        }
+        $redirectTo = $this->input->post('redirect_to') ?: 'sales_order/pecah_faktur#content-faktur-h';
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Tidak ada Faktur Pecahan H yang dipilih untuk dilunasi.');
+            redirect($redirectTo);
+            return;
+        }
+
+        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: ''));
+        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $skema_potongan     = (int)($this->input->post('skema_potongan', true) !== null && $this->input->post('skema_potongan', true) !== '' ? $this->input->post('skema_potongan', true) : 20);
+        $skema_potongan     = ($skema_potongan === 40) ? 40 : (($skema_potongan === 0) ? 0 : 20);
+        $keterangan         = trim((string)$this->input->post('keterangan', true));
+        $username           = $this->_getUsername();
+
+        $this->load->model('M_Journal');
+        $pembagi = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
+        $successCount = 0;
+
+        foreach ($ids as $idPecah) {
+            $faktur = $this->db->select('
+                p.*,
+                COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+                COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+                MAX(ca.nama_toko) AS nama_toko,
+                COALESCE(SUM(pd.total_harga), 0) AS grand_total
+            ')
+            ->from('tbso_faktur_z_pecah p')
+            ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
+            ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
+            ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+            ->where('p.id_pecah', (int)$idPecah)
+            ->group_by('p.id_pecah')
+            ->get()->row_array();
+
+            if (!$faktur) continue;
+
+            $jmlBayar = (float)$faktur['grand_total'];
+            if ($jmlBayar <= 0) continue;
+
+            $tgl = $tanggal_pembayaran !== '' ? $tanggal_pembayaran : (!empty($faktur['tanggal_faktur']) ? $faktur['tanggal_faktur'] : date('Y-m-d'));
+            $bruto = round($jmlBayar / $pembagi, 2);
+            $pot   = max(0, round($bruto - $jmlBayar, 2));
+
+            $paymentData = [
+                'tanggal_pembayaran' => $tgl,
+                'metode_pembayaran'  => $metode_pembayaran,
+                'jumlah_bayar'       => $jmlBayar,
+                'skema_potongan'     => $skema_potongan,
+                'nominal_bruto'      => $bruto,
+                'nominal_potongan'   => $pot,
+                'parent_no_faktur'   => $faktur['parent_no_faktur'] ?: '',
+                'keterangan'         => $keterangan ?: ('Pelunasan Faktur Pecahan ' . $faktur['no_faktur']),
+            ];
+
+            $this->db->trans_start();
+
+            if (!empty($faktur['id_jurnal_q'])) {
+                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+            }
+            if (!empty($faktur['id_jurnal_a'])) {
+                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+            }
+
+            $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
+
+            $updateData = [
+                'status_bayar'      => 'lunas',
+                'total_bayar'       => $jmlBayar,
+                'sisa_tagihan'      => 0,
+                'tanggal_bayar'     => $tgl,
+                'metode_pembayaran' => $metode_pembayaran,
+                'skema_potongan'    => $skema_potongan,
+                'nominal_bruto'     => $bruto,
+                'nominal_potongan'  => $pot,
+                'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
+                'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
+                'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
+                'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
+                'update_by'         => $username,
+                'update_at'         => date('Y-m-d H:i:s'),
+            ];
+            $this->db->where('id_pecah', (int)$faktur['id_pecah'])->update('tbso_faktur_z_pecah', $updateData);
+
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status() !== false) {
+                $successCount++;
+            }
+        }
+
+        if ($successCount > 0) {
+            $this->session->set_flashdata('success', "Berhasil melunasi <strong>{$successCount} Faktur Pecahan H</strong> sekaligus beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.");
+        } else {
+            $this->session->set_flashdata('error', 'Gagal memproses pelunasan batch Faktur Pecahan H.');
+        }
+
+        redirect($redirectTo);
+    }
+
+    /**
      * Membatalkan (Unpost) Pelunasan Faktur Pecahan H (Sistem) dan menghapus Jurnal Q & A terkait.
      */
     public function unpost_pelunasan_faktur_z_pecah($id_pecah)
@@ -10597,6 +10834,9 @@ class C_SalesOrder extends CI_Controller
 
         $this->_loadPhpSpreadsheetForFakturZ();
 
+        $this->load->model('M_Journal');
+        $this->M_Journal->sync_status_bayar_faktur_h_by_induk();
+
         $rawIds = $this->input->post('ids') ?: $this->input->get('ids');
         $ids = [];
         if (is_array($rawIds)) {
@@ -10671,13 +10911,44 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Kumpulkan ID Jurnal pelunasan
+        // Kumpulkan ID Jurnal pelunasan (Q, A, dan Jurnal Asli Z dari pembayaran faktur induk jika ada)
         $jurnalIds = [];
+        $hNos = [];
+        $parentNos = [];
         foreach ($faktursLunas as $f) {
             if (!empty($f['id_jurnal_q'])) $jurnalIds[] = (int)$f['id_jurnal_q'];
             if (!empty($f['id_jurnal_a'])) $jurnalIds[] = (int)$f['id_jurnal_a'];
+            if (!empty($f['no_faktur'])) $hNos[] = trim((string)$f['no_faktur']);
+            if (!empty($f['parent_no_faktur'])) $parentNos[] = trim((string)$f['parent_no_faktur']);
         }
-        $jurnalIds = array_unique(array_filter($jurnalIds));
+        $hNos = array_values(array_unique(array_filter($hNos)));
+        $parentNos = array_values(array_unique(array_filter($parentNos)));
+
+        // Ambil juga seluruh Jurnal Pembayaran (Z, Q, A) yang berstatus POSTED terkait Faktur H dan Faktur Z Induknya
+        if ($this->db->table_exists('tbkeu_jurnal') && (!empty($hNos) || !empty($parentNos))) {
+            $this->db->select('id_jurnal')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where_in('source_type', ['PEMBAYARAN_FAKTUR', 'PEMBAYARAN_FAKTUR_PECAH'])
+                ->where('status', 'POSTED')
+                ->group_start();
+            if (!empty($hNos)) {
+                $this->db->where_in('source_no', $hNos);
+            }
+            if (!empty($parentNos)) {
+                if (!empty($hNos)) {
+                    $this->db->or_where_in('source_no', $parentNos);
+                } else {
+                    $this->db->where_in('source_no', $parentNos);
+                }
+            }
+            $this->db->group_end();
+            $extraJurnals = $this->db->get()->result_array();
+            foreach ($extraJurnals as $ej) {
+                $jurnalIds[] = (int)$ej['id_jurnal'];
+            }
+        }
+        $jurnalIds = array_values(array_unique(array_filter($jurnalIds)));
 
         $journalRows = [];
         if (!empty($jurnalIds)) {
