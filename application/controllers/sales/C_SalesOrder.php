@@ -8466,7 +8466,10 @@ class C_SalesOrder extends CI_Controller
                             'catatan'             => $catatan,
                             'metode_pembayaran'   => $metodePembayaran ?: null,
                             'skema_potongan'      => ($skemaPotonganVal !== '') ? (int)$skemaPotonganVal : 20,
-                            'status_bayar'        => in_array($statusBayarVal, ['lunas', 'sebagian'], true) ? $statusBayarVal : 'belum_lunas',
+                            // Status awal selalu belum_lunas; status lunas hanya diset setelah Jurnal Q & A berhasil dibuat
+                            'status_bayar'        => 'belum_lunas',
+                            'total_bayar'         => 0,
+                            'sisa_tagihan'        => 0,
                             'tanggal_bayar'       => !empty($tglBayarVal) ? $tglBayarVal : null,
                             'total_item'          => 0,
                             'total_qty'           => 0,
@@ -8478,7 +8481,8 @@ class C_SalesOrder extends CI_Controller
                             'create_by'           => $currentUsername,
                             'create_at'           => $now
                         ],
-                        'items' => []
+                        'auto_lunas' => ($statusBayarVal === 'lunas'),
+                        'items'      => []
                     ];
                 } else {
                     // Jika baris sebelumnya kosong informasi customernya, perbarui jika baris ini ada isinya
@@ -8498,7 +8502,7 @@ class C_SalesOrder extends CI_Controller
                         $groupedFakturs[$noFaktur]['header']['skema_potongan'] = (int)$skemaPotonganVal;
                     }
                     if ($statusBayarVal === 'lunas') {
-                        $groupedFakturs[$noFaktur]['header']['status_bayar'] = 'lunas';
+                        $groupedFakturs[$noFaktur]['auto_lunas'] = true;
                     }
                     if (empty($groupedFakturs[$noFaktur]['header']['tanggal_bayar']) && !empty($tglBayarVal)) {
                         $groupedFakturs[$noFaktur]['header']['tanggal_bayar'] = $tglBayarVal;
@@ -8508,6 +8512,7 @@ class C_SalesOrder extends CI_Controller
                 $groupedFakturs[$noFaktur]['header']['total_item']++;
                 $groupedFakturs[$noFaktur]['header']['total_qty'] += $qty;
                 $groupedFakturs[$noFaktur]['header']['grand_total'] += $totalHarga;
+                $groupedFakturs[$noFaktur]['header']['sisa_tagihan'] = $groupedFakturs[$noFaktur]['header']['grand_total'];
                 if ($beratGram > 0) {
                     $groupedFakturs[$noFaktur]['header']['total_tonase'] += (($beratGram * $qty) / 1000000);
                 }
@@ -8611,20 +8616,27 @@ class C_SalesOrder extends CI_Controller
             // Jika ada faktur yang di-set status_bayar = 'lunas' pada file Excel import Faktur H ini,
             // proses pelunasan otomatis & buat Jurnal Acak (Q) dan Jurnal (A)
             $autoLunasCount = 0;
+            $autoLunasFail  = [];
             foreach ($groupedFakturs as $noFak => $fakData) {
-                if (($fakData['header']['status_bayar'] ?? '') === 'lunas') {
-                    $resLunas = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFak, [
-                        'tanggal_pembayaran' => $fakData['header']['tanggal_bayar'] ?: $fakData['header']['tanggal_faktur'],
-                        'jumlah_bayar'       => (float)$fakData['header']['grand_total'],
-                        'metode_pembayaran'  => $fakData['header']['metode_pembayaran'] ?: 'Q Mandiri',
-                        'skema_potongan'     => (int)($fakData['header']['skema_potongan'] ?? 20),
-                        'parent_no_faktur'   => $fakData['header']['parent_no_faktur'],
-                        'keterangan'         => 'Pelunasan Faktur H ' . $noFak . ' (dari Import Excel)',
-                        'import_batch'       => $importBatchId,
-                        'create_by'          => $currentUsername,
-                    ]);
-                    if (!empty($resLunas['success'])) {
-                        $autoLunasCount++;
+                if (!empty($fakData['auto_lunas'])) {
+                    try {
+                        $resLunas = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFak, [
+                            'tanggal_pembayaran' => $fakData['header']['tanggal_bayar'] ?: $fakData['header']['tanggal_faktur'],
+                            'jumlah_bayar'       => (float)$fakData['header']['grand_total'],
+                            'metode_pembayaran'  => $fakData['header']['metode_pembayaran'] ?: 'Q Mandiri',
+                            'skema_potongan'     => (int)($fakData['header']['skema_potongan'] ?? 20),
+                            'parent_no_faktur'   => $fakData['header']['parent_no_faktur'],
+                            'keterangan'         => 'Pelunasan Faktur H ' . $noFak . ' (dari Import Excel)',
+                            'import_batch'       => $importBatchId,
+                            'create_by'          => $currentUsername,
+                        ]);
+                        if (!empty($resLunas['success'])) {
+                            $autoLunasCount++;
+                        } else {
+                            $autoLunasFail[] = $noFak . ': ' . ($resLunas['message'] ?? 'gagal');
+                        }
+                    } catch (\Throwable $ePay) {
+                        $autoLunasFail[] = $noFak . ': ' . $ePay->getMessage();
                     }
                 }
             }
@@ -8632,6 +8644,9 @@ class C_SalesOrder extends CI_Controller
             $successMsg = "Berhasil mengimpor {$totalImportedFaktur} Faktur H ({$totalImportedItems} rincian barang).";
             if ($autoLunasCount > 0) {
                 $successMsg .= " <strong>{$autoLunasCount} Faktur</strong> langsung dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q) & Jurnal Kas Masuk (A)</strong>.";
+            }
+            if (!empty($autoLunasFail)) {
+                $this->session->set_flashdata('error', 'Pelunasan otomatis gagal pada beberapa faktur (status tetap Belum Lunas): ' . implode('; ', $autoLunasFail));
             }
             $this->session->set_flashdata('success', $successMsg);
         } catch (\Throwable $e) {
@@ -9627,26 +9642,29 @@ class C_SalesOrder extends CI_Controller
             ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
             : 'Periode: Pelunasan Faktur H Lunas (' . date('d/m/Y') . ')';
         $sheet->setCellValue('A2', $periodeStr);
+        $sheet->mergeCells('A1:L1');
+        $sheet->mergeCells('A2:L2');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
 
         $sheet->setCellValue('A3', 'PANDUAN WARNA:');
+        $sheet->mergeCells('A3:B3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(9);
         $sheet->getStyle('A3')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-        $sheet->setCellValue('B3', '■ Jurnal Asli (Z - Faktur Induk)');
-        $sheet->mergeCells('B3:C3');
-        $sheet->getStyle('B3:C3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
-        $sheet->getStyle('B3:C3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
-        $sheet->getStyle('B3:C3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
-        $sheet->getStyle('B3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('C3', '■ Jurnal Asli (Z - Faktur Induk)');
+        $sheet->mergeCells('C3:E3');
+        $sheet->getStyle('C3:E3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
+        $sheet->getStyle('C3:E3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
+        $sheet->getStyle('C3:E3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
+        $sheet->getStyle('C3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $sheet->setCellValue('E3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
-        $sheet->mergeCells('E3:F3');
-        $sheet->getStyle('E3:F3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
-        $sheet->getStyle('E3:F3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
-        $sheet->getStyle('E3:F3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
-        $sheet->getStyle('E3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('F3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
+        $sheet->mergeCells('F3:G3');
+        $sheet->getStyle('F3:G3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
+        $sheet->getStyle('F3:G3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        $sheet->getStyle('F3:G3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
+        $sheet->getStyle('F3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         $sheet->setCellValue('H3', '■ Jurnal (A) Kas Masuk (Potongan KIU / Tax)');
         $sheet->mergeCells('H3:J3');
@@ -9768,9 +9786,7 @@ class C_SalesOrder extends CI_Controller
         $sheet->getStyle($contentRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('BDC3C7');
         $sheet->setAutoFilter('A5:L' . ($rowIdx - 1));
 
-        foreach (range('A', 'L') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
+        $this->_applyReportJurnalColumnWidths($sheet);
 
         // SHEET 2: REKAP FAKTUR H LUNAS
         $sheet2 = $spreadsheet->createSheet();
@@ -10995,26 +11011,29 @@ class C_SalesOrder extends CI_Controller
             ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
             : 'Periode: Pelunasan Faktur Pecahan H (' . date('d/m/Y') . ')';
         $sheet->setCellValue('A2', $periodeStr);
+        $sheet->mergeCells('A1:L1');
+        $sheet->mergeCells('A2:L2');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
 
         $sheet->setCellValue('A3', 'PANDUAN WARNA:');
+        $sheet->mergeCells('A3:B3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(9);
         $sheet->getStyle('A3')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-        $sheet->setCellValue('B3', '■ Jurnal Asli (Z - Faktur Induk)');
-        $sheet->mergeCells('B3:C3');
-        $sheet->getStyle('B3:C3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
-        $sheet->getStyle('B3:C3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
-        $sheet->getStyle('B3:C3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
-        $sheet->getStyle('B3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('C3', '■ Jurnal Asli (Z - Faktur Induk)');
+        $sheet->mergeCells('C3:E3');
+        $sheet->getStyle('C3:E3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
+        $sheet->getStyle('C3:E3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
+        $sheet->getStyle('C3:E3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
+        $sheet->getStyle('C3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        $sheet->setCellValue('E3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
-        $sheet->mergeCells('E3:F3');
-        $sheet->getStyle('E3:F3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
-        $sheet->getStyle('E3:F3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
-        $sheet->getStyle('E3:F3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
-        $sheet->getStyle('E3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('F3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
+        $sheet->mergeCells('F3:G3');
+        $sheet->getStyle('F3:G3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
+        $sheet->getStyle('F3:G3')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        $sheet->getStyle('F3:G3')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
+        $sheet->getStyle('F3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         $sheet->setCellValue('H3', '■ Jurnal (A) Kas Masuk (Potongan KIU / Tax)');
         $sheet->mergeCells('H3:J3');
@@ -11136,9 +11155,7 @@ class C_SalesOrder extends CI_Controller
         $sheet->getStyle($contentRange)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)->getColor()->setRGB('BDC3C7');
         $sheet->setAutoFilter('A5:L' . ($rowIdx - 1));
 
-        foreach (range('A', 'L') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
+        $this->_applyReportJurnalColumnWidths($sheet);
 
         // SHEET 2: REKAP FAKTUR H LUNAS
         $sheet2 = $spreadsheet->createSheet();
@@ -11265,6 +11282,37 @@ class C_SalesOrder extends CI_Controller
         header('Cache-Control: max-age=0');
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
         exit;
+    }
+
+    /**
+     * Mengatur lebar kolom Report Jurnal agar kolom No. tetap ringkas dan header dengan AutoFilter tidak terpotong
+     *
+     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
+     */
+    private function _applyReportJurnalColumnWidths($sheet)
+    {
+        foreach (range('B', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->calculateColumnWidths();
+
+        // Kunci lebar kolom No. agar tidak melebar mengikuti teks judul/periode
+        $sheet->getColumnDimension('A')->setAutoSize(false)->setWidth(8);
+
+        // Pastikan kolom sempit yang memiliki panah AutoFilter tidak terpotong
+        $minWidths = [
+            'B' => 9,
+            'C' => 13,
+            'D' => 14,
+            'G' => 14,
+            'H' => 13,
+        ];
+        foreach ($minWidths as $col => $minW) {
+            $dim = $sheet->getColumnDimension($col);
+            if ($dim->getWidth() < $minW) {
+                $dim->setAutoSize(false)->setWidth($minW);
+            }
+        }
     }
 
     /**

@@ -2620,9 +2620,111 @@ class M_Journal extends CI_Model
     }
 
     /**
+     * Menghapus Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) milik Faktur H Import
+     *
+     * @param int $id_import_h
+     * @param string $no_faktur
+     * @param int $id_jurnal_q
+     * @param int $id_jurnal_a
+     * @return bool
+     */
+    public function delete_jurnal_pelunasan_faktur_h_import($id_import_h, $no_faktur = '', $id_jurnal_q = 0, $id_jurnal_a = 0)
+    {
+        if (!$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return false;
+        }
+
+        $jurnal_ids = [];
+        if ((int)$id_jurnal_q > 0) {
+            $jurnal_ids[] = (int)$id_jurnal_q;
+        }
+        if ((int)$id_jurnal_a > 0) {
+            $jurnal_ids[] = (int)$id_jurnal_a;
+        }
+
+        $id_import_h = (int)$id_import_h;
+        $no_faktur   = trim((string)$no_faktur);
+
+        if ($id_import_h > 0 || $no_faktur !== '') {
+            $this->db->select('id_jurnal');
+            $this->db->from('tbkeu_jurnal');
+            $this->db->where('source_module', 'KEUANGAN');
+            $this->db->where('source_type', 'PEMBAYARAN_FAKTUR');
+            $this->db->group_start();
+            if ($id_import_h > 0) {
+                $this->db->where('idempotency_key', 'PAYMENT_FH_IMPORT_Q_' . $id_import_h);
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_A_' . $id_import_h);
+            }
+            if ($no_faktur !== '') {
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_Q_' . $no_faktur);
+                $this->db->or_where('idempotency_key', 'PAYMENT_FH_IMPORT_A_' . $no_faktur);
+            }
+            $this->db->group_end();
+            $rows = $this->db->get()->result_array();
+            foreach ($rows as $r) {
+                $jurnal_ids[] = (int)$r['id_jurnal'];
+            }
+        }
+
+        $jurnal_ids = array_values(array_unique(array_filter($jurnal_ids)));
+        if (empty($jurnal_ids)) {
+            return false;
+        }
+
+        $this->db->where_in('id_jurnal', $jurnal_ids)->delete('tbkeu_jurnal_detail');
+        $this->db->where_in('id_jurnal', $jurnal_ids)->delete('tbkeu_jurnal');
+        return true;
+    }
+
+    /**
+     * Membuat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Pelunasan Faktur H Import (tbso_faktur_h_import)
+     *
+     * @param array $faktur
+     * @param array $paymentData
+     * @return array
+     */
+    public function post_jurnal_pelunasan_faktur_h_import($faktur, $paymentData = [])
+    {
+        $id_import_h = (int)($faktur['id_import_h'] ?? 0);
+        return $this->_post_jurnal_pelunasan_faktur_h_core(
+            $faktur,
+            $paymentData,
+            $id_import_h,
+            'PEMBAYARAN_FAKTUR',
+            'PAYMENT_FH_IMPORT_'
+        );
+    }
+
+    /**
      * Membuat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Pelunasan Faktur Pecahan Kode H dari Sistem (tbso_faktur_z_pecah)
+     *
+     * @param array $faktur
+     * @param array $paymentData
+     * @return array
      */
     public function post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData = [])
+    {
+        $id_pecah = (int)($faktur['id_pecah'] ?? 0);
+        return $this->_post_jurnal_pelunasan_faktur_h_core(
+            $faktur,
+            $paymentData,
+            $id_pecah,
+            'PEMBAYARAN_FAKTUR_PECAH',
+            'PAYMENT_FZ_PECAH_'
+        );
+    }
+
+    /**
+     * Helper inti pembuatan Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk pelunasan Faktur H
+     *
+     * @param array $faktur
+     * @param array $paymentData
+     * @param int $idRef
+     * @param string $sourceType
+     * @param string $keyPrefix
+     * @return array
+     */
+    private function _post_jurnal_pelunasan_faktur_h_core($faktur, $paymentData, $idRef, $sourceType, $keyPrefix)
     {
         $result = [
             'id_jurnal_q'    => null,
@@ -2635,7 +2737,7 @@ class M_Journal extends CI_Model
             return $result;
         }
 
-        $id_pecah         = (int)($faktur['id_pecah'] ?? 0);
+        $idRef            = (int)$idRef;
         $no_faktur_h      = trim((string)($faktur['no_faktur'] ?? ''));
         $parent_no_faktur = trim((string)($paymentData['parent_no_faktur'] ?? $faktur['parent_no_faktur'] ?? ''));
         $tanggal          = !empty($paymentData['tanggal_pembayaran']) ? $paymentData['tanggal_pembayaran'] : ($faktur['tanggal_faktur'] ?? date('Y-m-d'));
@@ -2757,6 +2859,7 @@ class M_Journal extends CI_Model
         // =========================================================================
         $no_jurnal_q = $this->generate_no_jurnal('pembayaran', $prefix_jurnal_q);
         $ket_q       = 'Penerimaan dari ' . $nama_cust_q;
+        $ref_key_id  = $idRef > 0 ? $idRef : $no_faktur_h;
 
         $jurnal_q_header = [
             'nomor_jurnal'      => $no_jurnal_q,
@@ -2765,10 +2868,10 @@ class M_Journal extends CI_Model
             'keterangan'        => $ket_q,
             'status'            => 'POSTED',
             'source_module'     => 'KEUANGAN',
-            'source_type'       => 'PEMBAYARAN_FAKTUR_PECAH',
-            'source_id'         => (string)$id_pecah,
+            'source_type'       => $sourceType,
+            'source_id'         => (string)$idRef,
             'source_no'         => $no_faktur_h,
-            'idempotency_key'   => 'PAYMENT_FZ_PECAH_Q_' . ($id_pecah > 0 ? $id_pecah : $no_faktur_h),
+            'idempotency_key'   => $keyPrefix . 'Q_' . $ref_key_id,
             'total_debit'       => $bruto_pecahan,
             'total_kredit'      => $bruto_pecahan,
             'created_by'        => $userId,
@@ -2854,10 +2957,10 @@ class M_Journal extends CI_Model
                 'keterangan'        => $ket_a,
                 'status'            => 'POSTED',
                 'source_module'     => 'KEUANGAN',
-                'source_type'       => 'PEMBAYARAN_FAKTUR_PECAH',
-                'source_id'         => (string)$id_pecah,
+                'source_type'       => $sourceType,
+                'source_id'         => (string)$idRef,
                 'source_no'         => $no_faktur_h,
-                'idempotency_key'   => 'PAYMENT_FZ_PECAH_A_' . ($id_pecah > 0 ? $id_pecah : $no_faktur_h),
+                'idempotency_key'   => $keyPrefix . 'A_' . $ref_key_id,
                 'total_debit'       => $potongan_pecahan,
                 'total_kredit'      => $potongan_pecahan,
                 'created_by'        => $userId,

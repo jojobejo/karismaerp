@@ -98,10 +98,8 @@
       $admkeuUri2 = strtolower((string)$this->uri->segment(2));
 
       $isAdmkeuMasterBarang     = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
-      $isAdmkeuPembayaranFaktur = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'pembayaran');
-      $isAdmkeuReportJurnal     = ($admkeuUri1 === 'keuangan' && $admkeuUri2 === 'report_jurnal');
       $isAdmkeuFakturHImport    = ($admkeuUri1 === 'sales_order' && $admkeuUri2 === 'faktur_h_import') || ($admkeuUri1 === 'faktur_h_import');
-      $isAdmkeuPecahFaktur      = !$isAdmkeuMasterBarang && !$isAdmkeuPembayaranFaktur && !$isAdmkeuReportJurnal && !$isAdmkeuFakturHImport;
+      $isAdmkeuPecahFaktur      = !$isAdmkeuMasterBarang && !$isAdmkeuFakturHImport;
       ?>
       <div class="sidebar">
         <nav class="mt-2">
@@ -122,18 +120,6 @@
               <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= $isAdmkeuMasterBarang ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-boxes"></i>
                 <p>Master Barang</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link <?= $isAdmkeuPembayaranFaktur ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>Pembayaran Faktur</p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= $isAdmkeuReportJurnal ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>Report Jurnal</p>
               </a>
             </li>
             <li class="nav-item">
@@ -199,22 +185,6 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Pembayaran Supplier
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>
-                  Pembayaran Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= ($this->uri->segment(1) == 'keuangan' && $this->uri->segment(2) == 'report_jurnal') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>
-                  Report Jurnal
                 </p>
               </a>
             </li>
@@ -288,22 +258,6 @@
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>
-                  Pembayaran Faktur
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/report_jurnal') ?>" class="nav-link <?= ($this->uri->segment(1) == 'keuangan' && $this->uri->segment(2) == 'report_jurnal') ? 'active' : '' ?>">
-                <i class="nav-icon fas fa-file-invoice-dollar"></i>
-                <p>
-                  Report Jurnal
                 </p>
               </a>
             </li>

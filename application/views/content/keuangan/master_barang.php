@@ -748,23 +748,13 @@ $dashboardUrl = base_url($isAdmkeu ? 'sales_order/pecah_faktur' : 'dashboard/');
                             <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-info py-2">
-                                <strong>Alur:</strong> unduh template Master Barang, isi daftar barang, lalu unggah kembali file Excel/CSV. Barang dengan kode baru akan ditambahkan, sedangkan kode yang sudah ada akan diperbarui otomatis.
-                            </div>
-                            <div class="form-group">
+                            <div class="form-group mb-0">
                                 <label for="fileImportMasterBarang" class="font-weight-bold">File Excel / CSV (.xlsx, .xls, atau .csv)</label>
                                 <div class="custom-file">
                                     <input type="file" name="file_master_barang" id="fileImportMasterBarang" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
                                     <label class="custom-file-label" for="fileImportMasterBarang">Pilih file template Master Barang yang telah diisi</label>
                                 </div>
-                                <small class="form-text text-muted">Maksimal 5 MB dan 10.000 baris. Seluruh file dibatalkan apabila ada baris dengan format tidak valid.</small>
                             </div>
-                            <ul class="small text-muted mb-0 pl-3">
-                                <li>Kolom <code>kode_barang</code> (maks. 25 karakter) dan <code>nama_barang</code> wajib diisi pada setiap baris.</li>
-                                <li>Kolom <code>isi_per_box</code> digunakan sebagai acuan konversi kuantitas box ke pcs pada Faktur Z.</li>
-                                <li>Kolom opsional seperti <code>satuan</code>, <code>berat_gram</code>, <code>kubikasi_m3</code>, <code>kd_suplier</code>, <code>merk_barang</code>, dan <code>bahan_aktif</code> akan otomatis dilengkapi nilai standar apabila dikosongkan.</li>
-                                <li>Jika <code>kode_barang</code> sudah terdaftar di Master Barang, data barang tersebut akan diperbarui (Upsert).</li>
-                            </ul>
                         </div>
                         <div class="modal-footer">
                             <a href="<?= base_url('sales_order/template_import_master_barang') ?>" class="btn btn-outline-primary btn-sm mr-auto">

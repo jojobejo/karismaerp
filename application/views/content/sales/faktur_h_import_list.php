@@ -480,26 +480,12 @@
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info py-2" style="font-size: 13px;">
-                        <i class="fas fa-info-circle mr-1"></i> <strong>Import Daftar Faktur H:</strong>
-                        Unggah daftar Faktur H beserta item barangnya. Setelah terimpor, Anda dapat mencetak nota ke printer LX-310 atau mengimpor pelunasannya agar terbentuk Jurnal Pembayaran Acak (Q) dan Jurnal (A).
-                    </div>
-                    <div class="alert alert-light border py-2" style="font-size: 12.5px;">
-                        <strong>Petunjuk:</strong>
-                        <ol class="mb-0 pl-3">
-                            <li>Unduh template Excel resmi melalui tombol <strong>Unduh Template Excel</strong> di bawah.</li>
-                            <li>Buka template dan salin data faktur H Anda.</li>
-                            <li>Satu nomor faktur H dapat memuat beberapa baris barang (multi-item).</li>
-                            <li>Simpan file dalam format <code>.xlsx</code> atau <code>.xls</code>, lalu pilih file pada kolom di bawah dan klik <strong>Proses Import</strong>.</li>
-                        </ol>
-                    </div>
-                    <div class="form-group">
+                    <div class="form-group mb-0">
                         <label for="fileImportFakturH" class="font-weight-bold text-dark">Pilih File Excel Faktur H (.xlsx / .xls)</label>
                         <div class="custom-file">
                             <input type="file" name="file_faktur_h" id="fileImportFakturH" class="custom-file-input" accept=".xlsx,.xls" required>
                             <label class="custom-file-label" for="fileImportFakturH" id="labelFileImportFakturH">Pilih file Excel Faktur H...</label>
                         </div>
-                        <small class="form-text text-muted">Format file yang didukung: .xlsx atau .xls (Ukuran maksimal: 10 MB).</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -529,41 +515,18 @@
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-success py-2" style="font-size: 13px;">
-                        <i class="fas fa-book mr-1"></i> <strong>Otomatis Terbentuk 2 Jurnal Akuntansi per Faktur H:</strong>
-                        <ul class="mb-0 pl-3 mt-1">
-                            <li><strong>Jurnal Pembayaran Acak (Q):</strong> Debit Kas/Bank (Bruto) &bull; Kredit Piutang Usaha <code>13099</code> (Netto Faktur H) &bull; Kredit Q Kas <code>11010</code> (Potongan).</li>
-                            <li><strong>Jurnal Kas Masuk (A):</strong> Debit A Kas <code>11030</code> (Potongan) &bull; Kredit A PND atas Pendapatan Pot Penj KIU <code>13036</code> (Tax 20%) / <code>13041</code> (Fee Petugas 20%).</li>
-                        </ul>
-                    </div>
-
-                    <div class="alert alert-light border py-2" style="font-size: 12.5px;">
-                        <strong>Petunjuk Pelunasan Faktur H (Pilih Faktur yang Lunas):</strong>
-                        <ol class="mb-0 pl-3">
-                            <li>Klik tombol hijau <strong>Unduh Template Terisi Faktur Belum Lunas (.xlsx)</strong> di bawah.</li>
-                            <li>Pada template Excel, kolom <strong><code>jumlah_pembayaran</code> sengaja dikosongkan</strong>. Cukup isi nominal pembayaran pada baris faktur yang sudah lunas (Anda dapat melihat patokan tagihan di kolom <code>nominal_tagihan_info</code>).</li>
-                            <li><strong>Faktur yang belum lunas biarkan kosong</strong> pada kolom <code>jumlah_pembayaran</code> (sistem akan otomatis melewati faktur tersebut tanpa mengubah statusnya).</li>
-                            <li>Anda juga dapat menyesuaikan kolom <code>metode_pembayaran</code> (contoh: <code>Q Mandiri</code>, <code>Q Kas Ayat Silang</code>, <code>Q BCA</code>, <code>Q BRI</code>, <code>Q Kas</code>), <code>tanggal_pembayaran</code>, dan <code>skema_potongan</code>.</li>
-                            <li>Unggah kembali file Excel tersebut di form bawah, lalu klik <strong>Proses Import Pelunasan & Buat Jurnal</strong>.</li>
-                        </ol>
-                    </div>
-
                     <div class="form-group mb-0">
                         <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur H (.xlsx / .xls / .csv)</label>
                         <div class="custom-file">
                             <input type="file" name="file_pelunasan_h" id="fileImportPelunasanH" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
                             <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel / CSV Pelunasan Faktur H...</label>
                         </div>
-                        <small class="form-text text-muted">Mendukung file .xlsx, .xls, dan .csv. Kolom: <code>no_faktur</code> (wajib), <code>metode_pembayaran</code>, <code>tanggal_pembayaran</code>, <code>jumlah_pembayaran</code>, <code>skema_potongan</code>, <code>parent_no_faktur</code>, <code>keterangan</code>.</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light d-flex justify-content-between">
                     <div>
-                        <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm mr-1">
+                        <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm">
                             <i class="fas fa-download mr-1"></i> Unduh Template Terisi Faktur Belum Lunas (.xlsx)
-                        </a>
-                        <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=sample') ?>" class="btn btn-outline-secondary btn-sm font-weight-bold shadow-sm">
-                            <i class="far fa-file-excel mr-1"></i> Template Contoh
                         </a>
                     </div>
                     <div>

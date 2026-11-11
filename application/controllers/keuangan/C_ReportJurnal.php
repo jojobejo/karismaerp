@@ -256,27 +256,30 @@ class C_ReportJurnal extends CI_Controller
         // Judul Laporan
         $sheet->setCellValue('A1', 'KARISMA ERP - REPORT JURNAL TRANSAKSI');
         $sheet->setCellValue('A2', 'Periode: ' . date('d/m/Y', strtotime($start_date)) . ' s/d ' . date('d/m/Y', strtotime($end_date)));
+        $sheet->mergeCells('A1:L1');
+        $sheet->mergeCells('A2:L2');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
 
         // Panduan Warna (Legend) agar Mudah Membedakan Jurnal Asli Z, Q Acak, dan Jurnal A
         $sheet->setCellValue('A3', 'PANDUAN WARNA:');
+        $sheet->mergeCells('A3:B3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(9);
         $sheet->getStyle('A3')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
-        $sheet->setCellValue('B3', '■ Jurnal Asli (Z - Faktur Induk)');
-        $sheet->mergeCells('B3:C3');
-        $sheet->getStyle('B3:C3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
-        $sheet->getStyle('B3:C3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
-        $sheet->getStyle('B3:C3')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
-        $sheet->getStyle('B3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('C3', '■ Jurnal Asli (Z - Faktur Induk)');
+        $sheet->mergeCells('C3:E3');
+        $sheet->getStyle('C3:E3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('1B4F72');
+        $sheet->getStyle('C3:E3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E8F4F8');
+        $sheet->getStyle('C3:E3')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('A9CCE3');
+        $sheet->getStyle('C3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $sheet->setCellValue('E3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
-        $sheet->mergeCells('E3:F3');
-        $sheet->getStyle('E3:F3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
-        $sheet->getStyle('E3:F3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
-        $sheet->getStyle('E3:F3')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
-        $sheet->getStyle('E3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('F3', '■ Jurnal Acak (Q - Faktur Pecahan H)');
+        $sheet->mergeCells('F3:G3');
+        $sheet->getStyle('F3:G3')->getFont()->setBold(true)->setSize(9)->getColor()->setRGB('7D6608');
+        $sheet->getStyle('F3:G3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFDE7');
+        $sheet->getStyle('F3:G3')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('F9E79F');
+        $sheet->getStyle('F3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         $sheet->setCellValue('H3', '■ Jurnal (A) Kas Masuk (Potongan KIU / Tax)');
         $sheet->mergeCells('H3:J3');
@@ -422,9 +425,17 @@ class C_ReportJurnal extends CI_Controller
         // AutoFilter dari baris header agar user bisa memfilter Kategori di Excel
         $sheet->setAutoFilter('A5:L' . ($rowIdx - 1));
 
-        // Auto width kolom
-        foreach (range('A', 'L') as $col) {
+        // Auto width kolom dengan lebar kolom No. ringkas dan header AutoFilter tidak terpotong
+        foreach (range('B', 'L') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->calculateColumnWidths();
+        $sheet->getColumnDimension('A')->setAutoSize(false)->setWidth(8);
+        foreach (['B' => 9, 'C' => 13, 'D' => 14, 'G' => 14, 'H' => 13] as $col => $minW) {
+            $dim = $sheet->getColumnDimension($col);
+            if ($dim->getWidth() < $minW) {
+                $dim->setAutoSize(false)->setWidth($minW);
+            }
         }
 
         $filename = 'Report_Jurnal_' . date('Ymd', strtotime($start_date)) . '_' . date('Ymd', strtotime($end_date)) . '.xlsx';

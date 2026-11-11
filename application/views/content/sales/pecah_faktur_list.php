@@ -87,6 +87,7 @@
         box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         transition: all 0.2s ease-in-out;
         overflow: hidden;
+    }
     .table td, .table th {
         vertical-align: middle;
     }
@@ -157,9 +158,6 @@
                         </a>
                         <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#modalImportMasterBarang">
                             <i class="fas fa-file-excel mr-1"></i> Import Master Barang
-                        </button>
-                        <button type="button" class="btn btn-purple text-white btn-sm ml-1 shadow-sm" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportPelunasanFakturZ" title="Import Pelunasan Faktur Pecahan H (Sistem)">
-                            <i class="fas fa-file-invoice-dollar mr-1"></i> Import Pelunasan Faktur H
                         </button>
                         <button type="button" class="btn btn-success btn-sm ml-1" data-toggle="modal" data-target="#modalImportFakturZ">
                             <i class="fas fa-file-import mr-1"></i> Import Faktur Z
@@ -621,7 +619,7 @@
                                         </a>
                                     </div>
                                 </div>
-                                <div class="table-responsive">
+                                <div class="table-responsive p-3">
                                     <table class="table table-hover table-striped mb-0 text-nowrap" id="tableFakturH">
                                         <thead class="thead-light">
                                             <tr>
@@ -632,21 +630,19 @@
                                                 <th>No. Faktur Pecahan</th>
                                                 <th>Faktur Induk Z</th>
                                                 <th>Tanggal</th>
-                                                <th>No. SO</th>
                                                 <th>Customer Penerima</th>
                                                 <th class="text-center">Total Item</th>
                                                 <th class="text-right">Total Nilai</th>
                                                 <th class="text-center">Status Bayar</th>
                                                 <th class="text-center">Jurnal Penjualan</th>
                                                 <th class="text-center">Jurnal Pelunasan</th>
-                                                <th>Dibuat Oleh</th>
                                                 <th width="120" class="text-center no-sort">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php if (empty($fakturs_h)): ?>
                                                 <tr>
-                                                    <td colspan="14" class="text-center py-5 text-muted">
+                                                    <td colspan="12" class="text-center py-5 text-muted">
                                                         <i class="fas fa-inbox fa-2x mb-2 text-warning"></i><br>
                                                         Belum ada faktur pecahan (kode H) yang dibuat.
                                                     </td>
@@ -674,9 +670,6 @@
                                                         </td>
                                                         <td class="align-middle">
                                                             <?= !empty($fh['tanggal_faktur']) ? date('d/m/Y', strtotime($fh['tanggal_faktur'])) : '-' ?>
-                                                        </td>
-                                                        <td class="align-middle font-weight-bold text-dark">
-                                                            <?= htmlspecialchars($fh['no_so']) ?>
                                                         </td>
                                                         <td class="align-middle">
                                                             <span class="font-weight-bold text-dark d-block">
@@ -757,10 +750,6 @@
                                                             <?php else: ?>
                                                                 <span class="text-muted small">-</span>
                                                             <?php endif; ?>
-                                                        </td>
-                                                        <td class="align-middle small text-muted">
-                                                            <?= htmlspecialchars($fh['create_by'] ?? '-') ?><br>
-                                                            <span style="font-size: 10px;"><?= !empty($fh['create_at']) ? date('d/m/y H:i', strtotime($fh['create_at'])) : '' ?></span>
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <div class="btn-group btn-group-sm">
@@ -946,32 +935,12 @@
                         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-success py-2" style="font-size: 13px;">
-                            <i class="fas fa-book mr-1"></i> <strong>Otomatis Terbentuk 2 Jurnal Akuntansi per Faktur H:</strong>
-                            <ul class="mb-0 pl-3 mt-1">
-                                <li><strong>Jurnal Pembayaran Acak (Q):</strong> Debit Kas/Bank (Bruto) &bull; Kredit Piutang Usaha <code>13099</code> (Netto Faktur H) &bull; Kredit Q Kas <code>11010</code> (Potongan).</li>
-                                <li><strong>Jurnal Kas Masuk (A):</strong> Debit A Kas <code>11030</code> (Potongan) &bull; Kredit A PND atas Pendapatan Pot Penj KIU <code>13036</code> (Tax 20%) / <code>13041</code> (Fee Petugas 20%).</li>
-                            </ul>
-                        </div>
-
-                        <div class="alert alert-light border py-2" style="font-size: 12.5px;">
-                            <strong>Petunjuk Pelunasan Faktur H (Pilih Faktur yang Lunas):</strong>
-                            <ol class="mb-0 pl-3">
-                                <li>Klik tombol hijau <strong>Unduh Template Terisi Faktur Belum Lunas (.xlsx)</strong> di bawah.</li>
-                                <li>Pada template Excel, kolom <strong><code>jumlah_pembayaran</code> sengaja dikosongkan</strong>. Cukup isi nominal pembayaran pada baris faktur yang sudah lunas (Anda dapat melihat patokan tagihan di kolom <code>total_tagihan</code>).</li>
-                                <li><strong>Faktur yang belum lunas biarkan kosong</strong> pada kolom <code>jumlah_pembayaran</code> (sistem akan otomatis melewati faktur tersebut tanpa mengubah statusnya).</li>
-                                <li>Anda juga dapat menyesuaikan kolom <code>metode_pembayaran</code> (contoh: <code>Q Mandiri</code>, <code>Q Kas Ayat Silang</code>, <code>Q BCA</code>, <code>Q BRI</code>, <code>Q Kas</code>), <code>tanggal_pembayaran</code>, dan <code>skema_potongan</code>.</li>
-                                <li>Unggah kembali file Excel tersebut di form bawah, lalu klik <strong>Proses Import Pelunasan & Buat Jurnal</strong>.</li>
-                            </ol>
-                        </div>
-
                         <div class="form-group mb-0">
                             <label for="filePelunasanZ" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur H (.xlsx / .xls / .csv)</label>
                             <div class="custom-file">
                                 <input type="file" name="file_pelunasan_h" id="filePelunasanZ" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
                                 <label class="custom-file-label" for="filePelunasanZ" id="labelFilePelunasanZ">Pilih file Excel / CSV Pelunasan Faktur H...</label>
                             </div>
-                            <small class="form-text text-muted">Mendukung file .xlsx, .xls, dan .csv. Kolom: <code>no_faktur</code> (wajib), <code>metode_pembayaran</code>, <code>tanggal_pembayaran</code>, <code>jumlah_pembayaran</code>, <code>skema_potongan</code>, <code>parent_no_faktur</code>, <code>keterangan</code>.</small>
                         </div>
                     </div>
                     <div class="modal-footer bg-light d-flex justify-content-between">
@@ -1196,24 +1165,13 @@
                         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-info py-2">
-                            <strong>Alur:</strong> unduh template, isi satu baris untuk setiap barang, lalu unggah kembali file Excel. Satu file dapat berisi beberapa Faktur Z.
-                        </div>
-                        <div class="form-group">
+                        <div class="form-group mb-0">
                             <label for="fileImportFakturZ" class="font-weight-bold">File Excel (.xlsx atau .xls)</label>
                             <div class="custom-file">
                                 <input type="file" name="file_faktur_z" id="fileImportFakturZ" class="custom-file-input" accept=".xlsx,.xls" required>
                                 <label class="custom-file-label" for="fileImportFakturZ">Pilih file template yang telah diisi</label>
                             </div>
-                            <small class="form-text text-muted">Maksimal 5 MB dan 5.000 baris. Seluruh file dibatalkan apabila ada satu baris yang tidak valid.</small>
                         </div>
-                        <ul class="small text-muted mb-0 pl-3">
-                            <li>Nomor faktur harus unik dan maksimal 30 karakter.</li>
-                            <li>Kode customer dan kode barang harus tersedia pada master KARISMA ERP.</li>
-                            <li>Kuantitas diisi terpisah pada <code>qty_box</code> dan <code>qty_pcs</code>; total pcs dihitung otomatis.</li>
-                            <li>Harga per pcs sudah termasuk PPN; persentase pajak hanya memisahkan DPP dan PPN, bukan menambah harga.</li>
-                            <li>Import ini hanya menjadi sumber pemecahan Faktur Z; tidak mengurangi stok dan tidak membentuk jurnal.</li>
-                        </ul>
                     </div>
                     <div class="modal-footer">
                         <a href="<?= base_url('sales_order/template_import_faktur_z') ?>" class="btn btn-outline-success btn-sm mr-auto">
@@ -1241,23 +1199,13 @@
                         <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-info py-2">
-                            <strong>Alur:</strong> unduh template Master Barang, isi daftar barang, lalu unggah kembali file Excel/CSV. Barang dengan kode baru akan ditambahkan, sedangkan kode yang sudah ada akan diperbarui otomatis.
-                        </div>
-                        <div class="form-group">
+                        <div class="form-group mb-0">
                             <label for="fileImportMasterBarang" class="font-weight-bold">File Excel / CSV (.xlsx, .xls, atau .csv)</label>
                             <div class="custom-file">
                                 <input type="file" name="file_master_barang" id="fileImportMasterBarang" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
                                 <label class="custom-file-label" for="fileImportMasterBarang">Pilih file template Master Barang yang telah diisi</label>
                             </div>
-                            <small class="form-text text-muted">Maksimal 5 MB dan 10.000 baris. Seluruh file dibatalkan apabila ada baris dengan format tidak valid.</small>
                         </div>
-                        <ul class="small text-muted mb-0 pl-3">
-                            <li>Kolom <code>kode_barang</code> (maks. 25 karakter) dan <code>nama_barang</code> wajib diisi pada setiap baris.</li>
-                            <li>Kolom <code>isi_per_box</code> digunakan sebagai acuan konversi kuantitas box ke pcs pada Faktur Z.</li>
-                            <li>Kolom opsional seperti <code>satuan</code>, <code>berat_gram</code>, <code>kubikasi_m3</code>, <code>kd_suplier</code>, <code>merk_barang</code>, dan <code>bahan_aktif</code> akan otomatis dilengkapi nilai standar apabila dikosongkan.</li>
-                            <li>Jika <code>kode_barang</code> sudah terdaftar di Master Barang, data barang tersebut akan diperbarui (Upsert).</li>
-                        </ul>
                     </div>
                     <div class="modal-footer">
                         <a href="<?= base_url('sales_order/template_import_master_barang') ?>" class="btn btn-outline-primary btn-sm mr-auto">
@@ -1617,6 +1565,7 @@ function setupDataTablesFaktur() {
             "language": {
                 "search": "Cari kios / data:",
                 "lengthMenu": "Tampilkan _MENU_ data",
+                "emptyTable": "Belum ada data yang tersedia",
                 "zeroRecords": "Tidak ada data yang cocok",
                 "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
                 "infoEmpty": "Menampilkan 0 data",
@@ -1631,22 +1580,39 @@ function setupDataTablesFaktur() {
             "order": [[0, "asc"]]
         };
 
+        // Bersihkan baris placeholder colspan agar DataTables tetap dapat menampilkan search & lengthMenu tanpa error saat data kosong
+        var clearColspanPlaceholder = function(selector) {
+            if ($(selector + ' tbody tr td[colspan]').length > 0) {
+                $(selector + ' tbody').empty();
+            }
+        };
+
         if (!$.fn.DataTable.isDataTable('#tableKiosList')) {
+            clearColspanPlaceholder('#tableKiosList');
             $('#tableKiosList').DataTable(dataTableConfig);
         }
 
         if (!$.fn.DataTable.isDataTable('#tableFakturZSudahPecah')) {
+            clearColspanPlaceholder('#tableFakturZSudahPecah');
             $('#tableFakturZSudahPecah').DataTable(dataTableConfig);
         }
 
         if (!$.fn.DataTable.isDataTable('#tableFakturH')) {
+            clearColspanPlaceholder('#tableFakturH');
             var dataTableConfigH = $.extend({}, dataTableConfig, {
                 "order": [[1, "asc"]],
                 "columnDefs": [
                     { "orderable": false, "targets": "no-sort" }
-                ]
+                ],
+                "language": $.extend({}, dataTableConfig.language, {
+                    "emptyTable": "Belum ada faktur pecahan (kode H) yang dibuat."
+                })
             });
             $('#tableFakturH').DataTable(dataTableConfigH);
+            // Sinkronkan checkbox dan tombol aksi batch saat DataTables berpindah halaman atau difilter
+            $('#tableFakturH').on('draw.dt', function() {
+                updateSelectedFakturHState();
+            });
         }
     }
 }
@@ -1748,6 +1714,9 @@ document.addEventListener('DOMContentLoaded', function() {
         $('.nav-tabs a[data-toggle="pill"], .nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
             if (window.history && window.history.replaceState) {
                 window.history.replaceState(null, null, e.target.getAttribute('href'));
+            }
+            if ($.fn.DataTable) {
+                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
             }
         });
 
@@ -1928,13 +1897,6 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSelectedFakturHState();
         });
 
-        // Sinkronisasi saat DataTables berpindah halaman atau difilter/search
-        if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
-            $('#tableFakturH').on('draw.dt', function() {
-                updateSelectedFakturHState();
-            });
-        }
-
         // Handler klik Unpost Batch (Beberapa / Seluruh faktur pecahan yang dipilih)
         $(document).on('click', '#btnUnpostBatchFakturH', function(e) {
             e.preventDefault();
@@ -2008,6 +1970,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmPrompt();
                 }
             }
+        });
+
         // Custom file input label untuk Import Pelunasan Faktur Pecahan H
         $(document).on('change', '#filePelunasanZ', function() {
             var fileName = $(this).val().split('\\').pop();
@@ -2093,6 +2057,71 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Helper bersama untuk merender kartu rincian ayat jurnal Faktur Pecahan H
+        var renderFakturHJournalCard = function(j, badgeClass, title, icon) {
+            // M_Journal::accounting_journal_detail_with_accounts() mengembalikan kunci 'journal'
+            var h = j ? (j.journal || j.header) : null;
+            if (!h) return '';
+
+            var rowsHtml = '';
+            var totD = 0, totK = 0;
+
+            if (j.details && j.details.length > 0) {
+                $.each(j.details, function(i, d) {
+                    var deb = parseFloat(d.debit || 0);
+                    var kre = parseFloat(d.kredit || 0);
+                    totD += deb;
+                    totK += kre;
+                    rowsHtml += '<tr>' +
+                        '<td class="text-center align-middle">' + (i + 1) + '</td>' +
+                        '<td class="text-center align-middle font-weight-bold text-monospace" style="font-size: 11px;">' + (d.kode_akun || '-') + '</td>' +
+                        '<td class="align-middle font-weight-bold">' + (d.nama_akun || '-') + '</td>' +
+                        '<td class="align-middle small text-muted">' + (d.keterangan || '-') + '</td>' +
+                        '<td class="text-right align-middle text-success font-weight-bold">' + (deb > 0 ? ('Rp ' + deb.toLocaleString('id-ID')) : '-') + '</td>' +
+                        '<td class="text-right align-middle text-danger font-weight-bold">' + (kre > 0 ? ('Rp ' + kre.toLocaleString('id-ID')) : '-') + '</td>' +
+                    '</tr>';
+                });
+            } else {
+                rowsHtml = '<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada baris ayat jurnal.</td></tr>';
+            }
+
+            return '' +
+                '<div class="card mb-3 shadow-sm border">' +
+                    '<div class="card-header bg-light d-flex justify-content-between align-items-center py-2">' +
+                        '<span class="font-weight-bold ' + badgeClass + ' px-2 py-1 rounded" style="font-size: 12px;">' +
+                            '<i class="' + icon + ' mr-1"></i> ' + title + ' — ' + (h.nomor_jurnal || '-') +
+                        '</span>' +
+                        '<span class="small text-muted">' +
+                            'Tanggal: <strong>' + (h.tanggal_transaksi || '-') + '</strong> | Ref: <strong>' + (h.source_no || '-') + '</strong> | Status: <span class="badge badge-success">' + (h.status || 'POSTED') + '</span>' +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="card-body p-0">' +
+                        '<div class="table-responsive">' +
+                            '<table class="table table-sm table-striped table-hover mb-0" style="font-size: 12px;">' +
+                                '<thead class="thead-light">' +
+                                    '<tr>' +
+                                        '<th width="35" class="text-center">#</th>' +
+                                        '<th width="90" class="text-center">Kode Akun</th>' +
+                                        '<th>Nama Akun</th>' +
+                                        '<th>Keterangan</th>' +
+                                        '<th width="140" class="text-right">Debit</th>' +
+                                        '<th width="140" class="text-right">Kredit</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' + rowsHtml + '</tbody>' +
+                                '<tfoot class="bg-light font-weight-bold">' +
+                                    '<tr>' +
+                                        '<td colspan="4" class="text-right">TOTAL:</td>' +
+                                        '<td class="text-right text-success">Rp ' + totD.toLocaleString('id-ID') + '</td>' +
+                                        '<td class="text-right text-danger">Rp ' + totK.toLocaleString('id-ID') + '</td>' +
+                                    '</tr>' +
+                                '</tfoot>' +
+                            '</table>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+        };
+
         // Handler klik Badge Nomor Jurnal untuk melihat Rincian Ayat Jurnal Pelunasan
         $(document).on('click', '.btn-view-jurnal-pecah', function(e) {
             e.preventDefault();
@@ -2108,75 +2137,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     var f = res.faktur;
                     $('#jurnalPecahNoFaktur').text(f.no_faktur);
 
-                    var renderJournalCard = function(j, badgeClass, title, icon) {
-                        if (!j || !j.header) return '';
-                        var h = j.header;
-                        var rowsHtml = '';
-                        var totD = 0, totK = 0;
-
-                        if (j.details && j.details.length > 0) {
-                            $.each(j.details, function(i, d) {
-                                var deb = parseFloat(d.debit || 0);
-                                var kre = parseFloat(d.kredit || 0);
-                                totD += deb;
-                                totK += kre;
-                                rowsHtml += '<tr>' +
-                                    '<td class="text-center align-middle">' + (i + 1) + '</td>' +
-                                    '<td class="text-center align-middle font-weight-bold text-monospace" style="font-size: 11px;">' + (d.kode_akun || '-') + '</td>' +
-                                    '<td class="align-middle font-weight-bold">' + (d.nama_akun || '-') + '</td>' +
-                                    '<td class="align-middle small text-muted">' + (d.keterangan || '-') + '</td>' +
-                                    '<td class="text-right align-middle text-success font-weight-bold">' + (deb > 0 ? ('Rp ' + deb.toLocaleString('id-ID')) : '-') + '</td>' +
-                                    '<td class="text-right align-middle text-danger font-weight-bold">' + (kre > 0 ? ('Rp ' + kre.toLocaleString('id-ID')) : '-') + '</td>' +
-                                '</tr>';
-                            });
-                        } else {
-                            rowsHtml = '<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada baris ayat jurnal.</td></tr>';
-                        }
-
-                        return '' +
-                            '<div class="card mb-3 shadow-sm border">' +
-                                '<div class="card-header bg-light d-flex justify-content-between align-items-center py-2">' +
-                                    '<span class="font-weight-bold ' + badgeClass + ' px-2 py-1 rounded" style="font-size: 12px;">' +
-                                        '<i class="' + icon + ' mr-1"></i> ' + title + ' — ' + (h.nomor_jurnal || '-') +
-                                    '</span>' +
-                                    '<span class="small text-muted">' +
-                                        'Tanggal: <strong>' + (h.tanggal_transaksi || '-') + '</strong> | Ref: <strong>' + (h.source_no || '-') + '</strong> | Status: <span class="badge badge-success">' + (h.status || 'POSTED') + '</span>' +
-                                    '</span>' +
-                                '</div>' +
-                                '<div class="card-body p-0">' +
-                                    '<div class="table-responsive">' +
-                                        '<table class="table table-sm table-striped table-hover mb-0" style="font-size: 12px;">' +
-                                            '<thead class="thead-light">' +
-                                                '<tr>' +
-                                                    '<th width="35" class="text-center">#</th>' +
-                                                    '<th width="90" class="text-center">Kode Akun</th>' +
-                                                    '<th>Nama Akun</th>' +
-                                                    '<th>Keterangan</th>' +
-                                                    '<th width="140" class="text-right">Debit</th>' +
-                                                    '<th width="140" class="text-right">Kredit</th>' +
-                                                '</tr>' +
-                                            '</thead>' +
-                                            '<tbody>' + rowsHtml + '</tbody>' +
-                                            '<tfoot class="bg-light font-weight-bold">' +
-                                                '<tr>' +
-                                                    '<td colspan="4" class="text-right">TOTAL:</td>' +
-                                                    '<td class="text-right text-success">Rp ' + totD.toLocaleString('id-ID') + '</td>' +
-                                                    '<td class="text-right text-danger">Rp ' + totK.toLocaleString('id-ID') + '</td>' +
-                                                '</tr>' +
-                                            '</tfoot>' +
-                                        '</table>' +
-                                    '</div>' +
-                                '</div>' +
-                            '</div>';
-                    };
-
                     var contentHtml = '';
-                    if (res.jurnal_q && res.jurnal_q.header) {
-                        contentHtml += renderJournalCard(res.jurnal_q, 'badge-warning text-dark', 'Jurnal Pembayaran Acak (Q)', 'fas fa-book');
-                    }
-                    if (res.jurnal_a && res.jurnal_a.header) {
-                        contentHtml += renderJournalCard(res.jurnal_a, 'badge-danger text-white', 'Jurnal Kas Masuk Potongan (A)', 'fas fa-file-invoice-dollar');
-                    }
+                    contentHtml += renderFakturHJournalCard(res.jurnal_q, 'badge-warning text-dark', 'Jurnal Pembayaran Acak (Q)', 'fas fa-book');
+                    contentHtml += renderFakturHJournalCard(res.jurnal_a, 'badge-danger text-white', 'Jurnal Kas Masuk Potongan (A)', 'fas fa-file-invoice-dollar');
                     if (!contentHtml) {
                         contentHtml = '<div class="alert alert-warning text-center"><i class="fas fa-exclamation-triangle mr-1"></i> Data rincian jurnal belum tersedia untuk faktur ini.</div>';
                     }
@@ -2205,75 +2168,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     var f = res.faktur;
                     $('#jurnalPenjualanPecahNoFaktur').text(f.no_faktur);
 
-                    var renderJournalCard = function(j, badgeClass, title, icon) {
-                        if (!j || !j.header) return '';
-                        var h = j.header;
-                        var rowsHtml = '';
-                        var totD = 0, totK = 0;
-
-                        if (j.details && j.details.length > 0) {
-                            $.each(j.details, function(i, d) {
-                                var deb = parseFloat(d.debit || 0);
-                                var kre = parseFloat(d.kredit || 0);
-                                totD += deb;
-                                totK += kre;
-                                rowsHtml += '<tr>' +
-                                    '<td class="text-center align-middle">' + (i + 1) + '</td>' +
-                                    '<td class="text-center align-middle font-weight-bold text-monospace" style="font-size: 11px;">' + (d.kode_akun || '-') + '</td>' +
-                                    '<td class="align-middle font-weight-bold">' + (d.nama_akun || '-') + '</td>' +
-                                    '<td class="align-middle small text-muted">' + (d.keterangan || '-') + '</td>' +
-                                    '<td class="text-right align-middle text-success font-weight-bold">' + (deb > 0 ? ('Rp ' + deb.toLocaleString('id-ID')) : '-') + '</td>' +
-                                    '<td class="text-right align-middle text-danger font-weight-bold">' + (kre > 0 ? ('Rp ' + kre.toLocaleString('id-ID')) : '-') + '</td>' +
-                                '</tr>';
-                            });
-                        } else {
-                            rowsHtml = '<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada baris ayat jurnal.</td></tr>';
-                        }
-
-                        return '' +
-                            '<div class="card mb-3 shadow-sm border">' +
-                                '<div class="card-header bg-light d-flex justify-content-between align-items-center py-2">' +
-                                    '<span class="font-weight-bold ' + badgeClass + ' px-2 py-1 rounded" style="font-size: 12px;">' +
-                                        '<i class="' + icon + ' mr-1"></i> ' + title + ' — ' + (h.nomor_jurnal || '-') +
-                                    '</span>' +
-                                    '<span class="small text-muted">' +
-                                        'Tanggal: <strong>' + (h.tanggal_transaksi || '-') + '</strong> | Ref: <strong>' + (h.source_no || '-') + '</strong> | Status: <span class="badge badge-success">' + (h.status || 'POSTED') + '</span>' +
-                                    '</span>' +
-                                '</div>' +
-                                '<div class="card-body p-0">' +
-                                    '<div class="table-responsive">' +
-                                        '<table class="table table-sm table-striped table-hover mb-0" style="font-size: 12px;">' +
-                                            '<thead class="thead-light">' +
-                                                '<tr>' +
-                                                    '<th width="35" class="text-center">#</th>' +
-                                                    '<th width="90" class="text-center">Kode Akun</th>' +
-                                                    '<th>Nama Akun</th>' +
-                                                    '<th>Keterangan</th>' +
-                                                    '<th width="140" class="text-right">Debit</th>' +
-                                                    '<th width="140" class="text-right">Kredit</th>' +
-                                                '</tr>' +
-                                            '</thead>' +
-                                            '<tbody>' + rowsHtml + '</tbody>' +
-                                            '<tfoot class="bg-light font-weight-bold">' +
-                                                '<tr>' +
-                                                    '<td colspan="4" class="text-right">TOTAL:</td>' +
-                                                    '<td class="text-right text-success">Rp ' + totD.toLocaleString('id-ID') + '</td>' +
-                                                    '<td class="text-right text-danger">Rp ' + totK.toLocaleString('id-ID') + '</td>' +
-                                                '</tr>' +
-                                            '</tfoot>' +
-                                        '</table>' +
-                                    '</div>' +
-                                '</div>' +
-                            '</div>';
-                    };
-
                     var contentHtml = '';
-                    if (res.jurnal_penjualan && res.jurnal_penjualan.header) {
-                        contentHtml += renderJournalCard(res.jurnal_penjualan, 'badge-info text-white', 'Jurnal Penjualan Resmi (SJ)', 'fas fa-file-invoice');
-                    }
-                    if (res.jurnal_hpp && res.jurnal_hpp.header) {
-                        contentHtml += renderJournalCard(res.jurnal_hpp, 'badge-secondary text-white', 'Jurnal HPP & Persediaan (Goods Issue)', 'fas fa-boxes');
-                    }
+                    contentHtml += renderFakturHJournalCard(res.jurnal_penjualan, 'badge-info text-white', 'Jurnal Penjualan Resmi (SJ)', 'fas fa-file-invoice');
+                    contentHtml += renderFakturHJournalCard(res.jurnal_hpp, 'badge-secondary text-white', 'Jurnal HPP & Persediaan (Goods Issue)', 'fas fa-boxes');
                     if (!contentHtml) {
                         contentHtml = '<div class="alert alert-warning text-center"><i class="fas fa-exclamation-triangle mr-1"></i> Data jurnal penjualan belum tersedia untuk faktur pecahan ini.</div>';
                     }
