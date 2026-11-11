@@ -178,6 +178,7 @@ class C_pembayaran extends CI_Controller
             ->where("p.status !=", 'cancelled')
             ->group_by('p.id_pecah')
             ->order_by('p.tanggal_faktur', 'ASC')
+            ->order_by('p.no_faktur', 'ASC')
             ->order_by('p.id_pecah', 'ASC')
             ->get()
             ->result_array();
@@ -197,13 +198,16 @@ class C_pembayaran extends CI_Controller
             }
             $pec['jurnals'] = $jurnal_rows;
 
-            // Hitung status pembayaran faktur H berdasarkan jurnal yang terposting
+            // Hitung status pembayaran faktur H berdasarkan jurnal yang terposting (kecualikan Jurnal A potongan 'PND u/Pot')
             $skema = (int)($pec['skema_potongan'] ?? 20);
             $factor_netto = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
 
             $total_bayar_bruto = 0.0;
             foreach ($jurnal_rows as $j) {
                 if ($j['status'] === 'POSTED') {
+                    if (stripos((string)($j['keterangan'] ?? ''), 'PND u/Pot') !== false) {
+                        continue;
+                    }
                     $total_bayar_bruto += (float)$j['total_debit'];
                 }
             }

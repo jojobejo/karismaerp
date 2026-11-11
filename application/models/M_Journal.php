@@ -1581,6 +1581,7 @@ class M_Journal extends CI_Model
             ->where("p.status !=", 'cancelled')
             ->group_by('p.id_pecah')
             ->order_by('p.tanggal_faktur', 'ASC')
+            ->order_by('p.no_faktur', 'ASC')
             ->order_by('p.id_pecah', 'ASC')
             ->get()
             ->result_array();
@@ -1699,14 +1700,26 @@ class M_Journal extends CI_Model
         // ── Ambil Total Pembayaran Bruto yang SUDAH DIBAYAR untuk Masing-Masing Faktur H dari Pembayaran Sebelumnya ──
         $existing_paid_h = [];
         if (!empty($h_nos)) {
+            // Sertakan pembayaran reguler maupun pelunasan/cicilan pecahan (kecuali Jurnal A potongan)
+            $this->db->select('source_no, COALESCE(SUM(total_debit), 0) AS total_sudah_bayar');
+            $this->db->from('tbkeu_jurnal');
+            $this->db->where('source_module', 'KEUANGAN');
+            $this->db->where_in('source_no', $h_nos);
+            $this->db->where('status', 'POSTED');
+            $this->db->group_start();
+                $this->db->group_start();
+                    $this->db->where('source_type', 'PEMBAYARAN_FAKTUR');
+                    $this->db->where('source_id !=', $id_pembayaran);
+                $this->db->group_end();
+                $this->db->or_group_start();
+                    $this->db->where('source_type', 'PEMBAYARAN_FAKTUR_PECAH');
+                    $this->db->group_start();
+                        $this->db->where('keterangan IS NULL', null, false);
+                        $this->db->or_not_like('keterangan', 'PND u/Pot');
+                    $this->db->group_end();
+                $this->db->group_end();
+            $this->db->group_end();
             $prev_jurnals = $this->db
-                ->select('source_no, COALESCE(SUM(total_debit), 0) AS total_sudah_bayar')
-                ->from('tbkeu_jurnal')
-                ->where('source_module', 'KEUANGAN')
-                ->where('source_type', 'PEMBAYARAN_FAKTUR')
-                ->where_in('source_no', $h_nos)
-                ->where('source_id !=', $id_pembayaran)
-                ->where('status', 'POSTED')
                 ->group_by('source_no')
                 ->get()
                 ->result_array();
@@ -1996,6 +2009,7 @@ class M_Journal extends CI_Model
                 ->where("p.status !=", 'cancelled')
                 ->group_by('p.id_pecah')
                 ->order_by('p.tanggal_faktur', 'ASC')
+                ->order_by('p.no_faktur', 'ASC')
                 ->order_by('p.id_pecah', 'ASC')
                 ->get()
                 ->result_array();
@@ -2677,6 +2691,24 @@ class M_Journal extends CI_Model
     }
 
     /**
+     * Menghapus satu record jurnal beserta detail ayatnya berdasarkan id_jurnal.
+     *
+     * @param int $id_jurnal
+     * @return bool
+     */
+    public function delete_journal($id_jurnal)
+    {
+        $id_jurnal = (int)$id_jurnal;
+        if ($id_jurnal <= 0 || !$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return false;
+        }
+
+        $this->db->where('id_jurnal', $id_jurnal)->delete('tbkeu_jurnal_detail');
+        $this->db->where('id_jurnal', $id_jurnal)->delete('tbkeu_jurnal');
+        return true;
+    }
+
+    /**
      * Membuat Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) untuk Pelunasan Faktur H Import (tbso_faktur_h_import)
      *
      * @param array $faktur
@@ -2861,6 +2893,22 @@ class M_Journal extends CI_Model
         $ket_q       = 'Penerimaan dari ' . $nama_cust_q;
         $ref_key_id  = $idRef > 0 ? $idRef : $no_faktur_h;
 
+        // Pastikan idempotency_key unik untuk setiap termin cicilan agar tidak bentrok dengan uk_tbkeu_jurnal_idempotency
+        $base_idem_q = $keyPrefix . 'Q_' . $ref_key_id;
+        $base_idem_a = $keyPrefix . 'A_' . $ref_key_id;
+        $idem_suffix = '';
+        $existsIdem = $this->db->where('idempotency_key', $base_idem_q)->count_all_results('tbkeu_jurnal');
+        if ($existsIdem > 0) {
+            $seqTermin   = (int)$this->db
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', $sourceType)
+                ->where('source_id', (string)$idRef)
+                ->count_all_results('tbkeu_jurnal') + 1;
+            $idem_suffix = '_T' . $seqTermin . '_' . substr(md5(uniqid('', true)), 0, 6);
+        }
+        $idem_key_q = $base_idem_q . $idem_suffix;
+        $idem_key_a = $base_idem_a . $idem_suffix;
+
         $jurnal_q_header = [
             'nomor_jurnal'      => $no_jurnal_q,
             'id_jenis_jurnal'   => $id_jenis_jurnal_q,
@@ -2871,7 +2919,7 @@ class M_Journal extends CI_Model
             'source_type'       => $sourceType,
             'source_id'         => (string)$idRef,
             'source_no'         => $no_faktur_h,
-            'idempotency_key'   => $keyPrefix . 'Q_' . $ref_key_id,
+            'idempotency_key'   => $idem_key_q,
             'total_debit'       => $bruto_pecahan,
             'total_kredit'      => $bruto_pecahan,
             'created_by'        => $userId,
@@ -2960,7 +3008,7 @@ class M_Journal extends CI_Model
                 'source_type'       => $sourceType,
                 'source_id'         => (string)$idRef,
                 'source_no'         => $no_faktur_h,
-                'idempotency_key'   => $keyPrefix . 'A_' . $ref_key_id,
+                'idempotency_key'   => $idem_key_a,
                 'total_debit'       => $potongan_pecahan,
                 'total_kredit'      => $potongan_pecahan,
                 'created_by'        => $userId,

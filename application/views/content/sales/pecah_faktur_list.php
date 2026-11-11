@@ -567,10 +567,14 @@
                                         <?php
                                             $totalH = count($fakturs_h);
                                             $lunasH = 0;
+                                            $sebagianH = 0;
                                             $belumH = 0;
                                             foreach ($fakturs_h as $fh) {
-                                                if (($fh['status_bayar'] ?? '') === 'lunas') {
+                                                $stH = strtolower(trim((string)($fh['status_bayar'] ?? 'belum_lunas')));
+                                                if ($stH === 'lunas') {
                                                     $lunasH++;
+                                                } elseif ($stH === 'sebagian' || (float)($fh['total_bayar'] ?? 0) > 0.01) {
+                                                    $sebagianH++;
                                                 } else {
                                                     $belumH++;
                                                 }
@@ -581,6 +585,9 @@
                                         </span>
                                         <span class="badge badge-success p-2 mr-1" title="Faktur Pecahan H yang Sudah Lunas">
                                             Lunas: <strong><?= $lunasH ?></strong>
+                                        </span>
+                                        <span class="badge badge-info p-2 mr-1" title="Faktur Pecahan H yang Dibayar Sebagian">
+                                            Sebagian: <strong><?= $sebagianH ?></strong>
                                         </span>
                                         <span class="badge badge-warning p-2 mr-3 text-dark" title="Faktur Pecahan H yang Belum Lunas">
                                             Belum: <strong><?= $belumH ?></strong>
@@ -649,11 +656,17 @@
                                                 </tr>
                                             <?php else: ?>
                                                 <?php $no = 1; foreach ($fakturs_h as $fh): 
-                                                    $isLunas = ($fh['status_bayar'] ?? '') === 'lunas';
+                                                    $statusBayar = strtolower(trim((string)($fh['status_bayar'] ?? 'belum_lunas')));
+                                                    $grandTotal  = (float)$fh['grand_total'];
+                                                    $totalBayar  = (float)($fh['total_bayar'] ?? 0);
+                                                    $isLunas     = ($statusBayar === 'lunas');
+                                                    $isSebagian  = (!$isLunas && ($statusBayar === 'sebagian' || $totalBayar > 0.01));
+                                                    $sisaTagihan = $isLunas ? 0.0 : max(0.0, round($grandTotal - $totalBayar, 2));
+                                                    $statusAttr  = $isLunas ? 'lunas' : ($isSebagian ? 'sebagian' : 'belum_lunas');
                                                 ?>
-                                                    <tr data-id-pecah="<?= (int)$fh['id_pecah'] ?>" data-status-bayar="<?= $isLunas ? 'lunas' : 'belum_lunas' ?>">
+                                                    <tr data-id-pecah="<?= (int)$fh['id_pecah'] ?>" data-status-bayar="<?= $statusAttr ?>">
                                                         <td class="text-center align-middle">
-                                                            <input type="checkbox" class="check-item-faktur-h" value="<?= (int)$fh['id_pecah'] ?>" data-no-faktur="<?= htmlspecialchars($fh['no_faktur']) ?>" data-status-bayar="<?= $isLunas ? 'lunas' : 'belum_lunas' ?>" style="cursor:pointer; width:16px; height:16px;">
+                                                            <input type="checkbox" class="check-item-faktur-h" value="<?= (int)$fh['id_pecah'] ?>" data-no-faktur="<?= htmlspecialchars($fh['no_faktur']) ?>" data-status-bayar="<?= $statusAttr ?>" style="cursor:pointer; width:16px; height:16px;">
                                                         </td>
                                                         <td class="text-center align-middle font-weight-bold text-muted"><?= $no++ ?></td>
                                                         <td class="align-middle">
@@ -688,12 +701,25 @@
                                                             </span>
                                                         </td>
                                                         <td class="text-right align-middle font-weight-bold text-success">
-                                                            Rp <?= number_format((float)$fh['grand_total'], 0, ',', '.') ?>
+                                                            Rp <?= number_format($grandTotal, 0, ',', '.') ?>
+                                                            <?php if ($isSebagian): ?>
+                                                                <small class="d-block font-weight-normal text-muted mt-1" style="font-size: 10.5px;">
+                                                                    Terbayar: <span class="text-primary font-weight-bold">Rp <?= number_format($totalBayar, 0, ',', '.') ?></span><br>
+                                                                    Sisa: <span class="text-danger font-weight-bold">Rp <?= number_format($sisaTagihan, 0, ',', '.') ?></span>
+                                                                </small>
+                                                            <?php endif; ?>
                                                         </td>
                                                         <td class="text-center align-middle">
                                                             <?php if ($isLunas): ?>
                                                                 <span class="badge badge-success px-2 py-1 shadow-sm" title="Faktur H telah lunas pada <?= !empty($fh['tanggal_bayar']) ? date('d/m/Y', strtotime($fh['tanggal_bayar'])) : '' ?>">
                                                                     <i class="fas fa-check-circle mr-1"></i> LUNAS
+                                                                </span>
+                                                                <span class="d-block text-muted small mt-1" style="font-size: 10px;">
+                                                                    <?= !empty($fh['metode_pembayaran']) ? htmlspecialchars($fh['metode_pembayaran']) : '' ?>
+                                                                </span>
+                                                            <?php elseif ($isSebagian): ?>
+                                                                <span class="badge badge-warning text-dark px-2 py-1 shadow-sm" title="Dibayar sebagian pada <?= !empty($fh['tanggal_bayar']) ? date('d/m/Y', strtotime($fh['tanggal_bayar'])) : '' ?>">
+                                                                    <i class="fas fa-adjust mr-1"></i> SEBAGIAN
                                                                 </span>
                                                                 <span class="d-block text-muted small mt-1" style="font-size: 10px;">
                                                                     <?= !empty($fh['metode_pembayaran']) ? htmlspecialchars($fh['metode_pembayaran']) : '' ?>
@@ -730,7 +756,7 @@
                                                             <?php endif; ?>
                                                         </td>
                                                         <td class="text-center align-middle">
-                                                            <?php if ($isLunas && (!empty($fh['nomor_jurnal_q']) || !empty($fh['nomor_jurnal_a']))): ?>
+                                                            <?php if (($isLunas || $isSebagian) && (!empty($fh['nomor_jurnal_q']) || !empty($fh['nomor_jurnal_a']))): ?>
                                                                 <?php if (!empty($fh['nomor_jurnal_q'])): ?>
                                                                     <a href="javascript:void(0)" 
                                                                        class="badge badge-warning text-dark font-weight-bold shadow-sm d-block mb-1 btn-view-jurnal-pecah" 
@@ -771,6 +797,24 @@
                                                                        onclick="return confirm('Apakah Anda yakin ingin membatalkan (unpost) pelunasan Faktur Pecahan <?= htmlspecialchars($fh['no_faktur']) ?>?\n\nJurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) terkait akan otomatis dihapus dari pembukuan.')">
                                                                         <i class="fas fa-undo text-warning mr-1"></i> Unpost Bayar
                                                                     </a>
+                                                                <?php elseif ($isSebagian): ?>
+                                                                    <button type="button"
+                                                                            class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-pecah-single"
+                                                                            data-id="<?= (int)$fh['id_pecah'] ?>"
+                                                                            data-no-faktur="<?= htmlspecialchars($fh['no_faktur']) ?>"
+                                                                            data-parent-no="<?= htmlspecialchars($fh['parent_no_faktur'] ?? '') ?>"
+                                                                            data-customer="<?= htmlspecialchars($fh['customer_name'] ?? '') ?>"
+                                                                            data-tanggal="<?= htmlspecialchars(!empty($fh['tanggal_faktur']) ? date('Y-m-d', strtotime($fh['tanggal_faktur'])) : date('Y-m-d')) ?>"
+                                                                            data-nominal="<?= $sisaTagihan ?>"
+                                                                            title="Bayar / Lunasi Sisa Tagihan Faktur Pecahan H ini (Sisa: Rp <?= number_format($sisaTagihan, 0, ',', '.') ?>)">
+                                                                        <i class="fas fa-check mr-1"></i> Lunasi
+                                                                    </button>
+                                                                    <a href="<?= base_url('sales_order/unpost_pelunasan_faktur_z_pecah/' . $fh['id_pecah']) ?>"
+                                                                       class="btn btn-outline-warning btn-sm text-dark"
+                                                                       title="Batalkan Pembayaran Sebagian Faktur Pecahan & Hapus Jurnal Terkait"
+                                                                       onclick="return confirm('Apakah Anda yakin ingin membatalkan (unpost) pembayaran Faktur Pecahan <?= htmlspecialchars($fh['no_faktur']) ?>?\n\nSeluruh Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) terkait akan otomatis dihapus dari pembukuan.')">
+                                                                        <i class="fas fa-undo text-warning mr-1"></i> Unpost Bayar
+                                                                    </a>
                                                                 <?php else: ?>
                                                                     <button type="button"
                                                                             class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-pecah-single"
@@ -779,7 +823,7 @@
                                                                             data-parent-no="<?= htmlspecialchars($fh['parent_no_faktur'] ?? '') ?>"
                                                                             data-customer="<?= htmlspecialchars($fh['customer_name'] ?? '') ?>"
                                                                             data-tanggal="<?= htmlspecialchars(!empty($fh['tanggal_faktur']) ? date('Y-m-d', strtotime($fh['tanggal_faktur'])) : date('Y-m-d')) ?>"
-                                                                            data-nominal="<?= (float)$fh['grand_total'] ?>"
+                                                                            data-nominal="<?= $grandTotal ?>"
                                                                             title="Lunasi Faktur Pecahan H ini & Buat Jurnal Q + A">
                                                                         <i class="fas fa-check mr-1"></i> Lunasi
                                                                     </button>
@@ -1623,17 +1667,22 @@ function updateSelectedFakturHState() {
     if (!window.jQuery) return;
     var $ = window.jQuery;
     var totalSelected = 0;
-    var totalLunas = 0;
-    var totalBelum = 0;
+    var totalHasPayment = 0;
+    var totalUnpaidPecahan = 0;
+    var totalBelumLunas = 0;
 
     var countCheckboxes = function($items) {
         $items.each(function() {
             totalSelected++;
             var st = $(this).attr('data-status-bayar');
             if (st === 'lunas') {
-                totalLunas++;
+                totalHasPayment++;
+            } else if (st === 'sebagian') {
+                totalHasPayment++;
+                totalBelumLunas++;
             } else {
-                totalBelum++;
+                totalUnpaidPecahan++;
+                totalBelumLunas++;
             }
         });
     };
@@ -1654,20 +1703,24 @@ function updateSelectedFakturHState() {
         $('#checkAllFakturH').prop('checked', totalCurrent > 0 && totalCurrent === checkedCurrent);
     }
 
-    if (totalBelum > 0) {
-        $('#countSelectedFakturH').text(totalBelum);
+    if (totalUnpaidPecahan > 0) {
+        $('#countSelectedFakturH').text(totalUnpaidPecahan);
         $('#btnUnpostBatchFakturH').fadeIn(150);
-        $('#countSelectedUnpaidFakturH').text(totalBelum);
-        $('#btnLunasiBatchFakturH').fadeIn(150);
     } else {
         $('#countSelectedFakturH').text(0);
         $('#btnUnpostBatchFakturH').fadeOut(150);
+    }
+
+    if (totalBelumLunas > 0) {
+        $('#countSelectedUnpaidFakturH').text(totalBelumLunas);
+        $('#btnLunasiBatchFakturH').fadeIn(150);
+    } else {
         $('#countSelectedUnpaidFakturH').text(0);
         $('#btnLunasiBatchFakturH').fadeOut(150);
     }
 
-    if (totalLunas > 0) {
-        $('#countSelectedLunasFakturH').text(totalLunas);
+    if (totalHasPayment > 0) {
+        $('#countSelectedLunasFakturH').text(totalHasPayment);
         $('#btnUnpostPelunasanBatchFakturH').fadeIn(150);
     } else {
         $('#countSelectedLunasFakturH').text(0);
@@ -1907,20 +1960,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
                 var dt = $('#tableFakturH').DataTable();
                 dt.$('.check-item-faktur-h:checked').each(function() {
-                    selectedIds.push($(this).val());
-                    var name = $(this).attr('data-no-faktur');
-                    if (name) selectedNames.push(name);
+                    if ($(this).attr('data-status-bayar') === 'belum_lunas') {
+                        selectedIds.push($(this).val());
+                        var name = $(this).attr('data-no-faktur');
+                        if (name) selectedNames.push(name);
+                    }
                 });
             } else {
                 $('.check-item-faktur-h:checked').each(function() {
-                    selectedIds.push($(this).val());
-                    var name = $(this).attr('data-no-faktur');
-                    if (name) selectedNames.push(name);
+                    if ($(this).attr('data-status-bayar') === 'belum_lunas') {
+                        selectedIds.push($(this).val());
+                        var name = $(this).attr('data-no-faktur');
+                        if (name) selectedNames.push(name);
+                    }
                 });
             }
 
             if (selectedIds.length === 0) {
-                var noDataMsg = 'Pilih minimal 1 faktur pecahan yang ingin di-unpost.';
+                var noDataMsg = 'Pilih minimal 1 faktur pecahan yang berstatus Belum Lunas (tanpa pembayaran) untuk di-unpost.';
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({ icon: 'warning', title: 'Belum Ada Faktur Dipilih', text: noDataMsg });
                 } else {
@@ -1988,7 +2045,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
                 var dt = $('#tableFakturH').DataTable();
                 dt.$('.check-item-faktur-h:checked').each(function() {
-                    if ($(this).attr('data-status-bayar') === 'lunas') {
+                    var st = $(this).attr('data-status-bayar');
+                    if (st === 'lunas' || st === 'sebagian') {
                         selectedIds.push($(this).val());
                         var name = $(this).attr('data-no-faktur');
                         if (name) selectedNames.push(name);
@@ -1996,7 +2054,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 $('.check-item-faktur-h:checked').each(function() {
-                    if ($(this).attr('data-status-bayar') === 'lunas') {
+                    var st = $(this).attr('data-status-bayar');
+                    if (st === 'lunas' || st === 'sebagian') {
                         selectedIds.push($(this).val());
                         var name = $(this).attr('data-no-faktur');
                         if (name) selectedNames.push(name);
@@ -2005,9 +2064,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (selectedIds.length === 0) {
-                var noDataMsg = 'Pilih minimal 1 faktur pecahan yang berstatus Lunas untuk dibatalkan pelunasannya.';
+                var noDataMsg = 'Pilih minimal 1 faktur pecahan yang berstatus Lunas atau Sebagian untuk dibatalkan pembayarannya.';
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire({ icon: 'warning', title: 'Belum Ada Faktur Lunas Dipilih', text: noDataMsg });
+                    Swal.fire({ icon: 'warning', title: 'Belum Ada Faktur Terbayar Dipilih', text: noDataMsg });
                 } else {
                     alert(noDataMsg);
                 }
@@ -2139,8 +2198,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#jurnalPecahNoFaktur').text(f.no_faktur);
 
                     var contentHtml = '';
-                    contentHtml += renderFakturHJournalCard(res.jurnal_q, 'badge-warning text-dark', 'Jurnal Pembayaran Acak (Q)', 'fas fa-book');
-                    contentHtml += renderFakturHJournalCard(res.jurnal_a, 'badge-danger text-white', 'Jurnal Kas Masuk Potongan (A)', 'fas fa-file-invoice-dollar');
+                    var listQ = (res.jurnals_q && res.jurnals_q.length > 0) ? res.jurnals_q : (res.jurnal_q ? [res.jurnal_q] : []);
+                    var listA = (res.jurnals_a && res.jurnals_a.length > 0) ? res.jurnals_a : (res.jurnal_a ? [res.jurnal_a] : []);
+
+                    $.each(listQ, function(idx, jq) {
+                        var suffix = listQ.length > 1 ? (' #' + (idx + 1)) : '';
+                        contentHtml += renderFakturHJournalCard(jq, 'badge-warning text-dark', 'Jurnal Pembayaran Acak (Q)' + suffix, 'fas fa-book');
+                    });
+                    $.each(listA, function(idx, ja) {
+                        var suffix = listA.length > 1 ? (' #' + (idx + 1)) : '';
+                        contentHtml += renderFakturHJournalCard(ja, 'badge-danger text-white', 'Jurnal Kas Masuk Potongan (A)' + suffix, 'fas fa-file-invoice-dollar');
+                    });
                     if (!contentHtml) {
                         contentHtml = '<div class="alert alert-warning text-center"><i class="fas fa-exclamation-triangle mr-1"></i> Data rincian jurnal belum tersedia untuk faktur ini.</div>';
                     }

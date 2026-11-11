@@ -10106,6 +10106,7 @@ class C_SalesOrder extends CI_Controller
                 COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
                 COALESCE(NULLIF(TRIM(fp.customer_name), ""), p.customer_name) AS customer_name,
                 p.status_bayar,
+                p.total_bayar,
                 p.metode_pembayaran,
                 p.skema_potongan,
                 COALESCE(d.grand_total, 0) AS grand_total
@@ -10113,7 +10114,9 @@ class C_SalesOrder extends CI_Controller
             ->from('tbso_faktur_z_pecah p')
             ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
             ->join('(SELECT id_pecah, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_z_pecah_detail GROUP BY id_pecah) d', 'd.id_pecah = p.id_pecah', 'left')
-            ->order_by('p.id_pecah', 'DESC')
+            ->where('p.status !=', 'cancelled')
+            ->order_by('p.no_faktur', 'ASC')
+            ->order_by('p.id_pecah', 'ASC')
             ->get()->result_array();
 
         // Kelompokkan data berdasarkan Nomor Faktur Z Induk
@@ -10137,14 +10140,16 @@ class C_SalesOrder extends CI_Controller
                 ];
             }
 
-            $tagihanH = (float)$row['grand_total'];
-            $isLunasH = strtolower(trim((string)($row['status_bayar'] ?? ''))) === 'lunas';
+            $tagihanH    = (float)$row['grand_total'];
+            $sudahBayarH = max(0.0, (float)($row['total_bayar'] ?? 0));
+            $isLunasH    = strtolower(trim((string)($row['status_bayar'] ?? ''))) === 'lunas';
+            $sisaH       = $isLunasH ? 0.0 : max(0.0, round($tagihanH - $sudahBayarH, 2));
 
             $groupedZ[$noZ]['total_h']++;
             $groupedZ[$noZ]['total_tagihan_z'] += $tagihanH;
-            if (!$isLunasH) {
+            if (!$isLunasH && $sisaH > 0.01) {
                 $groupedZ[$noZ]['belum_lunas_h']++;
-                $groupedZ[$noZ]['sisa_belum_lunas'] += $tagihanH;
+                $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
             }
         }
 
@@ -10349,10 +10354,13 @@ class C_SalesOrder extends CI_Controller
 
             $successZCount     = 0;
             $successHCount     = 0;
+            $lunasHCount       = 0;
+            $partialHCount     = 0;
             $skippedCount      = 0;
             $alreadyPaidList   = [];
             $insufficientList  = [];
             $leftoverInfoList  = [];
+            $partialInfoList   = [];
             $notFoundList      = [];
             $failedList        = [];
             $username          = $this->_getUsername();
@@ -10427,7 +10435,9 @@ class C_SalesOrder extends CI_Controller
                     $this->db->or_where('p.parent_id_faktur', $parentIdFaktur);
                 }
                 $this->db->group_end();
+                $this->db->where('p.status !=', 'cancelled');
                 $this->db->group_by('p.id_pecah');
+                $this->db->order_by('p.no_faktur', 'ASC');
                 $this->db->order_by('p.id_pecah', 'ASC');
                 $childFakturs = $this->db->get()->result_array();
 
@@ -10436,11 +10446,18 @@ class C_SalesOrder extends CI_Controller
                     continue;
                 }
 
-                // Saring hanya child Faktur H yang belum lunas
+                // Saring child Faktur H yang belum lunas (termasuk status 'sebagian' yang masih punya sisa tagihan)
                 $unpaidChildren = [];
                 foreach ($childFakturs as $child) {
-                    if (strtolower(trim((string)($child['status_bayar'] ?? ''))) !== 'lunas') {
-                        $unpaidChildren[] = $child;
+                    $tagihanH     = round((float)$child['grand_total'], 2);
+                    $sudahBayarH  = round((float)($child['total_bayar'] ?? 0), 2);
+                    $sisaTagihanH = max(0.0, round($tagihanH - $sudahBayarH, 2));
+                    $statusChild  = strtolower(trim((string)($child['status_bayar'] ?? '')));
+                    if ($statusChild !== 'lunas' && $sisaTagihanH > 0.01) {
+                        $child['_tagihan_h']      = $tagihanH;
+                        $child['_sudah_bayar_h']  = $sudahBayarH;
+                        $child['_sisa_tagihan_h'] = $sisaTagihanH;
+                        $unpaidChildren[]         = $child;
                     }
                 }
 
@@ -10449,33 +10466,46 @@ class C_SalesOrder extends CI_Controller
                     continue;
                 }
 
-                // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan.
-                // Child Faktur H hanya dilunasi & dibuatkan Jurnal Q/A apabila sisa dana mencukupi tagihan Faktur H tersebut.
-                $sisaDanaBayar    = round($jmlBayar, 2);
+                // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO berdasarkan no_faktur ASC).
+                // Mendukung pelunasan sebagian ('sebagian') bila dana tidak mencukupi seluruh sisa tagihan Faktur H terawal.
+                $sisaDanaBayar     = round($jmlBayar, 2);
                 $paidChildForThisZ = 0;
-                $unpaidNextTagihan = null;
-                $pembagi          = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
+                $pembagi           = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
 
                 foreach ($unpaidChildren as $child) {
                     if ($sisaDanaBayar <= 0.01) {
                         break;
                     }
 
-                    $tagihanH = round((float)$child['grand_total'], 2);
-                    if ($tagihanH <= 0) {
+                    $tagihanH     = (float)$child['_tagihan_h'];
+                    $sudahBayarH  = (float)$child['_sudah_bayar_h'];
+                    $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
+                    if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
                         continue;
                     }
 
-                    if ($sisaDanaBayar + 0.01 < $tagihanH) {
-                        if ($unpaidNextTagihan === null) {
-                            $unpaidNextTagihan = $tagihanH;
-                        }
-                        continue;
+                    // Serap dana ke Faktur H terawal hingga sisa tagihannya terpenuhi (boleh sebagian)
+                    $bayarChild = min($sisaDanaBayar, $sisaTagihanH);
+                    $bayarChild = round($bayarChild, 2);
+                    if ($bayarChild <= 0.01) {
+                        break;
                     }
 
-                    $bayarChild = $tagihanH;
                     $brutoChild = ($pembagi > 0 && $pembagi < 1.0) ? round($bayarChild / $pembagi, 2) : $bayarChild;
                     $potChild   = max(0, round($brutoChild - $bayarChild, 2));
+
+                    $totalBayarBaru  = round($sudahBayarH + $bayarChild, 2);
+                    $sisaTagihanBaru = max(0.0, round($tagihanH - $totalBayarBaru, 2));
+                    if ($sisaTagihanBaru <= 0.01) {
+                        $totalBayarBaru  = $tagihanH;
+                        $sisaTagihanBaru = 0.0;
+                        $statusBayarBaru = 'lunas';
+                    } else {
+                        $statusBayarBaru = 'sebagian';
+                    }
+
+                    $prevBruto = round((float)($child['nominal_bruto'] ?? 0), 2);
+                    $prevPot   = round((float)($child['nominal_potongan'] ?? 0), 2);
 
                     $paymentData = [
                         'tanggal_pembayaran' => $tglBayar,
@@ -10485,28 +10515,32 @@ class C_SalesOrder extends CI_Controller
                         'nominal_bruto'      => $brutoChild,
                         'nominal_potongan'   => $potChild,
                         'parent_no_faktur'   => $child['parent_no_faktur'] ?: $noFakturZ,
+                        'keterangan'         => ($statusBayarBaru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . $child['no_faktur'],
                     ];
 
                     $this->db->trans_start();
 
-                    if (!empty($child['id_jurnal_q'])) {
-                        $this->M_Journal->delete_journal((int)$child['id_jurnal_q']);
-                    }
-                    if (!empty($child['id_jurnal_a'])) {
-                        $this->M_Journal->delete_journal((int)$child['id_jurnal_a']);
+                    // Jangan hapus jurnal pembayaran sebelumnya bila ini cicilan lanjutan; hanya bersihkan bila belum ada riwayat bayar
+                    if ($sudahBayarH <= 0.01) {
+                        if (!empty($child['id_jurnal_q'])) {
+                            $this->M_Journal->delete_journal((int)$child['id_jurnal_q']);
+                        }
+                        if (!empty($child['id_jurnal_a'])) {
+                            $this->M_Journal->delete_journal((int)$child['id_jurnal_a']);
+                        }
                     }
 
                     $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($child, $paymentData);
 
                     $updateData = [
-                        'status_bayar'      => 'lunas',
-                        'total_bayar'       => $bayarChild,
-                        'sisa_tagihan'      => 0,
+                        'status_bayar'      => $statusBayarBaru,
+                        'total_bayar'       => $totalBayarBaru,
+                        'sisa_tagihan'      => $sisaTagihanBaru,
                         'tanggal_bayar'     => $tglBayar,
                         'metode_pembayaran' => $metode,
                         'skema_potongan'    => $skema,
-                        'nominal_bruto'     => $brutoChild,
-                        'nominal_potongan'  => $potChild,
+                        'nominal_bruto'     => round($prevBruto + $brutoChild, 2),
+                        'nominal_potongan'  => round($prevPot + $potChild, 2),
                         'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
                         'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
                         'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
@@ -10523,17 +10557,21 @@ class C_SalesOrder extends CI_Controller
                     } else {
                         $paidChildForThisZ++;
                         $successHCount++;
+                        if ($statusBayarBaru === 'lunas') {
+                            $lunasHCount++;
+                        } else {
+                            $partialHCount++;
+                            $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaTagihanBaru, 0, ',', '.') . ")";
+                        }
                         $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
                     }
                 }
 
                 if ($paidChildForThisZ > 0) {
                     $successZCount++;
-                    if ($sisaDanaBayar > 0.01 && $unpaidNextTagihan !== null) {
-                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} Faktur H lunas, sisa pembayaran Rp " . number_format($sisaDanaBayar, 0, ',', '.') . " tidak mencukupi Faktur H berikutnya Rp " . number_format($unpaidNextTagihan, 0, ',', '.') . ")";
+                    if ($sisaDanaBayar > 0.01) {
+                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} Faktur H terbayar, kelebihan dana Rp " . number_format($sisaDanaBayar, 0, ',', '.') . " setelah seluruh Faktur H lunas)";
                     }
-                } elseif ($unpaidNextTagihan !== null) {
-                    $insufficientList[] = "{$noFakturZ} (bayar Rp " . number_format($jmlBayar, 0, ',', '.') . ", tagihan Faktur H Rp " . number_format($unpaidNextTagihan, 0, ',', '.') . ")";
                 }
             }
 
@@ -10547,15 +10585,26 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($successHCount > 0) {
-                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong> diproses dan <strong>{$successHCount} Faktur Pecahan H</strong> telah dilunasi beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
+                $statusSummary = [];
+                if ($lunasHCount > 0) {
+                    $statusSummary[] = "<strong>{$lunasHCount} lunas</strong>";
+                }
+                if ($partialHCount > 0) {
+                    $statusSummary[] = "<strong>{$partialHCount} dibayar sebagian</strong>";
+                }
+                $ringkasanH = !empty($statusSummary) ? (' (' . implode(', ', $statusSummary) . ')') : '';
+                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong> diproses dan <strong>{$successHCount} Faktur Pecahan H</strong>{$ringkasanH} telah dicatat pembayarannya beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
                 if ($skippedCount > 0) {
                     $msg .= "<br><small class='text-muted'>Informasi: {$skippedCount} baris Faktur Z dilewati karena kolom jumlah pembayaran dikosongkan.</small>";
+                }
+                if (!empty($partialInfoList)) {
+                    $msg .= "<br><small class='text-info'>Pelunasan sebagian (cicilan): " . implode('; ', array_slice($partialInfoList, 0, 5)) . (count($partialInfoList) > 5 ? '; dll.' : '') . "</small>";
                 }
                 if (!empty($alreadyPaidList)) {
                     $msg .= "<br><small class='text-info'>Faktur Z yang seluruh pecahan H-nya sudah lunas: " . implode(', ', array_slice($alreadyPaidList, 0, 8)) . (count($alreadyPaidList) > 8 ? ', dll.' : '') . "</small>";
                 }
                 if (!empty($leftoverInfoList)) {
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-info-circle'></i> Sisa pembayaran belum melunasi pecahan berikutnya: " . implode('; ', array_slice($leftoverInfoList, 0, 5)) . (count($leftoverInfoList) > 5 ? '; dll.' : '') . "</span>";
+                    $msg .= "<br><span class='text-warning'><i class='fas fa-info-circle'></i> Kelebihan pembayaran: " . implode('; ', array_slice($leftoverInfoList, 0, 5)) . (count($leftoverInfoList) > 5 ? '; dll.' : '') . "</span>";
                 }
                 if (!empty($insufficientList)) {
                     $msg .= "<br><span class='text-warning'><i class='fas fa-exclamation-triangle'></i> Nominal bayar belum cukup untuk melunasi 1 Faktur H pun: " . implode('; ', array_slice($insufficientList, 0, 5)) . (count($insufficientList) > 5 ? '; dll.' : '') . "</span>";
@@ -10633,9 +10682,12 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $grand_total = (float)$faktur['grand_total'];
+        $grand_total = round((float)$faktur['grand_total'], 2);
+        $sudah_bayar = round((float)($faktur['total_bayar'] ?? 0), 2);
+        $sisa_awal   = max(0.0, round($grand_total - $sudah_bayar, 2));
+
         if ($jumlah_bayar <= 0) {
-            $jumlah_bayar = $grand_total;
+            $jumlah_bayar = ($sisa_awal > 0.01) ? $sisa_awal : $grand_total;
         }
 
         if ($jumlah_bayar <= 0) {
@@ -10644,9 +10696,27 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        // Batasi agar nominal bayar tidak melebihi sisa tagihan yang masih berjalan
+        if ($sisa_awal > 0.01 && $jumlah_bayar > $sisa_awal) {
+            $jumlah_bayar = $sisa_awal;
+        }
+
         $pembagi = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
         $bruto   = round($jumlah_bayar / $pembagi, 2);
         $pot     = max(0, round($bruto - $jumlah_bayar, 2));
+
+        $total_bayar_baru = round($sudah_bayar + $jumlah_bayar, 2);
+        $sisa_baru        = max(0.0, round($grand_total - $total_bayar_baru, 2));
+        if ($sisa_baru <= 0.01) {
+            $total_bayar_baru = $grand_total;
+            $sisa_baru        = 0.0;
+            $status_baru      = 'lunas';
+        } else {
+            $status_baru      = 'sebagian';
+        }
+
+        $prev_bruto = round((float)($faktur['nominal_bruto'] ?? 0), 2);
+        $prev_pot   = round((float)($faktur['nominal_potongan'] ?? 0), 2);
 
         $paymentData = [
             'tanggal_pembayaran' => $tanggal_pembayaran,
@@ -10656,31 +10726,33 @@ class C_SalesOrder extends CI_Controller
             'nominal_bruto'      => $bruto,
             'nominal_potongan'   => $pot,
             'parent_no_faktur'   => $parent_no_faktur ?: ($faktur['parent_no_faktur'] ?: ''),
-            'keterangan'         => $keterangan ?: ('Pelunasan Faktur Pecahan ' . $faktur['no_faktur']),
+            'keterangan'         => $keterangan ?: (($status_baru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . 'Faktur Pecahan ' . $faktur['no_faktur']),
         ];
 
         $this->load->model('M_Journal');
         $this->db->trans_start();
 
-        // Hapus jurnal lama jika ada
-        if (!empty($faktur['id_jurnal_q'])) {
-            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
-        }
-        if (!empty($faktur['id_jurnal_a'])) {
-            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+        // Hanya hapus jurnal bila belum ada riwayat pembayaran sebelumnya; bila cicilan lanjutan pertahankan jurnal termin lama
+        if ($sudah_bayar <= 0.01) {
+            if (!empty($faktur['id_jurnal_q'])) {
+                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+            }
+            if (!empty($faktur['id_jurnal_a'])) {
+                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+            }
         }
 
         $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
 
         $updateData = [
-            'status_bayar'      => 'lunas',
-            'total_bayar'       => $jumlah_bayar,
-            'sisa_tagihan'      => 0,
+            'status_bayar'      => $status_baru,
+            'total_bayar'       => $total_bayar_baru,
+            'sisa_tagihan'      => $sisa_baru,
             'tanggal_bayar'     => $tanggal_pembayaran,
             'metode_pembayaran' => $metode_pembayaran,
             'skema_potongan'    => $skema_potongan,
-            'nominal_bruto'     => $bruto,
-            'nominal_potongan'  => $pot,
+            'nominal_bruto'     => round($prev_bruto + $bruto, 2),
+            'nominal_potongan'  => round($prev_pot + $pot, 2),
             'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
             'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
             'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
@@ -10703,7 +10775,11 @@ class C_SalesOrder extends CI_Controller
             if (!empty($jurnalRes['nomor_jurnal_a'])) {
                 $jurnalInfo .= " | Jurnal A: <strong>" . $jurnalRes['nomor_jurnal_a'] . "</strong>";
             }
-            $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dilunasi. ({$jurnalInfo})");
+            if ($status_baru === 'lunas') {
+                $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dilunasi. ({$jurnalInfo})");
+            } else {
+                $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dibayar sebagian sebesar <strong>Rp " . number_format($jumlah_bayar, 0, ',', '.') . "</strong> (sisa tagihan Rp " . number_format($sisa_baru, 0, ',', '.') . "). ({$jurnalInfo})");
+            }
         }
 
         redirect($redirectTo);
@@ -10763,12 +10839,17 @@ class C_SalesOrder extends CI_Controller
 
             if (!$faktur) continue;
 
-            $jmlBayar = (float)$faktur['grand_total'];
-            if ($jmlBayar <= 0) continue;
+            $grandTotal = round((float)$faktur['grand_total'], 2);
+            $sudahBayar = round((float)($faktur['total_bayar'] ?? 0), 2);
+            $jmlBayar   = max(0.0, round($grandTotal - $sudahBayar, 2));
+            if ($jmlBayar <= 0.01) continue;
 
             $tgl = $tanggal_pembayaran !== '' ? $tanggal_pembayaran : (!empty($faktur['tanggal_faktur']) ? $faktur['tanggal_faktur'] : date('Y-m-d'));
             $bruto = round($jmlBayar / $pembagi, 2);
             $pot   = max(0, round($bruto - $jmlBayar, 2));
+
+            $prevBruto = round((float)($faktur['nominal_bruto'] ?? 0), 2);
+            $prevPot   = round((float)($faktur['nominal_potongan'] ?? 0), 2);
 
             $paymentData = [
                 'tanggal_pembayaran' => $tgl,
@@ -10783,24 +10864,26 @@ class C_SalesOrder extends CI_Controller
 
             $this->db->trans_start();
 
-            if (!empty($faktur['id_jurnal_q'])) {
-                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
-            }
-            if (!empty($faktur['id_jurnal_a'])) {
-                $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+            if ($sudahBayar <= 0.01) {
+                if (!empty($faktur['id_jurnal_q'])) {
+                    $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
+                }
+                if (!empty($faktur['id_jurnal_a'])) {
+                    $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
+                }
             }
 
             $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
 
             $updateData = [
                 'status_bayar'      => 'lunas',
-                'total_bayar'       => $jmlBayar,
+                'total_bayar'       => $grandTotal,
                 'sisa_tagihan'      => 0,
                 'tanggal_bayar'     => $tgl,
                 'metode_pembayaran' => $metode_pembayaran,
                 'skema_potongan'    => $skema_potongan,
-                'nominal_bruto'     => $bruto,
-                'nominal_potongan'  => $pot,
+                'nominal_bruto'     => round($prevBruto + $bruto, 2),
+                'nominal_potongan'  => round($prevPot + $pot, 2),
                 'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
                 'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
                 'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
@@ -10847,12 +10930,7 @@ class C_SalesOrder extends CI_Controller
         $this->load->model('M_Journal');
         $this->db->trans_start();
 
-        if (!empty($faktur['id_jurnal_q'])) {
-            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_q']);
-        }
-        if (!empty($faktur['id_jurnal_a'])) {
-            $this->M_Journal->delete_journal((int)$faktur['id_jurnal_a']);
-        }
+        $this->_deleteJurnalPelunasanFakturHPecah($faktur);
 
         $this->db->where('id_pecah', (int)$id_pecah)->update('tbso_faktur_z_pecah', [
             'status_bayar'      => 'belum_lunas',
@@ -10920,12 +10998,7 @@ class C_SalesOrder extends CI_Controller
         foreach ($fakturs as $f) {
             $this->db->trans_start();
 
-            if (!empty($f['id_jurnal_q'])) {
-                $this->M_Journal->delete_journal((int)$f['id_jurnal_q']);
-            }
-            if (!empty($f['id_jurnal_a'])) {
-                $this->M_Journal->delete_journal((int)$f['id_jurnal_a']);
-            }
+            $this->_deleteJurnalPelunasanFakturHPecah($f);
 
             $this->db->where('id_pecah', (int)$f['id_pecah'])->update('tbso_faktur_z_pecah', [
                 'status_bayar'      => 'belum_lunas',
@@ -10954,6 +11027,39 @@ class C_SalesOrder extends CI_Controller
     }
 
     /**
+     * Menghapus seluruh jurnal pelunasan/cicilan (Jurnal Q & A) yang terhubung ke satu Faktur Pecahan H.
+     */
+    private function _deleteJurnalPelunasanFakturHPecah(array $faktur)
+    {
+        $idPecah = (int)($faktur['id_pecah'] ?? 0);
+        $jurnalIds = [];
+
+        if (!empty($faktur['id_jurnal_q'])) {
+            $jurnalIds[] = (int)$faktur['id_jurnal_q'];
+        }
+        if (!empty($faktur['id_jurnal_a'])) {
+            $jurnalIds[] = (int)$faktur['id_jurnal_a'];
+        }
+
+        if ($idPecah > 0) {
+            $rows = $this->db->select('id_jurnal')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR_PECAH')
+                ->where('source_id', (string)$idPecah)
+                ->get()->result_array();
+            foreach ($rows as $row) {
+                $jurnalIds[] = (int)$row['id_jurnal'];
+            }
+        }
+
+        $jurnalIds = array_values(array_unique(array_filter($jurnalIds)));
+        foreach ($jurnalIds as $jid) {
+            $this->M_Journal->delete_journal($jid);
+        }
+    }
+
+    /**
      * Mengambil data rincian ayat jurnal pelunasan (Jurnal Q & Jurnal A) Faktur Pecahan H dalam format JSON untuk modal pop-up.
      */
     public function jurnal_pelunasan_faktur_z_pecah_json($id_pecah)
@@ -10978,18 +11084,56 @@ class C_SalesOrder extends CI_Controller
             }
 
             $this->load->model('M_Journal');
-            $jurnal_q = !empty($faktur['id_jurnal_q'])
+
+            // Ambil seluruh jurnal termin pelunasan/cicilan yang tercatat untuk Faktur Pecahan H ini
+            $jurnalRows = $this->db->select('id_jurnal, keterangan')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR_PECAH')
+                ->where('source_id', (string)(int)$id_pecah)
+                ->order_by('id_jurnal', 'ASC')
+                ->get()->result_array();
+
+            $jurnals_q = [];
+            $jurnals_a = [];
+            $seenIds   = [];
+
+            foreach ($jurnalRows as $jr) {
+                $jid = (int)$jr['id_jurnal'];
+                if ($jid <= 0 || isset($seenIds[$jid])) continue;
+                $seenIds[$jid] = true;
+
+                $detail = $this->M_Journal->accounting_journal_detail_with_accounts($jid);
+                if (!$detail) continue;
+
+                if (stripos((string)($jr['keterangan'] ?? ''), 'PND u/Pot') !== false) {
+                    $jurnals_a[] = $detail;
+                } else {
+                    $jurnals_q[] = $detail;
+                }
+            }
+
+            $jurnal_q = !empty($jurnals_q) ? end($jurnals_q) : (!empty($faktur['id_jurnal_q'])
                 ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_q'])
-                : null;
-            $jurnal_a = !empty($faktur['id_jurnal_a'])
+                : null);
+            $jurnal_a = !empty($jurnals_a) ? end($jurnals_a) : (!empty($faktur['id_jurnal_a'])
                 ? $this->M_Journal->accounting_journal_detail_with_accounts((int)$faktur['id_jurnal_a'])
-                : null;
+                : null);
+
+            if (empty($jurnals_q) && $jurnal_q) {
+                $jurnals_q[] = $jurnal_q;
+            }
+            if (empty($jurnals_a) && $jurnal_a) {
+                $jurnals_a[] = $jurnal_a;
+            }
 
             echo json_encode([
-                'status'   => 'success',
-                'faktur'   => $faktur,
-                'jurnal_q' => $jurnal_q,
-                'jurnal_a' => $jurnal_a,
+                'status'    => 'success',
+                'faktur'    => $faktur,
+                'jurnal_q'  => $jurnal_q,
+                'jurnal_a'  => $jurnal_a,
+                'jurnals_q' => $jurnals_q,
+                'jurnals_a' => $jurnals_a,
             ]);
         } catch (\Throwable $e) {
             echo json_encode([

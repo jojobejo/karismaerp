@@ -3870,9 +3870,11 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['status_bayar']) && $filter['status_bayar'] !== 'all') {
             if ($filter['status_bayar'] === 'lunas') {
                 $this->db->where('p.status_bayar', 'lunas');
+            } elseif ($filter['status_bayar'] === 'sebagian') {
+                $this->db->where('p.status_bayar', 'sebagian');
             } elseif ($filter['status_bayar'] === 'belum_lunas') {
                 $this->db->group_start();
-                $this->db->where('p.status_bayar', 'belum_lunas');
+                $this->db->where_in('p.status_bayar', ['belum_lunas', 'sebagian']);
                 $this->db->or_where('p.status_bayar IS NULL', null, false);
                 $this->db->group_end();
             }
