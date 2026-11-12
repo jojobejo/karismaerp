@@ -76,6 +76,15 @@
                                     <?php endif; ?>
                                 </select>
                             </div>
+                            <div class="form-group mr-2 mb-2">
+                                <label for="filterMdo" class="mr-2 small">MDO</label>
+                                <select id="filterMdo" name="mdo" class="form-control form-control-sm" <?= empty($tgl_kasbon_list)?'disabled':'' ?>>
+                                    <option value="">-- Semua MDO --</option>
+                                    <?php foreach($mdo_list as $mdo_item): ?>
+                                    <option value="<?= htmlspecialchars($mdo_item) ?>" <?= $mdo===$mdo_item?'selected':'' ?>><?= htmlspecialchars($mdo_item) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             <button type="submit" class="btn btn-info btn-sm mb-2 mr-2" <?= empty($tgl_kasbon_list)?'disabled':'' ?>><i class="fas fa-filter mr-1"></i> Tampilkan</button>
                             <a href="<?= base_url('kmt/dca/rekap') ?>" class="btn btn-outline-secondary btn-sm mb-2 mr-2"><i class="fas fa-undo mr-1"></i> Reset Filter</a>
                             <button type="button" id="btnResetManual" class="btn btn-outline-warning btn-sm mb-2 mr-2" <?= empty($grouped)?'disabled':'' ?>><i class="fas fa-redo mr-1"></i> Reset Nilai Manual</button>
@@ -84,13 +93,14 @@
                         <div class="small text-muted">Isi No. Bukti, UM DCA (dapat diubah manual), dan Note pada lembar rekap di bawah sebelum melakukan export.</div>
                         <form method="POST" action="<?= base_url('kmt/dca/export_rekap') ?>" id="formExport">
                             <input type="hidden" name="tgl_kasbon" value="<?= htmlspecialchars($tgl_kasbon) ?>">
+                            <input type="hidden" name="mdo" value="<?= htmlspecialchars($mdo) ?>">
                         </form>
                     </div>
                 </div>
 
                 <?php if(empty($grouped)): ?>
                 <div class="alert alert-info">
-                    <strong>Tidak ada data</strong> dengan tanggal kasbon <?= htmlspecialchars(date('d-m-Y', strtotime($tgl_kasbon))) ?>.
+                    <strong>Tidak ada data</strong> dengan tanggal kasbon <?= htmlspecialchars(date('d-m-Y', strtotime($tgl_kasbon))) ?><?= $mdo !== '' ? ' untuk MDO ' . htmlspecialchars($mdo) : '' ?>.
                 </div>
                 <?php endif; ?>
 
@@ -232,7 +242,32 @@
 <script>
 $(function() {
     const tglKasbon = <?= json_encode($tgl_kasbon) ?>;
-    const storageKeyPrefix = 'dca_rekap_' + tglKasbon;
+    const selectedMdo = <?= json_encode($mdo) ?>;
+    const storageKeyPrefix = 'dca_rekap_' + tglKasbon + (selectedMdo ? '_' + selectedMdo : '');
+
+    $('#tglKasbon').on('change', function() {
+        const selectedTgl = $(this).val();
+        const $mdoSelect = $('#filterMdo');
+        $mdoSelect.prop('disabled', true).html('<option value="">Memuat MDO...</option>');
+
+        $.getJSON('<?= base_url('kmt/dca/get_mdo_by_tgl_kasbon') ?>', { tgl_kasbon: selectedTgl })
+            .done(function(res) {
+                let html = '<option value="">-- Semua MDO --</option>';
+                if (res && res.status && Array.isArray(res.mdo_list)) {
+                    res.mdo_list.forEach(function(item) {
+                        const escaped = $('<div>').text(item).html();
+                        html += '<option value="' + escaped + '">' + escaped + '</option>';
+                    });
+                }
+                $mdoSelect.html(html);
+            })
+            .fail(function() {
+                $mdoSelect.html('<option value="">-- Semua MDO --</option>');
+            })
+            .always(function() {
+                $mdoSelect.prop('disabled', false);
+            });
+    });
 
     function parseNum(val) {
         if (!val) return 0;

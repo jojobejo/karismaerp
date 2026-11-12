@@ -35,6 +35,23 @@ class Dca extends CI_Controller {
             : ($default ?: date('Y-m-d'));
     }
 
+    private function get_mdo_filter($mdo_list = null) {
+        $value = preg_replace('/\s+/', ' ', trim((string)$this->input->post_get('mdo')));
+        if ($value === '') return '';
+
+        if (is_array($mdo_list)) {
+            $upper = mb_strtoupper($value);
+            foreach ($mdo_list as $item) {
+                if (mb_strtoupper($item) === $upper) {
+                    return $item;
+                }
+            }
+            return '';
+        }
+
+        return $value;
+    }
+
     private function get_dca_product_key($uraian) {
         $text = strtolower((string)$uraian);
         if (strpos($text, 'cpboration') !== false || preg_match('/\bcp\b/i', $text)) return 'cp';
@@ -668,6 +685,17 @@ class Dca extends CI_Controller {
         exit;
     }
  
+    public function get_mdo_by_tgl_kasbon() {
+        $tgl_kasbon = $this->get_tgl_kasbon_filter('');
+        $mdo_list = $tgl_kasbon ? $this->M_Kmt->get_dca_mdo_list($tgl_kasbon) : [];
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status'   => true,
+                'mdo_list' => $mdo_list,
+            ]));
+    }
+
     public function rekap() {
         $tgl_kasbon_list = $this->M_Kmt->get_dca_tgl_kasbon_list();
         $tgl_kasbon_values = array_column($tgl_kasbon_list, 'tgl_kasbon');
@@ -676,7 +704,12 @@ class Dca extends CI_Controller {
         if ($tgl_kasbon_values && !in_array($tgl_kasbon, $tgl_kasbon_values, true)) {
             $tgl_kasbon = $tgl_kasbon_default;
         }
+        $mdo_list = $tgl_kasbon ? $this->M_Kmt->get_dca_mdo_list($tgl_kasbon) : [];
+        $mdo = $this->get_mdo_filter($mdo_list);
         $filter = ['tgl_kasbon' => $tgl_kasbon];
+        if ($mdo !== '') {
+            $filter['mdo'] = $mdo;
+        }
  
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
  
@@ -753,6 +786,8 @@ class Dca extends CI_Controller {
             'rekap_data'   => $rekap_data,
             'tgl_kasbon'   => $tgl_kasbon,
             'tgl_kasbon_list' => $tgl_kasbon_list,
+            'mdo'          => $mdo,
+            'mdo_list'     => $mdo_list,
             'lv'           => $this->get_lv(),
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
@@ -765,7 +800,11 @@ class Dca extends CI_Controller {
     
     public function export_rekap() {
         $tgl_kasbon = $this->get_tgl_kasbon_filter();
+        $mdo = $this->get_mdo_filter();
         $filter = ['tgl_kasbon' => $tgl_kasbon];
+        if ($mdo !== '') {
+            $filter['mdo'] = $mdo;
+        }
         $no_bukti_values = $this->input->post('no_bukti');
         if (!is_array($no_bukti_values)) $no_bukti_values = [];
         $um_dca_values = $this->input->post('um_dca');
@@ -1058,7 +1097,14 @@ class Dca extends CI_Controller {
                 ->setCellValue('A1', 'Tidak ada data DCA untuk filter yang dipilih.');
         }
 
-        $filename = 'Rekap_DCA_KMT_' . date('d-m-Y', strtotime($tgl_kasbon)) . '.xlsx';
+        $mdo_suffix = '';
+        if ($mdo !== '') {
+            $safe_mdo = trim(preg_replace('/[^A-Za-z0-9_\-]+/', '_', $mdo), '_');
+            if ($safe_mdo !== '') {
+                $mdo_suffix = '_' . $safe_mdo;
+            }
+        }
+        $filename = 'Rekap_DCA_KMT' . $mdo_suffix . '_' . date('d-m-Y', strtotime($tgl_kasbon)) . '.xlsx';
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');

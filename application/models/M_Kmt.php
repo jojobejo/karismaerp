@@ -513,7 +513,24 @@ class M_Kmt extends CI_Model {
     
         $this->db->order_by('d.abm, d.nama_mdo, d.tanggal_dca');
         $headers = $this->db->get()->result_array();
-    
+
+        if (!empty($filter['mdo'])) {
+            $selected_mdos = is_array($filter['mdo']) ? $filter['mdo'] : [$filter['mdo']];
+            $selected_keys = [];
+            foreach ($selected_mdos as $mdo_item) {
+                $norm = mb_strtoupper(preg_replace('/\s+/', ' ', trim((string)$mdo_item)));
+                if ($norm !== '') {
+                    $selected_keys[$norm] = true;
+                }
+            }
+            if (!empty($selected_keys)) {
+                $headers = array_values(array_filter($headers, static function ($header) use ($selected_keys) {
+                    $row_key = mb_strtoupper(preg_replace('/\s+/', ' ', trim((string)($header['nama_mdo'] ?? ''))));
+                    return isset($selected_keys[$row_key]);
+                }));
+            }
+        }
+
         if (empty($headers)) return [];
     
         // ── Ambil semua detail sekaligus ────────────────────────────
@@ -555,6 +572,36 @@ class M_Kmt extends CI_Model {
             ->order_by('tgl_kasbon', 'DESC')
             ->get()
             ->result_array();
+    }
+
+    /**
+     * Ambil daftar nama MDO unik yang memiliki detail DCA pada tanggal kasbon tertentu.
+     */
+    public function get_dca_mdo_list($tgl_kasbon) {
+        if (empty($tgl_kasbon)) return [];
+
+        $rows = $this->db
+            ->distinct()
+            ->select('d.nama_mdo')
+            ->from('tbkmt_dca d')
+            ->join('tbkmt_dca_detail dd', 'dd.id_dca = d.id', 'inner')
+            ->where('dd.tgl_kasbon', $tgl_kasbon)
+            ->where('d.nama_mdo IS NOT NULL', null, false)
+            ->where("TRIM(d.nama_mdo) !=", '')
+            ->order_by('d.nama_mdo', 'ASC')
+            ->get()
+            ->result_array();
+
+        $unique = [];
+        foreach ($rows as $row) {
+            $label = preg_replace('/\s+/', ' ', trim((string)$row['nama_mdo']));
+            if ($label === '') continue;
+            $key = mb_strtoupper($label);
+            if (!isset($unique[$key])) {
+                $unique[$key] = $label;
+            }
+        }
+        return array_values($unique);
     }
     
     public function get_dca_with_details($filter = []) {
