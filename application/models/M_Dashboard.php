@@ -52,7 +52,8 @@ class M_Dashboard extends CI_Model
                     $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'orange', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.'),
                     $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
-                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
+                    $this->menu('Laporan Operasional', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan operasional lainnya.'),
+                    $this->menu('Laporan Lainnya', 'laporan/lainnya', 'fas fa-folder-open', 'teal', 'Laporan HRD, KPI, Logistik distribusi, dan laporan khusus lainnya.'),
                 ),
             ),
             'hrd' => array(

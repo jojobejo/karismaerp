@@ -19,6 +19,9 @@ class Data_customers extends CI_Controller
         // Hitung total customer secara cepat tanpa memuat seluruh baris
         $data['total_customers'] = (int)$this->db->count_all('tb_customer');
 
+        $hasCollectionCol = $this->db->field_exists('nama_collection', 'tb_customer');
+        $collectionSelect = $hasCollectionCol ? "COALESCE(nama_collection, '') AS nama_collection," : "'' AS nama_collection,";
+
         // Initial load dibatasi 50 data pertama agar halaman terbuka instan dan ringan
         $data['customers'] = $this->db->query("
             SELECT
@@ -27,6 +30,7 @@ class Data_customers extends CI_Controller
                 COALESCE(nama_customer, '') AS nama_customer,
                 COALESCE(nama_kios, '') AS nama_kios,
                 COALESCE(nama_sales, '') AS nama_sales,
+                {$collectionSelect}
                 COALESCE(kd_rute, '') AS kd_rute,
                 COALESCE(telp1, '') AS telp1
             FROM tb_customer
@@ -50,12 +54,16 @@ class Data_customers extends CI_Controller
         $offset = max(0, (int)$this->input->get('offset'));
         $limit  = min(100, max(10, (int)($this->input->get('limit') ?: 50)));
 
+        $hasCollectionCol = $this->db->field_exists('nama_collection', 'tb_customer');
+        $collectionSelect = $hasCollectionCol ? "COALESCE(nama_collection, '') AS nama_collection," : "'' AS nama_collection,";
+
         $this->db->select("
             id,
             COALESCE(kd_customer, '') AS kd_customer,
             COALESCE(nama_customer, '') AS nama_customer,
             COALESCE(nama_kios, '') AS nama_kios,
             COALESCE(nama_sales, '') AS nama_sales,
+            {$collectionSelect}
             COALESCE(kd_rute, '') AS kd_rute,
             COALESCE(telp1, '') AS telp1
         ");
@@ -68,6 +76,9 @@ class Data_customers extends CI_Controller
             $this->db->or_like('kd_customer', $search);
             $this->db->or_like('kd_rute', $search);
             $this->db->or_like('nama_sales', $search);
+            if ($hasCollectionCol) {
+                $this->db->or_like('nama_collection', $search);
+            }
             $this->db->or_like('telp1', $search);
             $this->db->group_end();
         }
@@ -96,6 +107,9 @@ class Data_customers extends CI_Controller
             return;
         }
 
+        $hasCollectionCol = $this->db->field_exists('nama_collection', 'tb_customer');
+        $collectionSelect = $hasCollectionCol ? "COALESCE(nama_collection, '') AS nama_collection," : "'' AS nama_collection,";
+
         $row = $this->db->query("
             SELECT
                 id,
@@ -103,6 +117,7 @@ class Data_customers extends CI_Controller
                 COALESCE(nama_customer, '') AS nama_customer,
                 COALESCE(nama_kios, '') AS nama_kios,
                 COALESCE(nama_sales, '') AS nama_sales,
+                {$collectionSelect}
                 COALESCE(kd_rute, '') AS kd_rute,
                 COALESCE(telp1, '') AS telp1,
                 COALESCE(telp2, '') AS telp2,
@@ -141,6 +156,10 @@ class Data_customers extends CI_Controller
             'jam_buka_tutup'     => $this->input->post('jam_buka_tutup'),
             'karakteristik_kios' => $this->input->post('karakteristik_kios'),
         ];
+
+        if ($this->db->field_exists('nama_collection', 'tb_customer')) {
+            $data['nama_collection'] = $this->input->post('nama_collection');
+        }
 
         if ($id > 0) {
             $ok = $this->db->where('id', $id)->update('tb_customer', $data);

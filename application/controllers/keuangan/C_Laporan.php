@@ -2588,4 +2588,176 @@ class C_Laporan extends CI_Controller
 
         $this->load->view('content/keuangan/laporan/laporan_keuangan/neraca_excel.php', $data);
     }
+
+    // =========================================================================
+    // LAPORAN LAINNYA — TAGPD (DAFTAR TAGIHAN PIUTANG)
+    // =========================================================================
+
+    /**
+     * Mengambil parameter filter TAGPD dari request GET atau POST secara seragam.
+     *
+     * @return array
+     */
+    private function _getTagpdFilterParams()
+    {
+        $todayDate = trim((string)($this->input->get_post('today_date', true) ?: date('Y-m-d')));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $todayDate)) {
+            $todayDate = date('Y-m-d');
+        }
+
+        return [
+            'today_date' => $todayDate,
+            'filters'    => [
+                'sales'        => trim((string)$this->input->get_post('sales', true)),
+                'status_bayar' => trim((string)$this->input->get_post('status_bayar', true)),
+                'keyword'      => trim((string)$this->input->get_post('keyword', true)),
+            ],
+        ];
+    }
+
+    /**
+     * Halaman utama laporan TAGPD (Daftar Tagihan Piutang).
+     */
+    public function tagpd_report()
+    {
+        $this->load->model('M_LaporanTagpd');
+        $params = $this->_getTagpdFilterParams();
+        $report = $this->M_LaporanTagpd->get_tagpd_report($params['today_date'], $params['filters']);
+
+        $data['page_title']     = 'KARISMA - TAGPD (DAFTAR TAGIHAN PIUTANG)';
+        $data['today_date']     = $report['today_date'];
+        $data['month_start']    = $report['month_start'];
+        $data['sales_options']  = $report['sales_options'];
+        $data['column_letters'] = $this->M_LaporanTagpd->get_column_letters();
+        $data['initial_report'] = $report;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_lainnya/tagpd_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint AJAX JSON untuk memuat ulang data TAGPD sesuai filter.
+     */
+    public function tagpd_data()
+    {
+        $this->load->model('M_LaporanTagpd');
+        $params = $this->_getTagpdFilterParams();
+        $report = $this->M_LaporanTagpd->get_tagpd_report($params['today_date'], $params['filters']);
+        $tableHtml = $this->load->view('content/keuangan/laporan/laporan_lainnya/_tagpd_table.php', [
+            'rows'           => $report['rows'],
+            'totals'         => $report['totals'],
+            'column_letters' => $this->M_LaporanTagpd->get_column_letters(),
+            'is_excel'       => false,
+        ], true);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'data'       => $report,
+                'table_html' => $tableHtml,
+            ]));
+    }
+
+    /**
+     * Export laporan TAGPD ke Excel (.xls) atau CSV (.csv).
+     */
+    public function tagpd_export()
+    {
+        $this->_ensure_access();
+        $this->load->model('M_LaporanTagpd');
+
+        $params = $this->_getTagpdFilterParams();
+        $format = strtolower(trim((string)($this->input->get('format', true) ?: 'xls')));
+        $report = $this->M_LaporanTagpd->get_tagpd_report($params['today_date'], $params['filters']);
+        $columnLetters = $this->M_LaporanTagpd->get_column_letters();
+
+        if ($format === 'csv') {
+            $filename = 'TAGPD_Daftar_Tagihan_Piutang_' . $report['today_date'] . '.csv';
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $out = fopen('php://output', 'w');
+            // Tulis BOM UTF-8 agar Excel membaca karakter dengan benar
+            fwrite($out, "\xEF\xBB\xBF");
+
+            // Baris nomor kolom 1..42 (offset 4 kolom awal)
+            $numRow = array_fill(0, 46, '');
+            for ($i = 4; $i < 46; $i++) {
+                $numRow[$i] = $i - 3;
+            }
+            fputcsv($out, $numRow);
+
+            // Baris Jangka Waktu JT & Today
+            $metaRow = array_fill(0, 46, '');
+            $metaRow[0] = 'Jangka Waktu JT';
+            $metaRow[12] = 'Today:';
+            $metaRow[13] = $report['today_date'];
+            fputcsv($out, $metaRow);
+
+            // Baris Judul
+            $titleRow = array_fill(0, 46, '');
+            $titleRow[0] = 'Daftar Tagihan Piutang';
+            fputcsv($out, $titleRow);
+
+            // Baris Header Tingkat 1
+            $h1 = [
+                'No', 'A/Q', 'Tanggal  Faktur', 'Tanggal  Tax', 'No. Faktur', 'FP', 'Plafon', 'Sales', 'Collection',
+                'Tgl Masuk Kios Baru', 'Metode', 'KODE', 'Nama Customer/Toko', 'Nama Customer',
+                'TAX', '', 'Pengiriman', '', 'Wilayah1', 'SE', 'Jatuh Tempo', 'Tanggal JT', 'Bts JT (hr)',
+                'Saldo Awal (Rp)', 'Saldo Awal/Faktur (Rp)', 'Jumlah/Faktur (Rp)',
+                'Pelunasan', '', '', '', '', '', '',
+                'Tanggal Pelunasan', 'Diselesaikan dg', 'Tgl Regt. (KU)', 'Saldo PD (Rp)', 'Saldo PD/Faktur',
+                'Program Bonus OTP', 'Keterangan', 'PH/Bonus/ Faktur', 'Jumlah PH/Bonus/ Faktur',
+                'Cocokan Saldo Tax/Non Tax', '', '', 'Bts JT (Hari)'
+            ];
+            fputcsv($out, $h1);
+
+            // Baris Header Tingkat 2
+            $h2 = array_fill(0, 46, '');
+            $h2[10] = 'Bayar';
+            $h2[14] = 'Alamat';
+            $h2[15] = 'Kota';
+            $h2[16] = 'Alamat';
+            $h2[17] = 'Kota';
+            $h2[26] = 'Retur, Pot, Bonus';
+            $h2[27] = 'BG';
+            $h2[28] = 'Tgl JT BG';
+            $h2[29] = 'No. BG';
+            $h2[30] = 'BG Cair';
+            $h2[31] = 'Tgl BG Cair';
+            $h2[32] = 'KU/Cash';
+            $h2[34] = 'ket byr';
+            $h2[37] = 'Rp.';
+            fputcsv($out, $h2);
+
+            // Baris Huruf Kolom A..BH
+            fputcsv($out, $columnLetters);
+
+            // Baris Data
+            foreach ($report['rows'] as $r) {
+                fputcsv($out, array_values($r));
+            }
+
+            fclose($out);
+            return;
+        }
+
+        $filename = 'TAGPD_Daftar_Tagihan_Piutang_' . $report['today_date'] . '.xls';
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $data = [
+            'today_date'     => $report['today_date'],
+            'month_start'    => $report['month_start'],
+            'rows'           => $report['rows'],
+            'totals'         => $report['totals'],
+            'column_letters' => $columnLetters,
+        ];
+
+        $this->load->view('content/keuangan/laporan/laporan_lainnya/tagpd_excel.php', $data);
+    }
 }

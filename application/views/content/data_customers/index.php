@@ -262,6 +262,13 @@
                                                             </div>
 
                                                             <div class="form-group row mb-2">
+                                                                <label class="col-sm-5 col-form-label col-form-label-sm">Collection :</label>
+                                                                <div class="col-sm-7">
+                                                                    <input type="text" name="nama_collection" id="nama_collection" class="form-control form-control-sm field-input" placeholder="Nama collection" readonly>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="form-group row mb-2">
                                                                 <label class="col-sm-5 col-form-label col-form-label-sm">Rute Pengiriman :</label>
                                                                 <div class="col-sm-7">
                                                                     <input type="text" name="kd_rute" id="kd_rute" class="form-control form-control-sm field-input" placeholder="Kode rute" readonly>
@@ -624,6 +631,7 @@
                 let subInfo = [];
                 if (data.kd_customer) subInfo.push('Kode: <strong class="text-primary">' + escapeHtml(data.kd_customer) + '</strong>');
                 if (data.nama_sales) subInfo.push('Sales: <strong>' + escapeHtml(data.nama_sales) + '</strong>');
+                if (data.nama_collection) subInfo.push('Collection: <strong>' + escapeHtml(data.nama_collection) + '</strong>');
                 if (data.kd_rute) subInfo.push('Rute: <strong>' + escapeHtml(data.kd_rute) + '</strong>');
                 if (data.regional) subInfo.push('Wilayah: <strong>' + escapeHtml(data.regional) + '</strong>');
 
@@ -647,6 +655,7 @@
         $('#kd_customer').val(data.kd_customer || '');
         $('#nama_kios').val(data.nama_kios || '');
         $('#nama_sales').val(data.nama_sales || '');
+        $('#nama_collection').val(data.nama_collection || '');
         $('#nama_customer').val(data.nama_customer || '');
         $('#kd_rute').val(data.kd_rute || '');
         $('#telp1').val(data.telp1 || '');
