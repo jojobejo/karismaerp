@@ -26,11 +26,8 @@ class C_Userfacility extends CI_Controller
 
     public function index()
     {
-        $this->facility->ensure_schema();
-        $data['page_title'] = 'KARISMA ERP - Fasilitas Per User';
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/master/userfacility/index.php', $data);
-        $this->load->view('partial/main/footer.php');
+        // Halaman pengaturan fasilitas per user telah digabungkan ke User Management
+        redirect('master/user-management?tab=fasilitas');
     }
 
     public function users()

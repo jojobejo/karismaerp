@@ -51,11 +51,8 @@ class C_Aksesdashboard extends CI_Controller
 
     public function index()
     {
-        $this->access->ensure_schema();
-        $data['page_title'] = 'KARISMA ERP - Akses Menu Dashboard';
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/master/aksesdashboard/index.php', $data);
-        $this->load->view('partial/main/footer.php');
+        // Halaman pengaturan akses menu dashboard telah digabungkan ke User Management
+        redirect('master/user-management?tab=akses-dashboard');
     }
 
     public function users()

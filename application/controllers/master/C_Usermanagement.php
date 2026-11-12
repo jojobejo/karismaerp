@@ -38,7 +38,22 @@ class C_Usermanagement extends CI_Controller
 
     public function index()
     {
+        $this->load->model('M_Dashboard');
+        $canDashboardAccess = $this->M_Dashboard->is_strict_admin();
+        $canUserFacility = $this->permission->can('master/user-facility');
+
+        if ($canDashboardAccess) {
+            $this->load->model('master/M_Dashboardaccess', 'dashboardAccess');
+            $this->dashboardAccess->ensure_schema();
+        }
+        if ($canUserFacility) {
+            $this->load->model('master/M_Userfacility', 'userFacility');
+            $this->userFacility->ensure_schema();
+        }
+
         $data['page_title'] = 'KARISMA ERP - User Management';
+        $data['can_dashboard_access'] = $canDashboardAccess;
+        $data['can_user_facility'] = $canUserFacility;
         $data['jobdesk'] = $this->users->bagian_options();
         $data['akses_level'] = $this->users->level_options();
         $data['departemen'] = $this->users->distinct_options('departemen');

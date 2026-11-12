@@ -74,12 +74,6 @@
                   </a>
                 </li>
                 <li class="nav-item">
-                  <a href="<?= base_url('master/akses-dashboard') ?>" class="nav-link">
-                    <i class="fas fa-user-lock nav-icon"></i>
-                    <p>Akses Menu Dashboard</p>
-                  </a>
-                </li>
-                <li class="nav-item">
                   <a href="<?= base_url('master/jobdesk') ?>" class="nav-link">
                     <i class="fas fa-briefcase nav-icon"></i>
                     <p>Jobdesk</p>

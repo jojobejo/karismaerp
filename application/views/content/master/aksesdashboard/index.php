@@ -21,8 +21,31 @@
                     overflow: hidden;
                 }
                 .da-user-list {
-                    max-height: 68vh;
+                    max-height: 55vh;
                     overflow-y: auto;
+                }
+                .da-matrix-container {
+                    max-height: 62vh;
+                    overflow-y: auto;
+                }
+                /* Pada layar desktop, samakan tinggi panel kiri & kanan agar hanya isi daftar/tabel yang men-scroll, bukan halaman utama */
+                @media (min-width: 992px) {
+                    .da-panel-card {
+                        height: calc(100vh - 235px);
+                        min-height: 460px;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .da-panel-card > :not(.da-user-list):not(.da-matrix-container) {
+                        flex-shrink: 0;
+                    }
+                    .da-user-list,
+                    .da-matrix-container {
+                        flex: 1 1 auto;
+                        min-height: 0;
+                        max-height: none;
+                        overflow-y: auto;
+                    }
                 }
                 .da-user-item {
                     cursor: pointer;
@@ -167,8 +190,8 @@
 
             <div class="row">
                 <!-- KOLOM KIRI: DAFTAR USER -->
-                <div class="col-lg-4 mb-3">
-                    <div class="da-card">
+                <div class="col-lg-4 mb-3 mb-lg-0">
+                    <div class="da-card da-panel-card">
                         <div class="p-3 border-bottom bg-light">
                             <label class="font-weight-bold mb-1 d-block">Pilih User</label>
                             <div class="input-group mb-2">
@@ -190,7 +213,7 @@
 
                 <!-- KOLOM KANAN: MATRIX MENU DASHBOARD -->
                 <div class="col-lg-8">
-                    <div class="da-card">
+                    <div class="da-card da-panel-card">
                         <div class="p-3 border-bottom d-flex flex-wrap justify-content-between align-items-center" style="gap: 12px;">
                             <div>
                                 <h5 class="mb-0 font-weight-bold" id="daSelectedUserName">Pilih user di sebelah kiri</h5>
@@ -231,7 +254,7 @@
                             <div class="da-section-tabs" id="daSectionTabs"></div>
                         </div>
 
-                        <div class="p-3" id="daMatrixContainer">
+                        <div class="p-3 da-matrix-container" id="daMatrixContainer">
                             <div class="text-center text-muted py-5">
                                 <i class="fas fa-hand-pointer fa-2x mb-2 text-secondary"></i>
                                 <p class="mb-0">Pilih salah satu user di daftar kiri untuk mengatur akses menu dashboard-nya.</p>
