@@ -504,6 +504,12 @@ $route['master/menu/save']                          = 'master/C_Menu/save';
 $route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
 $route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
 $route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
+$route['master/akses-dashboard']                    = 'master/C_Aksesdashboard';
+$route['master/akses-dashboard/users']              = 'master/C_Aksesdashboard/users';
+$route['master/akses-dashboard/matrix/(:num)']      = 'master/C_Aksesdashboard/matrix/$1';
+$route['master/akses-dashboard/update']             = 'master/C_Aksesdashboard/update';
+$route['master/akses-dashboard/bulk']               = 'master/C_Aksesdashboard/bulk';
+$route['master/akses-dashboard/reset/(:num)']       = 'master/C_Aksesdashboard/reset/$1';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';

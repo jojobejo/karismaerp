@@ -20,3 +20,11 @@ $hook['post_controller_constructor'][] = array(
     'filepath' => 'hooks'
 );
 
+// Hook proteksi hak akses menu dashboard per user
+$hook['post_controller_constructor'][] = array(
+    'class'    => 'Dashboard_access_guard',
+    'function' => 'enforce',
+    'filename' => 'Dashboard_access_guard.php',
+    'filepath' => 'hooks'
+);
+

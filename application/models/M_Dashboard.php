@@ -21,38 +21,60 @@ class M_Dashboard extends CI_Model
         );
     }
 
-    public function module_sections($context = array())
+    /**
+     * Cek apakah user yang login adalah Administrator sejati untuk mengelola hak akses
+     */
+    public function is_strict_admin($context = null)
+    {
+        if (!is_array($context)) {
+            $context = $this->current_user_context();
+        }
+        $lv = (int)($context['lv'] ?? 0);
+        $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
+        $username = strtolower(trim((string)($context['username'] ?? '')));
+
+        return (bool)$this->session->userdata('is_admin_dashboard')
+            || $username === 'admin'
+            || $lv >= 99
+            || in_array($jobdesk, array('ADMIN', 'SUPER ADMIN', 'SUPERADMIN'), true);
+    }
+
+    /**
+     * Definisi mentah seluruh section dan menu dashboard (single source of truth)
+     */
+    public function base_module_sections($context = array())
     {
         $retur_pj_route = $this->get_retur_penjualan_route($context);
         $retur_pb_route = $this->get_retur_pembelian_route($context);
         $piutang_customer_route = $this->get_piutang_customer_route($context);
-        $sections = array(
+
+        return array(
             'keuangan' => array(
                 'label' => 'KEUANGAN',
                 'icon' => 'fas fa-wallet',
                 'description' => 'Kontrol stok harian, master barang, dan laporan keuangan operasional.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.'),
-                    $this->menu('Jurnal Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul jurnal pembelian dan monitoring PO keuangan.'),
-                    $this->menu('Pembayaran Supplier', 'keuangan/pembayaran-supplier', 'fas fa-money-check-alt', 'green', 'Bayar hutang supplier dari LPB, retur, invoice, dan jurnal hutang.'),
-                    $this->menu('Jurnal Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul jurnal penjualan dan jurnal pembayaran.'),
-                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'red', 'Akses retur pembelian untuk verifikasi dampak stok serta jurnal.'),
-                    $this->menu('Penyesuaian Barang', 'persediaan/penyesuaian_barang', 'fas fa-sliders-h', 'teal', 'Kelola penyesuaian persediaan barang gudang (penambahan/pengurangan stok).'),
-                    $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
-                    $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
-                    $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'purple', 'Kelola chart of accounts dan akun jurnal general ledger.'),
-                    $this->menu('Transaksi Jurnal Umum', 'buku_besar/jurnal_umum', 'fas fa-book-open', 'lime', 'Kelola dan rekam transaksi jurnal umum.'),
-                    $this->menu('Buku Besar', 'keuangan/buku_besar', 'fas fa-book', 'blue', 'Buka laporan buku besar / general ledger per akun.'),
-                    $this->menu('Kas Keluar', 'keuangan/kas_keluar', 'fas fa-money-check-alt', 'teal', 'Kelola transaksi pengeluaran kas / bank dan posting jurnal umum.'),
-                    $this->menu('Kas Masuk', 'keuangan/kas_masuk', 'fas fa-cash-register', 'green', 'Kelola transaksi penerimaan kas / bank dan posting jurnal umum.'),
-                    $this->menu('Kasir', 'keuangan/kasir', 'fas fa-cash-register', 'brown', 'Kelola transaksi kas masuk & kas keluar kasir harian.'),
-                    $this->menu('Piutang Customer', $piutang_customer_route, 'fas fa-cash-register', 'blue', 'Kelola piutang customer dan input pembayaran faktur.'),
-                    $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market di kios, realisasi pembelian, dan sisa titipan.'),
-                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'orange', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.'),
-                    $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).'),
-                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
-                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.', 'daily_stock'),
+                    $this->menu('Jurnal Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul jurnal pembelian dan monitoring PO keuangan.', 'jurnal_pembelian'),
+                    $this->menu('Pembayaran Supplier', 'keuangan/pembayaran-supplier', 'fas fa-money-check-alt', 'green', 'Bayar hutang supplier dari LPB, retur, invoice, dan jurnal hutang.', 'pembayaran_supplier'),
+                    $this->menu('Jurnal Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul jurnal penjualan dan jurnal pembayaran.', 'jurnal_penjualan'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'red', 'Akses retur pembelian untuk verifikasi dampak stok serta jurnal.', 'retur_pembelian'),
+                    $this->menu('Penyesuaian Barang', 'persediaan/penyesuaian_barang', 'fas fa-sliders-h', 'teal', 'Kelola penyesuaian persediaan barang gudang (penambahan/pengurangan stok).', 'penyesuaian_barang'),
+                    $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.', 'daily_stock_lot'),
+                    $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.', 'master_barang'),
+                    $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'purple', 'Kelola chart of accounts dan akun jurnal general ledger.', 'jurnal'),
+                    $this->menu('Transaksi Jurnal Umum', 'buku_besar/jurnal_umum', 'fas fa-book-open', 'lime', 'Kelola dan rekam transaksi jurnal umum.', 'jurnal_umum'),
+                    $this->menu('Buku Besar', 'keuangan/buku_besar', 'fas fa-book', 'blue', 'Buka laporan buku besar / general ledger per akun.', 'buku_besar'),
+                    $this->menu('Kas Keluar', 'keuangan/kas_keluar', 'fas fa-money-check-alt', 'teal', 'Kelola transaksi pengeluaran kas / bank dan posting jurnal umum.', 'kas_keluar'),
+                    $this->menu('Kas Masuk', 'keuangan/kas_masuk', 'fas fa-cash-register', 'green', 'Kelola transaksi penerimaan kas / bank dan posting jurnal umum.', 'kas_masuk'),
+                    $this->menu('Kasir', 'keuangan/kasir', 'fas fa-cash-register', 'brown', 'Kelola transaksi kas masuk & kas keluar kasir harian.', 'kasir'),
+                    $this->menu('Piutang Customer', $piutang_customer_route, 'fas fa-cash-register', 'blue', 'Kelola piutang customer dan input pembayaran faktur.', 'piutang_customer'),
+                    $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market di kios, realisasi pembelian, dan sisa titipan.', 'test_market'),
+                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'orange', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.', 'pecah_faktur'),
+                    $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).', 'data_customers'),
+                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.', 'retur_penjualan'),
+                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.', 'semua_laporan'),
                 ),
             ),
             'hrd' => array(
@@ -60,11 +82,11 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-users',
                 'description' => 'Akses pengelolaan user, struktur kerja, dan penilaian lingkungan.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Penilaian Lingkungan', 'penilaian_lingkungan', 'fas fa-clipboard-check', 'green', 'Masuk ke modul penilaian lingkungan kerja.'),
-                    $this->menu('Admin Penilaian', 'hrd/penilaian_lingkungan/admin', 'fas fa-user-shield', 'purple', 'Panel admin untuk monitoring dan konfigurasi penilaian.'),
-                    $this->menu('User Management', 'master/user-management', 'fas fa-user-cog', 'dark', 'Kelola akun, level akses, dan status user.'),
-                    $this->menu('Schedule Direktur', 'schedule_direktur', 'fas fa-calendar-check', 'cyan', 'Kelola dan pantau jadwal direktur.'),
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Penilaian Lingkungan', 'penilaian_lingkungan', 'fas fa-clipboard-check', 'green', 'Masuk ke modul penilaian lingkungan kerja.', 'penilaian_lingkungan'),
+                    $this->menu('Admin Penilaian', 'hrd/penilaian_lingkungan/admin', 'fas fa-user-shield', 'purple', 'Panel admin untuk monitoring dan konfigurasi penilaian.', 'admin_penilaian'),
+                    $this->menu('User Management', 'master/user-management', 'fas fa-user-cog', 'dark', 'Kelola akun, level akses, dan status user.', 'user_management'),
+                    $this->menu('Schedule Direktur', 'schedule_direktur', 'fas fa-calendar-check', 'cyan', 'Kelola dan pantau jadwal direktur.', 'schedule_direktur'),
                 ),
             ),
             'logistik' => array(
@@ -72,28 +94,28 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-warehouse',
                 'description' => 'Pintu masuk operasional gudang, ICS, distribusi, dan stockopname.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Delivery Order', 'logistik', 'fas fa-truck', 'cyan', 'Kelola data Delivery Order, verifikasi SO loading, dan pengiriman barang.'),
-                    $this->menu('Activity Warehouse', 'checker', 'fas fa-warehouse', 'orange', 'Akses aktivitas bongkar muat dan loading barang gudang / checker.'),
-                    $this->menu('Data All Barang', 'ics/by_allbarang', 'fas fa-boxes', 'blue', 'Pantau seluruh stok barang ICS lintas gudang dalam satu pintu data.'),
-                    $this->menu('Data By Expired Date', 'ics/by_expdate', 'fas fa-calendar-alt', 'orange', 'Lihat barang berdasarkan tanggal expired untuk prioritas kontrol stok.'),
-                    $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.'),
-                    $this->menu('Master Gudang', 'ics/gudang', 'fas fa-warehouse', 'green', 'Kelola master gudang dan wilayah penyimpanan.'),
-                    $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data Purchase Order untuk kontrol barang masuk.'),
-                    $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau progress penerimaan barang dari PO berdasarkan status belum, partial, dan done.'),
-                    $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input penerimaan fisik LPB tanpa PO (draft, harga diisi oleh Purchasing).'),
-                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual dan LPB hasil input Logistik.'),
-                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian berbasis stok gudang.'),
-                    $this->menu('Master Barang PIC', 'ics/barangpic', 'fas fa-user-check', 'lime', 'Atur daftar barang yang menjadi tanggung jawab PIC.'),
-                    $this->menu('Barang Per Gudang', 'ics/barangpergudang', 'fas fa-dolly-flatbed', 'purple', 'Cek komposisi barang pada setiap gudang.'),
-                    $this->menu('Mutasi Barang Gudang', 'ics/mutasi_barang', 'fas fa-exchange-alt', 'teal', 'Telusuri perpindahan barang antar gudang secara operasional.'),
-                    $this->menu('Penyesuaian Barang', 'persediaan/penyesuaian_barang', 'fas fa-sliders-h', 'purple', 'Kelola penyesuaian persediaan barang gudang (penambahan/pengurangan stok).'),
-                    $this->menu('Show Diffrent', 'ics/ics_diffrent', 'fas fa-eye', 'dark', 'Bandingkan selisih data stok ICS untuk tindakan koreksi.'),
-                    $this->menu('List Faktur Terkirim / Belum', 'logistik/distibusi/list_faktur_status', 'fas fa-file-signature', 'brown', 'Monitor status faktur distribusi yang sudah atau belum terkirim.'),
-                    $this->menu('Export Data Expired Date', 'export-stock', 'fas fa-file-export', 'cyan', 'Unduh data expired date untuk kebutuhan pelaporan dan audit.'),
-                    $this->menu('Stockopname', 'admin/stockopname', 'fas fa-tasks', 'blue', 'Buka dashboard admin stockopname dan monitoring stok fisik.'),
-                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
-                    $this->menu('Realisasi Paket Bundling', 'logistik/bundling', 'fas fa-boxes', 'blue', 'Monitoring request, mutasi bahan, dan perakitan (assembly) paket bundling.')
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Delivery Order', 'logistik', 'fas fa-truck', 'cyan', 'Kelola data Delivery Order, verifikasi SO loading, dan pengiriman barang.', 'delivery_order'),
+                    $this->menu('Activity Warehouse', 'checker', 'fas fa-warehouse', 'orange', 'Akses aktivitas bongkar muat dan loading barang gudang / checker.', 'activity_warehouse'),
+                    $this->menu('Data All Barang', 'ics/by_allbarang', 'fas fa-boxes', 'blue', 'Pantau seluruh stok barang ICS lintas gudang dalam satu pintu data.', 'data_all_barang'),
+                    $this->menu('Data By Expired Date', 'ics/by_expdate', 'fas fa-calendar-alt', 'orange', 'Lihat barang berdasarkan tanggal expired untuk prioritas kontrol stok.', 'data_by_expired'),
+                    $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.', 'data_do'),
+                    $this->menu('Master Gudang', 'ics/gudang', 'fas fa-warehouse', 'green', 'Kelola master gudang dan wilayah penyimpanan.', 'master_gudang'),
+                    $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data Purchase Order untuk kontrol barang masuk.', 'data_po'),
+                    $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau progress penerimaan barang dari PO berdasarkan status belum, partial, dan done.', 'data_lpb'),
+                    $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input penerimaan fisik LPB tanpa PO (draft, harga diisi oleh Purchasing).', 'input_lpb_manual'),
+                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual dan LPB hasil input Logistik.', 'laporan_lpb'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian berbasis stok gudang.', 'retur_pembelian'),
+                    $this->menu('Master Barang PIC', 'ics/barangpic', 'fas fa-user-check', 'lime', 'Atur daftar barang yang menjadi tanggung jawab PIC.', 'master_barang_pic'),
+                    $this->menu('Barang Per Gudang', 'ics/barangpergudang', 'fas fa-dolly-flatbed', 'purple', 'Cek komposisi barang pada setiap gudang.', 'barang_per_gudang'),
+                    $this->menu('Mutasi Barang Gudang', 'ics/mutasi_barang', 'fas fa-exchange-alt', 'teal', 'Telusuri perpindahan barang antar gudang secara operasional.', 'mutasi_barang'),
+                    $this->menu('Penyesuaian Barang', 'persediaan/penyesuaian_barang', 'fas fa-sliders-h', 'purple', 'Kelola penyesuaian persediaan barang gudang (penambahan/pengurangan stok).', 'penyesuaian_barang'),
+                    $this->menu('Show Diffrent', 'ics/ics_diffrent', 'fas fa-eye', 'dark', 'Bandingkan selisih data stok ICS untuk tindakan koreksi.', 'show_diffrent'),
+                    $this->menu('List Faktur Terkirim / Belum', 'logistik/distibusi/list_faktur_status', 'fas fa-file-signature', 'brown', 'Monitor status faktur distribusi yang sudah atau belum terkirim.', 'list_faktur_status'),
+                    $this->menu('Export Data Expired Date', 'export-stock', 'fas fa-file-export', 'cyan', 'Unduh data expired date untuk kebutuhan pelaporan dan audit.', 'export_expired'),
+                    $this->menu('Stockopname', 'admin/stockopname', 'fas fa-tasks', 'blue', 'Buka dashboard admin stockopname dan monitoring stok fisik.', 'stockopname'),
+                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.', 'retur_penjualan'),
+                    $this->menu('Realisasi Paket Bundling', 'logistik/bundling', 'fas fa-boxes', 'blue', 'Monitoring request, mutasi bahan, dan perakitan (assembly) paket bundling.', 'realisasi_bundling')
                 ),
             ),
             'purchasing' => array(
@@ -101,16 +123,16 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-shopping-cart',
                 'description' => 'Akses pembelian, LPB, monitoring PO, dan paket bundling.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Request Paket Bundling', 'purchasing/bundling/request', 'fas fa-boxes', 'blue', 'Permintaan dan monitoring perakitan paket bundling ke Logistik.'),
-                    $this->menu('Barang Konsinyasi', 'purchasing/konsinyasi', 'fas fa-handshake', 'purple', 'Penerimaan barang titipan supplier dan penyelesaian tagihan konsinyasi yang terjual.'),
-                    $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.'),
-                    $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau data LPB dan progress penerimaan barang dari PO.'),
-                    $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.'),
-                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual Purchasing dan LPB hasil input Logistik.'),
-                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.'),
-                    $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Pantau PO yang masih membutuhkan tindak lanjut.'),
-                    $this->menu('Master Barang', 'master_barang', 'fas fa-box', 'slate', 'Buka master barang untuk referensi pembelian.'),
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Request Paket Bundling', 'purchasing/bundling/request', 'fas fa-boxes', 'blue', 'Permintaan dan monitoring perakitan paket bundling ke Logistik.', 'request_bundling'),
+                    $this->menu('Barang Konsinyasi', 'purchasing/konsinyasi', 'fas fa-handshake', 'purple', 'Penerimaan barang titipan supplier dan penyelesaian tagihan konsinyasi yang terjual.', 'barang_konsinyasi'),
+                    $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.', 'data_po'),
+                    $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau data LPB dan progress penerimaan barang dari PO.', 'data_lpb'),
+                    $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.', 'input_lpb_manual'),
+                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual Purchasing dan LPB hasil input Logistik.', 'laporan_lpb'),
+                    $this->menu('Retur Pembelian', $retur_pb_route, 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.', 'retur_pembelian'),
+                    $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Pantau PO yang masih membutuhkan tindak lanjut.', 'pending_po'),
+                    $this->menu('Master Barang', 'master_barang', 'fas fa-box', 'slate', 'Buka master barang untuk referensi pembelian.', 'master_barang'),
                 ),
             ),
             'it' => array(
@@ -118,9 +140,9 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-laptop-code',
                 'description' => 'Akses modul lintas departemen untuk support dan validasi teknis.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Log LPB Manual', 'ics/lpb_manual_log', 'fas fa-terminal', 'dark', 'Pantau log sistem khusus LPB Manual.'),
-                    $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur pembelian untuk support workflow Logistik, Purchasing, dan Keuangan.'),
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Log LPB Manual', 'ics/lpb_manual_log', 'fas fa-terminal', 'dark', 'Pantau log sistem khusus LPB Manual.', 'log_lpb_manual'),
+                    $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur pembelian untuk support workflow Logistik, Purchasing, dan Keuangan.', 'retur_pembelian'),
                 ),
             ),
             'sales' => array(
@@ -128,22 +150,27 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-handshake',
                 'description' => 'Akses penjualan, katalog, order, dan laporan sales.',
                 'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
-                    $this->menu('Admin SC', 'sales_order/admin_sc', 'fas fa-file-invoice-dollar', 'purple', 'Kelola verifikasi SO, proses faktur, pecah faktur, dan rute pengiriman Admin SC.'),
-                    $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
-                    $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.'),
-                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'teal', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.'),
-                    $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.'),
-                    $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market yang dititipkan, dibeli, dan masih tersisa di kios.'),
-                    $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
-                    $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
-                    $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
-                    $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).'),
-                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
-                    $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.'),
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
+                    $this->menu('Admin SC', 'sales_order/admin_sc', 'fas fa-file-invoice-dollar', 'purple', 'Kelola verifikasi SO, proses faktur, pecah faktur, dan rute pengiriman Admin SC.', 'admin_sc'),
+                    $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.', 'sales_order'),
+                    $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.', 'sales_order_loby'),
+                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'teal', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.', 'pecah_faktur'),
+                    $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.', 'faktur_penjualan'),
+                    $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market yang dititipkan, dibeli, dan masih tersisa di kios.', 'test_market'),
+                    $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.', 'katalog_sales'),
+                    $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.', 'sales_report'),
+                    $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.', 'stok_online'),
+                    $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).', 'data_customers'),
+                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.', 'retur_penjualan'),
+                    $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.', 'pengajuan_od'),
                 ),
             ),
         );
+    }
+
+    public function module_sections($context = array())
+    {
+        $sections = $this->base_module_sections($context);
 
         if (!empty($context['is_admin'])) {
             $sections = array('admin' => $this->admin_section($sections)) + $sections;
@@ -282,6 +309,461 @@ class M_Dashboard extends CI_Model
         return key($sections);
     }
 
+    /**
+     * Ambil aturan akses dashboard kustom per user dari tabel tb_user_dashboard_access
+     */
+    public function get_user_dashboard_rules($userId)
+    {
+        $userId = (int)$userId;
+        $CI =& get_instance();
+        if ($userId <= 0 || !isset($CI->db) || !$CI->db->table_exists('tb_user_dashboard_access')) {
+            return array();
+        }
+
+        $rows = $CI->db
+            ->select('menu_key, is_allowed')
+            ->where('user_id', $userId)
+            ->get('tb_user_dashboard_access')
+            ->result_array();
+
+        $map = array();
+        foreach ($rows as $row) {
+            $map[(string)$row['menu_key']] = (int)$row['is_allowed'];
+        }
+        return $map;
+    }
+
+    /**
+     * Katalog lengkap semua section dan menu unik untuk halaman pengaturan akses Admin
+     */
+    public function catalog_sections()
+    {
+        $sections = $this->base_module_sections(array());
+        $menuSections = array();
+
+        foreach ($sections as $secKey => $section) {
+            foreach ($section['menus'] as $menu) {
+                $mKey = $menu['menu_key'];
+                if (!isset($menuSections[$mKey])) {
+                    $menuSections[$mKey] = array();
+                }
+                if (!in_array($section['label'], $menuSections[$mKey], true)) {
+                    $menuSections[$mKey][] = $section['label'];
+                }
+            }
+        }
+
+        foreach ($sections as $secKey => $section) {
+            foreach ($section['menus'] as $idx => $menu) {
+                $mKey = $menu['menu_key'];
+                $sections[$secKey]['menus'][$idx]['section_labels'] = $menuSections[$mKey] ?? array($section['label']);
+            }
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Peta flat seluruh menu dashboard [menu_key => detail]
+     */
+    public function menu_catalog_map()
+    {
+        $map = array();
+        foreach ($this->catalog_sections() as $secKey => $section) {
+            foreach ($section['menus'] as $menu) {
+                $mKey = $menu['menu_key'];
+                if (!isset($map[$mKey])) {
+                    $map[$mKey] = $menu + array('primary_section' => $secKey);
+                }
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * Pemetaan rute URL dan controller/method ke menu_key kanonik untuk proteksi sisi server
+     */
+    public function route_access_map()
+    {
+        return array(
+            // Keuangan & Accounting
+            'kas_bon' => array(
+                'title' => 'Kas Bon',
+                'uri_prefixes' => array('c_kasbon'),
+                'controller_prefixes' => array('c_kasbon/'),
+            ),
+            'daily_stock' => array(
+                'title' => 'Daily Stock',
+                'uri_prefixes' => array('keuangan', 'get_data_a', 'detail_lot', 'gudang', 'get_data_global', 'list_stock_minimum'),
+                'controller_prefixes' => array('keuangan/c_keuangan/index', 'keuangan/c_keuangan/get_stock_a', 'keuangan/c_keuangan/gudang', 'keuangan/c_keuangan/get_data_global', 'keuangan/c_keuangan/list_stock_minimum', 'keuangan/c_keuangan/stock_suplier'),
+            ),
+            'jurnal_pembelian' => array(
+                'title' => 'Jurnal Pembelian',
+                'uri_prefixes' => array('keuangan/pembelian'),
+                'controller_prefixes' => array('keuangan/c_keuangan/menu_pembelian'),
+            ),
+            'pembayaran_supplier' => array(
+                'title' => 'Pembayaran Supplier',
+                'uri_prefixes' => array('keuangan/pembayaran-supplier'),
+                'controller_prefixes' => array('keuangan/c_pembayaransupplier/'),
+            ),
+            'jurnal_penjualan' => array(
+                'title' => 'Jurnal Penjualan',
+                'uri_prefixes' => array('keuangan/penjualan'),
+                'controller_prefixes' => array('keuangan/c_keuangan/menu_penjualan'),
+            ),
+            'retur_pembelian' => array(
+                'title' => 'Retur Pembelian',
+                'uri_prefixes' => array('ics/retur'),
+                'controller_prefixes' => array(
+                    'logistik/c_ics/dash_retur',
+                    'logistik/c_ics/retur_pembelian',
+                    'logistik/c_ics/retur_pembelian_monitoring',
+                    'logistik/c_ics/retur_pembelian_adjustment',
+                    'logistik/c_ics/detail_retur',
+                    'logistik/c_ics/ajax_retur_',
+                ),
+            ),
+            'penyesuaian_barang' => array(
+                'title' => 'Penyesuaian Barang',
+                'uri_prefixes' => array('persediaan/penyesuaian_barang'),
+                'controller_prefixes' => array('keuangan/c_penyesuaianbarang/'),
+            ),
+            'daily_stock_lot' => array(
+                'title' => 'Daily Stock Lot',
+                'uri_prefixes' => array('daily_stock_lot'),
+                'controller_prefixes' => array('keuangan/c_keuangan/daily_stock_lot', 'keuangan/c_keuangan/detail_lot'),
+            ),
+            'master_barang' => array(
+                'title' => 'Master Barang',
+                'uri_prefixes' => array('master_barang', 'purchase/listbarang'),
+                'controller_prefixes' => array('keuangan/c_keuangan/master_barang'),
+            ),
+            'jurnal' => array(
+                'title' => 'Jurnal',
+                'uri_prefixes' => array('jurnal', 'keuangan/jurnal', 'accounting', 'keuangan/accounting', 'accounting-test', 'keuangan/accounting-test', 'keuangan/report_jurnal'),
+                'controller_prefixes' => array('keuangan/c_keuangan/jurnal', 'keuangan/c_accounting/', 'keuangan/c_reportjurnal/'),
+            ),
+            'jurnal_umum' => array(
+                'title' => 'Transaksi Jurnal Umum',
+                'uri_prefixes' => array('buku_besar/jurnal_umum', 'buku_besar/jurnal_umum_list', 'buku_besar/jurnal_umum_store', 'buku_besar/jurnal_umum_delete', 'buku_besar/jurnal_umum_detail', 'buku_besar/jurnal_umum_next_ref'),
+                'controller_prefixes' => array('keuangan/c_bukubesar/jurnal_umum', 'keuangan/c_bukubesar/get_next_ref'),
+            ),
+            'buku_besar' => array(
+                'title' => 'Buku Besar',
+                'uri_prefixes' => array('keuangan/buku_besar'),
+                'controller_prefixes' => array('keuangan/c_bukubesar/index', 'keuangan/c_bukubesar/get_ledger_data', 'keuangan/c_bukubesar/get_accounts_lookup'),
+            ),
+            'kas_keluar' => array(
+                'title' => 'Kas Keluar',
+                'uri_prefixes' => array('keuangan/kas_keluar'),
+                'controller_prefixes' => array('keuangan/c_kaskeluar/'),
+            ),
+            'kas_masuk' => array(
+                'title' => 'Kas Masuk',
+                'uri_prefixes' => array('keuangan/kas_masuk'),
+                'controller_prefixes' => array('keuangan/c_kasmasuk/'),
+            ),
+            'kasir' => array(
+                'title' => 'Kasir',
+                'uri_prefixes' => array('keuangan/kasir'),
+                'controller_prefixes' => array('keuangan/c_kasir/'),
+            ),
+            'piutang_customer' => array(
+                'title' => 'Piutang Customer',
+                'uri_prefixes' => array('keuangan/pembayaran'),
+                'controller_prefixes' => array('keuangan/c_pembayaran/'),
+            ),
+            'test_market' => array(
+                'title' => 'Test Market',
+                'uri_prefixes' => array('test-market'),
+                'controller_prefixes' => array('sales/c_testmarket/'),
+            ),
+            'pecah_faktur' => array(
+                'title' => 'Pecah Faktur',
+                'uri_prefixes' => array(
+                    'sales_order/pecah_faktur',
+                    'pecah_faktur',
+                    'pecah_faktur_kios',
+                    'sales_order/pecah_faktur_kios',
+                    'sales_order/auto_split_kios',
+                    'sales_order/split_faktur',
+                    'sales_order/simpan_split_faktur',
+                    'sales_order/detail_faktur_pecah',
+                    'sales_order/cetak_faktur_pecah',
+                    'sales_order/cetak_semua_faktur_pecah',
+                    'sales_order/hapus_faktur_pecah',
+                    'sales_order/unpost_faktur_pecah_batch',
+                    'sales_order/ubah_customer_faktur_z',
+                    'sales_order/customer_acak',
+                    'sales_order/export_faktur_pecah',
+                    'sales_order/export_faktur_z_belum',
+                    'sales_order/export_faktur_z_selesai',
+                    'sales_order/reset_pecah_faktur_induk',
+                    'sales_order/template_import_pelunasan_faktur_z_pecah',
+                    'sales_order/import_pelunasan_faktur_z_pecah',
+                    'sales_order/unpost_pelunasan_faktur_z_pecah',
+                    'sales_order/jurnal_pelunasan_faktur_z_pecah_json',
+                    'sales_order/jurnal_penjualan_faktur_z_pecah_json',
+                    'sales_order/sinkronkan_jurnal_penjualan_faktur_h',
+                    'sales_order/export_faktur_z_pecah_lunas',
+                ),
+                'controller_prefixes' => array(
+                    'sales/c_salesorder/pecah_faktur',
+                    'sales/c_salesorder/split_faktur',
+                    'sales/c_salesorder/simpan_split_faktur',
+                    'sales/c_salesorder/detail_faktur_pecah',
+                    'sales/c_salesorder/cetak_faktur_pecah',
+                    'sales/c_salesorder/hapus_faktur_pecah',
+                ),
+            ),
+            'data_customers' => array(
+                'title' => 'Data Customers',
+                'uri_prefixes' => array('data_customers', 'master_customer'),
+                'controller_prefixes' => array('data_customers/', 'keuangan/c_keuangan/master_customer'),
+            ),
+            'retur_penjualan' => array(
+                'title' => 'Retur Penjualan',
+                'uri_prefixes' => array('retur_penjualan'),
+                'controller_prefixes' => array('sales/c_returpenjualan/'),
+            ),
+            'semua_laporan' => array(
+                'title' => 'Semua Laporan',
+                'uri_prefixes' => array('laporan'),
+                'controller_prefixes' => array('keuangan/c_laporan/'),
+            ),
+
+            // HRD
+            'penilaian_lingkungan' => array(
+                'title' => 'Penilaian Lingkungan',
+                'uri_prefixes' => array('penilaian_lingkungan', 'hrd/penilaian_lingkungan/submit', 'hrd/penilaian_lingkungan/list', 'hrd/penilaian_lingkungan/detail'),
+                'controller_prefixes' => array('hrd/c_hrd/penilaian_lingkungan'),
+            ),
+            'admin_penilaian' => array(
+                'title' => 'Admin Penilaian',
+                'uri_prefixes' => array('hrd/penilaian_lingkungan/admin', 'hrd/penilaian_lingkungan/monitoring'),
+                'controller_prefixes' => array('hrd/c_hrd/penilaian_lingkungan_admin', 'hrd/c_hrd/penilaian_lingkungan_monitoring'),
+            ),
+            'user_management' => array(
+                'title' => 'User Management',
+                'uri_prefixes' => array('master/user-management'),
+                'controller_prefixes' => array('master/c_usermanagement/'),
+            ),
+            'schedule_direktur' => array(
+                'title' => 'Schedule Direktur',
+                'uri_prefixes' => array('schedule_direktur', 'act_schedule'),
+                'controller_prefixes' => array('schedule/c_schedule/'),
+            ),
+
+            // Logistik & ICS
+            'delivery_order' => array(
+                'title' => 'Delivery Order',
+                'uri_prefixes' => array('logistik', 'logistikprepare', 'create_do', 'detail_do', 'detail_fk', 'save_do', 'rekam_do'),
+                'controller_prefixes' => array('logistik/c_logistik/delivery_order', 'logistik/c_logistik/create_do', 'logistik/c_logistik/detail_do'),
+            ),
+            'activity_warehouse' => array(
+                'title' => 'Activity Warehouse',
+                'uri_prefixes' => array('checker'),
+                'controller_prefixes' => array('logistik/c_checker/'),
+            ),
+            'data_all_barang' => array(
+                'title' => 'Data All Barang',
+                'uri_prefixes' => array('ics/by_allbarang', 'ics/by_allbarang_ics', 'ics/detail_allbarang'),
+                'controller_prefixes' => array('logistik/c_ics/ics_by_allbarang', 'logistik/c_ics/by_allbarang_ics', 'logistik/c_ics/ics_detail_allbarang'),
+            ),
+            'data_by_expired' => array(
+                'title' => 'Data By Expired Date',
+                'uri_prefixes' => array('ics/by_expdate', 'ics/by_expdate_ics'),
+                'controller_prefixes' => array('logistik/c_ics/ics_by_expdate', 'logistik/c_ics/by_expdate_ics'),
+            ),
+            'data_do' => array(
+                'title' => 'Data DO',
+                'uri_prefixes' => array('ics/icsdo'),
+                'controller_prefixes' => array('logistik/c_ics/ics_do', 'logistik/c_ics/history_ics_do'),
+            ),
+            'master_gudang' => array(
+                'title' => 'Master Gudang',
+                'uri_prefixes' => array('ics/gudang', 'ics/gudang_list', 'ics/gudang_save', 'ics/update_gudang', 'ics/update_wilayah', 'ics/detail_wilayah'),
+                'controller_prefixes' => array('logistik/c_ics/master_gudang', 'logistik/c_ics/gudang_'),
+            ),
+            'data_po' => array(
+                'title' => 'Data PO',
+                'uri_prefixes' => array('ics/icspo', 'ics/detail_po'),
+                'controller_prefixes' => array('logistik/c_ics/ics_po', 'logistik/c_ics/detail_po'),
+            ),
+            'data_lpb' => array(
+                'title' => 'Data LPB',
+                'uri_prefixes' => array('ics/data_lpb', 'ics/detail_record_lpb', 'ics/print_lpb_record', 'ics/print_lpb_records_all'),
+                'controller_prefixes' => array('logistik/c_ics/data_lpb', 'logistik/c_ics/detail_record_lpb', 'logistik/c_ics/print_lpb_record'),
+            ),
+            'input_lpb_manual' => array(
+                'title' => 'Input LPB Manual',
+                'uri_prefixes' => array('ics/lpb_manual'),
+                'controller_prefixes' => array('logistik/c_ics/lpb_manual', 'logistik/c_ics/ajax_lpb_manual_'),
+            ),
+            'laporan_lpb' => array(
+                'title' => 'Laporan LPB',
+                'uri_prefixes' => array('ics/lpb_report'),
+                'controller_prefixes' => array('logistik/c_ics/lpb_report', 'logistik/c_ics/ajax_lpb_report_data', 'logistik/c_ics/export_lpb_report_excel'),
+            ),
+            'master_barang_pic' => array(
+                'title' => 'Master Barang PIC',
+                'uri_prefixes' => array('ics/barangpic', 'ics/update_pic_lokasi'),
+                'controller_prefixes' => array('logistik/c_ics/pic_barang', 'logistik/c_ics/update_pic_lokasi'),
+            ),
+            'barang_per_gudang' => array(
+                'title' => 'Barang Per Gudang',
+                'uri_prefixes' => array('ics/barangpergudang', 'ics/ajax_barang_pergudang'),
+                'controller_prefixes' => array('logistik/c_ics/barangpergudang', 'logistik/c_ics/ajax_barang_pergudang'),
+            ),
+            'mutasi_barang' => array(
+                'title' => 'Mutasi Barang Gudang',
+                'uri_prefixes' => array('ics/mutasi_barang'),
+                'controller_prefixes' => array('logistik/c_ics/mutasi_barang', 'logistik/c_ics/input_mutasi_barang', 'logistik/c_ics/list_barang_mutasi'),
+            ),
+            'show_diffrent' => array(
+                'title' => 'Show Diffrent',
+                'uri_prefixes' => array('ics/ics_diffrent', 'ics/diffrent'),
+                'controller_prefixes' => array('logistik/c_ics/ics_diffrent'),
+            ),
+            'list_faktur_status' => array(
+                'title' => 'List Faktur Terkirim / Belum',
+                'uri_prefixes' => array('logistik/distibusi/list_faktur_status', 'logistik/distibusi/ajax_list_faktur_status'),
+                'controller_prefixes' => array('logistik/c_distribusi/list_faktur_status', 'logistik/c_distribusi/ajax_list_faktur_status'),
+            ),
+            'export_expired' => array(
+                'title' => 'Export Data Expired Date',
+                'uri_prefixes' => array('export-stock'),
+                'controller_prefixes' => array('logistik/c_exportstock/'),
+            ),
+            'stockopname' => array(
+                'title' => 'Stockopname',
+                'uri_prefixes' => array('admin/stockopname', 'stockopname'),
+                'controller_prefixes' => array('admin/c_stockopname/', 'logistik/c_logistik/stockopname'),
+            ),
+            'realisasi_bundling' => array(
+                'title' => 'Realisasi Paket Bundling',
+                'uri_prefixes' => array('logistik/bundling'),
+                'controller_prefixes' => array('logistik/c_bundlinglogistik/'),
+            ),
+
+            // Purchasing
+            'request_bundling' => array(
+                'title' => 'Request Paket Bundling',
+                'uri_prefixes' => array('purchasing/bundling'),
+                'controller_prefixes' => array('purchasing/c_bundlingrequest/'),
+            ),
+            'barang_konsinyasi' => array(
+                'title' => 'Barang Konsinyasi',
+                'uri_prefixes' => array('purchasing/konsinyasi', 'purchasing/konsinyasi_settlement'),
+                'controller_prefixes' => array('purchasing/c_konsinyasi/'),
+            ),
+            'pending_po' => array(
+                'title' => 'Pending PO',
+                'uri_prefixes' => array('pendingpo'),
+                'controller_prefixes' => array('keuangan/c_keuangan/pendingpo'),
+            ),
+
+            // IT
+            'log_lpb_manual' => array(
+                'title' => 'Log LPB Manual',
+                'uri_prefixes' => array('ics/lpb_manual_log'),
+                'controller_prefixes' => array('logistik/c_ics/lpb_manual_log'),
+            ),
+
+            // Sales
+            'admin_sc' => array(
+                'title' => 'Admin SC',
+                'uri_prefixes' => array('sales_order/admin_sc', 'admin_sc', 'sales_order/form_faktur', 'sales_order/simpan_faktur', 'sales_order/detail_faktur'),
+                'controller_prefixes' => array('sales/c_salesorder/admin_sc', 'sales/c_salesorder/simpan_faktur', 'sales/c_salesorder/detail_faktur'),
+            ),
+            'sales_order' => array(
+                'title' => 'Sales Order',
+                'uri_prefixes' => array('sales_order'),
+                'controller_prefixes' => array('sales/c_salesorder/index', 'sales/c_salesorder/create', 'sales/c_salesorder/store', 'sales/c_salesorder/detail', 'sales/c_salesorder/edit', 'sales/c_salesorder/update', 'sales/c_salesorder/cancel', 'sales/c_salesorder/rekam', 'sales/c_salesorder/approval', 'sales/c_salesorder/approve'),
+            ),
+            'sales_order_loby' => array(
+                'title' => 'Sales Order Loby',
+                'uri_prefixes' => array('sales_order_loby'),
+                'controller_prefixes' => array('sales/c_salesorderloby/'),
+            ),
+            'faktur_penjualan' => array(
+                'title' => 'Faktur Penjualan',
+                'uri_prefixes' => array('admin/transaksi', 'transaksi', 'faktur_penjualan'),
+                'controller_prefixes' => array('admin/c_transaksi/'),
+            ),
+            'katalog_sales' => array(
+                'title' => 'Katalog Sales',
+                'uri_prefixes' => array('kiu_katalog'),
+                'controller_prefixes' => array('sales/c_exportstock/'),
+            ),
+            'sales_report' => array(
+                'title' => 'Sales Report',
+                'uri_prefixes' => array('sales_report'),
+                'controller_prefixes' => array('sales/c_sales/'),
+            ),
+            'stok_online' => array(
+                'title' => 'Stok Online',
+                'uri_prefixes' => array('stock'),
+                'controller_prefixes' => array('stock/c_stock/'),
+            ),
+            'pengajuan_od' => array(
+                'title' => 'Pengajuan OD',
+                'uri_prefixes' => array('sales/c_pengajuanod'),
+                'controller_prefixes' => array('sales/c_pengajuanod/'),
+            ),
+        );
+    }
+
+    /**
+     * Resolusi menu_key berdasarkan URI atau controller/method (pencocokan prefix terpanjang)
+     */
+    public function resolve_menu_by_request($uriString, $controllerMethod = '')
+    {
+        $uri = trim(strtolower((string)$uriString), '/');
+        $ctrl = trim(strtolower((string)$controllerMethod), '/');
+        $map = $this->route_access_map();
+
+        $bestMatch = null;
+        $bestScore = -1;
+
+        foreach ($map as $menuKey => $rule) {
+            foreach ($rule['uri_prefixes'] as $prefix) {
+                $prefix = trim(strtolower((string)$prefix), '/');
+                if ($prefix === '') {
+                    continue;
+                }
+                if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
+                    $score = strlen($prefix);
+                    if ($score > $bestScore) {
+                        $bestScore = $score;
+                        $bestMatch = array('menu_key' => $menuKey, 'title' => $rule['title']);
+                    }
+                }
+            }
+
+            if ($ctrl !== '') {
+                foreach ($rule['controller_prefixes'] as $cPrefix) {
+                    $cPrefix = strtolower((string)$cPrefix);
+                    $isWildcard = substr($cPrefix, -1) === '_' || substr($cPrefix, -1) === '/';
+                    $matched = $isWildcard
+                        ? (strpos($ctrl, $cPrefix) === 0 || rtrim($ctrl, '/') === rtrim($cPrefix, '/'))
+                        : ($ctrl === $cPrefix || strpos($ctrl, $cPrefix . '/') === 0);
+
+                    if ($matched) {
+                        $score = strlen($cPrefix);
+                        if ($score > $bestScore) {
+                            $bestScore = $score;
+                            $bestMatch = array('menu_key' => $menuKey, 'title' => $rule['title']);
+                        }
+                    }
+                }
+            }
+        }
+
+        return $bestMatch;
+    }
+
     private function apply_access_rules(array $sections, array $context)
     {
         $allowed_retur_pj = array(
@@ -318,32 +800,53 @@ class M_Dashboard extends CI_Model
         $is_admin_sc_only = in_array($jobdesk, array('ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'), true)
             || in_array($username, array('admsc', 'nina'), true);
 
+        // Ambil pengaturan akses dashboard per user jika bukan Admin
+        $isAdmin = !empty($context['is_admin']);
+        $userRules = !$isAdmin ? $this->get_user_dashboard_rules($context['id'] ?? 0) : array();
+
         foreach ($sections as $key => $section) {
             if (empty($section['menus']) || !is_array($section['menus'])) {
                 continue;
             }
 
-            $sections[$key]['menus'] = array_values(array_filter($section['menus'], function ($menu) use ($context, $has_retur_pj, $has_admin_sc, $is_admin_sc_only) {
+            $filteredMenus = array();
+            foreach ($section['menus'] as $menu) {
                 $route = (string)($menu['route'] ?? '');
+                $menuKey = (string)($menu['menu_key'] ?? '');
 
+                // Admin selalu mendapat akses terbuka untuk seluruh menu
+                if ($isAdmin) {
+                    $menu['is_locked'] = false;
+                    $filteredMenus[] = $menu;
+                    continue;
+                }
+
+                // Cek apakah ada override eksplisit dari Admin di tb_user_dashboard_access
+                if ($menuKey !== '' && array_key_exists($menuKey, $userRules)) {
+                    $menu['is_locked'] = ((int)$userRules[$menuKey] === 0);
+                    $filteredMenus[] = $menu;
+                    continue;
+                }
+
+                // Jika belum ada override, ikuti aturan jobdesk bawaan
+                $legacyAllowed = true;
                 if ($route === 'sales_order/admin_sc') {
-                    return $has_admin_sc;
+                    $legacyAllowed = $has_admin_sc;
+                } elseif ($route === 'sales_order' && $is_admin_sc_only) {
+                    $legacyAllowed = false;
+                } elseif ($route === 'ics/retur' || strpos($route, 'ics/retur/pembelian/monitoring') === 0) {
+                    $legacyAllowed = $this->has_retur_access($context);
+                } elseif (strpos($route, 'retur_penjualan') === 0) {
+                    $legacyAllowed = $has_retur_pj;
                 }
 
-                if ($route === 'sales_order' && $is_admin_sc_only) {
-                    return false;
+                if ($legacyAllowed) {
+                    $menu['is_locked'] = false;
+                    $filteredMenus[] = $menu;
                 }
+            }
 
-                if ($route === 'ics/retur' || strpos($route, 'ics/retur/pembelian/monitoring') === 0) {
-                    return $this->has_retur_access($context);
-                }
-
-                if (strpos($route, 'retur_penjualan') === 0) {
-                    return $has_retur_pj;
-                }
-
-                return true;
-            }));
+            $sections[$key]['menus'] = $filteredMenus;
 
             if ($key === 'it' && empty($sections[$key]['menus'])) {
                 unset($sections[$key]);
@@ -465,12 +968,13 @@ class M_Dashboard extends CI_Model
         $menus = array();
         $seenRoutes = array();
         $adminMenus = array(
-            $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, unpost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.'),
-            $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.'),
-            $this->menu('Fasilitas Per User', 'master/user-facility', 'fas fa-user-lock', 'blue', 'Kelola fasilitas menu, aksi, data sensitif, cabang, gudang, dan status dokumen per user.'),
-            $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.'),
-            $this->menu('Akses Level', 'master/akses-level', 'fas fa-key', 'orange', 'Atur level akses dan matrix permission user.'),
-            $this->menu('Menu Aplikasi', 'master/menu', 'fas fa-bars', 'cyan', 'Kelola struktur menu dinamis aplikasi.'),
+            $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, unpost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.', 'faktur_penjualan'),
+            $this->menu('Akses Menu Dashboard', 'master/akses-dashboard', 'fas fa-lock', 'purple', 'Atur hak akses buka/kunci setiap menu dashboard per user (khusus Admin).', 'akses_menu_dashboard'),
+            $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.', 'user_management'),
+            $this->menu('Fasilitas Per User', 'master/user-facility', 'fas fa-user-lock', 'blue', 'Kelola fasilitas menu, aksi, data sensitif, cabang, gudang, dan status dokumen per user.', 'user_facility'),
+            $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.', 'master_jobdesk'),
+            $this->menu('Akses Level', 'master/akses-level', 'fas fa-key', 'orange', 'Atur level akses dan matrix permission user.', 'master_akses_level'),
+            $this->menu('Menu Aplikasi', 'master/menu', 'fas fa-bars', 'cyan', 'Kelola struktur menu dinamis aplikasi.', 'master_menu'),
         );
 
         foreach ($adminMenus as $menu) {
@@ -558,7 +1062,8 @@ class M_Dashboard extends CI_Model
                 $route,
                 !empty($iconField) && !empty($row[$iconField]) ? $row[$iconField] : 'fas fa-th-large',
                 $tones[$toneIndex % count($tones)],
-                'Buka modul ' . $title . ' dari menu aplikasi.'
+                'Buka modul ' . $title . ' dari menu aplikasi.',
+                'dyn_' . md5($route)
             );
             $seenRoutes[$route] = true;
             $toneIndex++;
@@ -588,14 +1093,19 @@ class M_Dashboard extends CI_Model
         $menus[] = $menu;
     }
 
-    private function menu($title, $route, $icon, $tone, $description)
+    private function menu($title, $route, $icon, $tone, $description, $menuKey = '')
     {
+        if ($menuKey === '') {
+            $menuKey = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '_', $title), '_'));
+        }
         return array(
+            'menu_key' => $menuKey,
             'title' => $title,
             'route' => $route,
             'icon' => $icon,
             'tone' => $tone,
             'description' => $description,
+            'is_locked' => false,
         );
     }
 }
