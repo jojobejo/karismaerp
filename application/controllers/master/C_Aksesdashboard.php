@@ -102,6 +102,51 @@ class C_Aksesdashboard extends CI_Controller
         ));
     }
 
+    /**
+     * Perbarui izin aksi granular (view, create, edit, delete) untuk satu menu & satu user
+     */
+    public function update_action()
+    {
+        $userId = (int)$this->input->post('user_id', true);
+        $menuKey = trim((string)$this->input->post('menu_key', true));
+        $action = strtolower(trim((string)$this->input->post('action', true)));
+        $value = (int)$this->input->post('value', true);
+
+        if ($userId <= 0 || $menuKey === '' || !in_array($action, array('view', 'create', 'edit', 'delete'), true)) {
+            return $this->json(false, 'Parameter izin aksi belum lengkap atau tidak valid.', array(), 400);
+        }
+
+        $user = $this->access->find_user($userId);
+        if (!$user) {
+            return $this->json(false, 'User tidak ditemukan.', array(), 404);
+        }
+        if (!empty($user['is_admin'])) {
+            return $this->json(false, 'Akun Administrator selalu memiliki akses penuh dan tidak dapat diubah.', array(), 400);
+        }
+
+        $actor = (string)($this->session->userdata('username') ?: 'admin');
+        $ok = $this->access->save_action($userId, $menuKey, $action, $value, $actor);
+
+        if (!$ok) {
+            return $this->json(false, 'Gagal memperbarui izin aksi menu.');
+        }
+
+        $actionLabels = array(
+            'view'   => 'Lihat',
+            'create' => 'Tambah',
+            'edit'   => 'Edit',
+            'delete' => 'Hapus',
+        );
+        $label = $actionLabels[$action] ?? $action;
+        $msg = $value === 1
+            ? "Izin {$label} berhasil diaktifkan."
+            : "Izin {$label} berhasil dinonaktifkan.";
+
+        $this->json(true, $msg, array(
+            'matrix' => $this->access->matrix($userId),
+        ));
+    }
+
     public function bulk()
     {
         $userId = (int)$this->input->post('user_id', true);

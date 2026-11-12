@@ -57,37 +57,29 @@ class Auth extends CI_Controller
             return;
         }
 
-        $auth_source = $key->auth_source ?? 'tb_users';
         // Di tb_users semakin tinggi angka level maka semakin tinggi jabatan (Admin = 99, Direksi = 5, Kadep = 4, Manager = 3, Koordinator = 2, Karyawan = 1)
-        $akses_lv = (int)($key->level ?? $key->akses_lv ?? 1);
-        $jobdesk_hrd = strtolower(trim((string)($key->jobdesk_hrd ?? '')));
+        $level = (int)($key->level ?? 1);
         // Jobdesk mengikuti kolom bagian pada tb_users
-        $jobdesk = strtoupper(trim((string)($key->bagian ?? $key->jobdesk ?? $key->jabatan ?? '')));
-        $jabatan = strtoupper(trim((string)($key->jabatan ?? '')));
+        $bagian = strtoupper(trim((string)($key->bagian ?? '')));
         $username_login = strtolower(trim((string)($key->username ?? '')));
-        $is_admin_dashboard = ($username_login === 'admin' || $jobdesk === 'ADMIN' || $akses_lv >= 99);
-        $nama = $key->nama_lngkp ?? $key->nm_karyawan ?? $key->nama_user ?? $key->username;
-        $departemen = trim((string)($key->departement ?? $key->departemen ?? ''));
+        $is_admin_dashboard = ($username_login === 'admin' || $bagian === 'ADMIN' || $level >= 99);
+        $nama_lngkp = $key->nama_lngkp ?? $key->username;
+        $departement = trim((string)($key->departement ?? ''));
 
         $data_session = array(
             'id'            => $key->id,
             'id_karyawan'   => $key->id,
-            'auth_source'   => $auth_source,
             'nik'           => $key->nik ?? null,
             'username'      => $key->username,
-            'departemen'    => $departemen,
-            'departement'   => $departemen,
-            'lv'            => $akses_lv,
-            'akses_lv'      => $akses_lv,
-            'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
-            'jobdesk'       => $jobdesk,
-            'bagian'        => $jobdesk,
-            'jabatan'       => $jabatan,
-            'jobdesk_hrd'   => $jobdesk_hrd,
-            'jobdesk_id'    => $key->jobdesk_id ?? null,
-            'nama'          => $nama,
-            'nm_karyawan'   => $nama,
-            'nama_user'     => $nama,
+            'departemen'    => $departement,
+            'departement'   => $departement,
+            'lv'            => $level,
+            'akses_lv'      => $level,
+            'akses_lv_id'   => $level,
+            'jobdesk'       => $bagian,
+            'nama'          => $nama_lngkp,
+            'nm_karyawan'   => $nama_lngkp,
+            'nama_user'     => $nama_lngkp,
             'tim'           => $key->tim ?? null,
             'wilayah'       => $key->wilayah ?? null,
             'is_admin_dashboard' => $is_admin_dashboard,
@@ -96,9 +88,9 @@ class Auth extends CI_Controller
 
         $this->session->set_userdata($data_session);
         if ($this->M_Auth->password_should_be_hashed($key->password ?? '')) {
-            $this->M_Auth->update_password_hash($key->id, $auth_source, $password);
+            $this->M_Auth->update_password_hash($key->id, 'tb_users', $password);
         }
-        $this->M_Auth->update_last_login($key->id, $auth_source);
+        $this->M_Auth->update_last_login($key->id, 'tb_users');
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
         // Seluruh user yang berhasil login langsung diarahkan ke halaman Dashboard;

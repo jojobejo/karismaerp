@@ -17,16 +17,26 @@ class M_Dashboardaccess extends CI_Model
     }
 
     /**
-     * Pastikan tabel tb_user_dashboard_access tersedia di database
+     * Pastikan tabel tb_user_dashboard_access dan kolom izin aksi granular tersedia di database
      */
     public function ensure_schema()
     {
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
         if (!$this->db->table_exists($this->table)) {
             $this->db->query("CREATE TABLE IF NOT EXISTS `{$this->table}` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `user_id` INT UNSIGNED NOT NULL,
                 `menu_key` VARCHAR(120) NOT NULL,
                 `is_allowed` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Diizinkan (Terbuka), 0 = Tidak Diizinkan (Terkunci / Gembok)',
+                `can_view` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Boleh melihat halaman/data',
+                `can_create` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Boleh membuat/menambah data',
+                `can_edit` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Boleh mengubah data',
+                `can_delete` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = Boleh menghapus data',
                 `updated_by` VARCHAR(100) NULL DEFAULT NULL,
                 `created_at` DATETIME NULL DEFAULT NULL,
                 `updated_at` DATETIME NULL DEFAULT NULL,
@@ -35,6 +45,26 @@ class M_Dashboardaccess extends CI_Model
                 KEY `idx_user_id` (`user_id`),
                 KEY `idx_menu_key` (`menu_key`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            return;
+        }
+
+        // Tambahkan kolom granular jika tabel lama belum memilikinya
+        $actionColumns = array(
+            'can_view' => "ALTER TABLE `{$this->table}` ADD COLUMN `can_view` TINYINT(1) NOT NULL DEFAULT 1 AFTER `is_allowed`",
+            'can_create' => "ALTER TABLE `{$this->table}` ADD COLUMN `can_create` TINYINT(1) NOT NULL DEFAULT 1 AFTER `can_view`",
+            'can_edit' => "ALTER TABLE `{$this->table}` ADD COLUMN `can_edit` TINYINT(1) NOT NULL DEFAULT 1 AFTER `can_create`",
+            'can_delete' => "ALTER TABLE `{$this->table}` ADD COLUMN `can_delete` TINYINT(1) NOT NULL DEFAULT 1 AFTER `can_edit`",
+        );
+        $added = false;
+        foreach ($actionColumns as $col => $sql) {
+            if (!$this->db->field_exists($col, $this->table)) {
+                $this->db->query($sql);
+                $added = true;
+            }
+        }
+        // Sinkronkan baris lama yang terkunci (is_allowed = 0) agar seluruh aksi ikut 0
+        if ($added) {
+            $this->db->query("UPDATE `{$this->table}` SET `can_view` = 0, `can_create` = 0, `can_edit` = 0, `can_delete` = 0 WHERE `is_allowed` = 0");
         }
     }
 
@@ -131,6 +161,32 @@ class M_Dashboardaccess extends CI_Model
     }
 
     /**
+     * Ambil map aturan akses granular (is_allowed, can_view, can_create, can_edit, can_delete) per menu_key untuk satu user
+     */
+    public function get_user_action_rules($userId)
+    {
+        $this->ensure_schema();
+        $rows = $this->db
+            ->select('menu_key, is_allowed, can_view, can_create, can_edit, can_delete')
+            ->where('user_id', (int)$userId)
+            ->get($this->table)
+            ->result_array();
+
+        $map = array();
+        foreach ($rows as $row) {
+            $isAllowed = ((int)$row['is_allowed'] === 1) ? 1 : 0;
+            $map[$row['menu_key']] = array(
+                'is_allowed' => $isAllowed,
+                'can_view'   => $isAllowed ? ((int)$row['can_view'] === 1 ? 1 : 0) : 0,
+                'can_create' => $isAllowed ? ((int)$row['can_create'] === 1 ? 1 : 0) : 0,
+                'can_edit'   => $isAllowed ? ((int)$row['can_edit'] === 1 ? 1 : 0) : 0,
+                'can_delete' => $isAllowed ? ((int)$row['can_delete'] === 1 ? 1 : 0) : 0,
+            );
+        }
+        return $map;
+    }
+
+    /**
      * Ambil matriks lengkap section dan menu dashboard untuk user tertentu
      */
     public function matrix($userId)
@@ -142,7 +198,7 @@ class M_Dashboardaccess extends CI_Model
         }
 
         $isAdmin = !empty($user['is_admin']);
-        $saved = $this->M_Dashboard->get_user_dashboard_rules($userId);
+        $saved = $this->get_user_action_rules($userId);
         $sections = $this->M_Dashboard->catalog_sections();
 
         $uniqueSeen = array();
@@ -153,9 +209,33 @@ class M_Dashboardaccess extends CI_Model
             foreach ($section['menus'] as $idx => $menu) {
                 $menuKey = $menu['menu_key'];
                 $hasOverride = !$isAdmin && array_key_exists($menuKey, $saved);
-                $isAllowed = $isAdmin ? 1 : ($hasOverride ? (int)$saved[$menuKey] : 1);
+
+                if ($isAdmin) {
+                    $isAllowed = 1;
+                    $canView = 1;
+                    $canCreate = 1;
+                    $canEdit = 1;
+                    $canDelete = 1;
+                } elseif ($hasOverride) {
+                    $rule = $saved[$menuKey];
+                    $isAllowed = $rule['is_allowed'];
+                    $canView = $rule['can_view'];
+                    $canCreate = $rule['can_create'];
+                    $canEdit = $rule['can_edit'];
+                    $canDelete = $rule['can_delete'];
+                } else {
+                    $isAllowed = 1;
+                    $canView = 1;
+                    $canCreate = 1;
+                    $canEdit = 1;
+                    $canDelete = 1;
+                }
 
                 $sections[$secKey]['menus'][$idx]['is_allowed'] = $isAllowed;
+                $sections[$secKey]['menus'][$idx]['can_view'] = $canView;
+                $sections[$secKey]['menus'][$idx]['can_create'] = $canCreate;
+                $sections[$secKey]['menus'][$idx]['can_edit'] = $canEdit;
+                $sections[$secKey]['menus'][$idx]['can_delete'] = $canDelete;
                 $sections[$secKey]['menus'][$idx]['has_override'] = $hasOverride ? 1 : 0;
 
                 if (!isset($uniqueSeen[$menuKey])) {
@@ -209,6 +289,10 @@ class M_Dashboardaccess extends CI_Model
             'user_id' => (int)$userId,
             'menu_key' => $menuKey,
             'is_allowed' => $isAllowed,
+            'can_view' => $isAllowed,
+            'can_create' => $isAllowed,
+            'can_edit' => $isAllowed,
+            'can_delete' => $isAllowed,
             'updated_by' => $actor !== '' ? $actor : null,
             'updated_at' => $now,
         );
@@ -221,6 +305,124 @@ class M_Dashboardaccess extends CI_Model
 
         $payload['created_at'] = $now;
         return $this->db->insert($this->table, $payload);
+    }
+
+    /**
+     * Simpan satu izin aksi granular (view, create, edit, delete) per user & per menu
+     */
+    public function save_action($userId, $menuKey, $action, $value, $actor = '')
+    {
+        $this->ensure_schema();
+        $user = $this->find_user($userId);
+        if (!$user || !empty($user['is_admin'])) {
+            return false;
+        }
+
+        $allowedActions = array('view', 'create', 'edit', 'delete');
+        if (!in_array($action, $allowedActions, true)) {
+            return false;
+        }
+
+        $catalog = $this->M_Dashboard->menu_catalog_map();
+        if (!isset($catalog[$menuKey])) {
+            return false;
+        }
+
+        $value = ((int)$value === 1) ? 1 : 0;
+        $now = date('Y-m-d H:i:s');
+
+        $existing = $this->db
+            ->where('user_id', (int)$userId)
+            ->where('menu_key', $menuKey)
+            ->get($this->table)
+            ->row_array();
+
+        if ($existing) {
+            $isAllowed = ((int)$existing['is_allowed'] === 1) ? 1 : 0;
+            $state = array(
+                'is_allowed' => $isAllowed,
+                'can_view'   => $isAllowed ? ((int)$existing['can_view'] === 1 ? 1 : 0) : 0,
+                'can_create' => $isAllowed ? ((int)$existing['can_create'] === 1 ? 1 : 0) : 0,
+                'can_edit'   => $isAllowed ? ((int)$existing['can_edit'] === 1 ? 1 : 0) : 0,
+                'can_delete' => $isAllowed ? ((int)$existing['can_delete'] === 1 ? 1 : 0) : 0,
+            );
+        } else {
+            $state = array(
+                'is_allowed' => 1,
+                'can_view'   => 1,
+                'can_create' => 1,
+                'can_edit'   => 1,
+                'can_delete' => 1,
+            );
+        }
+
+        $state['can_' . $action] = $value;
+
+        // Konsistensi: jika aksi create/edit/delete diaktifkan, view & menu otomatis dibuka;
+        // jika view dimatikan, seluruh aksi & menu ikut dikunci
+        if ($action !== 'view' && $value === 1) {
+            $state['can_view'] = 1;
+            $state['is_allowed'] = 1;
+        } elseif ($action === 'view' && $value === 0) {
+            $state['is_allowed'] = 0;
+            $state['can_create'] = 0;
+            $state['can_edit'] = 0;
+            $state['can_delete'] = 0;
+        } elseif ($state['can_view'] === 1) {
+            $state['is_allowed'] = 1;
+        }
+
+        $payload = array_merge($state, array(
+            'user_id' => (int)$userId,
+            'menu_key' => $menuKey,
+            'updated_by' => $actor !== '' ? $actor : null,
+            'updated_at' => $now,
+        ));
+
+        if ($existing) {
+            return $this->db
+                ->where('id', (int)$existing['id'])
+                ->update($this->table, $payload);
+        }
+
+        $payload['created_at'] = $now;
+        return $this->db->insert($this->table, $payload);
+    }
+
+    /**
+     * Cek apakah user memiliki izin aksi (view, create, edit, delete) pada menu_key tertentu
+     */
+    public function can_action($userId, $menuKey, $action = 'view')
+    {
+        $this->ensure_schema();
+        $user = $this->find_user($userId);
+        if (!$user) {
+            return false;
+        }
+        if (!empty($user['is_admin'])) {
+            return true;
+        }
+
+        $action = strtolower(trim((string)$action));
+        if (!in_array($action, array('view', 'create', 'edit', 'delete'), true)) {
+            $action = 'view';
+        }
+
+        $row = $this->db
+            ->select('is_allowed, can_view, can_create, can_edit, can_delete')
+            ->where('user_id', (int)$userId)
+            ->where('menu_key', $menuKey)
+            ->get($this->table)
+            ->row_array();
+
+        if (!$row) {
+            return true;
+        }
+        if ((int)$row['is_allowed'] !== 1) {
+            return false;
+        }
+
+        return (int)$row['can_' . $action] === 1;
     }
 
     /**

@@ -60,60 +60,7 @@ class M_Auth extends CI_Model
         }
 
         $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
-        $row = $this->db->get('tb_users')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_users';
-        return $row;
-    }
-
-    public function get_tb_karyawan_user($username)
-    {
-        $this->db->where('username', $username);
-        $row = $this->db->get('tb_karyawan')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_karyawan';
-        return $row;
-    }
-
-    private function apply_tb_users_hrd_access($karyawan)
-    {
-        if (!$karyawan || !$this->db->table_exists('tb_users') || !$this->has('tb_users', 'jobdesk_hrd')) {
-            return $karyawan;
-        }
-
-        $this->db->group_start();
-        if (!empty($karyawan->username) && $this->has('tb_users', 'username')) {
-            $this->db->or_where('username', $karyawan->username);
-        }
-        if (!empty($karyawan->nm_karyawan) && $this->has('tb_users', 'nama_lngkp')) {
-            $this->db->or_where('nama_lngkp', $karyawan->nm_karyawan);
-        }
-        if (!empty($karyawan->nik) && $this->has('tb_users', 'nik')) {
-            $this->db->or_where('nik', $karyawan->nik);
-        }
-        $this->db->group_end();
-
-        $this->db->where('jobdesk_hrd', 'inputer_laporan');
-        if ($this->has('tb_users', 'status')) {
-            $this->db->where('status', 1);
-        }
-
-        $tbUsers = $this->db->get('tb_users')->row();
-        if (!$tbUsers) {
-            return $karyawan;
-        }
-
-        $karyawan->jobdesk_hrd = $tbUsers->jobdesk_hrd ?? 'inputer_laporan';
-        $karyawan->default_redirect = $tbUsers->default_redirect ?? 'penilaian_lingkungan';
-        $karyawan->tb_users_match_id = $tbUsers->id ?? null;
-
-        return $karyawan;
+        return $this->db->get('tb_users')->row() ?: null;
     }
 
     public function verify_password($plainPassword, $storedPassword)

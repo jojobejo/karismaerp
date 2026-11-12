@@ -508,6 +508,7 @@ $route['master/akses-dashboard']                    = 'master/C_Aksesdashboard';
 $route['master/akses-dashboard/users']              = 'master/C_Aksesdashboard/users';
 $route['master/akses-dashboard/matrix/(:num)']      = 'master/C_Aksesdashboard/matrix/$1';
 $route['master/akses-dashboard/update']             = 'master/C_Aksesdashboard/update';
+$route['master/akses-dashboard/update-action']      = 'master/C_Aksesdashboard/update_action';
 $route['master/akses-dashboard/bulk']               = 'master/C_Aksesdashboard/bulk';
 $route['master/akses-dashboard/reset/(:num)']       = 'master/C_Aksesdashboard/reset/$1';
 

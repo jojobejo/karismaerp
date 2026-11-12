@@ -71,6 +71,67 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
         white-space: nowrap;
     }
 
+    .btn-approval-bell {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        background: #fff;
+        color: #64748b;
+        border: 1px solid rgba(18, 127, 173, .16);
+        box-shadow: 0 10px 24px rgba(23, 32, 42, .06);
+        cursor: pointer;
+        transition: all .2s ease;
+    }
+
+    .btn-approval-bell:hover {
+        background: #f0f9ff;
+        color: #127fad;
+        transform: translateY(-1px);
+    }
+
+    .btn-approval-bell.has-notif {
+        color: #d97706;
+        border-color: rgba(217, 119, 6, .35);
+        background: #fffbeb;
+    }
+
+    .btn-approval-bell.has-notif i {
+        animation: bellRing 1.6s ease-in-out infinite;
+        transform-origin: top center;
+    }
+
+    .bell-count-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #dc2626;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, .4);
+    }
+
+    @keyframes bellRing {
+        0%, 100% { transform: rotate(0deg); }
+        10% { transform: rotate(16deg); }
+        20% { transform: rotate(-14deg); }
+        30% { transform: rotate(12deg); }
+        40% { transform: rotate(-10deg); }
+        50% { transform: rotate(6deg); }
+        60% { transform: rotate(0deg); }
+    }
+
     .dashboard-nav-bar {
         display: flex;
         align-items: center;
@@ -613,6 +674,18 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                                     <span class="notif-badge"><?= (int)$lpb_notification_count ?></span>
                                 </button>
                             <?php endif; ?>
+                            <?php $approvalCount = (int)($approval_notification_count ?? 0); ?>
+                            <button type="button"
+                                class="btn-approval-bell <?= $approvalCount > 0 ? 'has-notif' : '' ?>"
+                                data-toggle="modal"
+                                data-target="#modalNotifikasiApproval"
+                                title="<?= $approvalCount > 0 ? $approvalCount . ' pengajuan menunggu approval Anda' : 'Tidak ada notifikasi approval' ?>"
+                                aria-label="Notifikasi Approval">
+                                <i class="fas fa-bell fa-lg"></i>
+                                <?php if ($approvalCount > 0): ?>
+                                    <span class="bell-count-badge"><?= $approvalCount > 99 ? '99+' : $approvalCount ?></span>
+                                <?php endif; ?>
+                            </button>
                             <div class="dashboard-badge">
                                 <i class="fas fa-user-shield mr-2"></i> <?= html_escape($jobdesk ?: 'USER') ?> · LV <?= html_escape((string)$lv) ?>
                             </div>
@@ -1048,3 +1121,62 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
     </div>
 </div>
 <?php endif; ?>
+
+<!-- MODAL NOTIFIKASI -->
+<div class="modal fade" id="modalNotifikasiApproval" tabindex="-1" role="dialog" aria-labelledby="modalNotifApprovalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #1e293b 0%, #0f4c81 60%, #127fad 100%);">
+                <h5 class="modal-title font-weight-bold" id="modalNotifApprovalTitle">
+                    <i class="fas fa-bell mr-2"></i> Notifikasi
+                    <?php if (!empty($approval_notification_count)): ?>
+                        <span class="badge badge-danger ml-2"><?= (int)$approval_notification_count ?></span>
+                    <?php endif; ?>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 1;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-3 p-md-4" style="background-color: #f8fafc; max-height: 70vh; overflow-y: auto;">
+                <?php if (empty($approval_notifications)): ?>
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="font-weight-bold text-dark">Semua Sudah Diproses</h5>
+                        <p class="small mb-0">Tidak ada pengajuan atau dokumen yang memerlukan approval Anda saat ini.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="list-group shadow-sm">
+                        <?php foreach ($approval_notifications as $item): ?>
+                            <a href="<?= html_escape($item['url']) ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap" style="gap: 12px; padding: 14px 16px;">
+                                <div class="d-flex align-items-start" style="gap: 12px; min-width: 0; flex: 1;">
+                                    <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                        <i class="<?= html_escape($item['icon']) ?>"></i>
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                            <span class="badge <?= html_escape($item['badge_class']) ?>"><?= html_escape($item['category']) ?></span>
+                                            <strong class="text-dark"><?= html_escape($item['title']) ?></strong>
+                                        </div>
+                                        <div class="small text-dark mt-1 font-weight-bold"><?= html_escape($item['subtitle']) ?></div>
+                                        <div class="small text-muted"><?= html_escape($item['detail']) ?></div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <div class="small text-muted mb-1"><?= html_escape($item['time_label']) ?></div>
+                                    <span class="btn btn-sm btn-outline-primary font-weight-bold">
+                                        Buka <i class="fas fa-arrow-right ml-1"></i>
+                                    </span>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -64,6 +64,12 @@
                 .custom-switch-lg .custom-control-label::before{height:1.5rem;width:2.75rem;border-radius:3rem;left:-2.75rem}
                 .custom-switch-lg .custom-control-label::after{width:calc(1.5rem - 4px);height:calc(1.5rem - 4px);border-radius:50%;left:calc(-2.75rem + 2px)}
                 .custom-switch-lg .custom-control-input:checked~.custom-control-label::after{transform:translateX(1.25rem)}
+                .da-action-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+                .da-action-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:600;color:#334155;cursor:pointer;margin:0;user-select:none;transition:all .15s ease}
+                .da-action-pill input{margin:0;cursor:pointer}
+                .da-action-pill.is-on{background:#eff6ff;border-color:#93c5fd;color:#1e40af}
+                .da-action-pill.is-off{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8}
+                .da-action-pill.is-disabled{opacity:.6;cursor:not-allowed}
 
                 /* Styling Fasilitas Per User */
                 .facility-toggle{width:1.15rem;height:1.15rem;cursor:pointer}
@@ -544,31 +550,63 @@ $(function(){
 
             filteredMenus.forEach(function(menu) {
                 const allowed = parseInt(menu.is_allowed, 10) === 1;
+                const canView = parseInt(menu.can_view, 10) === 1;
+                const canCreate = parseInt(menu.can_create, 10) === 1;
+                const canEdit = parseInt(menu.can_edit, 10) === 1;
+                const canDelete = parseInt(menu.can_delete, 10) === 1;
                 const switchId = 'sw_' + secKey + '_' + menu.menu_key;
                 const secLabels = (menu.section_labels || []).join(', ');
                 const multiNote = (menu.section_labels && menu.section_labels.length > 1)
                     ? '<span class="badge badge-light border text-muted ml-1" title="Perubahan di sini berlaku di semua tab tempat menu ini tampil">Tersinkron di: ' + esc(secLabels) + '</span>'
                     : '';
 
+                let statusBadge = '<span class="badge badge-danger px-2 py-1"><i class="fas fa-lock mr-1"></i>Terkunci</span>';
+                if (allowed) {
+                    if (canView && !canCreate && !canEdit && !canDelete) {
+                        statusBadge = '<span class="badge badge-warning px-2 py-1"><i class="fas fa-eye mr-1"></i>Hanya Lihat</span>';
+                    } else if (canView && canCreate && canEdit && canDelete) {
+                        statusBadge = '<span class="badge badge-success px-2 py-1"><i class="fas fa-lock-open mr-1"></i>Akses Penuh</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-info px-2 py-1"><i class="fas fa-sliders-h mr-1"></i>Kustom</span>';
+                    }
+                }
+
+                const actionsMeta = [
+                    { key: 'view',   label: 'Lihat',  icon: 'fas fa-eye',        val: canView },
+                    { key: 'create', label: 'Tambah', icon: 'fas fa-plus',       val: canCreate },
+                    { key: 'edit',   label: 'Edit',   icon: 'fas fa-edit',       val: canEdit },
+                    { key: 'delete', label: 'Hapus',  icon: 'fas fa-trash-alt',  val: canDelete }
+                ];
+
+                let actionPillsHtml = '<div class="da-action-pills">';
+                actionsMeta.forEach(function(act) {
+                    const checkedAttr = act.val ? 'checked' : '';
+                    const disabledAttr = isAdmin ? 'disabled' : '';
+                    const cls = (act.val ? 'is-on' : 'is-off') + (isAdmin ? ' is-disabled' : '');
+                    actionPillsHtml += '<label class="da-action-pill ' + cls + '" title="Atur izin ' + act.label + ' untuk ' + esc(menu.title) + '">' +
+                        '<input type="checkbox" class="da-action-toggle" data-key="' + esc(menu.menu_key) + '" data-action="' + act.key + '" ' + checkedAttr + ' ' + disabledAttr + '> ' +
+                        '<i class="' + act.icon + '"></i> ' + act.label +
+                    '</label>';
+                });
+                actionPillsHtml += '</div>';
+
                 html += '<div class="da-menu-row ' + (!allowed ? 'is-locked' : '') + '">' +
-                    '<div class="d-flex align-items-center" style="gap: 12px; min-width: 0; flex: 1;">' +
+                    '<div class="d-flex align-items-start" style="gap: 12px; min-width: 0; flex: 1;">' +
                         '<div class="da-menu-icon da-tone-' + esc(menu.tone || 'blue') + '">' +
                             '<i class="' + esc(menu.icon || 'fas fa-th-large') + '"></i>' +
                         '</div>' +
-                        '<div style="min-width: 0;">' +
+                        '<div style="min-width: 0; flex: 1;">' +
                             '<div class="font-weight-bold text-dark">' +
                                 esc(menu.title) +
                                 ' <code class="small text-muted ml-1">/' + esc(menu.route) + '</code>' +
                                 multiNote +
                             '</div>' +
                             '<div class="small text-muted text-truncate">' + esc(menu.description || '') + '</div>' +
+                            actionPillsHtml +
                         '</div>' +
                     '</div>' +
                     '<div class="d-flex align-items-center flex-shrink-0" style="gap: 14px;">' +
-                        (allowed
-                            ? '<span class="badge badge-success px-2 py-1"><i class="fas fa-lock-open mr-1"></i>Terbuka</span>'
-                            : '<span class="badge badge-danger px-2 py-1"><i class="fas fa-lock mr-1"></i>Terkunci</span>'
-                        ) +
+                        statusBadge +
                         '<div class="custom-control custom-switch custom-switch-lg">' +
                             '<input type="checkbox" class="custom-control-input da-menu-toggle" id="' + esc(switchId) + '" data-key="' + esc(menu.menu_key) + '" ' + (allowed ? 'checked' : '') + ' ' + (isAdmin ? 'disabled' : '') + '>' +
                             '<label class="custom-control-label" for="' + esc(switchId) + '"></label>' +
@@ -607,6 +645,38 @@ $(function(){
                 user_id: daSelectedUserId,
                 menu_key: menuKey,
                 is_allowed: isAllowed
+            }, function(res) {
+                if (res.status) {
+                    toastr.success(res.message);
+                    if (res.data && res.data.matrix) {
+                        daCurrentMatrix = res.data.matrix;
+                        daRenderMatrix();
+                    } else {
+                        daLoadMatrix(daSelectedUserId);
+                    }
+                    daLoadUsers();
+                } else {
+                    toastr.error(res.message);
+                    daLoadMatrix(daSelectedUserId);
+                }
+            }, 'json').fail(function(xhr) {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan server.';
+                toastr.error(msg);
+                daLoadMatrix(daSelectedUserId);
+            });
+        });
+
+        $('#daMatrixContainer').on('change', '.da-action-toggle', function() {
+            if (!daSelectedUserId) return;
+            const menuKey = $(this).data('key');
+            const action = $(this).data('action');
+            const value = this.checked ? 1 : 0;
+
+            $.post('<?= base_url('master/akses-dashboard/update-action') ?>', {
+                user_id: daSelectedUserId,
+                menu_key: menuKey,
+                action: action,
+                value: value
             }, function(res) {
                 if (res.status) {
                     toastr.success(res.message);

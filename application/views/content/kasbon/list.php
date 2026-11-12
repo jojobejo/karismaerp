@@ -114,9 +114,11 @@
                             <?php endif; ?>
                         </div>
                         <div>
-                            <a href="<?= base_url('C_Kasbon/create') ?>" class="btn btn-primary shadow-sm">
-                                <i class="fas fa-plus mr-1"></i> Buat Pengajuan Kas Bon
-                            </a>
+                            <?php if (!isset($can_create) || $can_create): ?>
+                                <a href="<?= base_url('C_Kasbon/create') ?>" class="btn btn-primary shadow-sm">
+                                    <i class="fas fa-plus mr-1"></i> Buat Pengajuan Kas Bon
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

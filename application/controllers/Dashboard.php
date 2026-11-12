@@ -47,6 +47,19 @@ class Dashboard extends CI_Controller
             $data['lpb_notification_count'] = count($data['lpb_notifications']);
         }
 
+        // Ambil seluruh notifikasi pending approval lintas modul untuk icon lonceng
+        $this->load->model('M_ApprovalNotification');
+        $notifUser = [
+            'id'       => $this->session->userdata('id'),
+            'nama'     => $this->session->userdata('nama'),
+            'username' => $this->session->userdata('username'),
+            'jobdesk'  => strtoupper((string)($context['jobdesk'] ?? $this->session->userdata('jobdesk'))),
+            'lv'       => (int)($context['lv'] ?? $this->session->userdata('lv') ?? 1),
+        ];
+        $approvalNotif = $this->M_ApprovalNotification->get_pending_approvals_for_user($notifUser);
+        $data['approval_notifications'] = $approvalNotif['items'];
+        $data['approval_notification_count'] = $approvalNotif['total'];
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/dashboard/index.php', $data);
         $this->load->view('partial/main/footer.php');
