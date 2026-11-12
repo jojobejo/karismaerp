@@ -356,7 +356,7 @@
                 <div class="modal-body">
                     <div class="alert alert-info py-2 px-3 small mb-3">
                         <strong>Cara Kerja:</strong> Pelunasan diinput per <strong>Nomor Faktur Z (Induk)</strong>. Nominal yang dibayarkan akan dialokasikan ke Faktur H di bawah Faktur Z tersebut secara berurutan.<br>
-                        <span class="text-muted">Contoh: Faktur Z senilai Rp 2.000.000 memiliki 2 Faktur H (@ Rp 1.000.000). Jika Faktur Z dibayar Rp 1.000.000, maka sistem melunasi dan membuat Jurnal Q &amp; A hanya untuk <strong>1 Faktur H</strong>.</span>
+                        <span class="text-muted">Mendukung <strong>2 metode pembayaran sekaligus</strong> dalam 1 baris dengan mengisi kolom <code>metode_pembayaran_2</code> &amp; <code>jumlah_pembayaran_2</code> (opsional, misal bayar sebagian via Q Mandiri dan sisanya via Q BRI).</span>
                     </div>
                     <div class="form-group mb-0">
                         <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur Z (.xlsx / .xls / .csv)</label>
@@ -410,7 +410,7 @@
                         <input type="number" step="0.01" name="jumlah_bayar" id="singleLunasiNominal" class="form-control form-control-sm font-weight-bold text-success" required>
                     </div>
                     <div class="form-group">
-                        <label class="small font-weight-bold">Metode Pembayaran (Akun Kas/Bank Jurnal Q)</label>
+                        <label class="small font-weight-bold">Metode Pembayaran 1 (Akun Kas/Bank Jurnal Q)</label>
                         <select name="metode_pembayaran" id="singleLunasiMetode" class="form-control form-control-sm">
                             <option value="Q Mandiri">Q Mandiri (12014)</option>
                             <option value="Q Kas Ayat Silang">Q Kas Ayat Silang</option>
@@ -418,6 +418,30 @@
                             <option value="Q BCA">Q BCA</option>
                             <option value="Q BRI">Q BRI</option>
                         </select>
+                    </div>
+                    <div class="form-group mb-2">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="toggleSplitMetodeSingleImport">
+                            <label class="custom-control-label small font-weight-bold text-primary" for="toggleSplitMetodeSingleImport" style="cursor:pointer;">
+                                Gunakan 2 Metode Pembayaran Sekaligus (Split Bank/Kas)
+                            </label>
+                        </div>
+                    </div>
+                    <div id="wrapSplitMetodeSingleImport" class="p-2 mb-3 rounded border bg-light" style="display:none;">
+                        <div class="form-group mb-2">
+                            <label class="small font-weight-bold">Metode Pembayaran 2</label>
+                            <select name="metode_pembayaran_2" id="singleLunasiMetode2" class="form-control form-control-sm">
+                                <option value="Q BRI" selected>Q BRI</option>
+                                <option value="Q Mandiri">Q Mandiri (12014)</option>
+                                <option value="Q Kas Ayat Silang">Q Kas Ayat Silang</option>
+                                <option value="Q Kas">Q Kas (11010)</option>
+                                <option value="Q BCA">Q BCA</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="small font-weight-bold">Nominal Pembayaran 2 (Netto)</label>
+                            <input type="number" step="0.01" name="jumlah_bayar_2" id="singleLunasiNominal2" class="form-control form-control-sm font-weight-bold text-primary" placeholder="0">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="small font-weight-bold">Skema Potongan (Untuk Jurnal A)</label>
@@ -605,13 +629,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Preview perhitungan Bruto & Potongan di Modal Single Pelunasan
         function updateSingleLunasiPreview() {
-            var netto = parseFloat($('#singleLunasiNominal').val() || 0);
+            var netto1 = parseFloat($('#singleLunasiNominal').val() || 0);
+            var netto2 = $('#toggleSplitMetodeSingleImport').is(':checked') ? parseFloat($('#singleLunasiNominal2').val() || 0) : 0;
+            var netto = Math.max(0, netto1) + Math.max(0, netto2);
             var skema = parseInt($('#singleLunasiSkema').val() || 20, 10);
             var pembagi = (skema === 40) ? 0.6 : ((skema === 20) ? 0.8 : 1.0);
             var bruto = (pembagi > 0 && pembagi < 1.0) ? Math.round(netto / pembagi) : netto;
             var potongan = Math.max(0, bruto - netto);
 
-            var html = '<strong>Simulasi Jurnal yang Akan Dibuat:</strong><br>' +
+            var html = '<strong>Simulasi Jurnal yang Akan Dibuat (Total Netto: Rp ' + netto.toLocaleString('id-ID') + '):</strong><br>' +
                 '&bull; <strong>Jurnal Acak (Q):</strong> Debit Kas/Bank = <strong>Rp ' + bruto.toLocaleString('id-ID') + '</strong> | Kredit Piutang (13099) = <strong>Rp ' + netto.toLocaleString('id-ID') + '</strong>';
             if (potongan > 0) {
                 html += ' | Kredit Q Kas (11010) = <strong>Rp ' + potongan.toLocaleString('id-ID') + '</strong><br>' +
@@ -622,7 +648,17 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#singleLunasiPreviewBox').html(html);
         }
 
-        $('#singleLunasiNominal, #singleLunasiSkema').on('input change', updateSingleLunasiPreview);
+        $('#toggleSplitMetodeSingleImport').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#wrapSplitMetodeSingleImport').slideDown(150);
+            } else {
+                $('#wrapSplitMetodeSingleImport').slideUp(150);
+                $('#singleLunasiNominal2').val('');
+            }
+            updateSingleLunasiPreview();
+        });
+
+        $('#singleLunasiNominal, #singleLunasiNominal2, #singleLunasiSkema').on('input change', updateSingleLunasiPreview);
 
         $(document).on('click', '.btn-open-lunasi-single', function() {
             var btn = $(this);
@@ -631,6 +667,9 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#singleLunasiCustomerLabel').text(btn.data('customer'));
             $('#singleLunasiTanggal').val(btn.data('tanggal') || '<?= date("Y-m-d") ?>');
             $('#singleLunasiNominal').val(btn.data('nominal'));
+            $('#toggleSplitMetodeSingleImport').prop('checked', false);
+            $('#wrapSplitMetodeSingleImport').hide();
+            $('#singleLunasiNominal2').val('');
             $('#singleLunasiParentNo').val(btn.data('parent-no') || '');
             updateSingleLunasiPreview();
             $('#modalLunasiSingleFakturH').modal('show');

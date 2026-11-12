@@ -5068,13 +5068,31 @@ class M_SalesOrder extends CI_Model
         ]);
         $id_pembayaran_h = $this->db->insert_id();
 
+        // Gabungkan label metode pembayaran jika merupakan cicilan / split metode agar tidak menimpa metode sebelumnya
+        $mergedMetode = $metode_pembayaran;
+        if ($incremental && $sudah_bayar_prev > 0.01 && !empty($faktur['metode_pembayaran'])) {
+            $parts = [];
+            foreach ([$faktur['metode_pembayaran'], $metode_pembayaran] as $rawM) {
+                foreach (explode(' + ', (string)$rawM) as $itemM) {
+                    $cleanM = trim($itemM);
+                    if ($cleanM !== '' && !in_array($cleanM, $parts, true)) {
+                        $parts[] = $cleanM;
+                    }
+                }
+            }
+            $mergedMetode = implode(' + ', $parts);
+            if (strlen($mergedMetode) > 100) {
+                $mergedMetode = substr($mergedMetode, 0, 100);
+            }
+        }
+
         $updateHeader = [
             'grand_total'       => $grand_total,
             'total_bayar'       => $total_bayar_baru,
             'sisa_tagihan'      => $sisa_tagihan_baru,
             'status_bayar'      => $status_bayar,
             'tanggal_bayar'     => $tanggal_pembayaran,
-            'metode_pembayaran' => $metode_pembayaran,
+            'metode_pembayaran' => $mergedMetode,
             'skema_potongan'    => $skema_potongan,
             'nominal_bruto'     => round($prev_bruto + $nominal_bruto_kali_ini, 2),
             'nominal_potongan'  => round($prev_potongan + $nominal_potongan_kali_ini, 2),

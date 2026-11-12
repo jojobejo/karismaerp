@@ -2825,8 +2825,9 @@ class M_Journal extends CI_Model
 
         // 2. Akun Kas / Bank sesuai metode pembayaran
         $akun_kas = null;
+        $metodeLower = strtolower($metode);
         if (!empty($metode)) {
-            $this->db->where('LOWER(nama_akun)', strtolower($metode));
+            $this->db->where('LOWER(nama_akun)', $metodeLower);
             $akun_kas = $this->db->get('tbkeu_akun')->row();
 
             if (!$akun_kas) {
@@ -2836,6 +2837,29 @@ class M_Journal extends CI_Model
             if (!$akun_kas) {
                 $this->db->like('nama_akun', $metode);
                 $akun_kas = $this->db->get('tbkeu_akun')->row();
+            }
+            // Pencocokan cerdas berdasarkan kata kunci bila nama metode (mis. "Q Kas Ayat Silang") belum terdaftar persis di tbkeu_akun
+            if (!$akun_kas) {
+                if (strpos($metodeLower, 'ayat silang') !== false || strpos($metodeLower, 'kas') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row()
+                        ?: $this->db->like('nama_akun', 'Q Kas')->get('tbkeu_akun')->row();
+                } elseif (strpos($metodeLower, 'bca') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12011'])->row()
+                        ?: $this->db->like('nama_akun', 'Q BCA')->get('tbkeu_akun')->row();
+                } elseif (strpos($metodeLower, 'bri') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12016'])->row()
+                        ?: $this->db->like('nama_akun', 'Q BRI')->get('tbkeu_akun')->row();
+                } elseif (strpos($metodeLower, 'bni') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12121'])->row()
+                        ?: $this->db->like('nama_akun', 'Q BNI')->get('tbkeu_akun')->row();
+                } elseif (strpos($metodeLower, 'cimb') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12123'])->row()
+                        ?: $this->db->like('nama_akun', 'Q CIMB')->get('tbkeu_akun')->row();
+                } elseif (strpos($metodeLower, 'danamon') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12013'])->row();
+                } elseif (strpos($metodeLower, 'mandiri') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12014'])->row();
+                }
             }
         }
         if (!$akun_kas) {
@@ -2847,14 +2871,14 @@ class M_Journal extends CI_Model
         // Tentukan prefix jurnal Q (KM, MR, BC, BR)
         $prefix_jurnal_q = 'MR';
         $nama_akun_kas_lower = strtolower($akun_kas ? $akun_kas->nama_akun : $metode);
-        if (strpos($nama_akun_kas_lower, 'mandiri') !== false) {
+        if (strpos($metodeLower, 'ayat silang') !== false || strpos($nama_akun_kas_lower, 'kas') !== false) {
+            $prefix_jurnal_q = 'KM';
+        } elseif (strpos($nama_akun_kas_lower, 'mandiri') !== false) {
             $prefix_jurnal_q = 'MR';
         } elseif (strpos($nama_akun_kas_lower, 'bca') !== false) {
             $prefix_jurnal_q = 'BC';
         } elseif (strpos($nama_akun_kas_lower, 'bri') !== false) {
             $prefix_jurnal_q = 'BR';
-        } elseif (strpos($nama_akun_kas_lower, 'kas') !== false) {
-            $prefix_jurnal_q = 'KM';
         }
         $jenis_q = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix_jurnal_q])->row();
         $id_jenis_jurnal_q = $jenis_q ? (int)$jenis_q->id_jenis_jurnal : 3;

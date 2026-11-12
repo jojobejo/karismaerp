@@ -98,8 +98,9 @@
       $admkeuUri2 = strtolower((string)$this->uri->segment(2));
 
       $isAdmkeuMasterBarang     = ($admkeuUri1 === 'master_barang' || ($admkeuUri1 === 'purchase' && $admkeuUri2 === 'listbarang'));
+      $isAdmkeuCustomerAcak     = ($admkeuUri1 === 'sales_order' && $admkeuUri2 === 'customer_acak');
       $isAdmkeuFakturHImport    = ($admkeuUri1 === 'sales_order' && $admkeuUri2 === 'faktur_h_import') || ($admkeuUri1 === 'faktur_h_import');
-      $isAdmkeuPecahFaktur      = !$isAdmkeuMasterBarang && !$isAdmkeuFakturHImport;
+      $isAdmkeuPecahFaktur      = !$isAdmkeuMasterBarang && !$isAdmkeuCustomerAcak && !$isAdmkeuFakturHImport;
       ?>
       <div class="sidebar">
         <nav class="mt-2">
@@ -120,6 +121,12 @@
               <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= $isAdmkeuMasterBarang ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-boxes"></i>
                 <p>Master Barang</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= $isAdmkeuCustomerAcak ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-users"></i>
+                <p>Master Customer Acak</p>
               </a>
             </li>
             <li class="nav-item">
@@ -229,6 +236,22 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= ($this->uri->segment(1) == 'master_barang') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-boxes"></i>
+                <p>
+                  Master Barang
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'customer_acak') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                  Master Customer Acak
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
                 <i class="nav-icon fas fa-money-bill-wave"></i>
                 <p>
@@ -294,10 +317,34 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= ($this->uri->segment(1) == 'master_barang') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-boxes"></i>
+                <p>
+                  Master Barang
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'customer_acak') ? 'active' : '' ?>">
                 <i class="nav-icon fas fa-users"></i>
                 <p>
-                  Customer Acak
+                  Master Customer Acak
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'customer_acak') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                  Master Customer Acak
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= ($this->uri->segment(1) == 'master_barang') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-boxes"></i>
+                <p>
+                  Master Barang
                 </p>
               </a>
             </li>
@@ -740,6 +787,22 @@
                 <i class="nav-icon fas fa-file-invoice" style="color: #a78bfa;"></i>
                 <p>
                   Faktur H Import
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('master_barang') ?>" class="nav-link <?= ($this->uri->segment(1) == 'master_barang') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-boxes"></i>
+                <p>
+                  Master Barang
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order/customer_acak') ?>" class="nav-link <?= ($this->uri->segment(1) == 'sales_order' && $this->uri->segment(2) == 'customer_acak') ? 'active' : '' ?>">
+                <i class="nav-icon fas fa-users"></i>
+                <p>
+                  Master Customer Acak
                 </p>
               </a>
             </li>

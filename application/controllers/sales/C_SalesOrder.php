@@ -9094,9 +9094,11 @@ class C_SalesOrder extends CI_Controller
 
         $headers = [
             'no_faktur_z',
-            'metode_pembayaran',
             'tanggal_pembayaran',
-            'jumlah_pembayaran',
+            'metode_pembayaran1',
+            'jumlah_pembayaran1',
+            'metode_pembayaran_2',
+            'jumlah_pembayaran_2',
             'skema_potongan',
             'customer_name',
             'jumlah_pecahan_h',
@@ -9125,9 +9127,11 @@ class C_SalesOrder extends CI_Controller
                 $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
                 $sheet->fromArray([
                     $z['no_faktur_z'],
-                    !empty($z['metode_pembayaran']) ? $z['metode_pembayaran'] : $defaultMetode,
                     $z['tanggal_faktur'] ?: date('Y-m-d'),
-                    '', // Dikosongkan agar user mengisi nominal bayar Faktur Z
+                    !empty($z['metode_pembayaran']) ? $z['metode_pembayaran'] : $defaultMetode,
+                    '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
+                    '', // Opsional: isi Metode Pembayaran 2 (mis. Q BRI) bila bayar pakai 2 bank/kas
+                    '', // Opsional: isi Nominal Pembayaran 2
                     $z['skema_potongan'] !== null ? (int)$z['skema_potongan'] : $defaultSkema,
                     $z['customer_name'],
                     $infoPecahan,
@@ -9141,8 +9145,8 @@ class C_SalesOrder extends CI_Controller
         } else {
             // Mode contoh manual (?mode=sample)
             $sampleRows = [
-                ['ZINV2601001', 'Q Mandiri', date('Y-m-d'), 2000000, 20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000],
-                ['ZINV2601002', 'Q Kas Ayat Silang', date('Y-m-d'), 1500000, 20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000],
+                ['ZINV2601001', date('Y-m-d'), 'Q Mandiri', 1500000, 'Q BRI', 500000, 20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000],
+                ['ZINV2601002', date('Y-m-d'), 'Q Kas Ayat Silang', 1500000, '', '', 20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000],
             ];
             $sheet->fromArray($sampleRows, null, 'A2');
             $rowIdx = 4;
@@ -9159,19 +9163,20 @@ class C_SalesOrder extends CI_Controller
                 'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
             ]
         ];
-        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(24);
         $sheet->freezePane('A2');
 
-        foreach (range('A', 'I') as $col) {
+        foreach (range('A', 'K') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
         $lastRow = max(2, $rowIdx - 1);
         $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()->setFormatCode('@');
-        $sheet->getStyle("C2:C{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle("B2:B{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
         $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("H2:I{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("F2:F{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("J2:K{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
 
         $spreadsheet->setActiveSheetIndex(0);
         $filename = 'template_pelunasan_faktur_z_import_' . date('Ymd_His') . '.xlsx';
@@ -9228,7 +9233,18 @@ class C_SalesOrder extends CI_Controller
             if ($extension === 'csv') {
                 $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
                 $reader->setInputEncoding('UTF-8');
-                $reader->setAutoDetect(true);
+                // Deteksi pemisah CSV (koma atau titik koma) secara aman tanpa memanggil private setAutoDetect()
+                $firstLine = '';
+                $fpCsv = @fopen($file['tmp_name'], 'r');
+                if ($fpCsv) {
+                    $firstLine = (string)fgets($fpCsv);
+                    fclose($fpCsv);
+                }
+                if (substr_count($firstLine, ';') > substr_count($firstLine, ',')) {
+                    $reader->setDelimiter(';');
+                } else {
+                    $reader->setDelimiter(',');
+                }
                 $spreadsheet = $reader->load($file['tmp_name']);
                 $sheet = $spreadsheet->getActiveSheet();
             } else {
@@ -9277,18 +9293,42 @@ class C_SalesOrder extends CI_Controller
                 'tgl_pelunasan'        => 'tanggal_pembayaran',
                 'tanggal'              => 'tanggal_pembayaran',
                 'jumlah_pembayaran'    => 'jumlah_pembayaran',
+                'jumlah_pembayaran1'   => 'jumlah_pembayaran',
+                'jumlah_pembayaran_1'  => 'jumlah_pembayaran',
                 'jumlah_bayar'         => 'jumlah_pembayaran',
+                'jumlah_bayar1'        => 'jumlah_pembayaran',
+                'jumlah_bayar_1'       => 'jumlah_pembayaran',
                 'nominal_bayar'        => 'jumlah_pembayaran',
                 'nominal_pelunasan'    => 'jumlah_pembayaran',
                 'nominal'              => 'jumlah_pembayaran',
                 'total_bayar'          => 'jumlah_pembayaran',
                 'grand_total'          => 'jumlah_pembayaran',
                 'metode_pembayaran'    => 'metode_pembayaran',
+                'metode_pembayaran1'   => 'metode_pembayaran',
+                'metode_pembayaran_1'  => 'metode_pembayaran',
                 'metode_bayar'         => 'metode_pembayaran',
+                'metode_bayar1'        => 'metode_pembayaran',
+                'metode_bayar_1'       => 'metode_pembayaran',
                 'metode'               => 'metode_pembayaran',
                 'akun_kas'             => 'metode_pembayaran',
                 'kas_bank'             => 'metode_pembayaran',
                 'bank'                 => 'metode_pembayaran',
+                'metode_pembayaran_2'  => 'metode_pembayaran_2',
+                'metode_pembayaran2'   => 'metode_pembayaran_2',
+                'metode_bayar_2'       => 'metode_pembayaran_2',
+                'metode_bayar2'        => 'metode_pembayaran_2',
+                'metode_2'             => 'metode_pembayaran_2',
+                'akun_kas_2'           => 'metode_pembayaran_2',
+                'kas_bank_2'           => 'metode_pembayaran_2',
+                'bank_2'               => 'metode_pembayaran_2',
+                'jumlah_pembayaran_2'  => 'jumlah_pembayaran_2',
+                'jumlah_pembayaran2'   => 'jumlah_pembayaran_2',
+                'jumlah_bayar_2'       => 'jumlah_pembayaran_2',
+                'jumlah_bayar2'        => 'jumlah_pembayaran_2',
+                'nominal_bayar_2'      => 'jumlah_pembayaran_2',
+                'nominal_pembayaran_2' => 'jumlah_pembayaran_2',
+                'nominal_2'            => 'jumlah_pembayaran_2',
+                'jumlah_2'             => 'jumlah_pembayaran_2',
                 'skema_potongan'       => 'skema_potongan',
                 'skema'                => 'skema_potongan',
                 'potongan_persen'      => 'skema_potongan',
@@ -9362,15 +9402,24 @@ class C_SalesOrder extends CI_Controller
                     return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
                 };
 
-                // Periksa jumlah pembayaran: jika kosong atau <= 0, lewati baris Faktur Z ini
-                $rawJmlBayar = $getVal('jumlah_pembayaran', '');
-                if ($rawJmlBayar === '') {
-                    $skippedCount++;
-                    continue;
+                // Periksa jumlah pembayaran (mendukung hingga 2 metode pembayaran per baris Faktur Z)
+                $rawJmlBayar  = $getVal('jumlah_pembayaran', '');
+                $rawJmlBayar2 = $getVal('jumlah_pembayaran_2', '');
+                $jmlBayar1    = $rawJmlBayar !== '' ? $this->_parseImportNumber($rawJmlBayar) : 0.0;
+                $jmlBayar2    = $rawJmlBayar2 !== '' ? $this->_parseImportNumber($rawJmlBayar2) : 0.0;
+
+                $metode1 = $getVal('metode_pembayaran', $defaultMetode);
+                $metode2 = $getVal('metode_pembayaran_2', '');
+
+                $paymentSplits = [];
+                if ($jmlBayar1 > 0) {
+                    $paymentSplits[] = ['metode' => $metode1, 'jumlah' => $jmlBayar1];
+                }
+                if ($jmlBayar2 > 0) {
+                    $paymentSplits[] = ['metode' => ($metode2 !== '' ? $metode2 : $metode1), 'jumlah' => $jmlBayar2];
                 }
 
-                $jmlBayar = $this->_parseImportNumber($rawJmlBayar);
-                if ($jmlBayar <= 0) {
+                if (empty($paymentSplits)) {
                     $skippedCount++;
                     continue;
                 }
@@ -9380,7 +9429,6 @@ class C_SalesOrder extends CI_Controller
                     ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
                     : ($defaultTanggal ?: date('Y-m-d'));
 
-                $metode   = $getVal('metode_pembayaran', $defaultMetode);
                 $skemaRaw = $getVal('skema_potongan', '');
                 if ($skemaRaw !== '') {
                     $skemaParsed = (int)$this->_parseImportNumber($skemaRaw);
@@ -9390,91 +9438,110 @@ class C_SalesOrder extends CI_Controller
                 }
                 $ketCustom = $getVal('keterangan', '');
 
-                // Ambil seluruh child Faktur H Import di bawah Faktur Z Induk secara FIFO
-                $childFakturs = $this->M_SalesOrder->get_child_faktur_h_import_by_z($noFakturZ, $restrictedCreate);
-                if (empty($childFakturs)) {
-                    $notFoundList[] = $noFakturZ;
-                    continue;
-                }
-
-                // Saring child Faktur H yang belum lunas (termasuk status 'sebagian' yang masih memiliki sisa tagihan)
-                $unpaidChildren = [];
-                foreach ($childFakturs as $child) {
-                    $tagihanH     = round((float)($child['grand_total'] ?? 0), 2);
-                    $sudahBayarH  = round((float)($child['total_bayar'] ?? 0), 2);
-                    $sisaTagihanH = max(0.0, round($tagihanH - $sudahBayarH, 2));
-                    $statusChild  = strtolower(trim((string)($child['status_bayar'] ?? '')));
-                    if ($statusChild !== 'lunas' && $sisaTagihanH > 0.01) {
-                        $child['_tagihan_h']      = $tagihanH;
-                        $child['_sudah_bayar_h']  = $sudahBayarH;
-                        $child['_sisa_tagihan_h'] = $sisaTagihanH;
-                        $unpaidChildren[]         = $child;
-                    }
-                }
-
-                if (empty($unpaidChildren)) {
-                    $alreadyPaidList[] = $noFakturZ;
-                    continue;
-                }
-
-                // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO)
-                $sisaDanaBayar     = round($jmlBayar, 2);
                 $paidChildForThisZ = 0;
+                $zFoundAnyChild    = false;
+                $zHasUnpaid        = false;
+                $sisaDanaTotalZ    = 0.0;
 
-                foreach ($unpaidChildren as $child) {
-                    if ($sisaDanaBayar <= 0.01) {
-                        break;
-                    }
+                // Proses setiap metode pembayaran secara berurutan (FIFO)
+                foreach ($paymentSplits as $splitItem) {
+                    $metode   = $splitItem['metode'];
+                    $jmlBayar = $splitItem['jumlah'];
 
-                    $tagihanH     = (float)$child['_tagihan_h'];
-                    $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
-                    if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
+                    // Ambil seluruh child Faktur H Import di bawah Faktur Z Induk secara FIFO
+                    $childFakturs = $this->M_SalesOrder->get_child_faktur_h_import_by_z($noFakturZ, $restrictedCreate);
+                    if (empty($childFakturs)) {
                         continue;
                     }
+                    $zFoundAnyChild = true;
 
-                    $bayarChild = round(min($sisaDanaBayar, $sisaTagihanH), 2);
-                    if ($bayarChild <= 0.01) {
-                        break;
+                    // Saring child Faktur H yang belum lunas (termasuk status 'sebagian' yang masih memiliki sisa tagihan)
+                    $unpaidChildren = [];
+                    foreach ($childFakturs as $child) {
+                        $tagihanH     = round((float)($child['grand_total'] ?? 0), 2);
+                        $sudahBayarH  = round((float)($child['total_bayar'] ?? 0), 2);
+                        $sisaTagihanH = max(0.0, round($tagihanH - $sudahBayarH, 2));
+                        $statusChild  = strtolower(trim((string)($child['status_bayar'] ?? '')));
+                        if ($statusChild !== 'lunas' && $sisaTagihanH > 0.01) {
+                            $child['_tagihan_h']      = $tagihanH;
+                            $child['_sudah_bayar_h']  = $sudahBayarH;
+                            $child['_sisa_tagihan_h'] = $sisaTagihanH;
+                            $unpaidChildren[]         = $child;
+                        }
                     }
 
-                    $isFullPayChild = ($sisaTagihanH - $bayarChild) <= 0.01;
-                    $ketChild = $ketCustom !== ''
-                        ? $ketCustom
-                        : (($isFullPayChild ? 'Pelunasan ' : 'Pembayaran Sebagian ') . $child['no_faktur'] . ' (Faktur Z ' . $noFakturZ . ')');
+                    if (empty($unpaidChildren)) {
+                        $sisaDanaTotalZ += round($jmlBayar, 2);
+                        continue;
+                    }
+                    $zHasUnpaid = true;
 
-                    $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import((int)$child['id_import_h'], [
-                        'incremental'        => true,
-                        'tanggal_pembayaran' => $tglBayar,
-                        'jumlah_bayar'       => $bayarChild,
-                        'metode_pembayaran'  => $metode,
-                        'skema_potongan'     => $skema,
-                        'parent_no_faktur'   => $noFakturZ,
-                        'keterangan'         => $ketChild,
-                        'import_batch'       => $importBatch,
-                        'create_by'          => $username,
-                    ]);
+                    // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO)
+                    $sisaDanaBayar = round($jmlBayar, 2);
 
-                    if (!empty($res['success'])) {
-                        $paidChildForThisZ++;
-                        $successHCount++;
-                        $resData = $res['data'] ?? [];
-                        if (($resData['status_bayar'] ?? '') === 'lunas') {
-                            $lunasHCount++;
-                        } else {
-                            $partialHCount++;
-                            $sisaBaru = (float)($resData['sisa_tagihan'] ?? max(0, $sisaTagihanH - $bayarChild));
-                            $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaBaru, 0, ',', '.') . ")";
+                    foreach ($unpaidChildren as $child) {
+                        if ($sisaDanaBayar <= 0.01) {
+                            break;
                         }
-                        $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
-                    } else {
-                        $failedList[] = $child['no_faktur'] . ' (' . ($res['message'] ?? 'Gagal') . ')';
+
+                        $tagihanH     = (float)$child['_tagihan_h'];
+                        $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
+                        if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
+                            continue;
+                        }
+
+                        $bayarChild = round(min($sisaDanaBayar, $sisaTagihanH), 2);
+                        if ($bayarChild <= 0.01) {
+                            break;
+                        }
+
+                        $isFullPayChild = ($sisaTagihanH - $bayarChild) <= 0.01;
+                        $ketChild = $ketCustom !== ''
+                            ? $ketCustom
+                            : (($isFullPayChild ? 'Pelunasan ' : 'Pembayaran Sebagian ') . $child['no_faktur'] . ' (Faktur Z ' . $noFakturZ . ')');
+
+                        $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import((int)$child['id_import_h'], [
+                            'incremental'        => true,
+                            'tanggal_pembayaran' => $tglBayar,
+                            'jumlah_bayar'       => $bayarChild,
+                            'metode_pembayaran'  => $metode,
+                            'skema_potongan'     => $skema,
+                            'parent_no_faktur'   => $noFakturZ,
+                            'keterangan'         => $ketChild,
+                            'import_batch'       => $importBatch,
+                            'create_by'          => $username,
+                        ]);
+
+                        if (!empty($res['success'])) {
+                            $paidChildForThisZ++;
+                            $successHCount++;
+                            $resData = $res['data'] ?? [];
+                            if (($resData['status_bayar'] ?? '') === 'lunas') {
+                                $lunasHCount++;
+                            } else {
+                                $partialHCount++;
+                                $sisaBaru = (float)($resData['sisa_tagihan'] ?? max(0, $sisaTagihanH - $bayarChild));
+                                $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaBaru, 0, ',', '.') . ")";
+                            }
+                            $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
+                        } else {
+                            $failedList[] = $child['no_faktur'] . ' (' . ($res['message'] ?? 'Gagal') . ')';
+                        }
+                    }
+
+                    if ($sisaDanaBayar > 0.01) {
+                        $sisaDanaTotalZ += $sisaDanaBayar;
                     }
                 }
 
-                if ($paidChildForThisZ > 0) {
+                if (!$zFoundAnyChild) {
+                    $notFoundList[] = $noFakturZ;
+                } elseif (!$zHasUnpaid && $paidChildForThisZ === 0) {
+                    $alreadyPaidList[] = $noFakturZ;
+                } elseif ($paidChildForThisZ > 0) {
                     $successZCount++;
-                    if ($sisaDanaBayar > 0.01) {
-                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} Faktur H terbayar, kelebihan dana Rp " . number_format($sisaDanaBayar, 0, ',', '.') . " setelah seluruh Faktur H lunas)";
+                    if ($sisaDanaTotalZ > 0.01) {
+                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} termin/Faktur H terbayar, kelebihan dana Rp " . number_format($sisaDanaTotalZ, 0, ',', '.') . " setelah seluruh Faktur H lunas)";
                     }
                 }
             }
@@ -9489,32 +9556,7 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($successHCount > 0) {
-                $statusSummary = [];
-                if ($lunasHCount > 0) {
-                    $statusSummary[] = "<strong>{$lunasHCount} lunas</strong>";
-                }
-                if ($partialHCount > 0) {
-                    $statusSummary[] = "<strong>{$partialHCount} dibayar sebagian</strong>";
-                }
-                $ringkasanH = !empty($statusSummary) ? (' (' . implode(', ', $statusSummary) . ')') : '';
-                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong> diproses dan <strong>{$successHCount} Faktur H</strong>{$ringkasanH} telah dicatat pembayarannya beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
-                if ($skippedCount > 0) {
-                    $msg .= "<br><small class='text-muted'>Informasi: {$skippedCount} baris Faktur Z dilewati karena kolom jumlah pembayaran dikosongkan.</small>";
-                }
-                if (!empty($partialInfoList)) {
-                    $msg .= "<br><small class='text-info'>Pelunasan sebagian (cicilan): " . implode('; ', array_slice($partialInfoList, 0, 5)) . (count($partialInfoList) > 5 ? '; dll.' : '') . "</small>";
-                }
-                if (!empty($alreadyPaidList)) {
-                    $msg .= "<br><small class='text-info'>Faktur Z yang seluruh Faktur H-nya sudah lunas: " . implode(', ', array_slice($alreadyPaidList, 0, 8)) . (count($alreadyPaidList) > 8 ? ', dll.' : '') . "</small>";
-                }
-                if (!empty($leftoverInfoList)) {
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-info-circle'></i> Kelebihan pembayaran: " . implode('; ', array_slice($leftoverInfoList, 0, 5)) . (count($leftoverInfoList) > 5 ? '; dll.' : '') . "</span>";
-                }
-                if (!empty($notFoundList)) {
-                    $previewNotFound = implode(', ', array_slice($notFoundList, 0, 8));
-                    if (count($notFoundList) > 8) $previewNotFound .= ', dll.';
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-exclamation-triangle'></i> Faktur Z tidak ditemukan / belum memiliki Faktur H: {$previewNotFound}.</span>";
-                }
+                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong>.";
                 if (!empty($failedList)) {
                     $msg .= "<br><span class='text-danger'><i class='fas fa-times-circle'></i> Faktur gagal diproses: " . implode(', ', $failedList) . "</span>";
                 }
@@ -9550,34 +9592,55 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $id_import_h        = (int)$this->input->post('id_import_h');
-        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
-        $jumlah_bayar       = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
-        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
-        $skema_potongan     = (int)$this->input->post('skema_potongan', true);
-        $parent_no_faktur   = trim((string)$this->input->post('parent_no_faktur', true));
-        $keterangan         = trim((string)$this->input->post('keterangan', true));
-        $redirectTo         = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
+        $id_import_h         = (int)$this->input->post('id_import_h');
+        $tanggal_pembayaran  = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
+        $jumlah_bayar        = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
+        $metode_pembayaran   = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $jumlah_bayar_2      = $this->_parseImportNumber($this->input->post('jumlah_bayar_2', true));
+        $metode_pembayaran_2 = trim((string)($this->input->post('metode_pembayaran_2', true) ?: ''));
+        $skema_potongan      = (int)$this->input->post('skema_potongan', true);
+        $parent_no_faktur    = trim((string)$this->input->post('parent_no_faktur', true));
+        $keterangan          = trim((string)$this->input->post('keterangan', true));
+        $redirectTo          = $this->input->post('redirect_to') ?: 'sales_order/faktur_h_import';
 
         $fhExisting = $this->M_SalesOrder->get_faktur_h_import($id_import_h);
         $isIncremental = $fhExisting && strtolower(trim((string)($fhExisting['status_bayar'] ?? ''))) === 'sebagian';
 
-        $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($id_import_h, [
-            'incremental'        => $isIncremental,
-            'tanggal_pembayaran' => $tanggal_pembayaran,
-            'jumlah_bayar'       => $jumlah_bayar,
-            'metode_pembayaran'  => $metode_pembayaran,
-            'skema_potongan'     => $skema_potongan,
-            'parent_no_faktur'   => $parent_no_faktur,
-            'keterangan'         => $keterangan,
-            'create_by'          => $this->_getUsername(),
-        ]);
+        $splits = [];
+        if ($jumlah_bayar > 0 || $jumlah_bayar_2 <= 0) {
+            $splits[] = ['metode' => $metode_pembayaran, 'jumlah' => $jumlah_bayar];
+        }
+        if ($jumlah_bayar_2 > 0) {
+            $splits[] = ['metode' => ($metode_pembayaran_2 !== '' ? $metode_pembayaran_2 : $metode_pembayaran), 'jumlah' => $jumlah_bayar_2];
+        }
+
+        $res = ['success' => false, 'message' => 'Gagal melunasi Faktur H.'];
+        $jurnalQList = [];
+        $jurnalAList = [];
+        foreach ($splits as $idx => $sp) {
+            $useIncremental = $isIncremental || ($idx > 0);
+            $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($id_import_h, [
+                'incremental'        => $useIncremental,
+                'tanggal_pembayaran' => $tanggal_pembayaran,
+                'jumlah_bayar'       => $sp['jumlah'],
+                'metode_pembayaran'  => $sp['metode'],
+                'skema_potongan'     => $skema_potongan,
+                'parent_no_faktur'   => $parent_no_faktur,
+                'keterangan'         => $keterangan,
+                'create_by'          => $this->_getUsername(),
+            ]);
+            if (empty($res['success'])) {
+                break;
+            }
+            $d = $res['data'] ?? [];
+            if (!empty($d['nomor_jurnal_q'])) $jurnalQList[] = $d['nomor_jurnal_q'];
+            if (!empty($d['nomor_jurnal_a'])) $jurnalAList[] = $d['nomor_jurnal_a'];
+        }
 
         if (!empty($res['success'])) {
-            $d = $res['data'] ?? [];
-            $jurnalInfo = "Jurnal Q: <strong>" . ($d['nomor_jurnal_q'] ?: '-') . "</strong>";
-            if (!empty($d['nomor_jurnal_a'])) {
-                $jurnalInfo .= " | Jurnal A: <strong>" . $d['nomor_jurnal_a'] . "</strong>";
+            $jurnalInfo = "Jurnal Q: <strong>" . (!empty($jurnalQList) ? implode(', ', $jurnalQList) : '-') . "</strong>";
+            if (!empty($jurnalAList)) {
+                $jurnalInfo .= " | Jurnal A: <strong>" . implode(', ', $jurnalAList) . "</strong>";
             }
             $this->session->set_flashdata('success', $res['message'] . " ({$jurnalInfo})");
         } else {
@@ -9968,13 +10031,18 @@ class C_SalesOrder extends CI_Controller
             $kat_info = $this->_detect_kategori_jurnal($r);
             $formatted_desc = $raw_desc;
 
+            $refFaktur = trim((string)($r['source_no'] ?? ''));
+            if (isset($jurnalToFakturH[(int)$r['id_jurnal']]) && stripos($refFaktur, 'H') !== 0) {
+                $refFaktur = $jurnalToFakturH[(int)$r['id_jurnal']];
+            }
+
             $sheet->setCellValue('A' . $rowIdx, $no++);
             $sheet->setCellValue('B' . $rowIdx, $ref);
             $sheet->setCellValue('C' . $rowIdx, $dateStr);
             $sheet->setCellValue('D' . $rowIdx, $prefix);
             $sheet->setCellValue('E' . $rowIdx, $r['nomor_jurnal']);
             $sheet->setCellValue('F' . $rowIdx, $kat_info['kategori']);
-            $sheet->setCellValue('G' . $rowIdx, $r['source_no'] ?: '-');
+            $sheet->setCellValue('G' . $rowIdx, $refFaktur ?: '-');
             $sheet->setCellValueExplicit('H' . $rowIdx, $no_perk, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('I' . $rowIdx, $r['nama_akun'] ?: '-');
             $sheet->setCellValue('J' . $rowIdx, $formatted_desc);
@@ -10177,9 +10245,11 @@ class C_SalesOrder extends CI_Controller
 
         $headers = [
             'no_faktur_z',
-            'metode_pembayaran',
             'tanggal_pembayaran',
-            'jumlah_pembayaran',
+            'metode_pembayaran1',
+            'jumlah_pembayaran1',
+            'metode_pembayaran_2',
+            'jumlah_pembayaran_2',
             'skema_potongan',
             'customer_name',
             'jumlah_pecahan_h',
@@ -10256,9 +10326,11 @@ class C_SalesOrder extends CI_Controller
             $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
             $sheet->fromArray([
                 $z['no_faktur_z'],
-                $z['metode_pembayaran'],
                 $z['tanggal_faktur'],
-                '', // Dikosongkan agar user mengisi nominal bayar Faktur Z
+                $z['metode_pembayaran'],
+                '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
+                '', // Opsional: isi Metode Pembayaran 2 (mis. Q BRI) bila bayar pakai 2 bank/kas
+                '', // Opsional: isi Nominal Pembayaran 2
                 $z['skema_potongan'],
                 $z['customer_name'],
                 $infoPecahan,
@@ -10281,19 +10353,20 @@ class C_SalesOrder extends CI_Controller
                 'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
             ]
         ];
-        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(24);
         $sheet->freezePane('A2');
 
-        foreach (range('A', 'I') as $col) {
+        foreach (range('A', 'K') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
         $lastRow = max(2, $rowIdx - 1);
         $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()->setFormatCode('@');
-        $sheet->getStyle("C2:C{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+        $sheet->getStyle("B2:B{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
         $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("H2:I{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("F2:F{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle("J2:K{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
 
         $spreadsheet->setActiveSheetIndex(0);
         $filename = 'template_pelunasan_faktur_z_' . date('Ymd_His') . '.xlsx';
@@ -10350,7 +10423,18 @@ class C_SalesOrder extends CI_Controller
             if ($extension === 'csv') {
                 $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
                 $reader->setInputEncoding('UTF-8');
-                $reader->setAutoDetect(true);
+                // Deteksi pemisah CSV (koma atau titik koma) secara aman tanpa memanggil private setAutoDetect()
+                $firstLine = '';
+                $fpCsv = @fopen($file['tmp_name'], 'r');
+                if ($fpCsv) {
+                    $firstLine = (string)fgets($fpCsv);
+                    fclose($fpCsv);
+                }
+                if (substr_count($firstLine, ';') > substr_count($firstLine, ',')) {
+                    $reader->setDelimiter(';');
+                } else {
+                    $reader->setDelimiter(',');
+                }
                 $spreadsheet = $reader->load($file['tmp_name']);
                 $sheet = $spreadsheet->getActiveSheet();
             } else {
@@ -10398,18 +10482,42 @@ class C_SalesOrder extends CI_Controller
                 'tgl_pelunasan'        => 'tanggal_pembayaran',
                 'tanggal'              => 'tanggal_pembayaran',
                 'jumlah_pembayaran'    => 'jumlah_pembayaran',
+                'jumlah_pembayaran1'   => 'jumlah_pembayaran',
+                'jumlah_pembayaran_1'  => 'jumlah_pembayaran',
                 'jumlah_bayar'         => 'jumlah_pembayaran',
+                'jumlah_bayar1'        => 'jumlah_pembayaran',
+                'jumlah_bayar_1'       => 'jumlah_pembayaran',
                 'nominal_bayar'        => 'jumlah_pembayaran',
                 'nominal_pelunasan'    => 'jumlah_pembayaran',
                 'nominal'              => 'jumlah_pembayaran',
                 'total_bayar'          => 'jumlah_pembayaran',
                 'grand_total'          => 'jumlah_pembayaran',
                 'metode_pembayaran'    => 'metode_pembayaran',
+                'metode_pembayaran1'   => 'metode_pembayaran',
+                'metode_pembayaran_1'  => 'metode_pembayaran',
                 'metode_bayar'         => 'metode_pembayaran',
+                'metode_bayar1'        => 'metode_pembayaran',
+                'metode_bayar_1'       => 'metode_pembayaran',
                 'metode'               => 'metode_pembayaran',
                 'akun_kas'             => 'metode_pembayaran',
                 'kas_bank'             => 'metode_pembayaran',
                 'bank'                 => 'metode_pembayaran',
+                'metode_pembayaran_2'  => 'metode_pembayaran_2',
+                'metode_pembayaran2'   => 'metode_pembayaran_2',
+                'metode_bayar_2'       => 'metode_pembayaran_2',
+                'metode_bayar2'        => 'metode_pembayaran_2',
+                'metode_2'             => 'metode_pembayaran_2',
+                'akun_kas_2'           => 'metode_pembayaran_2',
+                'kas_bank_2'           => 'metode_pembayaran_2',
+                'bank_2'               => 'metode_pembayaran_2',
+                'jumlah_pembayaran_2'  => 'jumlah_pembayaran_2',
+                'jumlah_pembayaran2'   => 'jumlah_pembayaran_2',
+                'jumlah_bayar_2'       => 'jumlah_pembayaran_2',
+                'jumlah_bayar2'        => 'jumlah_pembayaran_2',
+                'nominal_bayar_2'      => 'jumlah_pembayaran_2',
+                'nominal_pembayaran_2' => 'jumlah_pembayaran_2',
+                'nominal_2'            => 'jumlah_pembayaran_2',
+                'jumlah_2'             => 'jumlah_pembayaran_2',
                 'skema_potongan'       => 'skema_potongan',
                 'skema'                => 'skema_potongan',
                 'potongan_persen'      => 'skema_potongan',
@@ -10472,15 +10580,24 @@ class C_SalesOrder extends CI_Controller
                     return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
                 };
 
-                // Periksa jumlah pembayaran: jika kosong atau <= 0, lewati baris Faktur Z ini
-                $rawJmlBayar = $getVal('jumlah_pembayaran', '');
-                if ($rawJmlBayar === '') {
-                    $skippedCount++;
-                    continue;
+                // Periksa jumlah pembayaran (mendukung hingga 2 metode pembayaran per baris Faktur Z)
+                $rawJmlBayar  = $getVal('jumlah_pembayaran', '');
+                $rawJmlBayar2 = $getVal('jumlah_pembayaran_2', '');
+                $jmlBayar1    = $rawJmlBayar !== '' ? $this->_parseImportNumber($rawJmlBayar) : 0.0;
+                $jmlBayar2    = $rawJmlBayar2 !== '' ? $this->_parseImportNumber($rawJmlBayar2) : 0.0;
+
+                $metode1 = $getVal('metode_pembayaran', $defaultMetode);
+                $metode2 = $getVal('metode_pembayaran_2', '');
+
+                $paymentSplits = [];
+                if ($jmlBayar1 > 0) {
+                    $paymentSplits[] = ['metode' => $metode1, 'jumlah' => $jmlBayar1];
+                }
+                if ($jmlBayar2 > 0) {
+                    $paymentSplits[] = ['metode' => ($metode2 !== '' ? $metode2 : $metode1), 'jumlah' => $jmlBayar2];
                 }
 
-                $jmlBayar = $this->_parseImportNumber($rawJmlBayar);
-                if ($jmlBayar <= 0) {
+                if (empty($paymentSplits)) {
                     $skippedCount++;
                     continue;
                 }
@@ -10490,7 +10607,6 @@ class C_SalesOrder extends CI_Controller
                     ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
                     : ($defaultTanggal ?: date('Y-m-d'));
 
-                $metode   = $getVal('metode_pembayaran', $defaultMetode);
                 $skemaRaw = $getVal('skema_potongan', '');
                 if ($skemaRaw !== '') {
                     $skemaParsed = (int)$this->_parseImportNumber($skemaRaw);
@@ -10507,160 +10623,182 @@ class C_SalesOrder extends CI_Controller
                     ->get()->row_array();
                 $parentIdFaktur = $parentRow ? (int)$parentRow['id_faktur'] : 0;
 
-                // Ambil seluruh child Faktur Pecahan H di bawah Faktur Z ini berurutan dari yang terawal
-                $this->db->select('
-                    p.*,
-                    COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
-                    COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
-                    MAX(ca.nama_toko) AS nama_toko,
-                    COALESCE(d.grand_total, 0) AS grand_total
-                ', false);
-                $this->db->from('tbso_faktur_z_pecah p');
-                $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
-                $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
-                $this->db->join('(SELECT id_pecah, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_z_pecah_detail GROUP BY id_pecah) d', 'd.id_pecah = p.id_pecah', 'left');
-                $this->db->group_start();
-                $this->db->where('p.parent_no_faktur', $noFakturZ);
-                if ($parentIdFaktur > 0) {
-                    $this->db->or_where('p.parent_id_faktur', $parentIdFaktur);
-                }
-                $this->db->group_end();
-                $this->db->where('p.status !=', 'cancelled');
-                $this->db->group_by('p.id_pecah');
-                $this->db->order_by('p.no_faktur', 'ASC');
-                $this->db->order_by('p.id_pecah', 'ASC');
-                $childFakturs = $this->db->get()->result_array();
-
-                if (empty($childFakturs)) {
-                    $notFoundList[] = $noFakturZ;
-                    continue;
-                }
-
-                // Saring child Faktur H yang belum lunas (termasuk status 'sebagian' yang masih punya sisa tagihan)
-                $unpaidChildren = [];
-                foreach ($childFakturs as $child) {
-                    $tagihanH     = round((float)$child['grand_total'], 2);
-                    $sudahBayarH  = round((float)($child['total_bayar'] ?? 0), 2);
-                    $sisaTagihanH = max(0.0, round($tagihanH - $sudahBayarH, 2));
-                    $statusChild  = strtolower(trim((string)($child['status_bayar'] ?? '')));
-                    if ($statusChild !== 'lunas' && $sisaTagihanH > 0.01) {
-                        $child['_tagihan_h']      = $tagihanH;
-                        $child['_sudah_bayar_h']  = $sudahBayarH;
-                        $child['_sisa_tagihan_h'] = $sisaTagihanH;
-                        $unpaidChildren[]         = $child;
-                    }
-                }
-
-                if (empty($unpaidChildren)) {
-                    $alreadyPaidList[] = $noFakturZ;
-                    continue;
-                }
-
-                // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO berdasarkan no_faktur ASC).
-                // Mendukung pelunasan sebagian ('sebagian') bila dana tidak mencukupi seluruh sisa tagihan Faktur H terawal.
-                $sisaDanaBayar     = round($jmlBayar, 2);
                 $paidChildForThisZ = 0;
                 $pembagi           = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
+                $zFoundAnyChild    = false;
+                $zHasUnpaid        = false;
+                $sisaDanaTotalZ    = 0.0;
 
-                foreach ($unpaidChildren as $child) {
-                    if ($sisaDanaBayar <= 0.01) {
-                        break;
+                // Proses setiap metode pembayaran secara berurutan (agar pembayaran ke-2 otomatis melanjutkan sisa tagihan setelah pembayaran ke-1)
+                foreach ($paymentSplits as $splitItem) {
+                    $metode   = $splitItem['metode'];
+                    $jmlBayar = $splitItem['jumlah'];
+
+                    // Ambil seluruh child Faktur Pecahan H di bawah Faktur Z ini berurutan dari yang terawal
+                    $this->db->select('
+                        p.*,
+                        COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
+                        COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
+                        MAX(ca.nama_toko) AS nama_toko,
+                        COALESCE(d.grand_total, 0) AS grand_total
+                    ', false);
+                    $this->db->from('tbso_faktur_z_pecah p');
+                    $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
+                    $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
+                    $this->db->join('(SELECT id_pecah, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_z_pecah_detail GROUP BY id_pecah) d', 'd.id_pecah = p.id_pecah', 'left');
+                    $this->db->group_start();
+                    $this->db->where('p.parent_no_faktur', $noFakturZ);
+                    if ($parentIdFaktur > 0) {
+                        $this->db->or_where('p.parent_id_faktur', $parentIdFaktur);
                     }
+                    $this->db->group_end();
+                    $this->db->where('p.status !=', 'cancelled');
+                    $this->db->group_by('p.id_pecah');
+                    $this->db->order_by('p.no_faktur', 'ASC');
+                    $this->db->order_by('p.id_pecah', 'ASC');
+                    $childFakturs = $this->db->get()->result_array();
 
-                    $tagihanH     = (float)$child['_tagihan_h'];
-                    $sudahBayarH  = (float)$child['_sudah_bayar_h'];
-                    $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
-                    if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
+                    if (empty($childFakturs)) {
                         continue;
                     }
+                    $zFoundAnyChild = true;
 
-                    // Serap dana ke Faktur H terawal hingga sisa tagihannya terpenuhi (boleh sebagian)
-                    $bayarChild = min($sisaDanaBayar, $sisaTagihanH);
-                    $bayarChild = round($bayarChild, 2);
-                    if ($bayarChild <= 0.01) {
-                        break;
-                    }
-
-                    $brutoChild = ($pembagi > 0 && $pembagi < 1.0) ? round($bayarChild / $pembagi, 2) : $bayarChild;
-                    $potChild   = max(0, round($brutoChild - $bayarChild, 2));
-
-                    $totalBayarBaru  = round($sudahBayarH + $bayarChild, 2);
-                    $sisaTagihanBaru = max(0.0, round($tagihanH - $totalBayarBaru, 2));
-                    if ($sisaTagihanBaru <= 0.01) {
-                        $totalBayarBaru  = $tagihanH;
-                        $sisaTagihanBaru = 0.0;
-                        $statusBayarBaru = 'lunas';
-                    } else {
-                        $statusBayarBaru = 'sebagian';
-                    }
-
-                    $prevBruto = round((float)($child['nominal_bruto'] ?? 0), 2);
-                    $prevPot   = round((float)($child['nominal_potongan'] ?? 0), 2);
-
-                    $paymentData = [
-                        'tanggal_pembayaran' => $tglBayar,
-                        'metode_pembayaran'  => $metode,
-                        'jumlah_bayar'       => $bayarChild,
-                        'skema_potongan'     => $skema,
-                        'nominal_bruto'      => $brutoChild,
-                        'nominal_potongan'   => $potChild,
-                        'parent_no_faktur'   => $child['parent_no_faktur'] ?: $noFakturZ,
-                        'keterangan'         => ($statusBayarBaru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . $child['no_faktur'],
-                    ];
-
-                    $this->db->trans_start();
-
-                    // Jangan hapus jurnal pembayaran sebelumnya bila ini cicilan lanjutan; hanya bersihkan bila belum ada riwayat bayar
-                    if ($sudahBayarH <= 0.01) {
-                        if (!empty($child['id_jurnal_q'])) {
-                            $this->M_Journal->delete_journal((int)$child['id_jurnal_q']);
-                        }
-                        if (!empty($child['id_jurnal_a'])) {
-                            $this->M_Journal->delete_journal((int)$child['id_jurnal_a']);
+                    // Saring child Faktur H yang belum lunas (termasuk status 'sebagian' yang masih punya sisa tagihan)
+                    $unpaidChildren = [];
+                    foreach ($childFakturs as $child) {
+                        $tagihanH     = round((float)$child['grand_total'], 2);
+                        $sudahBayarH  = round((float)($child['total_bayar'] ?? 0), 2);
+                        $sisaTagihanH = max(0.0, round($tagihanH - $sudahBayarH, 2));
+                        $statusChild  = strtolower(trim((string)($child['status_bayar'] ?? '')));
+                        if ($statusChild !== 'lunas' && $sisaTagihanH > 0.01) {
+                            $child['_tagihan_h']      = $tagihanH;
+                            $child['_sudah_bayar_h']  = $sudahBayarH;
+                            $child['_sisa_tagihan_h'] = $sisaTagihanH;
+                            $unpaidChildren[]         = $child;
                         }
                     }
 
-                    $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($child, $paymentData);
+                    if (empty($unpaidChildren)) {
+                        $sisaDanaTotalZ += round($jmlBayar, 2);
+                        continue;
+                    }
+                    $zHasUnpaid = true;
 
-                    $updateData = [
-                        'status_bayar'      => $statusBayarBaru,
-                        'total_bayar'       => $totalBayarBaru,
-                        'sisa_tagihan'      => $sisaTagihanBaru,
-                        'tanggal_bayar'     => $tglBayar,
-                        'metode_pembayaran' => $metode,
-                        'skema_potongan'    => $skema,
-                        'nominal_bruto'     => round($prevBruto + $brutoChild, 2),
-                        'nominal_potongan'  => round($prevPot + $potChild, 2),
-                        'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
-                        'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
-                        'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
-                        'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
-                        'update_by'         => $username,
-                        'update_at'         => date('Y-m-d H:i:s'),
-                    ];
-                    $this->db->where('id_pecah', (int)$child['id_pecah'])->update('tbso_faktur_z_pecah', $updateData);
+                    // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO berdasarkan no_faktur ASC)
+                    $sisaDanaBayar = round($jmlBayar, 2);
 
-                    $this->db->trans_complete();
+                    foreach ($unpaidChildren as $child) {
+                        if ($sisaDanaBayar <= 0.01) {
+                            break;
+                        }
 
-                    if ($this->db->trans_status() === false) {
-                        $failedList[] = $child['no_faktur'] . ' (' . $noFakturZ . ')';
-                    } else {
-                        $paidChildForThisZ++;
-                        $successHCount++;
-                        if ($statusBayarBaru === 'lunas') {
-                            $lunasHCount++;
+                        $tagihanH     = (float)$child['_tagihan_h'];
+                        $sudahBayarH  = (float)$child['_sudah_bayar_h'];
+                        $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
+                        if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
+                            continue;
+                        }
+
+                        // Serap dana ke Faktur H terawal hingga sisa tagihannya terpenuhi (boleh sebagian)
+                        $bayarChild = min($sisaDanaBayar, $sisaTagihanH);
+                        $bayarChild = round($bayarChild, 2);
+                        if ($bayarChild <= 0.01) {
+                            break;
+                        }
+
+                        $brutoChild = ($pembagi > 0 && $pembagi < 1.0) ? round($bayarChild / $pembagi, 2) : $bayarChild;
+                        $potChild   = max(0, round($brutoChild - $bayarChild, 2));
+
+                        $totalBayarBaru  = round($sudahBayarH + $bayarChild, 2);
+                        $sisaTagihanBaru = max(0.0, round($tagihanH - $totalBayarBaru, 2));
+                        if ($sisaTagihanBaru <= 0.01) {
+                            $totalBayarBaru  = $tagihanH;
+                            $sisaTagihanBaru = 0.0;
+                            $statusBayarBaru = 'lunas';
                         } else {
-                            $partialHCount++;
-                            $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaTagihanBaru, 0, ',', '.') . ")";
+                            $statusBayarBaru = 'sebagian';
                         }
-                        $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
+
+                        $prevBruto = round((float)($child['nominal_bruto'] ?? 0), 2);
+                        $prevPot   = round((float)($child['nominal_potongan'] ?? 0), 2);
+
+                        $paymentData = [
+                            'tanggal_pembayaran' => $tglBayar,
+                            'metode_pembayaran'  => $metode,
+                            'jumlah_bayar'       => $bayarChild,
+                            'skema_potongan'     => $skema,
+                            'nominal_bruto'      => $brutoChild,
+                            'nominal_potongan'   => $potChild,
+                            'parent_no_faktur'   => $child['parent_no_faktur'] ?: $noFakturZ,
+                            'keterangan'         => ($statusBayarBaru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . $child['no_faktur'],
+                        ];
+
+                        $this->db->trans_start();
+
+                        // Jangan hapus jurnal pembayaran sebelumnya bila ini cicilan lanjutan; hanya bersihkan bila belum ada riwayat bayar
+                        if ($sudahBayarH <= 0.01) {
+                            if (!empty($child['id_jurnal_q'])) {
+                                $this->M_Journal->delete_journal((int)$child['id_jurnal_q']);
+                            }
+                            if (!empty($child['id_jurnal_a'])) {
+                                $this->M_Journal->delete_journal((int)$child['id_jurnal_a']);
+                            }
+                        }
+
+                        $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($child, $paymentData);
+
+                        $mergedMetode = ($sudahBayarH > 0.01)
+                            ? $this->_mergePaymentLabels($child['metode_pembayaran'] ?? '', $metode, ' + ', 100)
+                            : $metode;
+
+                        $updateData = [
+                            'status_bayar'      => $statusBayarBaru,
+                            'total_bayar'       => $totalBayarBaru,
+                            'sisa_tagihan'      => $sisaTagihanBaru,
+                            'tanggal_bayar'     => $tglBayar,
+                            'metode_pembayaran' => $mergedMetode,
+                            'skema_potongan'    => $skema,
+                            'nominal_bruto'     => round($prevBruto + $brutoChild, 2),
+                            'nominal_potongan'  => round($prevPot + $potChild, 2),
+                            'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
+                            'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
+                            'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
+                            'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
+                            'update_by'         => $username,
+                            'update_at'         => date('Y-m-d H:i:s'),
+                        ];
+                        $this->db->where('id_pecah', (int)$child['id_pecah'])->update('tbso_faktur_z_pecah', $updateData);
+
+                        $this->db->trans_complete();
+
+                        if ($this->db->trans_status() === false) {
+                            $failedList[] = $child['no_faktur'] . ' (' . $noFakturZ . ')';
+                        } else {
+                            $paidChildForThisZ++;
+                            $successHCount++;
+                            if ($statusBayarBaru === 'lunas') {
+                                $lunasHCount++;
+                            } else {
+                                $partialHCount++;
+                                $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaTagihanBaru, 0, ',', '.') . ")";
+                            }
+                            $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
+                        }
+                    }
+
+                    if ($sisaDanaBayar > 0.01) {
+                        $sisaDanaTotalZ += $sisaDanaBayar;
                     }
                 }
 
-                if ($paidChildForThisZ > 0) {
+                if (!$zFoundAnyChild) {
+                    $notFoundList[] = $noFakturZ;
+                } elseif (!$zHasUnpaid && $paidChildForThisZ === 0) {
+                    $alreadyPaidList[] = $noFakturZ;
+                } elseif ($paidChildForThisZ > 0) {
                     $successZCount++;
-                    if ($sisaDanaBayar > 0.01) {
-                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} Faktur H terbayar, kelebihan dana Rp " . number_format($sisaDanaBayar, 0, ',', '.') . " setelah seluruh Faktur H lunas)";
+                    if ($sisaDanaTotalZ > 0.01) {
+                        $leftoverInfoList[] = "{$noFakturZ} ({$paidChildForThisZ} termin/Faktur H terbayar, kelebihan dana Rp " . number_format($sisaDanaTotalZ, 0, ',', '.') . " setelah seluruh Faktur H lunas)";
                     }
                 }
             }
@@ -10675,35 +10813,7 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($successHCount > 0) {
-                $statusSummary = [];
-                if ($lunasHCount > 0) {
-                    $statusSummary[] = "<strong>{$lunasHCount} lunas</strong>";
-                }
-                if ($partialHCount > 0) {
-                    $statusSummary[] = "<strong>{$partialHCount} dibayar sebagian</strong>";
-                }
-                $ringkasanH = !empty($statusSummary) ? (' (' . implode(', ', $statusSummary) . ')') : '';
-                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong> diproses dan <strong>{$successHCount} Faktur Pecahan H</strong>{$ringkasanH} telah dicatat pembayarannya beserta pembuatan <strong>Jurnal Pembayaran Acak (Q)</strong> dan <strong>Jurnal Kas Masuk (A)</strong>.";
-                if ($skippedCount > 0) {
-                    $msg .= "<br><small class='text-muted'>Informasi: {$skippedCount} baris Faktur Z dilewati karena kolom jumlah pembayaran dikosongkan.</small>";
-                }
-                if (!empty($partialInfoList)) {
-                    $msg .= "<br><small class='text-info'>Pelunasan sebagian (cicilan): " . implode('; ', array_slice($partialInfoList, 0, 5)) . (count($partialInfoList) > 5 ? '; dll.' : '') . "</small>";
-                }
-                if (!empty($alreadyPaidList)) {
-                    $msg .= "<br><small class='text-info'>Faktur Z yang seluruh pecahan H-nya sudah lunas: " . implode(', ', array_slice($alreadyPaidList, 0, 8)) . (count($alreadyPaidList) > 8 ? ', dll.' : '') . "</small>";
-                }
-                if (!empty($leftoverInfoList)) {
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-info-circle'></i> Kelebihan pembayaran: " . implode('; ', array_slice($leftoverInfoList, 0, 5)) . (count($leftoverInfoList) > 5 ? '; dll.' : '') . "</span>";
-                }
-                if (!empty($insufficientList)) {
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-exclamation-triangle'></i> Nominal bayar belum cukup untuk melunasi 1 Faktur H pun: " . implode('; ', array_slice($insufficientList, 0, 5)) . (count($insufficientList) > 5 ? '; dll.' : '') . "</span>";
-                }
-                if (!empty($notFoundList)) {
-                    $previewNotFound = implode(', ', array_slice($notFoundList, 0, 8));
-                    if (count($notFoundList) > 8) $previewNotFound .= ', dll.';
-                    $msg .= "<br><span class='text-warning'><i class='fas fa-exclamation-triangle'></i> Faktur Z tidak ditemukan / belum dipecah: {$previewNotFound}.</span>";
-                }
+                $msg = "Import Pelunasan berdasarkan Faktur Z berhasil! Sebanyak <strong>{$successZCount} Faktur Z</strong>.";
                 if (!empty($failedList)) {
                     $msg .= "<br><span class='text-danger'><i class='fas fa-times-circle'></i> Faktur gagal diproses: " . implode(', ', $failedList) . "</span>";
                 }
@@ -10740,15 +10850,17 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $id_pecah           = (int)$this->input->post('id_pecah');
-        $tanggal_pembayaran = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
-        $jumlah_bayar       = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
-        $metode_pembayaran  = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
-        $skema_potongan     = (int)($this->input->post('skema_potongan', true) !== null && $this->input->post('skema_potongan', true) !== '' ? $this->input->post('skema_potongan', true) : 20);
-        $skema_potongan     = ($skema_potongan === 40) ? 40 : (($skema_potongan === 0) ? 0 : 20);
-        $parent_no_faktur   = trim((string)$this->input->post('parent_no_faktur', true));
-        $keterangan         = trim((string)$this->input->post('keterangan', true));
-        $redirectTo         = $this->input->post('redirect_to') ?: 'sales_order/pecah_faktur#content-faktur-h';
+        $id_pecah            = (int)$this->input->post('id_pecah');
+        $tanggal_pembayaran  = trim((string)($this->input->post('tanggal_pembayaran', true) ?: date('Y-m-d')));
+        $jumlah_bayar        = $this->_parseImportNumber($this->input->post('jumlah_bayar', true));
+        $metode_pembayaran   = trim((string)($this->input->post('metode_pembayaran', true) ?: 'Q Mandiri'));
+        $jumlah_bayar_2      = $this->_parseImportNumber($this->input->post('jumlah_bayar_2', true));
+        $metode_pembayaran_2 = trim((string)($this->input->post('metode_pembayaran_2', true) ?: ''));
+        $skema_potongan      = (int)($this->input->post('skema_potongan', true) !== null && $this->input->post('skema_potongan', true) !== '' ? $this->input->post('skema_potongan', true) : 20);
+        $skema_potongan      = ($skema_potongan === 40) ? 40 : (($skema_potongan === 0) ? 0 : 20);
+        $parent_no_faktur    = trim((string)$this->input->post('parent_no_faktur', true));
+        $keterangan          = trim((string)$this->input->post('keterangan', true));
+        $redirectTo          = $this->input->post('redirect_to') ?: 'sales_order/pecah_faktur#content-faktur-h';
 
         // Ambil data faktur pecahan H
         $faktur = $this->db->select('
@@ -10776,49 +10888,25 @@ class C_SalesOrder extends CI_Controller
         $sudah_bayar = round((float)($faktur['total_bayar'] ?? 0), 2);
         $sisa_awal   = max(0.0, round($grand_total - $sudah_bayar, 2));
 
-        if ($jumlah_bayar <= 0) {
+        if ($jumlah_bayar <= 0 && $jumlah_bayar_2 <= 0) {
             $jumlah_bayar = ($sisa_awal > 0.01) ? $sisa_awal : $grand_total;
         }
 
-        if ($jumlah_bayar <= 0) {
+        $splits = [];
+        if ($jumlah_bayar > 0) {
+            $splits[] = ['metode' => $metode_pembayaran, 'jumlah' => $jumlah_bayar];
+        }
+        if ($jumlah_bayar_2 > 0) {
+            $splits[] = ['metode' => ($metode_pembayaran_2 !== '' ? $metode_pembayaran_2 : $metode_pembayaran), 'jumlah' => $jumlah_bayar_2];
+        }
+
+        if (empty($splits)) {
             $this->session->set_flashdata('error', 'Nominal pelunasan untuk Faktur ' . $faktur['no_faktur'] . ' harus lebih dari 0.');
             redirect($redirectTo);
             return;
         }
 
-        // Batasi agar nominal bayar tidak melebihi sisa tagihan yang masih berjalan
-        if ($sisa_awal > 0.01 && $jumlah_bayar > $sisa_awal) {
-            $jumlah_bayar = $sisa_awal;
-        }
-
         $pembagi = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
-        $bruto   = round($jumlah_bayar / $pembagi, 2);
-        $pot     = max(0, round($bruto - $jumlah_bayar, 2));
-
-        $total_bayar_baru = round($sudah_bayar + $jumlah_bayar, 2);
-        $sisa_baru        = max(0.0, round($grand_total - $total_bayar_baru, 2));
-        if ($sisa_baru <= 0.01) {
-            $total_bayar_baru = $grand_total;
-            $sisa_baru        = 0.0;
-            $status_baru      = 'lunas';
-        } else {
-            $status_baru      = 'sebagian';
-        }
-
-        $prev_bruto = round((float)($faktur['nominal_bruto'] ?? 0), 2);
-        $prev_pot   = round((float)($faktur['nominal_potongan'] ?? 0), 2);
-
-        $paymentData = [
-            'tanggal_pembayaran' => $tanggal_pembayaran,
-            'metode_pembayaran'  => $metode_pembayaran,
-            'jumlah_bayar'       => $jumlah_bayar,
-            'skema_potongan'     => $skema_potongan,
-            'nominal_bruto'      => $bruto,
-            'nominal_potongan'   => $pot,
-            'parent_no_faktur'   => $parent_no_faktur ?: ($faktur['parent_no_faktur'] ?: ''),
-            'keterangan'         => $keterangan ?: (($status_baru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . 'Faktur Pecahan ' . $faktur['no_faktur']),
-        ];
-
         $this->load->model('M_Journal');
         $this->db->trans_start();
 
@@ -10832,21 +10920,77 @@ class C_SalesOrder extends CI_Controller
             }
         }
 
-        $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
+        $runningBayar     = $sudah_bayar;
+        $runningBruto     = round((float)($faktur['nominal_bruto'] ?? 0), 2);
+        $runningPot       = round((float)($faktur['nominal_potongan'] ?? 0), 2);
+        $runningMetode    = ($sudah_bayar > 0.01) ? (string)($faktur['metode_pembayaran'] ?? '') : '';
+        $jurnalQList      = [];
+        $jurnalAList      = [];
+        $lastJurnalRes    = ['id_jurnal_q' => null, 'nomor_jurnal_q' => null, 'id_jurnal_a' => null, 'nomor_jurnal_a' => null];
+        $status_baru      = 'belum_lunas';
+        $sisa_baru        = max(0.0, round($grand_total - $runningBayar, 2));
+        $total_dibayar_ok = 0.0;
+
+        foreach ($splits as $sp) {
+            $sisa_saat_ini = max(0.0, round($grand_total - $runningBayar, 2));
+            $nominal_sp    = round((float)$sp['jumlah'], 2);
+            if ($sisa_saat_ini > 0.01 && $nominal_sp > $sisa_saat_ini) {
+                $nominal_sp = $sisa_saat_ini;
+            }
+            if ($nominal_sp <= 0.01) {
+                continue;
+            }
+
+            $bruto_sp         = round($nominal_sp / $pembagi, 2);
+            $pot_sp           = max(0, round($bruto_sp - $nominal_sp, 2));
+            $runningBayar     = round($runningBayar + $nominal_sp, 2);
+            $runningBruto     = round($runningBruto + $bruto_sp, 2);
+            $runningPot       = round($runningPot + $pot_sp, 2);
+            $total_dibayar_ok = round($total_dibayar_ok + $nominal_sp, 2);
+
+            $sisa_baru = max(0.0, round($grand_total - $runningBayar, 2));
+            if ($sisa_baru <= 0.01) {
+                $runningBayar = $grand_total;
+                $sisa_baru    = 0.0;
+                $status_baru  = 'lunas';
+            } else {
+                $status_baru  = 'sebagian';
+            }
+
+            $paymentData = [
+                'tanggal_pembayaran' => $tanggal_pembayaran,
+                'metode_pembayaran'  => $sp['metode'],
+                'jumlah_bayar'       => $nominal_sp,
+                'skema_potongan'     => $skema_potongan,
+                'nominal_bruto'      => $bruto_sp,
+                'nominal_potongan'   => $pot_sp,
+                'parent_no_faktur'   => $parent_no_faktur ?: ($faktur['parent_no_faktur'] ?: ''),
+                'keterangan'         => $keterangan ?: (($status_baru === 'lunas' ? 'Pelunasan ' : 'Pembayaran Sebagian ') . 'Faktur Pecahan ' . $faktur['no_faktur']),
+            ];
+
+            $lastJurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_z_pecah($faktur, $paymentData);
+            if (!empty($lastJurnalRes['nomor_jurnal_q'])) {
+                $jurnalQList[] = $lastJurnalRes['nomor_jurnal_q'];
+            }
+            if (!empty($lastJurnalRes['nomor_jurnal_a'])) {
+                $jurnalAList[] = $lastJurnalRes['nomor_jurnal_a'];
+            }
+            $runningMetode = $this->_mergePaymentLabels($runningMetode, $sp['metode'], ' + ', 100);
+        }
 
         $updateData = [
             'status_bayar'      => $status_baru,
-            'total_bayar'       => $total_bayar_baru,
+            'total_bayar'       => $runningBayar,
             'sisa_tagihan'      => $sisa_baru,
             'tanggal_bayar'     => $tanggal_pembayaran,
-            'metode_pembayaran' => $metode_pembayaran,
+            'metode_pembayaran' => $runningMetode ?: $metode_pembayaran,
             'skema_potongan'    => $skema_potongan,
-            'nominal_bruto'     => round($prev_bruto + $bruto, 2),
-            'nominal_potongan'  => round($prev_pot + $pot, 2),
-            'id_jurnal_q'       => $jurnalRes['id_jurnal_q'],
-            'nomor_jurnal_q'    => $jurnalRes['nomor_jurnal_q'],
-            'id_jurnal_a'       => $jurnalRes['id_jurnal_a'],
-            'nomor_jurnal_a'    => $jurnalRes['nomor_jurnal_a'],
+            'nominal_bruto'     => $runningBruto,
+            'nominal_potongan'  => $runningPot,
+            'id_jurnal_q'       => $lastJurnalRes['id_jurnal_q'],
+            'nomor_jurnal_q'    => $lastJurnalRes['nomor_jurnal_q'],
+            'id_jurnal_a'       => $lastJurnalRes['id_jurnal_a'],
+            'nomor_jurnal_a'    => $lastJurnalRes['nomor_jurnal_a'],
             'update_by'         => $this->_getUsername(),
             'update_at'         => date('Y-m-d H:i:s'),
         ];
@@ -10861,14 +11005,14 @@ class C_SalesOrder extends CI_Controller
         if ($this->db->trans_status() === false) {
             $this->session->set_flashdata('error', 'Gagal melunasi Faktur Pecahan ' . $faktur['no_faktur']);
         } else {
-            $jurnalInfo = "Jurnal Q: <strong>" . ($jurnalRes['nomor_jurnal_q'] ?: '-') . "</strong>";
-            if (!empty($jurnalRes['nomor_jurnal_a'])) {
-                $jurnalInfo .= " | Jurnal A: <strong>" . $jurnalRes['nomor_jurnal_a'] . "</strong>";
+            $jurnalInfo = "Jurnal Q: <strong>" . (!empty($jurnalQList) ? implode(', ', $jurnalQList) : '-') . "</strong>";
+            if (!empty($jurnalAList)) {
+                $jurnalInfo .= " | Jurnal A: <strong>" . implode(', ', $jurnalAList) . "</strong>";
             }
             if ($status_baru === 'lunas') {
                 $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dilunasi. ({$jurnalInfo})");
             } else {
-                $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dibayar sebagian sebesar <strong>Rp " . number_format($jumlah_bayar, 0, ',', '.') . "</strong> (sisa tagihan Rp " . number_format($sisa_baru, 0, ',', '.') . "). ({$jurnalInfo})");
+                $this->session->set_flashdata('success', "Faktur Pecahan <strong>{$faktur['no_faktur']}</strong> berhasil dibayar sebagian sebesar <strong>Rp " . number_format($total_dibayar_ok, 0, ',', '.') . "</strong> (sisa tagihan Rp " . number_format($sisa_baru, 0, ',', '.') . "). ({$jurnalInfo})");
             }
         }
 
@@ -11419,38 +11563,40 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Kumpulkan ID Jurnal pelunasan (Q, A, dan Jurnal Asli Z dari pembayaran faktur induk jika ada)
+        // Kumpulkan ID Jurnal pelunasan khusus Faktur Pecahan H (Q & A), tanpa menarik jurnal Faktur Z induk
         $jurnalIds = [];
         $hNos = [];
-        $parentNos = [];
+        $jurnalToFakturH = [];
         foreach ($faktursLunas as $f) {
-            if (!empty($f['id_jurnal_q'])) $jurnalIds[] = (int)$f['id_jurnal_q'];
-            if (!empty($f['id_jurnal_a'])) $jurnalIds[] = (int)$f['id_jurnal_a'];
-            if (!empty($f['no_faktur'])) $hNos[] = trim((string)$f['no_faktur']);
-            if (!empty($f['parent_no_faktur'])) $parentNos[] = trim((string)$f['parent_no_faktur']);
+            $noFakturH = trim((string)($f['no_faktur'] ?? ''));
+            if (!empty($f['id_jurnal_q'])) {
+                $idJq = (int)$f['id_jurnal_q'];
+                $jurnalIds[] = $idJq;
+                if ($noFakturH !== '') {
+                    $jurnalToFakturH[$idJq] = $noFakturH;
+                }
+            }
+            if (!empty($f['id_jurnal_a'])) {
+                $idJa = (int)$f['id_jurnal_a'];
+                $jurnalIds[] = $idJa;
+                if ($noFakturH !== '') {
+                    $jurnalToFakturH[$idJa] = $noFakturH;
+                }
+            }
+            if ($noFakturH !== '') {
+                $hNos[] = $noFakturH;
+            }
         }
         $hNos = array_values(array_unique(array_filter($hNos)));
-        $parentNos = array_values(array_unique(array_filter($parentNos)));
 
-        // Ambil juga seluruh Jurnal Pembayaran (Z, Q, A) yang berstatus POSTED terkait Faktur H dan Faktur Z Induknya
-        if ($this->db->table_exists('tbkeu_jurnal') && (!empty($hNos) || !empty($parentNos))) {
+        // Ambil juga seluruh Jurnal Pembayaran (Q, A) berstatus POSTED yang source_no-nya merujuk langsung ke Faktur H
+        if ($this->db->table_exists('tbkeu_jurnal') && !empty($hNos)) {
             $this->db->select('id_jurnal')
                 ->from('tbkeu_jurnal')
                 ->where('source_module', 'KEUANGAN')
                 ->where_in('source_type', ['PEMBAYARAN_FAKTUR', 'PEMBAYARAN_FAKTUR_PECAH'])
                 ->where('status', 'POSTED')
-                ->group_start();
-            if (!empty($hNos)) {
-                $this->db->where_in('source_no', $hNos);
-            }
-            if (!empty($parentNos)) {
-                if (!empty($hNos)) {
-                    $this->db->or_where_in('source_no', $parentNos);
-                } else {
-                    $this->db->where_in('source_no', $parentNos);
-                }
-            }
-            $this->db->group_end();
+                ->where_in('source_no', $hNos);
             $extraJurnals = $this->db->get()->result_array();
             foreach ($extraJurnals as $ej) {
                 $jurnalIds[] = (int)$ej['id_jurnal'];
@@ -11594,13 +11740,18 @@ class C_SalesOrder extends CI_Controller
             $kat_info = $this->_detect_kategori_jurnal($r);
             $formatted_desc = $raw_desc;
 
+            $refFaktur = trim((string)($r['source_no'] ?? ''));
+            if (isset($jurnalToFakturH[(int)$r['id_jurnal']]) && stripos($refFaktur, 'H') !== 0) {
+                $refFaktur = $jurnalToFakturH[(int)$r['id_jurnal']];
+            }
+
             $sheet->setCellValue('A' . $rowIdx, $no++);
             $sheet->setCellValue('B' . $rowIdx, $ref);
             $sheet->setCellValue('C' . $rowIdx, $dateStr);
             $sheet->setCellValue('D' . $rowIdx, $prefix);
             $sheet->setCellValue('E' . $rowIdx, $r['nomor_jurnal']);
             $sheet->setCellValue('F' . $rowIdx, $kat_info['kategori']);
-            $sheet->setCellValue('G' . $rowIdx, $r['source_no'] ?: '-');
+            $sheet->setCellValue('G' . $rowIdx, $refFaktur ?: '-');
             $sheet->setCellValueExplicit('H' . $rowIdx, $no_perk, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue('I' . $rowIdx, $r['nama_akun'] ?: '-');
             $sheet->setCellValue('J' . $rowIdx, $formatted_desc);
@@ -11873,6 +12024,24 @@ class C_SalesOrder extends CI_Controller
             'excel_color'      => 'FFFFFF',
             'excel_text_color' => '000000'
         ];
+    }
+
+    /**
+     * Menggabungkan label metode pembayaran (mis. cicilan / split 2 bank) tanpa duplikasi dan aman dari batas panjang kolom.
+     */
+    private function _mergePaymentLabels($existing, $newLabel, $separator = ' + ', $maxLength = 100)
+    {
+        $parts = [];
+        foreach ([$existing, $newLabel] as $raw) {
+            foreach (explode($separator, (string)$raw) as $item) {
+                $clean = trim($item);
+                if ($clean !== '' && !in_array($clean, $parts, true)) {
+                    $parts[] = $clean;
+                }
+            }
+        }
+        $merged = implode($separator, $parts);
+        return strlen($merged) > $maxLength ? substr($merged, 0, $maxLength) : $merged;
     }
 
     /**
