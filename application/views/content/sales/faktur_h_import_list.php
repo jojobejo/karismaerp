@@ -62,8 +62,8 @@
                     <button type="button" class="btn btn-purple text-white btn-sm shadow-sm font-weight-bold mr-2 mb-1" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportFakturH">
                         <i class="fas fa-file-excel mr-1"></i> Import Excel Faktur H
                     </button>
-                    <button type="button" class="btn btn-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" data-toggle="modal" data-target="#modalImportPelunasanFakturH">
-                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Jurnal Q & A)
+                    <button type="button" class="btn btn-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" data-toggle="modal" data-target="#modalImportPelunasanFakturH" title="Import file pelunasan berdasarkan Nomor Faktur Z Induk dari Excel / CSV (otomatis mengalokasikan ke Faktur H & membuat Jurnal Q/A)">
+                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur Z (Jurnal Q & A)
                     </button>
                     <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" class="btn btn-outline-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" title="Unduh file Excel seluruh Faktur H yang berstatus lunas beserta data Jurnal Q & A">
                         <i class="fas fa-file-excel mr-1"></i> Export Faktur Lunas & Jurnal (.xlsx)
@@ -341,7 +341,7 @@
     </div>
 </div>
 
-<!-- Modal Import Pelunasan Faktur H (Otomatis Buat Jurnal Acak Q & Jurnal A) -->
+<!-- Modal Import Pelunasan Berdasarkan Faktur Z (Otomatis Alokasi ke Faktur H & Jurnal Q/A) -->
 <div class="modal fade" id="modalImportPelunasanFakturH" tabindex="-1" role="dialog" aria-labelledby="modalImportPelunasanFakturHLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content shadow-lg border-0">
@@ -349,23 +349,27 @@
                 <input type="hidden" name="redirect_to" value="sales_order/faktur_h_import">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title font-weight-bold" id="modalImportPelunasanFakturHLabel">
-                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur H (Otomatis Jurnal Acak Q & Jurnal A)
+                        <i class="fas fa-check-double mr-1"></i> Import Pelunasan Berdasarkan Faktur Z (Otomatis Alokasi ke Faktur H & Jurnal Q/A)
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-info py-2 px-3 small mb-3">
+                        <strong>Cara Kerja:</strong> Pelunasan diinput per <strong>Nomor Faktur Z (Induk)</strong>. Nominal yang dibayarkan akan dialokasikan ke Faktur H di bawah Faktur Z tersebut secara berurutan.<br>
+                        <span class="text-muted">Contoh: Faktur Z senilai Rp 2.000.000 memiliki 2 Faktur H (@ Rp 1.000.000). Jika Faktur Z dibayar Rp 1.000.000, maka sistem melunasi dan membuat Jurnal Q &amp; A hanya untuk <strong>1 Faktur H</strong>.</span>
+                    </div>
                     <div class="form-group mb-0">
-                        <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur H (.xlsx / .xls / .csv)</label>
+                        <label for="fileImportPelunasanH" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur Z (.xlsx / .xls / .csv)</label>
                         <div class="custom-file">
                             <input type="file" name="file_pelunasan_h" id="fileImportPelunasanH" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
-                            <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel / CSV Pelunasan Faktur H...</label>
+                            <label class="custom-file-label" for="fileImportPelunasanH" id="labelFileImportPelunasanH">Pilih file Excel / CSV Pelunasan Faktur Z...</label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light d-flex justify-content-between">
                     <div>
                         <a href="<?= base_url('sales_order/template_import_pelunasan_faktur_h?mode=unpaid') ?>" class="btn btn-outline-success btn-sm font-weight-bold shadow-sm">
-                            <i class="fas fa-download mr-1"></i> Unduh Template Terisi Faktur Belum Lunas (.xlsx)
+                            <i class="fas fa-download mr-1"></i> Unduh Template Faktur Z Belum Lunas (.xlsx)
                         </a>
                     </div>
                     <div>
@@ -588,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $('#fileImportPelunasanH').on('change', function() {
             var fileName = $(this).val().split('\\').pop();
-            $('#labelFileImportPelunasanH').text(fileName || 'Pilih file Excel Pelunasan Faktur H...');
+            $('#labelFileImportPelunasanH').text(fileName || 'Pilih file Excel / CSV Pelunasan Faktur Z...');
         });
 
         $('#formImportFakturH').on('submit', function() {
@@ -819,8 +823,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return html;
                             }
                             if (stBayar === 'sebagian') {
+                                var sisaTagihan = Math.max(0, gt - bayar);
                                 return '<span class="badge badge-warning px-2 py-1" style="font-size: 11px;"><i class="fas fa-adjust mr-1"></i> SEBAGIAN</span>' +
-                                    '<div class="small text-dark font-weight-bold mt-1" style="font-size: 11px;">Dibayar: ' + formatRupiah(bayar) + '</div>';
+                                    '<div class="small text-dark font-weight-bold mt-1" style="font-size: 11px;">Dibayar: ' + formatRupiah(bayar) + '</div>' +
+                                    '<div class="small text-danger font-weight-bold" style="font-size: 10.5px;">Sisa: ' + formatRupiah(sisaTagihan) + '</div>';
                             }
                             return '<span class="badge badge-secondary px-2 py-1" style="font-size: 11px;"><i class="far fa-clock mr-1"></i> BELUM LUNAS</span>';
                         }
@@ -864,6 +870,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         render: function(data, type, row) {
                             var id = parseInt(row.id_import_h, 10);
                             var gt = parseFloat(row.grand_total || 0);
+                            var bayar = parseFloat(row.total_bayar || 0);
+                            var sisa = Math.max(0, gt - bayar);
                             var stBayar = String(row.status_bayar || 'belum_lunas').trim().toLowerCase();
                             var noFakturEsc = escapeHtml(row.no_faktur || '');
                             var html = '<div class="btn-group btn-group-sm">';
@@ -876,13 +884,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                     'class="btn btn-outline-warning btn-sm btn-unpost-single-faktur-h" data-no-faktur="' + noFakturEsc + '" ' +
                                     'title="Batalkan (Unpost) Pelunasan & Hapus Jurnal Q/A"><i class="fas fa-undo"></i></a>';
                             } else {
+                                if (stBayar === 'sebagian' && (row.nomor_jurnal_q || row.nomor_jurnal_a)) {
+                                    html += '<button type="button" class="btn btn-outline-primary btn-sm" onclick="lihatJurnalPelunasanFakturH(' + id + ')" title="Lihat Jurnal Pembayaran Acak (Q) & Jurnal (A)"><i class="fas fa-book"></i></button>';
+                                    html += '<a href="<?= base_url("sales_order/unpost_pelunasan_faktur_h_import/") ?>' + id + '?from=page" ' +
+                                        'class="btn btn-outline-warning btn-sm btn-unpost-single-faktur-h" data-no-faktur="' + noFakturEsc + '" ' +
+                                        'title="Batalkan (Unpost) Pelunasan & Hapus Jurnal Q/A"><i class="fas fa-undo"></i></a>';
+                                }
                                 html += '<button type="button" class="btn btn-success btn-sm font-weight-bold btn-open-lunasi-single" ' +
                                     'data-id="' + id + '" ' +
                                     'data-no-faktur="' + noFakturEsc + '" ' +
                                     'data-parent-no="' + escapeHtml(row.parent_no_faktur || '') + '" ' +
                                     'data-customer="' + escapeHtml(row.customer_name || '') + '" ' +
                                     'data-tanggal="' + escapeHtml(row.tanggal_faktur || '<?= date("Y-m-d") ?>') + '" ' +
-                                    'data-nominal="' + gt + '" ' +
+                                    'data-nominal="' + (sisa > 0 ? sisa : gt) + '" ' +
                                     'title="Lunasi Faktur H ini & Buat Jurnal Q + A">' +
                                     '<i class="fas fa-check mr-1"></i> Lunasi</button>';
                             }

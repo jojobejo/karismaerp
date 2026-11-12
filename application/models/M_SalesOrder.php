@@ -4936,11 +4936,19 @@ class M_SalesOrder extends CI_Model
             }
         }
 
-        $jumlah_bayar = isset($params['jumlah_bayar']) && (float)$params['jumlah_bayar'] > 0
-            ? round((float)$params['jumlah_bayar'], 2)
-            : round($grand_total, 2);
+        $incremental        = !empty($params['incremental']);
+        $sudah_bayar_prev   = max(0.0, round((float)($faktur['total_bayar'] ?? 0), 2));
+        $sisa_sebelumnya    = max(0.0, round($grand_total - $sudah_bayar_prev, 2));
 
-        if ($jumlah_bayar <= 0) {
+        $bayar_kali_ini = isset($params['jumlah_bayar']) && (float)$params['jumlah_bayar'] > 0
+            ? round((float)$params['jumlah_bayar'], 2)
+            : ($incremental ? $sisa_sebelumnya : round($grand_total, 2));
+
+        if ($incremental && $sisa_sebelumnya > 0) {
+            $bayar_kali_ini = min($bayar_kali_ini, $sisa_sebelumnya);
+        }
+
+        if ($bayar_kali_ini <= 0) {
             return [
                 'success' => false,
                 'message' => "Nominal pelunasan untuk Faktur {$no_faktur} harus lebih dari 0."
@@ -4956,56 +4964,75 @@ class M_SalesOrder extends CI_Model
         $import_batch       = !empty($params['import_batch']) ? $params['import_batch'] : null;
         $username           = !empty($params['create_by']) ? $params['create_by'] : ((string)$this->session->userdata('username') ?: 'system');
 
-        // Hitung Bruto & Potongan sesuai skema potongan (atau gunakan angka eksplisit jika disuplai)
+        // Hitung Bruto & Potongan untuk termin pembayaran ini sesuai skema potongan
         $pembagi_bruto = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
         $nominal_bruto_input    = isset($params['nominal_bruto']) ? (float)$params['nominal_bruto'] : 0;
         $nominal_potongan_input = isset($params['nominal_potongan']) ? (float)$params['nominal_potongan'] : -1;
 
         if ($nominal_bruto_input > 0 && $nominal_potongan_input >= 0) {
-            $nominal_bruto    = round($nominal_bruto_input, 2);
-            $nominal_potongan = round($nominal_potongan_input, 2);
+            $nominal_bruto_kali_ini    = round($nominal_bruto_input, 2);
+            $nominal_potongan_kali_ini = round($nominal_potongan_input, 2);
         } elseif ($nominal_bruto_input > 0) {
-            $nominal_bruto    = round($nominal_bruto_input, 2);
-            $nominal_potongan = max(0, round($nominal_bruto - $jumlah_bayar, 2));
+            $nominal_bruto_kali_ini    = round($nominal_bruto_input, 2);
+            $nominal_potongan_kali_ini = max(0, round($nominal_bruto_kali_ini - $bayar_kali_ini, 2));
         } else {
-            $nominal_bruto    = ($pembagi_bruto > 0 && $pembagi_bruto < 1.0)
-                ? round($jumlah_bayar / $pembagi_bruto, 2)
-                : round($jumlah_bayar, 2);
-            $nominal_potongan = max(0, round($nominal_bruto - $jumlah_bayar, 2));
+            $nominal_bruto_kali_ini    = ($pembagi_bruto > 0 && $pembagi_bruto < 1.0)
+                ? round($bayar_kali_ini / $pembagi_bruto, 2)
+                : round($bayar_kali_ini, 2);
+            $nominal_potongan_kali_ini = max(0, round($nominal_bruto_kali_ini - $bayar_kali_ini, 2));
         }
 
         $this->load->model('M_Journal');
         $this->db->trans_start();
 
-        // Bersihkan pelunasan dan jurnal lama untuk faktur H ini agar idempoten (tidak pernah ganda)
-        $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
-            $id_import_h,
-            $no_faktur,
-            (int)($faktur['id_jurnal_q'] ?? 0),
-            (int)($faktur['id_jurnal_a'] ?? 0)
-        );
-        $old_payments = $this->get_faktur_h_import_pembayaran($id_import_h);
-        foreach ($old_payments as $op) {
+        // Pada mode non-incremental (lunasi ulang penuh) atau belum ada pembayaran sebelumnya, bersihkan riwayat & jurnal lama agar idempoten
+        if (!$incremental || $sudah_bayar_prev <= 0.01) {
             $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
                 $id_import_h,
-                $op['no_faktur'] ?? '',
-                (int)($op['id_jurnal_q'] ?? 0),
-                (int)($op['id_jurnal_a'] ?? 0)
+                $no_faktur,
+                (int)($faktur['id_jurnal_q'] ?? 0),
+                (int)($faktur['id_jurnal_a'] ?? 0)
             );
+            $old_payments = $this->get_faktur_h_import_pembayaran($id_import_h);
+            foreach ($old_payments as $op) {
+                $this->M_Journal->delete_jurnal_pelunasan_faktur_h_import(
+                    $id_import_h,
+                    $op['no_faktur'] ?? '',
+                    (int)($op['id_jurnal_q'] ?? 0),
+                    (int)($op['id_jurnal_a'] ?? 0)
+                );
+            }
+            $this->db->delete('tbso_faktur_h_import_pembayaran', ['id_import_h' => $id_import_h]);
+            $sudah_bayar_prev = 0.0;
+            $prev_bruto       = 0.0;
+            $prev_potongan    = 0.0;
+        } else {
+            $prev_bruto    = max(0.0, round((float)($faktur['nominal_bruto'] ?? 0), 2));
+            $prev_potongan = max(0.0, round((float)($faktur['nominal_potongan'] ?? 0), 2));
         }
-        $this->db->delete('tbso_faktur_h_import_pembayaran', ['id_import_h' => $id_import_h]);
+
+        // Hitung total kumulatif setelah pembayaran termin ini
+        $total_bayar_baru  = round($sudah_bayar_prev + $bayar_kali_ini, 2);
+        $sisa_tagihan_baru = max(0.0, round($grand_total - $total_bayar_baru, 2));
+        if ($sisa_tagihan_baru <= 0.01) {
+            $total_bayar_baru  = round($grand_total, 2);
+            $sisa_tagihan_baru = 0.0;
+            $status_bayar      = 'lunas';
+        } else {
+            $status_bayar = ($total_bayar_baru > 0) ? 'sebagian' : 'belum_lunas';
+        }
 
         // Update parent_no_faktur jika disuplai baru dari import pelunasan
         if (!empty($parent_no_faktur) && empty($faktur['parent_no_faktur'])) {
             $faktur['parent_no_faktur'] = $parent_no_faktur;
         }
 
-        // Posting Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A)
+        // Posting Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) sebesar termin bayar kali ini
         $jurnalRes = $this->M_Journal->post_jurnal_pelunasan_faktur_h_import($faktur, [
             'tanggal_pembayaran' => $tanggal_pembayaran,
-            'jumlah_bayar'       => $jumlah_bayar,
-            'nominal_bruto'      => $nominal_bruto,
-            'nominal_potongan'   => $nominal_potongan,
+            'jumlah_bayar'       => $bayar_kali_ini,
+            'nominal_bruto'      => $nominal_bruto_kali_ini,
+            'nominal_potongan'   => $nominal_potongan_kali_ini,
             'skema_potongan'     => $skema_potongan,
             'metode_pembayaran'  => $metode_pembayaran,
             'parent_no_faktur'   => $parent_no_faktur,
@@ -5018,15 +5045,15 @@ class M_SalesOrder extends CI_Model
         $id_jurnal_a    = $jurnalRes['id_jurnal_a'] ?? null;
         $nomor_jurnal_a = $jurnalRes['nomor_jurnal_a'] ?? null;
 
-        // Simpan record ke tbso_faktur_h_import_pembayaran
+        // Simpan record termin ini ke tbso_faktur_h_import_pembayaran
         $this->db->insert('tbso_faktur_h_import_pembayaran', [
             'id_import_h'        => $id_import_h,
             'no_faktur'          => $no_faktur,
             'parent_no_faktur'   => $parent_no_faktur ?: null,
             'tanggal_pembayaran' => $tanggal_pembayaran,
-            'jumlah_bayar'       => $jumlah_bayar,
-            'nominal_bruto'      => $nominal_bruto,
-            'nominal_potongan'   => $nominal_potongan,
+            'jumlah_bayar'       => $bayar_kali_ini,
+            'nominal_bruto'      => $nominal_bruto_kali_ini,
+            'nominal_potongan'   => $nominal_potongan_kali_ini,
             'skema_potongan'     => $skema_potongan,
             'metode_pembayaran'  => $metode_pembayaran,
             'keterangan'         => $keterangan,
@@ -5041,20 +5068,16 @@ class M_SalesOrder extends CI_Model
         ]);
         $id_pembayaran_h = $this->db->insert_id();
 
-        // Hitung sisa tagihan dan status bayar
-        $sisa_tagihan = max(0, round($grand_total - $jumlah_bayar, 2));
-        $status_bayar = ($sisa_tagihan <= 0.01) ? 'lunas' : (($jumlah_bayar > 0) ? 'sebagian' : 'belum_lunas');
-
         $updateHeader = [
             'grand_total'       => $grand_total,
-            'total_bayar'       => $jumlah_bayar,
-            'sisa_tagihan'      => $sisa_tagihan,
+            'total_bayar'       => $total_bayar_baru,
+            'sisa_tagihan'      => $sisa_tagihan_baru,
             'status_bayar'      => $status_bayar,
             'tanggal_bayar'     => $tanggal_pembayaran,
             'metode_pembayaran' => $metode_pembayaran,
             'skema_potongan'    => $skema_potongan,
-            'nominal_bruto'     => $nominal_bruto,
-            'nominal_potongan'  => $nominal_potongan,
+            'nominal_bruto'     => round($prev_bruto + $nominal_bruto_kali_ini, 2),
+            'nominal_potongan'  => round($prev_potongan + $nominal_potongan_kali_ini, 2),
             'id_jurnal_q'       => $id_jurnal_q,
             'nomor_jurnal_q'    => $nomor_jurnal_q,
             'id_jurnal_a'       => $id_jurnal_a,
@@ -5084,9 +5107,11 @@ class M_SalesOrder extends CI_Model
                 'id_pembayaran_h' => $id_pembayaran_h,
                 'id_import_h'     => $id_import_h,
                 'no_faktur'       => $no_faktur,
-                'jumlah_bayar'    => $jumlah_bayar,
-                'nominal_bruto'   => $nominal_bruto,
-                'nominal_potongan'=> $nominal_potongan,
+                'jumlah_bayar'    => $bayar_kali_ini,
+                'total_bayar'     => $total_bayar_baru,
+                'sisa_tagihan'    => $sisa_tagihan_baru,
+                'nominal_bruto'   => $nominal_bruto_kali_ini,
+                'nominal_potongan'=> $nominal_potongan_kali_ini,
                 'status_bayar'    => $status_bayar,
                 'id_jurnal_q'     => $id_jurnal_q,
                 'nomor_jurnal_q'  => $nomor_jurnal_q,
@@ -5094,5 +5119,122 @@ class M_SalesOrder extends CI_Model
                 'nomor_jurnal_a'  => $nomor_jurnal_a,
             ]
         ];
+    }
+
+    /**
+     * Mengambil data Faktur H Import yang dikelompokkan per Nomor Faktur Z Induk untuk template pelunasan.
+     *
+     * @param array $filter Filter opsional (create_by)
+     * @return array
+     */
+    public function get_faktur_z_import_template_data($filter = [])
+    {
+        $this->ensure_faktur_h_import_tables();
+
+        $this->db->select("
+            h.id_import_h,
+            h.no_faktur,
+            TRIM(COALESCE(h.parent_no_faktur, '')) AS no_faktur_z,
+            h.tanggal_faktur,
+            h.customer_name,
+            h.kontak_person,
+            h.status_bayar,
+            h.total_bayar,
+            h.metode_pembayaran,
+            h.skema_potongan,
+            COALESCE(NULLIF(h.grand_total, 0), d.grand_total, 0) AS grand_total
+        ", false);
+        $this->db->from('tbso_faktur_h_import h');
+        $this->db->join(
+            '(SELECT id_import_h, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_h_import_detail GROUP BY id_import_h) d',
+            'd.id_import_h = h.id_import_h',
+            'left'
+        );
+        $this->db->where("COALESCE(h.status, 'imported') !=", 'cancelled');
+        $this->db->where("TRIM(COALESCE(h.parent_no_faktur, '')) !=", '');
+        if (!empty($filter['create_by'])) {
+            $this->db->where('h.create_by', $filter['create_by']);
+        }
+        $this->db->order_by('h.no_faktur', 'ASC');
+        $this->db->order_by('h.id_import_h', 'ASC');
+
+        $childRows = $this->db->get()->result_array();
+        $groupedZ = [];
+
+        foreach ($childRows as $row) {
+            $noZ = trim((string)($row['no_faktur_z'] ?? ''));
+            if ($noZ === '') {
+                continue;
+            }
+
+            if (!isset($groupedZ[$noZ])) {
+                $custLabel = trim((string)($row['customer_name'] ?? ''));
+                $kontak = trim((string)($row['kontak_person'] ?? ''));
+                if ($kontak !== '' && $kontak !== '-' && stripos($custLabel, $kontak) === false) {
+                    $custLabel .= ' (' . $kontak . ')';
+                }
+                $groupedZ[$noZ] = [
+                    'no_faktur_z'       => $noZ,
+                    'tanggal_faktur'    => $row['tanggal_faktur'] ?: date('Y-m-d'),
+                    'customer_name'     => $custLabel !== '' ? $custLabel : '-',
+                    'metode_pembayaran' => $row['metode_pembayaran'] ?: '',
+                    'skema_potongan'    => ($row['skema_potongan'] !== null && $row['skema_potongan'] !== '') ? (int)$row['skema_potongan'] : null,
+                    'total_h'           => 0,
+                    'belum_lunas_h'     => 0,
+                    'total_tagihan_z'   => 0.0,
+                    'sisa_belum_lunas'  => 0.0,
+                ];
+            }
+
+            $tagihanH    = (float)$row['grand_total'];
+            $sudahBayarH = max(0.0, (float)($row['total_bayar'] ?? 0));
+            $isLunasH    = strtolower(trim((string)($row['status_bayar'] ?? ''))) === 'lunas';
+            $sisaH       = $isLunasH ? 0.0 : max(0.0, round($tagihanH - $sudahBayarH, 2));
+
+            $groupedZ[$noZ]['total_h']++;
+            $groupedZ[$noZ]['total_tagihan_z'] += $tagihanH;
+            if (!$isLunasH && $sisaH > 0.01) {
+                $groupedZ[$noZ]['belum_lunas_h']++;
+                $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
+            }
+        }
+
+        return $groupedZ;
+    }
+
+    /**
+     * Mengambil daftar child Faktur H Import berdasarkan Nomor Faktur Z Induk secara berurutan (FIFO).
+     *
+     * @param string $noFakturZ Nomor Faktur Z Induk
+     * @param string $createBy Filter opsional username pembuat
+     * @return array
+     */
+    public function get_child_faktur_h_import_by_z($noFakturZ, $createBy = '')
+    {
+        $this->ensure_faktur_h_import_tables();
+        $noFakturZ = trim((string)$noFakturZ);
+        if ($noFakturZ === '') {
+            return [];
+        }
+
+        $this->db->select("
+            h.*,
+            COALESCE(NULLIF(h.grand_total, 0), d.grand_total, 0) AS grand_total
+        ", false);
+        $this->db->from('tbso_faktur_h_import h');
+        $this->db->join(
+            '(SELECT id_import_h, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_h_import_detail GROUP BY id_import_h) d',
+            'd.id_import_h = h.id_import_h',
+            'left'
+        );
+        $this->db->where("TRIM(COALESCE(h.parent_no_faktur, '')) =", $noFakturZ);
+        $this->db->where("COALESCE(h.status, 'imported') !=", 'cancelled');
+        if ($createBy !== '') {
+            $this->db->where('h.create_by', $createBy);
+        }
+        $this->db->order_by('h.no_faktur', 'ASC');
+        $this->db->order_by('h.id_import_h', 'ASC');
+
+        return $this->db->get()->result_array();
     }
 }
