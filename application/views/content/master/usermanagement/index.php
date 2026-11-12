@@ -195,6 +195,9 @@
                                                 </div>
                                             </div>
                                             <div class="col-md-6 text-md-right" id="daBulkActions">
+                                                <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold mr-1" id="daBtnCloneFrom" title="Salin pengaturan akses dari user lain">
+                                                    <i class="fas fa-copy mr-1"></i> Salin dari User
+                                                </button>
                                                 <button type="button" class="btn btn-success btn-sm font-weight-bold mr-1" id="daBtnAllowAll">
                                                     <i class="fas fa-lock-open mr-1"></i> Izinkan Semua
                                                 </button>
@@ -247,6 +250,11 @@
                                         <div>
                                             <h5 class="mb-0 font-weight-bold" id="facSelectedUserTitle">Pilih user</h5>
                                             <div class="small text-muted mt-1" id="facSelectedUserMeta">Matrix fasilitas akan tampil setelah user dipilih.</div>
+                                        </div>
+                                        <div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold" id="facBtnCloneFrom" style="display:none;" title="Salin fasilitas dari user lain">
+                                                <i class="fas fa-copy mr-1"></i> Salin dari User
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="p-3 table-responsive fac-matrix-container">
@@ -418,6 +426,37 @@ $(function(){
     let daCurrentMatrix = null;
     let daUserSearchTimer = null;
     let daUsersLoaded = false;
+    let daUsersCache = [];
+
+    function openCloneUserDialog(title, usersList, targetUserId, onConfirm) {
+        const options = {};
+        (usersList || []).forEach(function(u) {
+            if (parseInt(u.id, 10) !== parseInt(targetUserId, 10)) {
+                options[u.id] = (u.nm_karyawan || u.username || '-') + ' (@' + (u.username || '-') + ')';
+            }
+        });
+        if (Object.keys(options).length === 0) {
+            toastr.warning('Tidak ada user lain yang tersedia untuk disalin.');
+            return;
+        }
+        Swal.fire({
+            title: title,
+            text: 'Pengaturan user tujuan akan diganti mengikuti user sumber yang Anda pilih.',
+            input: 'select',
+            inputOptions: options,
+            inputPlaceholder: '-- Pilih User Sumber --',
+            showCancelButton: true,
+            confirmButtonText: 'Salin Sekarang',
+            cancelButtonText: 'Batal',
+            inputValidator: function(value) {
+                if (!value) return 'Silakan pilih user sumber terlebih dahulu.';
+            }
+        }).then(function(result) {
+            if (result.isConfirmed && result.value) {
+                onConfirm(parseInt(result.value, 10));
+            }
+        });
+    }
 
     function daLoadUsers(callback) {
         if (!canDashboardAccess) return;
@@ -429,7 +468,8 @@ $(function(){
                 return;
             }
             daUsersLoaded = true;
-            let rows = res.data || [];
+            daUsersCache = res.data || [];
+            let rows = daUsersCache;
             if (filterMode === 'locked_only') {
                 rows = rows.filter(function(u) { return parseInt(u.locked_count, 10) > 0; });
             }
@@ -720,6 +760,26 @@ $(function(){
         }
 
         $('#daBtnAllowAll').on('click', function() { daRunBulk('all', '', 1); });
+        $('#daBtnCloneFrom').on('click', function() {
+            if (!daSelectedUserId) return;
+            openCloneUserDialog('Salin Akses Menu Dashboard', daUsersCache, daSelectedUserId, function(sourceUserId) {
+                $.post('<?= base_url('master/akses-dashboard/clone') ?>', {
+                    source_user_id: sourceUserId,
+                    target_user_id: daSelectedUserId
+                }, function(res) {
+                    if (res.status) {
+                        toastr.success(res.message);
+                        if (res.data && res.data.matrix) {
+                            daCurrentMatrix = res.data.matrix;
+                            daRenderMatrix();
+                        }
+                        daLoadUsers();
+                    } else {
+                        toastr.error(res.message);
+                    }
+                }, 'json');
+            });
+        });
         $('#daBtnLockAll').on('click', function() {
             Swal.fire({
                 title: 'Kunci Semua Menu?',
@@ -758,6 +818,7 @@ $(function(){
     let facSelectedUserId = 0;
     let facTimer = null;
     let facUsersLoaded = false;
+    let facUsersCache = [];
 
     function facLoadUsers(callback) {
         if (!canUserFacility) return;
@@ -768,8 +829,9 @@ $(function(){
                 return;
             }
             facUsersLoaded = true;
+            facUsersCache = res.data || [];
             let html = '';
-            (res.data || []).forEach(function(user) {
+            facUsersCache.forEach(function(user) {
                 const isActive = parseInt(user.id, 10) === facSelectedUserId;
                 html += '<div class="fac-user-item ' + (isActive ? 'active' : '') + '" data-id="' + esc(user.id) + '">' +
                     '<div class="font-weight-bold text-dark">' + esc(user.nm_karyawan || user.username || '-') + '</div>' +
@@ -795,6 +857,7 @@ $(function(){
             const user = res.data.user || {};
             $('#facSelectedUserTitle').html(esc(user.nm_karyawan || user.username || '-') + ' <small class="text-muted font-weight-normal">(@' + esc(user.username || '-') + ')</small>');
             $('#facSelectedUserMeta').text((user.departemen || '-') + ' · ' + (user.jobdesk || '-'));
+            $('#facBtnCloneFrom').show();
             let html = '';
             let lastGroup = '';
             (res.data.facilities || []).forEach(function(row) {
@@ -831,6 +894,22 @@ $(function(){
                 res.status ? toastr.success(res.message) : toastr.error(res.message);
                 facLoadMatrix(facSelectedUserId);
             }, 'json');
+        });
+        $('#facBtnCloneFrom').on('click', function() {
+            if (!facSelectedUserId) return;
+            openCloneUserDialog('Salin Fasilitas Per User', facUsersCache, facSelectedUserId, function(sourceUserId) {
+                $.post('<?= base_url('master/user-facility/clone') ?>', {
+                    source_user_id: sourceUserId,
+                    target_user_id: facSelectedUserId
+                }, function(res) {
+                    if (res.status) {
+                        toastr.success(res.message);
+                        facLoadMatrix(facSelectedUserId);
+                    } else {
+                        toastr.error(res.message);
+                    }
+                }, 'json');
+            });
         });
     }
 

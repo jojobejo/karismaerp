@@ -483,6 +483,7 @@ $route['master/user-facility']                      = 'master/C_Userfacility';
 $route['master/user-facility/users']                = 'master/C_Userfacility/users';
 $route['master/user-facility/matrix/(:num)']        = 'master/C_Userfacility/matrix/$1';
 $route['master/user-facility/update']               = 'master/C_Userfacility/update';
+$route['master/user-facility/clone']                = 'master/C_Userfacility/clone_facility';
 $route['master/jobdesk']                            = 'master/C_Jobdesk';
 $route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
 $route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
@@ -511,6 +512,7 @@ $route['master/akses-dashboard/update']             = 'master/C_Aksesdashboard/u
 $route['master/akses-dashboard/update-action']      = 'master/C_Aksesdashboard/update_action';
 $route['master/akses-dashboard/bulk']               = 'master/C_Aksesdashboard/bulk';
 $route['master/akses-dashboard/reset/(:num)']       = 'master/C_Aksesdashboard/reset/$1';
+$route['master/akses-dashboard/clone']              = 'master/C_Aksesdashboard/clone_access';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';

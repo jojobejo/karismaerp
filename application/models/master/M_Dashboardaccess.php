@@ -478,5 +478,51 @@ class M_Dashboardaccess extends CI_Model
             ->where('user_id', (int)$userId)
             ->delete($this->table);
     }
+
+    /**
+     * Salin seluruh aturan akses menu dashboard (termasuk izin granular) dari user sumber ke user target
+     */
+    public function clone_from_user($sourceUserId, $targetUserId, $actor = '')
+    {
+        $this->ensure_schema();
+        $sourceUserId = (int)$sourceUserId;
+        $targetUserId = (int)$targetUserId;
+        if ($sourceUserId <= 0 || $targetUserId <= 0 || $sourceUserId === $targetUserId) {
+            return false;
+        }
+
+        $targetUser = $this->find_user($targetUserId);
+        if (!$targetUser || !empty($targetUser['is_admin'])) {
+            return false;
+        }
+
+        $sourceRows = $this->db->where('user_id', $sourceUserId)->get($this->table)->result_array();
+        $now = date('Y-m-d H:i:s');
+
+        $this->db->trans_begin();
+        $this->db->where('user_id', $targetUserId)->delete($this->table);
+
+        foreach ($sourceRows as $row) {
+            $this->db->insert($this->table, array(
+                'user_id'    => $targetUserId,
+                'menu_key'   => $row['menu_key'],
+                'is_allowed' => (int)$row['is_allowed'],
+                'can_view'   => (int)($row['can_view'] ?? $row['is_allowed']),
+                'can_create' => (int)($row['can_create'] ?? $row['is_allowed']),
+                'can_edit'   => (int)($row['can_edit'] ?? $row['is_allowed']),
+                'can_delete' => (int)($row['can_delete'] ?? $row['is_allowed']),
+                'updated_by' => $actor !== '' ? $actor : null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ));
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $this->db->trans_commit();
+        return true;
+    }
 }
 

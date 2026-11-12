@@ -133,6 +133,9 @@ class C_Usermanagement extends CI_Controller
 
     public function delete($id = null)
     {
+        if ((int)$id === (int)$this->session->userdata('id')) {
+            return $this->json(false, 'Anda tidak dapat menghapus akun yang sedang Anda gunakan untuk login.');
+        }
         $ok = $this->users->delete((int)$id);
         $this->json($ok, $ok ? 'Data berhasil dihapus' : 'Data gagal dihapus');
     }
@@ -147,6 +150,9 @@ class C_Usermanagement extends CI_Controller
 
     public function toggle_status($id = null)
     {
+        if ((int)$id === (int)$this->session->userdata('id')) {
+            return $this->json(false, 'Anda tidak dapat menonaktifkan akun yang sedang Anda gunakan untuk login.');
+        }
         $ok = $this->users->toggle_status((int)$id);
         $this->json($ok, $ok ? 'Status user berhasil diperbarui' : 'Kolom status belum tersedia atau data tidak ditemukan');
     }

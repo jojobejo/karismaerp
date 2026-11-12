@@ -208,5 +208,37 @@ class C_Aksesdashboard extends CI_Controller
             'matrix' => $this->access->matrix($userId),
         ));
     }
+
+    /**
+     * Salin pengaturan akses menu dashboard dari user sumber ke user target
+     */
+    public function clone_access()
+    {
+        $sourceUserId = (int)$this->input->post('source_user_id', true);
+        $targetUserId = (int)$this->input->post('target_user_id', true);
+
+        if ($sourceUserId <= 0 || $targetUserId <= 0 || $sourceUserId === $targetUserId) {
+            return $this->json(false, 'Pilih user sumber yang berbeda dengan user target.', array(), 400);
+        }
+
+        $targetUser = $this->access->find_user($targetUserId);
+        if (!$targetUser) {
+            return $this->json(false, 'User target tidak ditemukan.', array(), 404);
+        }
+        if (!empty($targetUser['is_admin'])) {
+            return $this->json(false, 'Akun Administrator tidak dapat ditimpa pengaturannya.', array(), 400);
+        }
+
+        $actor = (string)($this->session->userdata('username') ?: 'admin');
+        $ok = $this->access->clone_from_user($sourceUserId, $targetUserId, $actor);
+
+        if (!$ok) {
+            return $this->json(false, 'Gagal menyalin pengaturan akses menu.');
+        }
+
+        $this->json(true, 'Pengaturan akses menu dashboard berhasil disalin.', array(
+            'matrix' => $this->access->matrix($targetUserId),
+        ));
+    }
 }
 

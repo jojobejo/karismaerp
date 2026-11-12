@@ -31,9 +31,6 @@ class M_Userfacility extends CI_Model
     {
         return [
             ['key' => 'menu.ics_lpb', 'label' => 'Akses Menu LPB', 'module' => 'LPB', 'group' => 'Menu / Module'],
-            ['key' => 'action.add', 'label' => 'Tambah Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
-            ['key' => 'action.edit', 'label' => 'Edit Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
-            ['key' => 'action.delete', 'label' => 'Hapus Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.approve', 'label' => 'Approve / Afirmasi', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.print', 'label' => 'Print Dokumen', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.export', 'label' => 'Export Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
@@ -190,5 +187,46 @@ class M_Userfacility extends CI_Model
         }
 
         return $fallback ? 1 : 0;
+    }
+
+    /**
+     * Salin seluruh pengaturan fasilitas dari satu user ke user lain
+     */
+    public function clone_from_user($sourceUserId, $targetUserId)
+    {
+        $this->ensure_schema();
+        $sourceUserId = (int) $sourceUserId;
+        $targetUserId = (int) $targetUserId;
+        if ($sourceUserId <= 0 || $targetUserId <= 0 || $sourceUserId === $targetUserId) {
+            return false;
+        }
+
+        $sourceRows = $this->db->where('user_id', $sourceUserId)->get($this->table)->result_array();
+        $this->db->trans_begin();
+        $this->db->where('user_id', $targetUserId)->delete($this->table);
+
+        $now = date('Y-m-d H:i:s');
+        foreach ($sourceRows as $row) {
+            if (!$this->catalog_item($row['facility_key'])) {
+                continue;
+            }
+            $this->db->insert($this->table, [
+                'user_id'        => $targetUserId,
+                'facility_key'   => $row['facility_key'],
+                'facility_label' => $row['facility_label'],
+                'module_key'     => $row['module_key'],
+                'facility_group' => $row['facility_group'],
+                'is_allowed'     => (int) $row['is_allowed'],
+                'created_at'     => $now,
+                'updated_at'     => $now,
+            ]);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $this->db->trans_commit();
+        return true;
     }
 }
