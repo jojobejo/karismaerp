@@ -170,10 +170,12 @@ class M_Dashboard extends CI_Model
 
     public function module_sections($context = array())
     {
-        $sections = $this->base_module_sections($context);
+        $rawSections = $this->base_module_sections($context);
+        // Terapkan pengaturan pengelompokan menu per departemen dari database
+        $sections = $this->apply_section_menu_config($rawSections);
 
         if (!empty($context['is_admin'])) {
-            $sections = array('admin' => $this->admin_section($sections)) + $sections;
+            $sections = array('admin' => $this->admin_section($rawSections)) + $sections;
         }
 
         $sections = $this->apply_access_rules($sections, $context);
@@ -182,6 +184,94 @@ class M_Dashboard extends CI_Model
         $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
         if ($jobdesk === 'ADMPNJ' && isset($sections['sales'])) {
             $sections = array('sales' => $sections['sales']);
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Terapkan konfigurasi menu per departemen dari tabel tb_dashboard_section_menus
+     */
+    public function apply_section_menu_config(array $sections)
+    {
+        if (!isset($this->db) || !$this->db->table_exists('tb_dashboard_section_menus')) {
+            return $sections;
+        }
+
+        $rows = $this->db
+            ->order_by('section_key', 'ASC')
+            ->order_by('sort_order', 'ASC')
+            ->order_by('id', 'ASC')
+            ->get('tb_dashboard_section_menus')
+            ->result_array();
+
+        if (empty($rows)) {
+            return $sections;
+        }
+
+        // Bangun katalog semua menu yang tersedia (bawaan + menu dinamis)
+        $sectionMenuMap = array();
+        $globalCatalog = array();
+        $seenRoutes = array();
+
+        foreach ($sections as $secKey => $sec) {
+            $sectionMenuMap[$secKey] = array();
+            foreach (($sec['menus'] ?? array()) as $menu) {
+                $mKey = (string)($menu['menu_key'] ?? '');
+                if ($mKey === '') {
+                    continue;
+                }
+                $sectionMenuMap[$secKey][$mKey] = $menu;
+                if (!isset($globalCatalog[$mKey])) {
+                    $globalCatalog[$mKey] = $menu;
+                }
+                if (!empty($menu['route'])) {
+                    $seenRoutes[$menu['route']] = true;
+                }
+            }
+        }
+
+        foreach ($this->dynamic_app_menus($seenRoutes) as $dynMenu) {
+            $mKey = (string)($dynMenu['menu_key'] ?? '');
+            if ($mKey !== '' && !isset($globalCatalog[$mKey])) {
+                $globalCatalog[$mKey] = $dynMenu;
+            }
+        }
+
+        // Kelompokkan baris konfigurasi berdasarkan section_key
+        $configuredBySection = array();
+        foreach ($rows as $row) {
+            $secKey = (string)($row['section_key'] ?? '');
+            if ($secKey !== '') {
+                $configuredBySection[$secKey][] = $row;
+            }
+        }
+
+        foreach ($sections as $secKey => $sec) {
+            if (!isset($configuredBySection[$secKey])) {
+                continue;
+            }
+
+            $newMenus = array();
+            $addedKeys = array();
+            foreach ($configuredBySection[$secKey] as $row) {
+                if ((int)($row['is_visible'] ?? 0) !== 1) {
+                    continue;
+                }
+                $mKey = (string)($row['menu_key'] ?? '');
+                if ($mKey === '' || isset($addedKeys[$mKey])) {
+                    continue;
+                }
+
+                // Prioritaskan definisi menu dari section yang bersangkutan jika ada
+                $menuItem = $sectionMenuMap[$secKey][$mKey] ?? ($globalCatalog[$mKey] ?? null);
+                if ($menuItem !== null) {
+                    $newMenus[] = $menuItem;
+                    $addedKeys[$mKey] = true;
+                }
+            }
+
+            $sections[$secKey]['menus'] = $newMenus;
         }
 
         return $sections;
@@ -338,7 +428,7 @@ class M_Dashboard extends CI_Model
      */
     public function catalog_sections()
     {
-        $sections = $this->base_module_sections(array());
+        $sections = $this->apply_section_menu_config($this->base_module_sections(array()));
         $menuSections = array();
 
         foreach ($sections as $secKey => $section) {
@@ -1018,7 +1108,7 @@ class M_Dashboard extends CI_Model
         return $menus;
     }
 
-    private function dynamic_app_menus(array $seenRoutes)
+    public function dynamic_app_menus(array $seenRoutes)
     {
         if (!isset($this->db) || !$this->db->table_exists('tb_menu')) {
             return array();

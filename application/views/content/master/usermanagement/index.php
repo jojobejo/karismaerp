@@ -24,13 +24,13 @@
                 .um-tabs .nav-link:hover{background:#f1f5f9;color:#0f172a}
                 .um-tabs .nav-link.active{background:linear-gradient(135deg,#0f766e,#2563eb);color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.22)}
 
-                /* Panel Scrollable untuk Akses Dashboard & Fasilitas Per User */
-                .da-user-list,.fac-user-list{max-height:55vh;overflow-y:auto}
-                .da-matrix-container,.fac-matrix-container{max-height:62vh;overflow-y:auto}
+                /* Panel Scrollable untuk Akses Dashboard, Fasilitas Per User, & Menu Departemen */
+                .da-user-list,.fac-user-list,.sm-dept-list{max-height:55vh;overflow-y:auto}
+                .da-matrix-container,.fac-matrix-container,.sm-menu-list{max-height:62vh;overflow-y:auto}
                 @media(min-width:992px){
                     .um-split-card{height:calc(100vh - 285px);min-height:460px;display:flex;flex-direction:column}
-                    .um-split-card>:not(.da-user-list):not(.da-matrix-container):not(.fac-user-list):not(.fac-matrix-container){flex-shrink:0}
-                    .da-user-list,.da-matrix-container,.fac-user-list,.fac-matrix-container{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
+                    .um-split-card>:not(.da-user-list):not(.da-matrix-container):not(.fac-user-list):not(.fac-matrix-container):not(.sm-dept-list):not(.sm-menu-list){flex-shrink:0}
+                    .da-user-list,.da-matrix-container,.fac-user-list,.fac-matrix-container,.sm-dept-list,.sm-menu-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
                 }
 
                 .da-user-item,.fac-user-item{cursor:pointer;border-bottom:1px solid #f1f5f9;padding:12px 15px;transition:background .15s ease,border-left .15s ease;border-left:4px solid transparent}
@@ -76,7 +76,21 @@
                 .facility-group-title td{background:#f8fafc!important;color:#334155;font-weight:700;padding:10px 14px}
                 .fac-matrix-container thead th{position:sticky;top:0;background:#fff!important;z-index:2;border-bottom:2px solid #e2e8f0}
 
-                @media(max-width:768px){.erp-hero{padding:18px}.filter-grid{grid-template-columns:1fr!important}.action-group .btn{flex:1}}
+                /* Styling Akses Level & Permission Matrix */
+                .perm-table th{position:sticky;top:0;background:#f8fafc!important;z-index:2}
+                .perm-toggle{width:1.15rem;height:1.15rem;cursor:pointer}
+                .akses-matrix-wrap{max-height:62vh;overflow-y:auto}
+
+                /* Styling Menu Departemen */
+                .sm-dept-item{cursor:pointer;border-bottom:1px solid #f1f5f9;padding:12px 15px;transition:background .15s ease,border-left .15s ease;border-left:4px solid transparent}
+                .sm-dept-item:hover{background:#f8fafc}
+                .sm-dept-item.active{background:#eff6ff;border-left-color:#127fad}
+                .sm-menu-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid #f1f5f9;transition:background .15s ease}
+                .sm-menu-row:hover{background:#f8fafc}
+                .sm-menu-row.is-selected{background:#f0fdf4}
+                .sm-order-btns{display:inline-flex;gap:4px;flex-shrink:0}
+
+                @media(max-width:768px){.erp-hero{padding:18px}.filter-grid{grid-template-columns:1fr!important}.action-group .btn{flex:1}.akses-matrix-wrap{overflow:auto}}
             </style>
 
             <div class="erp-page">
@@ -84,7 +98,7 @@
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center" style="gap:12px;">
                         <div>
                             <h3 class="mb-1 font-weight-bold"><i class="fas fa-users-cog mr-2"></i>User Management</h3>
-                            <div style="opacity:.85;">Pusat pengelolaan akun user, hak akses menu dashboard, dan fasilitas per user dalam satu tempat.</div>
+                            <div style="opacity:.85;">Pusat pengelolaan akun user, hak akses menu dashboard, fasilitas per user, dan akses level dalam satu tempat.</div>
                         </div>
                         <div class="d-flex flex-wrap" style="gap:8px;">
                             <a href="<?= base_url('dashboard') ?>" class="btn btn-light font-weight-bold"><i class="fas fa-arrow-left mr-1"></i> Dashboard</a>
@@ -110,6 +124,20 @@
                     <li class="nav-item" role="presentation">
                         <a class="nav-link" id="tabBtnUserFacility" data-toggle="pill" href="#paneUserFacility" data-tab-key="fasilitas" role="tab">
                             <i class="fas fa-sliders-h"></i> Fasilitas Per User
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                    <?php if (!empty($can_akses_level)) : ?>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="tabBtnAksesLevel" data-toggle="pill" href="#paneAksesLevel" data-tab-key="akses-level" role="tab">
+                            <i class="fas fa-key"></i> Akses Level
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                    <?php if (!empty($can_section_menu)) : ?>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="tabBtnDeptMenu" data-toggle="pill" href="#paneDeptMenu" data-tab-key="menu-departemen" role="tab">
+                            <i class="fas fa-layer-group"></i> Menu Departemen
                         </a>
                     </li>
                     <?php endif; ?>
@@ -277,9 +305,159 @@
                         </div>
                     </div>
                     <?php endif; ?>
+
+                    <?php if (!empty($can_akses_level)) : ?>
+                    <!-- TAB 4: AKSES LEVEL -->
+                    <div class="tab-pane fade" id="paneAksesLevel" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-5 mb-3 mb-lg-0">
+                                <div class="erp-panel p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h5 class="mb-0 font-weight-bold">Daftar Akses Level</h5>
+                                            <div class="small text-muted">Role permission matrix: view, add, edit, delete, approve, print.</div>
+                                        </div>
+                                        <button type="button" class="btn btn-erp btn-sm font-weight-bold" id="btnAddAkses">
+                                            <i class="fas fa-plus mr-1"></i> Tambah Akses
+                                        </button>
+                                    </div>
+                                    <table class="table table-hover w-100 compact" id="tableAkses">
+                                        <thead><tr><th>Akses</th><th>Status</th><th>Aksi</th></tr></thead>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-lg-7">
+                                <div class="erp-panel">
+                                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Permission Matrix</strong>
+                                            <div class="small text-muted" id="matrixTitleAkses">Pilih akses level</div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 akses-matrix-wrap">
+                                        <table class="table table-sm perm-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Menu</th>
+                                                    <th class="text-center">View</th>
+                                                    <th class="text-center">Add</th>
+                                                    <th class="text-center">Edit</th>
+                                                    <th class="text-center">Delete</th>
+                                                    <th class="text-center">Approve</th>
+                                                    <th class="text-center">Print</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="matrixBodyAkses">
+                                                <tr><td colspan="7" class="text-center text-muted py-4">Belum ada akses dipilih.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($can_section_menu)) : ?>
+                    <!-- TAB 5: MENU DEPARTEMEN -->
+                    <div class="tab-pane fade" id="paneDeptMenu" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-4 mb-3 mb-lg-0">
+                                <div class="erp-panel um-split-card">
+                                    <div class="p-3 border-bottom bg-light">
+                                        <h6 class="font-weight-bold mb-1">Pilih Departemen</h6>
+                                        <div class="small text-muted">Atur menu apa saja yang ditampilkan pada masing-masing departemen di dashboard.</div>
+                                    </div>
+                                    <div id="smDeptList" class="sm-dept-list">
+                                        <div class="p-4 text-center text-muted">Memuat departemen...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <div class="erp-panel um-split-card">
+                                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+                                        <div>
+                                            <h5 class="mb-0 font-weight-bold" id="smSelectedTitle">Pilih departemen</h5>
+                                            <div class="small text-muted mt-1" id="smSelectedMeta">Daftar menu akan tampil setelah departemen dipilih.</div>
+                                        </div>
+                                        <div class="d-flex flex-wrap" style="gap:6px;">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm font-weight-bold" id="smBtnReset" style="display:none;">
+                                                <i class="fas fa-undo mr-1"></i> Reset Default
+                                            </button>
+                                            <button type="button" class="btn btn-erp btn-sm font-weight-bold" id="smBtnSave" style="display:none;">
+                                                <i class="fas fa-save mr-1"></i> Simpan Pengaturan
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 border-bottom bg-light" id="smFilterBar" style="display:none;">
+                                        <div class="row" style="gap:8px 0;">
+                                            <div class="col-md-6">
+                                                <div class="input-group input-group-sm">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                                    </div>
+                                                    <input type="text" class="form-control" id="smSearchMenu" placeholder="Cari nama menu atau route...">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <select class="form-control form-control-sm" id="smFilterState">
+                                                    <option value="all">Semua Menu Tersedia</option>
+                                                    <option value="checked">Hanya Menu Ditampilkan</option>
+                                                    <option value="unchecked">Menu Belum Ditampilkan</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-center justify-content-md-end">
+                                                <span class="badge badge-info" id="smVisibleCounter">0 dipilih</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="smMenuList" class="sm-menu-list">
+                                        <div class="p-5 text-center text-muted">Belum ada departemen dipilih.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>
+    </div>
+</div>
+
+<!-- Modal Tambah / Edit Akses Level -->
+<div class="modal fade" id="modalAksesLevel" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" id="formAksesLevel">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold">Form Akses Level</h5>
+                <button type="button" class="close js-close-akses-modal" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="akses_id_akses_level">
+                <div class="form-group">
+                    <label>Nama Akses</label>
+                    <input class="form-control" name="nama_akses_level" id="akses_nama_akses_level" required>
+                </div>
+                <div class="form-group">
+                    <label>Deskripsi</label>
+                    <textarea class="form-control" name="deskripsi" id="akses_deskripsi"></textarea>
+                </div>
+                <div class="form-group mb-0">
+                    <label>Status</label>
+                    <select class="form-control" name="status" id="akses_status">
+                        <option value="1">Aktif</option>
+                        <option value="0">Nonaktif</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary js-close-akses-modal" data-dismiss="modal">Batal</button>
+                <button class="btn btn-erp" type="submit"><i class="fas fa-save mr-1"></i> Simpan</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -323,6 +501,8 @@
 $(function(){
     const canDashboardAccess = <?= !empty($can_dashboard_access) ? 'true' : 'false' ?>;
     const canUserFacility = <?= !empty($can_user_facility) ? 'true' : 'false' ?>;
+    const canAksesLevel = <?= !empty($can_akses_level) ? 'true' : 'false' ?>;
+    const canSectionMenu = <?= !empty($can_section_menu) ? 'true' : 'false' ?>;
 
     function esc(val) {
         return $('<div>').text(val == null ? '' : val).html();
@@ -914,7 +1094,339 @@ $(function(){
     }
 
     // =========================================================
-    // 4. NAVIGASI TAB, SHORTCUT DARI TABEL USER, & URL QUERY
+    // 4. TAB AKSES LEVEL
+    // =========================================================
+    let aksesLoaded = false;
+    let tableAkses = null;
+    let activeAksesId = null;
+
+    function loadAksesMatrix(id, name) {
+        activeAksesId = id;
+        $('#matrixTitleAkses').text(name);
+        $('#matrixBodyAkses').html('<tr><td colspan="7" class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat...</td></tr>');
+        $.getJSON('<?= base_url('master/akses-level/matrix/') ?>' + id, function(res) {
+            if (!res.status) {
+                toastr.error(res.message);
+                return;
+            }
+            let html = '';
+            (res.data || []).forEach(function(m) {
+                html += '<tr>' +
+                    '<td><i class="' + esc(m.icon || 'fas fa-circle') + ' mr-1"></i>' + esc(m.nama_menu) + '</td>' +
+                    ['can_view', 'can_add', 'can_edit', 'can_delete', 'can_approve', 'can_print'].map(function(p) {
+                        return '<td class="text-center"><input type="checkbox" class="perm-toggle" data-menu="' + esc(m.id_menu) + '" data-perm="' + p + '" ' + (parseInt(m[p], 10) === 1 ? 'checked' : '') + '></td>';
+                    }).join('') +
+                '</tr>';
+            });
+            $('#matrixBodyAkses').html(html || '<tr><td colspan="7" class="text-center text-muted py-4">Menu belum tersedia.</td></tr>');
+        });
+    }
+
+    function initAksesLevelTab() {
+        if (!canAksesLevel || aksesLoaded) return;
+        aksesLoaded = true;
+
+        tableAkses = $('#tableAkses').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '<?= base_url('master/akses-level/list') ?>',
+                type: 'POST'
+            },
+            columns: [
+                {data: 'nama_akses_level', render: v => esc(v)},
+                {data: 'status', render: v => parseInt(v, 10) === 1 ? '<span class="badge badge-soft-success">Aktif</span>' : '<span class="badge badge-soft-danger">Nonaktif</span>'},
+                {data: null, orderable: false, searchable: false, render: r =>
+                    '<div class="action-group">' +
+                    '<button type="button" class="btn btn-sm btn-outline-success btn-matrix" data-name="' + esc(r.nama_akses_level) + '" data-id="' + esc(r.id_akses_level) + '" title="Permission Matrix"><i class="fas fa-shield-alt"></i></button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-primary btn-edit" data-id="' + esc(r.id_akses_level) + '" title="Edit Akses"><i class="fas fa-edit"></i></button>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger btn-delete" data-id="' + esc(r.id_akses_level) + '" title="Hapus Akses"><i class="fas fa-trash"></i></button>' +
+                    '</div>'
+                }
+            ]
+        });
+    }
+
+    if (canAksesLevel) {
+        $('.js-close-akses-modal').on('click', function(e) {
+            e.preventDefault();
+            $('#modalAksesLevel').modal('hide');
+        });
+
+        $('#matrixBodyAkses').on('change', '.perm-toggle', function() {
+            if (!activeAksesId) return;
+            $.post('<?= base_url('master/akses-level/update-permission') ?>', {
+                akses_lv_id: activeAksesId,
+                id_menu: $(this).data('menu'),
+                permission: $(this).data('perm'),
+                value: this.checked ? 1 : 0
+            }, function(res) {
+                res.status ? toastr.success(res.message) : toastr.error(res.message);
+            }, 'json');
+        });
+
+        $('#btnAddAkses').on('click', function() {
+            $('#formAksesLevel')[0].reset();
+            $('#akses_id_akses_level').val('');
+            $('#modalAksesLevel').modal('show');
+        });
+
+        $('#tableAkses').on('click', '.btn-matrix', function() {
+            loadAksesMatrix($(this).data('id'), $(this).data('name'));
+        });
+
+        $('#tableAkses').on('click', '.btn-edit', function() {
+            $.getJSON('<?= base_url('master/akses-level/detail/') ?>' + $(this).data('id'), function(res) {
+                if (!res.status) {
+                    toastr.error(res.message);
+                    return;
+                }
+                $('#akses_id_akses_level').val(res.data.id_akses_level);
+                $('#akses_nama_akses_level').val(res.data.nama_akses_level);
+                $('#akses_deskripsi').val(res.data.deskripsi);
+                $('#akses_status').val(res.data.status);
+                $('#modalAksesLevel').modal('show');
+            });
+        });
+
+        $('#formAksesLevel').on('submit', function(e) {
+            e.preventDefault();
+            const id = $('#akses_id_akses_level').val();
+            const url = id ? '<?= base_url('master/akses-level/update/') ?>' + id : '<?= base_url('master/akses-level/save') ?>';
+            $.post(url, $(this).serialize(), function(res) {
+                res.status ? toastr.success(res.message) : toastr.error(res.message);
+                if (res.status) {
+                    $('#modalAksesLevel').modal('hide');
+                    if (tableAkses) tableAkses.ajax.reload(null, false);
+                }
+            }, 'json');
+        });
+
+        $('#tableAkses').on('click', '.btn-delete', function() {
+            const id = $(this).data('id');
+            Swal.fire({
+                title: 'Hapus akses level?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Hapus'
+            }).then(function(r) {
+                if (r.isConfirmed) {
+                    $.post('<?= base_url('master/akses-level/delete/') ?>' + id, function(res) {
+                        res.status ? toastr.success(res.message) : toastr.error(res.message);
+                        if (tableAkses) tableAkses.ajax.reload(null, false);
+                    }, 'json');
+                }
+            });
+        });
+    }
+
+    // =========================================================
+    // 5. TAB MENU DEPARTEMEN (PENGELOMPOKAN MENU PER DEPARTEMEN)
+    // =========================================================
+    let smSectionsLoaded = false;
+    let smSelectedSection = null;
+    let smMenusState = [];
+
+    function smUpdateCounter() {
+        const count = smMenusState.filter(m => m.is_visible).length;
+        $('#smVisibleCounter').text(count + ' dipilih');
+    }
+
+    function smRenderMenus() {
+        if (!smSelectedSection) return;
+        const q = ($('#smSearchMenu').val() || '').toLowerCase().trim();
+        const stateFilter = $('#smFilterState').val() || 'all';
+
+        const filtered = smMenusState.filter(function(m) {
+            if (stateFilter === 'checked' && !m.is_visible) return false;
+            if (stateFilter === 'unchecked' && m.is_visible) return false;
+            if (q !== '') {
+                const hay = (m.title + ' ' + m.route + ' ' + m.menu_key + ' ' + (m.description || '')).toLowerCase();
+                if (hay.indexOf(q) === -1) return false;
+            }
+            return true;
+        });
+
+        smUpdateCounter();
+
+        if (filtered.length === 0) {
+            $('#smMenuList').html('<div class="p-5 text-center text-muted">Tidak ada menu yang sesuai filter.</div>');
+            return;
+        }
+
+        const visibleKeys = smMenusState.filter(m => m.is_visible).map(m => m.menu_key);
+        let html = '';
+        filtered.forEach(function(m) {
+            const isChecked = !!m.is_visible;
+            const toneClass = 'da-tone-' + esc(m.tone || 'blue');
+            const visIdx = visibleKeys.indexOf(m.menu_key);
+            const canMoveUp = isChecked && visIdx > 0;
+            const canMoveDown = isChecked && visIdx < visibleKeys.length - 1;
+
+            html += '<div class="sm-menu-row ' + (isChecked ? 'is-selected' : '') + '" data-key="' + esc(m.menu_key) + '">' +
+                '<div class="d-flex align-items-center" style="gap:12px;min-width:0;flex:1;">' +
+                    '<input type="checkbox" class="facility-toggle sm-menu-check" data-key="' + esc(m.menu_key) + '" ' + (isChecked ? 'checked' : '') + '>' +
+                    '<div class="da-menu-icon ' + toneClass + '" style="width:36px;height:36px;font-size:15px;"><i class="' + esc(m.icon || 'fas fa-th-large') + '"></i></div>' +
+                    '<div style="min-width:0;">' +
+                        '<div class="font-weight-bold text-truncate">' + esc(m.title) + ' <small class="text-muted font-weight-normal">(' + esc(m.route) + ')</small></div>' +
+                        '<div class="small text-muted text-truncate">' + esc(m.description || '') + '</div>' +
+                    '</div>' +
+                '</div>' +
+                (isChecked ? '<div class="sm-order-btns">' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary sm-move-up" data-key="' + esc(m.menu_key) + '" ' + (canMoveUp ? '' : 'disabled') + ' title="Geser ke atas"><i class="fas fa-arrow-up"></i></button>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary sm-move-down" data-key="' + esc(m.menu_key) + '" ' + (canMoveDown ? '' : 'disabled') + ' title="Geser ke bawah"><i class="fas fa-arrow-down"></i></button>' +
+                '</div>' : '') +
+            '</div>';
+        });
+
+        $('#smMenuList').html(html);
+    }
+
+    function smLoadSections(callback) {
+        if (!canSectionMenu) return;
+        $('#smDeptList').html('<div class="p-4 text-center text-muted"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat departemen...</div>');
+        $.getJSON('<?= base_url('master/menu-departemen/sections') ?>', function(res) {
+            if (!res.status) {
+                $('#smDeptList').html('<div class="p-4 text-center text-danger">Gagal memuat departemen.</div>');
+                return;
+            }
+            smSectionsLoaded = true;
+            const list = res.data || [];
+            let html = '';
+            list.forEach(function(sec) {
+                const isActive = smSelectedSection === sec.section_key;
+                const badge = sec.is_customized
+                    ? '<span class="badge badge-primary">Custom</span>'
+                    : '<span class="badge badge-secondary">Default</span>';
+                html += '<div class="sm-dept-item ' + (isActive ? 'active' : '') + '" data-key="' + esc(sec.section_key) + '">' +
+                    '<div class="d-flex justify-content-between align-items-center">' +
+                        '<div class="font-weight-bold"><i class="' + esc(sec.icon) + ' mr-2 text-primary"></i>' + esc(sec.label) + '</div>' +
+                        '<div>' + badge + '</div>' +
+                    '</div>' +
+                    '<div class="small text-muted mt-1">' + esc(sec.description) + '</div>' +
+                    '<div class="small font-weight-bold text-info mt-1">' + sec.visible_count + ' menu ditampilkan</div>' +
+                '</div>';
+            });
+            $('#smDeptList').html(html || '<div class="p-4 text-center text-muted">Tidak ada departemen.</div>');
+            if (typeof callback === 'function') callback(list);
+        });
+    }
+
+    function smLoadDetail(sectionKey) {
+        if (!canSectionMenu || !sectionKey) return;
+        smSelectedSection = sectionKey;
+        $('#smDeptList .sm-dept-item').removeClass('active');
+        $('#smDeptList .sm-dept-item[data-key="' + sectionKey + '"]').addClass('active');
+        $('#smMenuList').html('<div class="p-5 text-center text-muted"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat daftar menu...</div>');
+
+        $.getJSON('<?= base_url('master/menu-departemen/detail/') ?>' + encodeURIComponent(sectionKey), function(res) {
+            if (!res.status) {
+                toastr.error(res.message);
+                return;
+            }
+            const sec = res.data.section || {};
+            smMenusState = res.data.menus || [];
+            $('#smSelectedTitle').html('<i class="' + esc(sec.icon || 'fas fa-folder') + ' mr-2"></i>' + esc(sec.label || sectionKey));
+            $('#smSelectedMeta').text(sec.description || '');
+            $('#smFilterBar').show();
+            $('#smBtnSave').show();
+            $('#smBtnReset').toggle(!!sec.is_customized);
+            smRenderMenus();
+        });
+    }
+
+    if (canSectionMenu) {
+        $('#smDeptList').on('click', '.sm-dept-item', function() {
+            smLoadDetail($(this).data('key'));
+        });
+
+        $('#smSearchMenu').on('input', smRenderMenus);
+        $('#smFilterState').on('change', smRenderMenus);
+
+        $('#smMenuList').on('change', '.sm-menu-check', function() {
+            const key = String($(this).data('key'));
+            const checked = this.checked;
+            const idx = smMenusState.findIndex(m => m.menu_key === key);
+            if (idx === -1) return;
+
+            smMenusState[idx].is_visible = checked;
+            if (checked) {
+                // Pindahkan ke posisi akhir daftar menu yang aktif
+                const item = smMenusState.splice(idx, 1)[0];
+                const firstUnchecked = smMenusState.findIndex(m => !m.is_visible);
+                if (firstUnchecked === -1) {
+                    smMenusState.push(item);
+                } else {
+                    smMenusState.splice(firstUnchecked, 0, item);
+                }
+            } else {
+                const item = smMenusState.splice(idx, 1)[0];
+                smMenusState.push(item);
+            }
+            smRenderMenus();
+        });
+
+        $('#smMenuList').on('click', '.sm-move-up, .sm-move-down', function() {
+            const key = String($(this).data('key'));
+            const dir = $(this).hasClass('sm-move-up') ? -1 : 1;
+            const idx = smMenusState.findIndex(m => m.menu_key === key);
+            if (idx === -1) return;
+            const targetIdx = idx + dir;
+            if (targetIdx < 0 || targetIdx >= smMenusState.length || !smMenusState[targetIdx].is_visible) return;
+            const tmp = smMenusState[idx];
+            smMenusState[idx] = smMenusState[targetIdx];
+            smMenusState[targetIdx] = tmp;
+            smRenderMenus();
+        });
+
+        $('#smBtnSave').on('click', function() {
+            if (!smSelectedSection) return;
+            const menuKeys = smMenusState.filter(m => m.is_visible).map(m => m.menu_key);
+            $.post('<?= base_url('master/menu-departemen/save') ?>', {
+                section_key: smSelectedSection,
+                menu_keys: menuKeys
+            }, function(res) {
+                if (res.status) {
+                    toastr.success(res.message);
+                    daUsersLoaded = false; // Segarkan katalog pada tab Akses Menu Dashboard
+                    smLoadSections(function() {
+                        smLoadDetail(smSelectedSection);
+                    });
+                } else {
+                    toastr.error(res.message);
+                }
+            }, 'json');
+        });
+
+        $('#smBtnReset').on('click', function() {
+            if (!smSelectedSection) return;
+            Swal.fire({
+                title: 'Reset menu departemen ke default?',
+                text: 'Pengaturan khusus untuk departemen ini akan dihapus dan kembali ke bawaan sistem.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Reset'
+            }).then(function(r) {
+                if (!r.isConfirmed) return;
+                $.post('<?= base_url('master/menu-departemen/reset') ?>', {
+                    section_key: smSelectedSection
+                }, function(res) {
+                    if (res.status) {
+                        toastr.success(res.message);
+                        daUsersLoaded = false;
+                        smLoadSections(function() {
+                            smLoadDetail(smSelectedSection);
+                        });
+                    } else {
+                        toastr.error(res.message);
+                    }
+                }, 'json');
+            });
+        });
+    }
+
+    // =========================================================
+    // 6. NAVIGASI TAB, SHORTCUT DARI TABEL USER, & URL QUERY
     // =========================================================
     function activateTab(tabKey, targetUserId) {
         const $btn = $('#umMainTabs a[data-tab-key="' + tabKey + '"]');
@@ -938,6 +1450,16 @@ $(function(){
             } else if (targetUserId) {
                 facLoadMatrix(targetUserId);
             }
+        } else if (tabKey === 'akses-level' && canAksesLevel) {
+            initAksesLevelTab();
+        } else if (tabKey === 'menu-departemen' && canSectionMenu) {
+            if (!smSectionsLoaded) {
+                smLoadSections(function(list) {
+                    if (!smSelectedSection && list && list.length > 0) {
+                        smLoadDetail(list[0].section_key);
+                    }
+                });
+            }
         }
     }
 
@@ -947,6 +1469,15 @@ $(function(){
             daLoadUsers();
         } else if (tabKey === 'fasilitas' && canUserFacility && !facUsersLoaded) {
             facLoadUsers();
+        } else if (tabKey === 'akses-level' && canAksesLevel) {
+            initAksesLevelTab();
+            if (tableAkses) tableAkses.columns.adjust();
+        } else if (tabKey === 'menu-departemen' && canSectionMenu && !smSectionsLoaded) {
+            smLoadSections(function(list) {
+                if (!smSelectedSection && list && list.length > 0) {
+                    smLoadDetail(list[0].section_key);
+                }
+            });
         }
 
         // Perbarui query string di URL tanpa reload halaman
@@ -973,7 +1504,7 @@ $(function(){
     const initParams = new URLSearchParams(window.location.search);
     const initTab = initParams.get('tab');
     const initUserId = parseInt(initParams.get('user_id') || '0', 10);
-    if (initTab === 'akses-dashboard' || initTab === 'fasilitas') {
+    if (initTab === 'akses-dashboard' || initTab === 'fasilitas' || initTab === 'akses-level' || initTab === 'menu-departemen') {
         activateTab(initTab, initUserId || 0);
     }
 });

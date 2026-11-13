@@ -513,6 +513,11 @@ $route['master/akses-dashboard/update-action']      = 'master/C_Aksesdashboard/u
 $route['master/akses-dashboard/bulk']               = 'master/C_Aksesdashboard/bulk';
 $route['master/akses-dashboard/reset/(:num)']       = 'master/C_Aksesdashboard/reset/$1';
 $route['master/akses-dashboard/clone']              = 'master/C_Aksesdashboard/clone_access';
+$route['master/menu-departemen']                    = 'master/C_Sectionmenu';
+$route['master/menu-departemen/sections']           = 'master/C_Sectionmenu/sections';
+$route['master/menu-departemen/detail/(:any)']      = 'master/C_Sectionmenu/detail/$1';
+$route['master/menu-departemen/save']               = 'master/C_Sectionmenu/save';
+$route['master/menu-departemen/reset']              = 'master/C_Sectionmenu/reset';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';

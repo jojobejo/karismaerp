@@ -233,6 +233,11 @@ $route['master/menu/save']                          = 'master/C_Menu/save';
 $route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
 $route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
 $route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
+$route['master/menu-departemen']                    = 'master/C_Sectionmenu';
+$route['master/menu-departemen/sections']           = 'master/C_Sectionmenu/sections';
+$route['master/menu-departemen/detail/(:any)']      = 'master/C_Sectionmenu/detail/$1';
+$route['master/menu-departemen/save']               = 'master/C_Sectionmenu/save';
+$route['master/menu-departemen/reset']              = 'master/C_Sectionmenu/reset';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';

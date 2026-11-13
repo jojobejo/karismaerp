@@ -41,10 +41,14 @@ class C_Usermanagement extends CI_Controller
         $this->load->model('M_Dashboard');
         $canDashboardAccess = $this->M_Dashboard->is_strict_admin();
         $canUserFacility = $this->permission->can('master/user-facility');
+        $canAksesLevel = $this->permission->can('master/akses-level');
+        $canSectionMenu = $canDashboardAccess;
 
         if ($canDashboardAccess) {
             $this->load->model('master/M_Dashboardaccess', 'dashboardAccess');
             $this->dashboardAccess->ensure_schema();
+            $this->load->model('master/M_Sectionmenu', 'sectionMenu');
+            $this->sectionMenu->ensure_schema();
         }
         if ($canUserFacility) {
             $this->load->model('master/M_Userfacility', 'userFacility');
@@ -54,6 +58,8 @@ class C_Usermanagement extends CI_Controller
         $data['page_title'] = 'KARISMA ERP - User Management';
         $data['can_dashboard_access'] = $canDashboardAccess;
         $data['can_user_facility'] = $canUserFacility;
+        $data['can_akses_level'] = $canAksesLevel;
+        $data['can_section_menu'] = $canSectionMenu;
         $data['jobdesk'] = $this->users->bagian_options();
         $data['akses_level'] = $this->users->level_options();
         $data['departemen'] = $this->users->distinct_options('departemen');
