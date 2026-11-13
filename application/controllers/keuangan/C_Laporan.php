@@ -366,11 +366,14 @@ class C_Laporan extends CI_Controller
             foreach ($byWarehouse as $wh_id => $txs) {
                 $wh_name = $warehouses_map[$wh_id] ?? ('Gudang ' . $wh_id);
 
-                // Urutkan transaksi dalam gudang ini
+                // Urutkan transaksi dalam gudang ini (IN selalu didahulukan sebelum OUT di tanggal yang sama)
                 usort($txs, function($a, $b) {
                     $t1 = strtotime($a['tanggal']);
                     $t2 = strtotime($b['tanggal']);
                     if ($t1 === $t2) {
+                        if ($a['type'] === $b['type']) {
+                            return strcmp((string)($a['referensi'] ?? ''), (string)($b['referensi'] ?? ''));
+                        }
                         return ($a['type'] === 'IN') ? -1 : 1;
                     }
                     return $t1 < $t2 ? -1 : 1;
@@ -948,8 +951,10 @@ class C_Laporan extends CI_Controller
 
         $queries = [];
 
-        // 1. Query LPB (Penerimaan Barang / Masuk) - non konsinyasi & non virtual TM
-        $lpb_where_extra = "";
+        // 1. Query LPB (Penerimaan Barang / Masuk) - khusus barang kode Q & C, non konsinyasi & non virtual TM
+        $lpb_where_extra = " AND UPPER(LEFT(TRIM(ld.kd_barang), 1)) IN ('Q', 'C')
+                             AND UPPER(LEFT(TRIM(COALESCE(l.nomor_lpb, '')), 4)) != 'LPBK'
+                             AND COALESCE(UPPER(l.jenis_lpb), '') NOT LIKE '%KONSINYASI%'";
         if ($excluded_wh_sql !== '') {
             $lpb_where_extra .= " AND l.gudang_id NOT IN ({$excluded_wh_sql})";
         }
@@ -979,8 +984,8 @@ class C_Laporan extends CI_Controller
         }
         $queries[] = "($sql_lpb)";
 
-        // 2. Query Retur Penjualan (Masuk) - kecualikan retur konsinyasi, faktur T/K, dan gudang konsinyasi/TM
-        $retur_where_extra = " AND COALESCE(LOWER(r.tipe_retur), '') != 'konsinyasi'
+        // 2. Query Retur Penjualan (Masuk) - hanya tipe refund ('biasa'/'refund'), kecualikan replace/service/konsinyasi, faktur T/K, dan gudang konsinyasi/TM
+        $retur_where_extra = " AND COALESCE(LOWER(TRIM(r.tipe_retur)), 'biasa') IN ('biasa', 'refund')
                                AND UPPER(LEFT(TRIM(COALESCE(rd.no_faktur, '')), 1)) NOT IN ('K', 'T')";
         if ($excluded_wh_sql !== '') {
             $retur_where_extra .= " AND r.gudang_id NOT IN ({$excluded_wh_sql})";
@@ -1100,7 +1105,8 @@ class C_Laporan extends CI_Controller
             $queries[] = "($sql_faktur_h)";
         }
 
-        // 5. Query Penjualan Test Market yang sudah lunas (dari realisasi pembayaran POSTED & valid)
+        // 5. Query Penjualan Test Market yang sudah dibayar & terbit faktur realisasi (T...-1, T...-2, dst)
+        // Diakui sebagai pembelian (IN) dan penjualan (OUT) sekaligus di kartu stok pajak
         if ($this->db->table_exists('tb_test_market_realisasi') && $this->db->table_exists('tb_test_market_position')) {
             $tm_wh_expr = ($id_wh_transit_tm && $id_wh_transit_tm > 0)
                 ? "IF(p.gudang_asal_id REGEXP '^[0-9]+$' AND CAST(p.gudang_asal_id AS UNSIGNED) > 0 AND CAST(p.gudang_asal_id AS UNSIGNED) != {$id_wh_transit_tm}, CAST(p.gudang_asal_id AS UNSIGNED), {$id_wh_induk})"
@@ -1109,8 +1115,11 @@ class C_Laporan extends CI_Controller
             $has_pay_table = $this->db->table_exists('tbkeu_pembayaran_faktur');
             $pay_join = $has_pay_table ? "LEFT JOIN tbkeu_pembayaran_faktur pay ON pay.id_pembayaran = r.id_pembayaran" : "";
             $tm_date_expr = $has_pay_table ? "COALESCE(NULLIF(pay.tanggal_pembayaran, '0000-00-00'), r.tanggal_realisasi)" : "r.tanggal_realisasi";
+            $tm_ref_expr = $has_pay_table
+                ? "COALESCE(NULLIF(TRIM(r.no_faktur_realisasi), ''), NULLIF(TRIM(pay.no_faktur_konsinyasi), ''), '')"
+                : "COALESCE(NULLIF(TRIM(r.no_faktur_realisasi), ''), '')";
 
-            $tm_where_extra = "";
+            $tm_where_extra = " AND ({$tm_ref_expr}) != ''";
             if ($has_pay_table) {
                 $pay_valid = "COALESCE(UPPER(pay.status), '') NOT IN ('CANCELLED', 'UNPOST', 'DRAFT')";
                 if ($this->db->field_exists('status_bg', 'tbkeu_pembayaran_faktur')) {
@@ -1128,15 +1137,16 @@ class C_Laporan extends CI_Controller
                 $tm_where_extra .= " AND ({$tm_wh_expr}) = {$wh_target_id}";
             }
 
-            $sql_tm_lunas = "SELECT 
+            // 5a. Test Market Lunas - Masuk (Pembelian)
+            $sql_tm_beli = "SELECT 
                                 r.kd_barang,
                                 ({$tm_wh_expr}) AS gudang_id,
                                 ({$tm_date_expr}) AS tanggal,
-                                CONCAT(r.no_faktur, ' (TM Lunas - ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
+                                CONCAT({$tm_ref_expr}, ' (TM Beli - ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
                                 r.qty,
                                 COALESCE(p.harga_pokok, 0) AS harga,
-                                'OUT' AS type,
-                                'TM-LUNAS ' AS ref_prefix,
+                                'IN' AS type,
+                                'TM-BELI ' AS ref_prefix,
                                 b.satuan,
                                 b.nama_barang,
                                 {$pajak_group_expr} AS kelompok_dagang
@@ -1149,10 +1159,103 @@ class C_Laporan extends CI_Controller
                               AND ({$tm_date_expr}) <= {$end_date_sql}
                               {$tm_where_extra}
                               {$prod_filter_clause}";
-            $queries[] = "($sql_tm_lunas)";
+            $queries[] = "($sql_tm_beli)";
+
+            // 5b. Test Market Lunas - Keluar (Penjualan)
+            $sql_tm_jual = "SELECT 
+                                r.kd_barang,
+                                ({$tm_wh_expr}) AS gudang_id,
+                                ({$tm_date_expr}) AS tanggal,
+                                CONCAT({$tm_ref_expr}, ' (TM Jual - ', COALESCE(p.customer_name, 'Kios'), ')') AS referensi,
+                                r.qty,
+                                COALESCE(p.harga_pokok, 0) AS harga,
+                                'OUT' AS type,
+                                'TM-JUAL ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tb_test_market_realisasi r
+                            JOIN tb_test_market_position p ON p.id_position = r.id_position
+                            JOIN tbpo_barang b ON b.kode_barang = r.kd_barang
+                            {$pay_join}
+                            WHERE r.status = 'POSTED'
+                              AND p.status != 'DIBATALKAN'
+                              AND ({$tm_date_expr}) <= {$end_date_sql}
+                              {$tm_where_extra}
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_tm_jual)";
         }
 
-        // 6. Query Retur Pembelian (Keluar) - non konsinyasi & non virtual TM
+        // 5c. Query Penjualan Konsinyasi yang sudah dilunasi ke supplier (status BILLED / masuk Gdg. Konsinyasi Lunas)
+        // Diakui sebagai pembelian (IN) dan penjualan (OUT) sekaligus di kartu stok pajak
+        if ($this->db->table_exists('tb_konsinyasi_settlement') && (!$wh_target_id || $wh_target_id == $id_wh_induk)) {
+            $has_pay_table = $this->db->table_exists('tbkeu_pembayaran_faktur');
+            $kons_pay_join = $has_pay_table ? "LEFT JOIN tbkeu_pembayaran_faktur pay ON pay.id_pembayaran = s.id_pembayaran" : "";
+            $kons_date_expr = "COALESCE(NULLIF(s.tgl_invoice_supplier, '0000-00-00'), DATE(s.settled_at), s.tanggal_settlement, DATE(s.created_at))";
+            $kons_ref_expr = $has_pay_table
+                ? "COALESCE(NULLIF(TRIM(pay.no_faktur_konsinyasi), ''), NULLIF(TRIM(s.no_faktur), ''), s.no_settlement)"
+                : "COALESCE(NULLIF(TRIM(s.no_faktur), ''), s.no_settlement)";
+
+            $kons_where_extra = "";
+            if ($has_pay_table) {
+                $pay_valid = "COALESCE(UPPER(pay.status), '') NOT IN ('CANCELLED', 'UNPOST', 'DRAFT')";
+                if ($this->db->field_exists('status_bg', 'tbkeu_pembayaran_faktur')) {
+                    $pay_valid .= " AND COALESCE(LOWER(pay.status_bg), '') != 'pending'";
+                }
+                if ($this->db->field_exists('status_kasir', 'tbkeu_pembayaran_faktur')) {
+                    $pay_valid .= " AND COALESCE(LOWER(pay.status_kasir), '') != 'pending_kasir'";
+                }
+                $kons_where_extra .= " AND (pay.id_pembayaran IS NULL OR ({$pay_valid}))";
+            }
+
+            // Konsinyasi Lunas - Masuk (Pembelian)
+            $sql_kons_beli = "SELECT 
+                                s.kd_barang,
+                                {$id_wh_induk} AS gudang_id,
+                                ({$kons_date_expr}) AS tanggal,
+                                CONCAT({$kons_ref_expr}, ' (Konsinyasi Beli - ', COALESCE(s.nama_suplier, 'Supplier'), ')') AS referensi,
+                                s.qty_net AS qty,
+                                COALESCE(s.hrg_beli_satuan, 0) AS harga,
+                                'IN' AS type,
+                                'KONS-BELI ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tb_konsinyasi_settlement s
+                            JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+                            {$kons_pay_join}
+                            WHERE s.status = 'BILLED'
+                              AND s.qty_net > 0
+                              AND ({$kons_date_expr}) <= {$end_date_sql}
+                              {$kons_where_extra}
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_kons_beli)";
+
+            // Konsinyasi Lunas - Keluar (Penjualan)
+            $sql_kons_jual = "SELECT 
+                                s.kd_barang,
+                                {$id_wh_induk} AS gudang_id,
+                                ({$kons_date_expr}) AS tanggal,
+                                CONCAT({$kons_ref_expr}, ' (Konsinyasi Jual - ', COALESCE(s.customer_name, 'Kios'), ')') AS referensi,
+                                s.qty_net AS qty,
+                                COALESCE(s.hrg_beli_satuan, 0) AS harga,
+                                'OUT' AS type,
+                                'KONS-JUAL ' AS ref_prefix,
+                                b.satuan,
+                                b.nama_barang,
+                                {$pajak_group_expr} AS kelompok_dagang
+                            FROM tb_konsinyasi_settlement s
+                            JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+                            {$kons_pay_join}
+                            WHERE s.status = 'BILLED'
+                              AND s.qty_net > 0
+                              AND ({$kons_date_expr}) <= {$end_date_sql}
+                              {$kons_where_extra}
+                              {$prod_filter_clause}";
+            $queries[] = "($sql_kons_jual)";
+        }
+
+        // 6. Query Retur Pembelian (Keluar) - khusus Potong Hutang Usaha (POTONG_HUTANG), non konsinyasi & non virtual TM
         if ($this->db->table_exists('tb_retur_pembelian') && $this->db->table_exists('tb_retur_pembelian_detail')) {
             $rb_where_extra = "";
             if ($excluded_wh_sql !== '') {
@@ -1160,6 +1263,9 @@ class C_Laporan extends CI_Controller
             }
             if ($this->db->field_exists('is_konsinyasi', 'tb_retur_pembelian')) {
                 $rb_where_extra .= " AND COALESCE(rb.is_konsinyasi, 0) = 0";
+            }
+            if ($this->db->field_exists('jenis_penyelesaian', 'tb_retur_pembelian')) {
+                $rb_where_extra .= " AND UPPER(TRIM(COALESCE(rb.jenis_penyelesaian, ''))) = 'POTONG_HUTANG'";
             }
             $sql_retur_beli = "SELECT 
                                 rbd.kd_barang,

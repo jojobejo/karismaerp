@@ -208,7 +208,7 @@
                             <div class="report-subtitle">Periode: <span id="lblPeriode">-</span></div>
                             <div class="report-warehouse" id="lblWarehouse">-- Semua Gudang --</div>
                             <div class="report-rule-note">
-                                Cakupan: Barang Pajak (BKP &amp; BKPS) &bull; Penjualan Reguler (Non-Konsinyasi &amp; Non-Faktur Z) &bull; Penjualan Test Market Lunas &bull; Penjualan Faktur H
+                                Cakupan: Barang Pajak (BKP &amp; BKPS) &bull; Penjualan Reguler (Non-Konsinyasi, Non-TM &amp; Non-Faktur Z) &bull; Test Market Lunas (Faktur Realisasi T...-1 dst: Masuk &amp; Keluar) &bull; Konsinyasi Lunas (Masuk &amp; Keluar) &bull; Penjualan Faktur H (Pecah Z: Keluar)
                             </div>
                         </div>
 

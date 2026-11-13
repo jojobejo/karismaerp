@@ -2549,9 +2549,35 @@ class M_Konsinyasi extends CI_Model
         if ($needed > 0) {
             $lastBatch = !empty($availableBatches) ? end($availableBatches) : null;
             $fallbackPrice = $lastBatch ? (float)$lastBatch['harga_beli_satuan'] : 0.0;
+            if ($fallbackPrice <= 0 && $idFaktur > 0) {
+                $fakturDetail = $this->db->select('hrg_pokok')
+                    ->where('id_faktur', $idFaktur)
+                    ->where('kd_barang', $kdBarang)
+                    ->where('hrg_pokok >', 0)
+                    ->limit(1)
+                    ->get('tbso_faktur_detail')
+                    ->row_array();
+                $fallbackPrice = (float)($fakturDetail['hrg_pokok'] ?? 0);
+            }
             if ($fallbackPrice <= 0) {
-                $masterItem = $this->db->select('hrg_pokok')->where('kode_barang', $kdBarang)->get('tbpo_barang')->row_array();
-                $fallbackPrice = (float)($masterItem['hrg_pokok'] ?? 0);
+                $lastLpb = $this->db->select('harga_satuan')
+                    ->where('kd_barang', $kdBarang)
+                    ->where('harga_satuan >', 0)
+                    ->order_by('id_detail_lpb', 'DESC')
+                    ->limit(1)
+                    ->get('tb_lpb_detail')
+                    ->row_array();
+                $fallbackPrice = (float)($lastLpb['harga_satuan'] ?? 0);
+            }
+            if ($fallbackPrice <= 0) {
+                $lastFakturDetail = $this->db->select('hrg_pokok')
+                    ->where('kd_barang', $kdBarang)
+                    ->where('hrg_pokok >', 0)
+                    ->order_by('id', 'DESC')
+                    ->limit(1)
+                    ->get('tbso_faktur_detail')
+                    ->row_array();
+                $fallbackPrice = (float)($lastFakturDetail['hrg_pokok'] ?? 0);
             }
             $subtotalFallback = round($needed * $fallbackPrice, 2);
             $totalCogs += $subtotalFallback;
