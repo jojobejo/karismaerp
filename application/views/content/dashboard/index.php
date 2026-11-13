@@ -338,6 +338,7 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
     .dashboard-tone-teal { --tile-a: #2d929b; --tile-b: #50b8c0; }
     .dashboard-tone-dark { --tile-a: #343a40; --tile-b: #59626e; }
     .dashboard-tone-cyan { --tile-a: #1287a8; --tile-b: #26bad1; }
+    .dashboard-tone-brown { --tile-a: #7c4a2d; --tile-b: #a46b48; }
 
     @keyframes bellShake {
         0% { transform: rotate(0deg) scale(1); }
@@ -814,13 +815,6 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
 
                     <?php foreach ($sections as $key => $section) : ?>
                         <div class="dashboard-panel <?= $key === $activeKey ? 'active' : '' ?>" data-panel="<?= html_escape($key) ?>">
-                            <div class="dashboard-panel-head">
-                                <div>
-                                    <h2><?= html_escape($section['label']) ?></h2>
-                                    <p><?= html_escape($section['description']) ?></p>
-                                </div>
-                            </div>
-
                             <div class="dashboard-menu-grid">
                                 <?php foreach ($section['menus'] as $menu) :
                                     $isLocked = !empty($menu['is_locked']);

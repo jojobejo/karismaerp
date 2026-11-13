@@ -49,10 +49,10 @@ class M_Dashboard extends CI_Model
         $piutang_customer_route = $this->get_piutang_customer_route($context);
 
         return array(
-            'keuangan' => array(
-                'label' => 'KEUANGAN',
+            'keuangan_sales' => array(
+                'label' => 'KEUANGAN & SALES',
                 'icon' => 'fas fa-wallet',
-                'description' => 'Kontrol stok harian, master barang, dan laporan keuangan operasional.',
+                'description' => 'Kontrol stok harian, keuangan operasional, penjualan, katalog, dan laporan sales.',
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
                     $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.', 'daily_stock'),
@@ -75,6 +75,14 @@ class M_Dashboard extends CI_Model
                     $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).', 'data_customers'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.', 'retur_penjualan'),
                     $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.', 'semua_laporan'),
+                    $this->menu('Admin SC', 'sales_order/admin_sc', 'fas fa-file-invoice-dollar', 'purple', 'Kelola verifikasi SO, proses faktur, pecah faktur, dan rute pengiriman Admin SC.', 'admin_sc'),
+                    $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.', 'sales_order'),
+                    $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.', 'sales_order_loby'),
+                    $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.', 'faktur_penjualan'),
+                    $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.', 'katalog_sales'),
+                    $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.', 'sales_report'),
+                    $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.', 'stok_online'),
+                    $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.', 'pengajuan_od'),
                 ),
             ),
             'hrd' => array(
@@ -145,26 +153,6 @@ class M_Dashboard extends CI_Model
                     $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur pembelian untuk support workflow Logistik, Purchasing, dan Keuangan.', 'retur_pembelian'),
                 ),
             ),
-            'sales' => array(
-                'label' => 'SALES',
-                'icon' => 'fas fa-handshake',
-                'description' => 'Akses penjualan, katalog, order, dan laporan sales.',
-                'menus' => array(
-                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.', 'kas_bon'),
-                    $this->menu('Admin SC', 'sales_order/admin_sc', 'fas fa-file-invoice-dollar', 'purple', 'Kelola verifikasi SO, proses faktur, pecah faktur, dan rute pengiriman Admin SC.', 'admin_sc'),
-                    $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.', 'sales_order'),
-                    $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.', 'sales_order_loby'),
-                    $this->menu('Pecah Faktur', 'sales_order/pecah_faktur', 'fas fa-cut', 'teal', 'Kelola dan proses pemecahan Faktur Z menjadi faktur turunan.', 'pecah_faktur'),
-                    $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.', 'faktur_penjualan'),
-                    $this->menu('Test Market', 'test-market', 'fas fa-flask', 'cyan', 'Pantau barang Test Market yang dititipkan, dibeli, dan masih tersisa di kios.', 'test_market'),
-                    $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.', 'katalog_sales'),
-                    $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.', 'sales_report'),
-                    $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.', 'stok_online'),
-                    $this->menu('Data Customers', 'data_customers', 'fas fa-address-book', 'slate', 'Kelola data pelanggan (Zahir style).', 'data_customers'),
-                    $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.', 'retur_penjualan'),
-                    $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.', 'pengajuan_od'),
-                ),
-            ),
         );
     }
 
@@ -180,10 +168,17 @@ class M_Dashboard extends CI_Model
 
         $sections = $this->apply_access_rules($sections, $context);
 
-        // Batasi tampilan dashboard ADMPNJ hanya section penjualan/sales
-        $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
-        if ($jobdesk === 'ADMPNJ' && isset($sections['sales'])) {
-            $sections = array('sales' => $sections['sales']);
+        // Untuk user non-admin, tampilkan hanya tab departemen milik user yang login
+        if (empty($context['is_admin'])) {
+            $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
+            if ($jobdesk === 'ADMPNJ' && isset($sections['keuangan_sales'])) {
+                return array('keuangan_sales' => $sections['keuangan_sales']);
+            }
+
+            $userSectionKey = $this->resolve_user_section_key($context, $sections);
+            if ($userSectionKey !== null && isset($sections[$userSectionKey])) {
+                return array($userSectionKey => $sections[$userSectionKey]);
+            }
         }
 
         return $sections;
@@ -194,11 +189,12 @@ class M_Dashboard extends CI_Model
      */
     public function apply_section_menu_config(array $sections)
     {
-        if (!isset($this->db) || !$this->db->table_exists('tb_dashboard_section_menus')) {
+        $db = $this->db;
+        if (!$db || !$db->table_exists('tb_dashboard_section_menus')) {
             return $sections;
         }
 
-        $rows = $this->db
+        $rows = $db
             ->order_by('section_key', 'ASC')
             ->order_by('sort_order', 'ASC')
             ->order_by('id', 'ASC')
@@ -277,34 +273,81 @@ class M_Dashboard extends CI_Model
         return $sections;
     }
 
-    public function default_active_section(array $context, array $sections)
+    /**
+     * Tentukan section departemen milik user berdasarkan kolom departement dan jobdesk
+     */
+    public function resolve_user_section_key(array $context, array $sections)
     {
-        if (!empty($context['is_admin']) && isset($sections['admin'])) {
-            return 'admin';
+        $departemen = strtoupper(trim((string)($context['departemen'] ?? '')));
+        if ($departemen !== '') {
+            if ((strpos($departemen, 'KEUANGAN') !== false || strpos($departemen, 'SALES') !== false || strpos($departemen, 'KASIR') !== false || strpos($departemen, 'FINANCE') !== false || strpos($departemen, 'BISNIS') !== false) && isset($sections['keuangan_sales'])) {
+                return 'keuangan_sales';
+            }
+            if ((strpos($departemen, 'LOGISTI') !== false || strpos($departemen, 'WAREHOUSE') !== false) && isset($sections['logistik'])) {
+                return 'logistik';
+            }
+            if (strpos($departemen, 'PURCHAS') !== false && isset($sections['purchasing'])) {
+                return 'purchasing';
+            }
+            if ((strpos($departemen, 'HRD') !== false || $departemen === 'GA') && isset($sections['hrd'])) {
+                return 'hrd';
+            }
+            if (($departemen === 'IT' || strpos($departemen, 'IT ') === 0) && isset($sections['it'])) {
+                return 'it';
+            }
         }
 
-        $jobdesk = $context['jobdesk'];
+        $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
         $map = array(
-            // Keuangan & Accounting
-            'ADMINKEU' => 'keuangan',
-            'ADMINKEUTC' => 'keuangan',
-            'ADMIN JURNAL PAJAK' => 'keuangan',
-            'ADMIN KEUANGAN' => 'keuangan',
-            'ADMIN JURNAL' => 'keuangan',
-            'MT ADMIN ACCOUNTING' => 'keuangan',
-            'MT MANAGER ACCOUNTING & TAX' => 'keuangan',
-            'MT MANAGER KEUANGAN' => 'keuangan',
-            'TEAM COLLECTION' => 'keuangan',
-            'MT TEAM COLLECTION' => 'keuangan',
-            'COLLECTION' => 'keuangan',
-            'KOLEKTOR' => 'keuangan',
-            'KASIR' => 'keuangan',
-            'DIREKTUR' => 'keuangan',
-            'DIREKSI' => 'keuangan',
-            'DIREKTUR UTAMA' => 'keuangan',
-            'DIREKTURUTAMA' => 'keuangan',
-            'MT DIREKTUR OPERASIONAL' => 'keuangan',
-            'DIREKTUROP' => 'keuangan',
+            // Keuangan, Accounting & Sales
+            'ADMINKEU' => 'keuangan_sales',
+            'ADMINKEUTC' => 'keuangan_sales',
+            'ADMIN JURNAL PAJAK' => 'keuangan_sales',
+            'ADMIN KEUANGAN' => 'keuangan_sales',
+            'ADMIN JURNAL' => 'keuangan_sales',
+            'MT ADMIN ACCOUNTING' => 'keuangan_sales',
+            'MT MANAGER ACCOUNTING & TAX' => 'keuangan_sales',
+            'MT MANAGER KEUANGAN' => 'keuangan_sales',
+            'TEAM COLLECTION' => 'keuangan_sales',
+            'MT TEAM COLLECTION' => 'keuangan_sales',
+            'COLLECTION' => 'keuangan_sales',
+            'KOLEKTOR' => 'keuangan_sales',
+            'KASIR' => 'keuangan_sales',
+            'DIREKTUR' => 'keuangan_sales',
+            'DIREKSI' => 'keuangan_sales',
+            'DIREKTUR UTAMA' => 'keuangan_sales',
+            'DIREKTURUTAMA' => 'keuangan_sales',
+            'MT DIREKTUR OPERASIONAL' => 'keuangan_sales',
+            'DIREKTUROP' => 'keuangan_sales',
+            'SALES' => 'keuangan_sales',
+            'SALESONLINE' => 'keuangan_sales',
+            'SALESCOUNTER' => 'keuangan_sales',
+            'SALES COUNTER' => 'keuangan_sales',
+            'MT SALES COUNTER' => 'keuangan_sales',
+            'SC' => 'keuangan_sales',
+            'ADMINSC' => 'keuangan_sales',
+            'ADMSC' => 'keuangan_sales',
+            'ADMIN SALES COUNTER' => 'keuangan_sales',
+            'MT ADMIN SALES COUNTER' => 'keuangan_sales',
+            'LOBY' => 'keuangan_sales',
+            'SALESLOBY' => 'keuangan_sales',
+            'ADMINLOBY' => 'keuangan_sales',
+            'MNGSC' => 'keuangan_sales',
+            'MANAGER SC' => 'keuangan_sales',
+            'MANAGERSC' => 'keuangan_sales',
+            'MANAGER SALES COUNTER' => 'keuangan_sales',
+            'MANAGER SALES EXECUTIVE' => 'keuangan_sales',
+            'MANAGERSE' => 'keuangan_sales',
+            'KADEPSC' => 'keuangan_sales',
+            'KADEPKS' => 'keuangan_sales',
+            'MT KADEP KEUANGAN & SALES' => 'keuangan_sales',
+            'MANAGERTC' => 'keuangan_sales',
+            'MNGTC' => 'keuangan_sales',
+            'KADEPUB' => 'keuangan_sales',
+            'KEPALA UNIT BISNIS' => 'keuangan_sales',
+            'MT ABM SEED JATIM TIMUR' => 'keuangan_sales',
+            'ADMPNJ' => 'keuangan_sales',
+            'ADMIN PRICELIST & RETUR PENJUALAN' => 'keuangan_sales',
 
             // HRD & GA
             'ADMINGA' => 'hrd',
@@ -351,50 +394,25 @@ class M_Dashboard extends CI_Model
             'ADMINIT' => 'it',
             'ADMIN IT' => 'it',
             'PROGRAMMER' => 'it',
-
-            // Sales & Unit Bisnis
-            'SALES' => 'sales',
-            'SALESONLINE' => 'sales',
-            'SALESCOUNTER' => 'sales',
-            'SALES COUNTER' => 'sales',
-            'MT SALES COUNTER' => 'sales',
-            'SC' => 'sales',
-            'ADMINSC' => 'sales',
-            'ADMSC' => 'sales',
-            'ADMIN SALES COUNTER' => 'sales',
-            'MT ADMIN SALES COUNTER' => 'sales',
-            'LOBY' => 'sales',
-            'SALESLOBY' => 'sales',
-            'ADMINLOBY' => 'sales',
-            'MNGSC' => 'sales',
-            'MANAGER SC' => 'sales',
-            'MANAGERSC' => 'sales',
-            'MANAGER SALES COUNTER' => 'sales',
-            'MANAGER SALES EXECUTIVE' => 'sales',
-            'MANAGERSE' => 'sales',
-            'KADEPSC' => 'sales',
-            'KADEPKS' => 'sales',
-            'MT KADEP KEUANGAN & SALES' => 'sales',
-            'MANAGERTC' => 'sales',
-            'MNGTC' => 'sales',
-            'KADEPUB' => 'sales',
-            'KEPALA UNIT BISNIS' => 'sales',
-            'MT ABM SEED JATIM TIMUR' => 'sales',
-            'ADMPNJ' => 'sales',
-            'ADMIN PRICELIST & RETUR PENJUALAN' => 'sales',
         );
 
         if (isset($map[$jobdesk]) && isset($sections[$map[$jobdesk]])) {
             return $map[$jobdesk];
         }
 
-        $departemen = $context['departemen'] ?? '';
-        if (strpos($departemen, 'LOGISTI') !== false && isset($sections['logistik'])) return 'logistik';
-        if (strpos($departemen, 'PURCHAS') !== false && isset($sections['purchasing'])) return 'purchasing';
-        if (strpos($departemen, 'IT') !== false && isset($sections['it'])) return 'it';
-        if (strpos($departemen, 'HRD') !== false && isset($sections['hrd'])) return 'hrd';
-        if ((strpos($departemen, 'SALES') !== false || strpos($departemen, 'BISNIS') !== false) && isset($sections['sales'])) return 'sales';
-        if (strpos($departemen, 'KEUANGAN') !== false && isset($sections['keuangan'])) return 'keuangan';
+        return null;
+    }
+
+    public function default_active_section(array $context, array $sections)
+    {
+        if (!empty($context['is_admin']) && isset($sections['admin'])) {
+            return 'admin';
+        }
+
+        $resolved = $this->resolve_user_section_key($context, $sections);
+        if ($resolved !== null && isset($sections[$resolved])) {
+            return $resolved;
+        }
 
         return key($sections);
     }
@@ -1110,7 +1128,8 @@ class M_Dashboard extends CI_Model
 
     public function dynamic_app_menus(array $seenRoutes)
     {
-        if (!isset($this->db) || !$this->db->table_exists('tb_menu')) {
+        $db = $this->db;
+        if (!$db || !$db->table_exists('tb_menu')) {
             return array();
         }
 
