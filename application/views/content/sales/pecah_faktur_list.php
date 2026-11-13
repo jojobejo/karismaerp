@@ -231,6 +231,7 @@
                     </div>
                     <div class="card-body py-2">
                         <form action="<?= base_url('sales_order/pecah_faktur') ?>" method="get" id="formFilterFakturZ">
+                            <input type="hidden" name="tab" value="<?= htmlspecialchars($active_tab ?? 'belum_dipecah') ?>">
                             <div class="row align-items-end">
                                 <div class="col-md-3 col-sm-6 mb-2">
                                     <label class="small font-weight-bold mb-1">Dari Tanggal Faktur</label>
@@ -265,31 +266,45 @@
                 </div>
 
                 <!-- Tabel Faktur Z & Faktur Pecahan H -->
+                <?php
+                    $currentTab = $active_tab ?? 'belum_dipecah';
+                    $baseQueryParams = array_filter([
+                        'date1'         => $filter['date1'] ?? '',
+                        'date2'         => $filter['date2'] ?? '',
+                        'status_faktur' => ($filter['status_faktur'] ?? 'all') !== 'all' ? $filter['status_faktur'] : '',
+                        'search'        => $filter['search'] ?? '',
+                    ]);
+                    $buildTabUrl = function ($tabName) use ($baseQueryParams) {
+                        $params = array_merge(['tab' => $tabName], $baseQueryParams);
+                        return base_url('sales_order/pecah_faktur?' . http_build_query($params));
+                    };
+                ?>
                 <div class="card card-outline card-primary card-outline-tabs shadow-sm">
                     <div class="card-header p-0 border-bottom-0">
                         <ul class="nav nav-tabs" id="custom-tabs-faktur" role="tablist">
                             <li class="nav-item">
-                                <a class="nav-link active font-weight-bold" id="tab-faktur-z" data-toggle="pill" href="#content-faktur-z" role="tab" aria-controls="content-faktur-z" aria-selected="true">
+                                <a class="nav-link <?= $currentTab === 'belum_dipecah' ? 'active' : '' ?> font-weight-bold" id="tab-faktur-z" href="<?= $buildTabUrl('belum_dipecah') ?>">
                                     <i class="fas fa-hourglass-start text-warning mr-1"></i> Faktur Z Induk (Belum Dipecah)
-                                    <span class="badge badge-warning ml-1"><?= count($fakturs_belum_dipecah ?? []) ?></span>
+                                    <span class="badge badge-warning ml-1"><?= number_format($stat['belum_dipecah'] ?? 0) ?></span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link font-weight-bold" id="tab-faktur-z-selesai" data-toggle="pill" href="#content-faktur-z-selesai" role="tab" aria-controls="content-faktur-z-selesai" aria-selected="false">
+                                <a class="nav-link <?= $currentTab === 'sudah_dipecah' ? 'active' : '' ?> font-weight-bold" id="tab-faktur-z-selesai" href="<?= $buildTabUrl('sudah_dipecah') ?>">
                                     <i class="fas fa-check-circle text-success mr-1"></i> Faktur Z Selesai Dipecah
-                                    <span class="badge badge-success ml-1"><?= count($fakturs_sudah_dipecah ?? []) ?></span>
+                                    <span class="badge badge-success ml-1"><?= number_format($stat['sudah_dipecah'] ?? 0) ?></span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link font-weight-bold" id="tab-faktur-h" data-toggle="pill" href="#content-faktur-h" role="tab" aria-controls="content-faktur-h" aria-selected="false">
+                                <a class="nav-link <?= $currentTab === 'hasil_pecah' ? 'active' : '' ?> font-weight-bold" id="tab-faktur-h" href="<?= $buildTabUrl('hasil_pecah') ?>">
                                     <i class="fas fa-tag text-info mr-1"></i> Faktur Pecahan Kode H
-                                    <span class="badge badge-info ml-1"><?= count($fakturs_h) ?></span>
+                                    <span class="badge badge-info ml-1"><?= number_format($stat['turunan'] ?? 0) ?></span>
                                 </a>
                             </li>
                         </ul>
                     </div>
                     <div class="card-body p-0">
                         <div class="tab-content" id="custom-tabs-faktur-content">
+                            <?php if ($currentTab === 'belum_dipecah'): ?>
                             <!-- TAB 1: DAFTAR KIOS DENGAN FAKTUR Z BELUM DIPECAS -->
                             <div class="tab-pane fade show active" id="content-faktur-z" role="tabpanel" aria-labelledby="tab-faktur-z">
                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
@@ -401,9 +416,10 @@
                                     </table>
                                 </div>
                             </div>
+                            <?php elseif ($currentTab === 'sudah_dipecah'): ?>
 
                             <!-- TAB 2: DAFTAR FAKTUR Z YANG TELAH SELESAI DI PECAH -->
-                            <div class="tab-pane fade" id="content-faktur-z-selesai" role="tabpanel" aria-labelledby="tab-faktur-z-selesai">
+                            <div class="tab-pane fade show active" id="content-faktur-z-selesai" role="tabpanel" aria-labelledby="tab-faktur-z-selesai">
                                 <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap">
                                     <div>
                                         <span class="font-weight-bold text-dark" style="font-size: 15px;">
@@ -521,9 +537,10 @@
                                     </table>
                                 </div>
                             </div>
+                            <?php elseif ($currentTab === 'hasil_pecah'): ?>
 
                             <!-- TAB 2: FAKTUR PECAHAN KODE H -->
-                            <div class="tab-pane fade" id="content-faktur-h" role="tabpanel" aria-labelledby="tab-faktur-h">
+                            <div class="tab-pane fade show active" id="content-faktur-h" role="tabpanel" aria-labelledby="tab-faktur-h">
                                 <?php
                                     $totalH = count($fakturs_h);
                                     $lunasH = 0;
@@ -841,6 +858,7 @@
                                     </table>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

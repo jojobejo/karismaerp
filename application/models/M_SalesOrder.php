@@ -2656,6 +2656,66 @@ class M_SalesOrder extends CI_Model
      * Ambil seluruh faktur yang berawalan Z (atau SO is_faktur_z = 1)
      * untuk modul Pecah Faktur Z.
      */
+    /**
+     * Menghitung ringkasan jumlah Faktur Z (belum dipecah, sudah dipecah, dan turunan H) secara ringan
+     */
+    public function get_faktur_z_stats($filter = [])
+    {
+        $stat = [
+            'total'         => 0,
+            'belum_dipecah' => 0,
+            'sudah_dipecah' => 0,
+            'turunan'       => 0,
+            'total_nilai'   => 0,
+        ];
+
+        // Hitung Faktur Z Induk (belum vs sudah dipecah)
+        $this->db->select('
+            SUM(CASE WHEN (f.is_split_parent = 0 OR f.is_split_parent IS NULL) THEN 1 ELSE 0 END) AS belum_dipecah,
+            SUM(CASE WHEN f.is_split_parent = 1 THEN 1 ELSE 0 END) AS sudah_dipecah,
+            COUNT(*) AS total
+        ', false);
+        $this->db->from('tbso_faktur_penjualan f');
+        $this->db->join('tbso_sales_order so', 'so.id_so = f.id_so', 'left');
+        $this->db->where('f.parent_id_faktur IS NULL', null, false);
+        $this->db->group_start();
+        $this->db->like('f.no_faktur', 'Z', 'after');
+        $this->db->or_where('so.is_faktur_z', 1);
+        $this->db->group_end();
+
+        if (!empty($filter['date1'])) {
+            $this->db->where('f.tanggal_faktur >=', $filter['date1']);
+        }
+        if (!empty($filter['date2'])) {
+            $this->db->where('f.tanggal_faktur <=', $filter['date2']);
+        }
+        if (!empty($filter['create_by'])) {
+            $this->db->where('f.create_by', $filter['create_by']);
+        }
+
+        $rowZ = $this->db->get()->row_array();
+        if ($rowZ) {
+            $stat['belum_dipecah'] = (int)($rowZ['belum_dipecah'] ?? 0);
+            $stat['sudah_dipecah'] = (int)($rowZ['sudah_dipecah'] ?? 0);
+            $stat['total']         = (int)($rowZ['total'] ?? 0);
+        }
+
+        // Hitung Faktur Pecahan H
+        $this->db->from('tbso_faktur_z_pecah p');
+        if (!empty($filter['date1'])) {
+            $this->db->where('p.tanggal_faktur >=', $filter['date1']);
+        }
+        if (!empty($filter['date2'])) {
+            $this->db->where('p.tanggal_faktur <=', $filter['date2']);
+        }
+        if (!empty($filter['create_by'])) {
+            $this->db->where('p.create_by', $filter['create_by']);
+        }
+        $stat['turunan'] = (int)$this->db->count_all_results();
+
+        return $stat;
+    }
+
     public function get_faktur_z_list($filter = [])
     {
         $detail_summary = "
@@ -3833,28 +3893,34 @@ class M_SalesOrder extends CI_Model
 
     public function get_all_faktur_pecah_h($filter = [])
     {
-        $this->ensure_faktur_z_pecah_tables();
-        $this->ensure_customer_acak_table();
-        if ($this->db->table_exists('tbkeu_pembayaran_faktur')) {
-            $this->load->model('M_Journal');
-            $this->M_Journal->sync_status_bayar_faktur_h_by_induk();
-        }
+        // Optimasi: hindari OR pada LEFT JOIN tb_customer agar index kd_customer terpakai
+        $detail_sub = "
+            SELECT
+                id_pecah,
+                COALESCE(SUM(qty), 0) AS total_qty,
+                COALESCE(SUM(total_harga), 0) AS grand_total,
+                COUNT(id) AS total_barang
+            FROM tbso_faktur_z_pecah_detail
+            GROUP BY id_pecah
+        ";
+
         $this->db->select('p.*, 
             COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
             COALESCE(fp.tanggal_jatuh_tempo, p.tanggal_jatuh_tempo) AS tanggal_jatuh_tempo,
-            COALESCE(MAX(ca.kontak_person), MAX(c.nama_customer)) AS nama_customer, 
-            COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
-            MAX(ca.nama_toko) AS nama_toko, 
-            MAX(ca.kota) AS customer_kota,
-            MAX(c.kd_rute) AS customer_kd_rute,
-            COALESCE(SUM(pd.qty), 0) AS total_qty,
-            COALESCE(SUM(pd.total_harga), 0) AS grand_total,
-            COUNT(pd.id) AS total_barang');
+            COALESCE(ca.kontak_person, c1.nama_customer, c2.nama_customer) AS nama_customer, 
+            COALESCE(ca.kontak_person, "") AS kontak_person,
+            ca.nama_toko AS nama_toko, 
+            ca.kota AS customer_kota,
+            COALESCE(c1.kd_rute, c2.kd_rute) AS customer_kd_rute,
+            COALESCE(pd.total_qty, 0) AS total_qty,
+            COALESCE(pd.grand_total, 0) AS grand_total,
+            COALESCE(pd.total_barang, 0) AS total_barang', false);
         $this->db->from('tbso_faktur_z_pecah p');
         $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
         $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
-        $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
-        $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+        $this->db->join('tb_customer c1', 'c1.kd_customer = p.kd_customer', 'left');
+        $this->db->join('tb_customer c2', 'c2.kd_customer = ca.kd_customer_induk', 'left');
+        $this->db->join('(' . $detail_sub . ') pd', 'pd.id_pecah = p.id_pecah', 'left');
         if (!empty($filter['date1'])) {
             $this->db->group_start();
             $this->db->where('p.tanggal_faktur >=', $filter['date1']);
@@ -3889,12 +3955,12 @@ class M_SalesOrder extends CI_Model
             $this->db->or_like('p.customer_name', $q);
             $this->db->or_like('ca.kontak_person', $q);
             $this->db->or_like('ca.nama_toko', $q);
-            $this->db->or_like('c.nama_customer', $q);
+            $this->db->or_like('c1.nama_customer', $q);
+            $this->db->or_like('c2.nama_customer', $q);
             $this->db->or_like('p.nomor_jurnal_q', $q);
             $this->db->or_like('p.nomor_jurnal_a', $q);
             $this->db->group_end();
         }
-        $this->db->group_by('p.id_pecah');
         $this->db->order_by('p.id_pecah', 'DESC');
         return $this->db->get()->result_array();
     }

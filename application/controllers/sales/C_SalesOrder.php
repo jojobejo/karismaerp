@@ -2357,8 +2357,11 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $this->_ensureFakturStatusEnum();
-        $this->_ensureFakturPaymentInfoColumns();
+        // Tentukan tab aktif agar hanya memuat 1 jenis data per request (optimasi kecepatan)
+        $active_tab = $this->input->get('tab', true) ?: 'belum_dipecah';
+        if (!in_array($active_tab, ['belum_dipecah', 'sudah_dipecah', 'hasil_pecah'], true)) {
+            $active_tab = 'belum_dipecah';
+        }
 
         $filter = [
             'date1'         => $this->input->post('date1') ?: $this->input->get('date1', true),
@@ -2372,83 +2375,79 @@ class C_SalesOrder extends CI_Controller
             $filter['create_by'] = $this->_getUsername();
         }
 
-        $fakturs = $this->M_SalesOrder->get_faktur_z_list($filter);
-        $fakturs_h = $this->M_SalesOrder->get_all_faktur_pecah_h($filter);
+        // Hitung statistik ringkasan secara ringan tanpa menarik seluruh baris detail
+        $stat = $this->M_SalesOrder->get_faktur_z_stats($filter);
 
-        // Ringkasan statistik untuk widget
-        $stat = [
-            'total'          => count($fakturs),
-            'belum_dipecah'  => 0,
-            'sudah_dipecah'  => 0,
-            'turunan'        => count($fakturs_h),
-            'total_nilai'    => 0,
-        ];
-
-        // Pisahkan Faktur Z belum dipecah vs sudah dipecah
+        $fakturs = [];
+        $fakturs_h = [];
         $fakturs_belum_dipecah = [];
         $fakturs_sudah_dipecah = [];
-
-        // Kelompokkan Faktur Z berdasarkan Nama Kios
         $kios_grouped = [];
-        foreach ($fakturs as $f) {
-            $stat['total_nilai'] += (float)($f['grand_total'] ?? 0);
-            if ($f['tipe_faktur'] === 'belum_dipecah') {
-                $stat['belum_dipecah']++;
-                $fakturs_belum_dipecah[] = $f;
-            } else {
-                $stat['sudah_dipecah']++;
-                $fakturs_sudah_dipecah[] = $f;
-            }
-
-            // Penentuan nama kios
-            $kios_name = !empty($f['nama_kios']) ? trim($f['nama_kios']) : (!empty($f['display_customer_name']) ? trim($f['display_customer_name']) : (!empty($f['customer_name']) ? trim($f['customer_name']) : 'Tanpa Kios'));
-            if (!isset($kios_grouped[$kios_name])) {
-                $kios_grouped[$kios_name] = [
-                    'nama_kios'          => $kios_name,
-                    'kd_customer'        => $f['kd_customer'] ?? '-',
-                    'nama_customer'      => $f['display_customer_name'] ?? $f['customer_name'] ?? '-',
-                    'kd_rute'            => $f['customer_kd_rute'] ?? $f['so_kd_rute'] ?? '',
-                    'total_faktur'       => 0,
-                    'total_nilai'        => 0,
-                    'total_qty'          => 0,
-                    'total_barang'       => 0,
-                    'belum_dipecah'      => 0,
-                    'sudah_dipecah'      => 0,
-                    'total_nilai_belum'  => 0,
-                    'total_qty_belum'    => 0,
-                    'total_barang_belum' => 0,
-                    'fakturs'            => []
-                ];
-            }
-
-            $kios_grouped[$kios_name]['total_faktur']++;
-            $kios_grouped[$kios_name]['total_nilai'] += (float)($f['grand_total'] ?? 0);
-            $kios_grouped[$kios_name]['total_qty']   += (float)($f['total_qty'] ?? 0);
-            $kios_grouped[$kios_name]['total_barang']+= (int)($f['total_barang'] ?? 0);
-            if ($f['tipe_faktur'] === 'belum_dipecah') {
-                $kios_grouped[$kios_name]['belum_dipecah']++;
-                $kios_grouped[$kios_name]['total_nilai_belum']  += (float)($f['grand_total'] ?? 0);
-                $kios_grouped[$kios_name]['total_qty_belum']    += (float)($f['total_qty'] ?? 0);
-                $kios_grouped[$kios_name]['total_barang_belum'] += (int)($f['total_barang'] ?? 0);
-            } else {
-                $kios_grouped[$kios_name]['sudah_dipecah']++;
-            }
-            $kios_grouped[$kios_name]['fakturs'][] = $f;
-        }
-
-        // Filter kios yang masih memiliki Faktur Z belum dipecah
         $kios_grouped_belum = [];
-        foreach ($kios_grouped as $kn => $kg) {
-            if ($kg['belum_dipecah'] > 0) {
-                $kios_grouped_belum[$kn] = $kg;
-            }
-        }
 
-        // Urutkan grup kios berdasarkan nama kios secara alfabetis
-        ksort($kios_grouped, SORT_NATURAL | SORT_FLAG_CASE);
-        ksort($kios_grouped_belum, SORT_NATURAL | SORT_FLAG_CASE);
+        if ($active_tab === 'hasil_pecah') {
+            $fakturs_h = $this->M_SalesOrder->get_all_faktur_pecah_h($filter);
+        } else {
+            $query_filter = $filter;
+            $query_filter['status_pecah'] = $active_tab;
+            $fakturs = $this->M_SalesOrder->get_faktur_z_list($query_filter);
+
+            foreach ($fakturs as $f) {
+                if ($f['tipe_faktur'] === 'belum_dipecah') {
+                    $fakturs_belum_dipecah[] = $f;
+                } else {
+                    $fakturs_sudah_dipecah[] = $f;
+                }
+
+                // Penentuan nama kios
+                $kios_name = !empty($f['nama_kios']) ? trim($f['nama_kios']) : (!empty($f['display_customer_name']) ? trim($f['display_customer_name']) : (!empty($f['customer_name']) ? trim($f['customer_name']) : 'Tanpa Kios'));
+                if (!isset($kios_grouped[$kios_name])) {
+                    $kios_grouped[$kios_name] = [
+                        'nama_kios'          => $kios_name,
+                        'kd_customer'        => $f['kd_customer'] ?? '-',
+                        'nama_customer'      => $f['display_customer_name'] ?? $f['customer_name'] ?? '-',
+                        'kd_rute'            => $f['customer_kd_rute'] ?? $f['so_kd_rute'] ?? '',
+                        'total_faktur'       => 0,
+                        'total_nilai'        => 0,
+                        'total_qty'          => 0,
+                        'total_barang'       => 0,
+                        'belum_dipecah'      => 0,
+                        'sudah_dipecah'      => 0,
+                        'total_nilai_belum'  => 0,
+                        'total_qty_belum'    => 0,
+                        'total_barang_belum' => 0,
+                        'fakturs'            => []
+                    ];
+                }
+
+                $kios_grouped[$kios_name]['total_faktur']++;
+                $kios_grouped[$kios_name]['total_nilai'] += (float)($f['grand_total'] ?? 0);
+                $kios_grouped[$kios_name]['total_qty']   += (float)($f['total_qty'] ?? 0);
+                $kios_grouped[$kios_name]['total_barang']+= (int)($f['total_barang'] ?? 0);
+                if ($f['tipe_faktur'] === 'belum_dipecah') {
+                    $kios_grouped[$kios_name]['belum_dipecah']++;
+                    $kios_grouped[$kios_name]['total_nilai_belum']  += (float)($f['grand_total'] ?? 0);
+                    $kios_grouped[$kios_name]['total_qty_belum']    += (float)($f['total_qty'] ?? 0);
+                    $kios_grouped[$kios_name]['total_barang_belum'] += (int)($f['total_barang'] ?? 0);
+                } else {
+                    $kios_grouped[$kios_name]['sudah_dipecah']++;
+                }
+                $kios_grouped[$kios_name]['fakturs'][] = $f;
+            }
+
+            if ($active_tab === 'belum_dipecah') {
+                foreach ($kios_grouped as $kn => $kg) {
+                    if ($kg['belum_dipecah'] > 0) {
+                        $kios_grouped_belum[$kn] = $kg;
+                    }
+                }
+                ksort($kios_grouped_belum, SORT_NATURAL | SORT_FLAG_CASE);
+            }
+            ksort($kios_grouped, SORT_NATURAL | SORT_FLAG_CASE);
+        }
 
         $data['page_title']            = 'KARISMA - Modul Pecah Faktur Z';
+        $data['active_tab']            = $active_tab;
         $data['fakturs']               = $fakturs;
         $data['fakturs_belum_dipecah'] = $fakturs_belum_dipecah;
         $data['fakturs_sudah_dipecah'] = $fakturs_sudah_dipecah;
