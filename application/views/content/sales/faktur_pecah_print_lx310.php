@@ -217,7 +217,7 @@
         .frx-memo32-nofaktur {
             position: absolute;
             left: 161.66mm;
-            top: 5.56mm;
+            top: 4.56mm; /* Disesuaikan naik 1mm dari posisi awal 5.56mm */
             width: 43.75mm;
             height: 7.14mm;
             font-family: "Trebuchet MS", Arial, sans-serif;
@@ -235,6 +235,7 @@
             position: relative;
             width: 209mm;
             height: 21.17mm;
+            margin-top: 2.00mm; /* Digeser turun total 2mm */
             font-family: "Arial Unicode MS", Arial, sans-serif;
             font-size: 11.25pt;
             font-weight: normal;
@@ -459,7 +460,7 @@
             left: 0;
             bottom: 0;
             width: 209mm;
-            height: 36.78mm;
+            height: 34.78mm; /* Diturunkan total 2mm dari 36.78mm agar sejajar dengan pergeseran konten di atasnya */
             font-family: "Arial Unicode MS", Arial, sans-serif;
             font-size: 11.25pt;
             font-weight: normal;
@@ -606,13 +607,13 @@
          */
         @page {
             size: 210mm 140mm landscape;
-            margin: 12mm 1mm 0mm 0mm;
+            margin: 7mm 1mm 0mm 0mm;
         }
 
         @media print {
             @page {
                 size: 210mm 140mm landscape;
-                margin: 12mm 1mm 0mm 0mm;
+                margin: 7mm 1mm 0mm 0mm;
             }
 
             html, body {
@@ -637,10 +638,11 @@
                 border: none !important;
                 box-shadow: none !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                /* Tambahan 5mm diletakkan di padding-top konten agar tetap tercetak oleh driver LX-310 (total 7mm + 5mm = 12mm) */
+                padding: 5mm 0 0 0 !important;
                 width: 209mm !important;
-                height: 128mm !important;
-                max-height: 128mm !important;
+                height: 133mm !important;
+                max-height: 133mm !important;
                 page-break-after: always !important;
                 break-after: page !important;
             }
