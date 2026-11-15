@@ -200,48 +200,159 @@ class M_ApprovalNotification extends CI_Model
     }
 
     /**
-     * 4. Retur Penjualan / SPR (khusus role Kadep UB / Koordinator / Admin)
+     * 4. Retur Penjualan / SPR & Dokumen Retur (semua role approval sesuai C_ReturPenjualan)
      */
     private function _get_retur_penjualan_pending($user)
     {
         $items = [];
-        if (!$this->db->table_exists('tbrp_spr_header')) {
-            return $items;
-        }
-
         $jobdesk = strtoupper(trim((string)($user['jobdesk'] ?? '')));
         $lv = (int)($user['lv'] ?? 1);
+        $isSuper = ($lv >= 99 || in_array($jobdesk, ['ADMIN', 'SUPER ADMIN', 'SUPERADMIN'], true));
 
-        $statuses = [];
-        if ($lv >= 99 || in_array($jobdesk, ['ADMIN', 'KADEPUB', 'KEPALA UNIT BISNIS', 'KADEP_UB'])) {
-            $statuses = ['menunggu_kadepub', 'diajukan'];
-        } elseif (in_array($jobdesk, ['KOORDINATOR', 'KOOR'])) {
-            $statuses = ['diajukan'];
-        }
-
-        if (empty($statuses)) {
-            return $items;
-        }
-
-        $this->db->select('id_spr, no_spr, tanggal, nama_customer, create_by, status, create_at');
-        $this->db->from('tbrp_spr_header');
-        $this->db->where_in('status', $statuses);
-        $this->db->order_by('id_spr', 'DESC');
-        $this->db->limit(15);
-        $rows = $this->db->get()->result_array();
-
-        foreach ($rows as $row) {
-            $items[] = [
-                'category'    => 'Retur Penjualan',
-                'badge_class' => 'badge-info',
-                'icon'        => 'fas fa-undo-alt text-info',
-                'title'       => 'Pengajuan SPR ' . ($row['no_spr'] ?: ('#' . $row['id_spr'])),
-                'subtitle'    => ($row['create_by'] ?: 'Sales') . ' · ' . ($row['nama_customer'] ?: '-'),
-                'detail'      => 'Status: ' . str_replace('_', ' ', strtoupper($row['status'])),
-                'url'         => base_url('sales/C_ReturPenjualan'),
-                'datetime'    => $row['create_at'] ?: ($row['tanggal'] . ' 00:00:00'),
-                'time_label'  => !empty($row['tanggal']) ? date('d M Y', strtotime($row['tanggal'])) : '-',
+        // 4A. Pending SPR (tbrp_spr_header)
+        if ($this->db->table_exists('tbrp_spr_header')) {
+            $sprRules = [
+                'diajukan' => [
+                    'roles' => ['KOORDINATOR', 'KOOR', 'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER'],
+                    'label' => 'Persetujuan SPR (Manager SC)',
+                    'url'   => 'retur_penjualan/mngsc/verifikasi/',
+                ],
+                'menunggu_kadepub' => [
+                    'roles' => ['KADEPUB', 'KEPALA UNIT BISNIS', 'KADEP_UB', 'MT ABM SEED JATIM TIMUR'],
+                    'label' => 'Persetujuan SPR Jagung (Kadep UB)',
+                    'url'   => 'retur_penjualan/kadepub/verifikasi/',
+                ],
+                'diverifikasi_koor' => [
+                    'roles' => ['ADMIN STOCK', 'ADMSTOCK'],
+                    'label' => 'Pengecekan SPR (Admin Stock)',
+                    'url'   => 'retur_penjualan/admretur/cek/',
+                ],
+                'dicek_admretur' => [
+                    'roles' => ['KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES'],
+                    'label' => 'Persetujuan SPR (Kadep SC)',
+                    'url'   => 'retur_penjualan/kadep_sc/approve/',
+                ],
+                'disetujui_kadep' => [
+                    'roles' => ['LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'MT ADMIN LOGISTIK', 'ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'],
+                    'label' => 'Proses SPR menjadi Retur (Logistik)',
+                    'url'   => 'retur_penjualan/retur/buat/',
+                ],
             ];
+
+            $sprStatuses = [];
+            foreach ($sprRules as $st => $rule) {
+                if ($isSuper || in_array($jobdesk, $rule['roles'], true)) {
+                    $sprStatuses[] = $st;
+                }
+            }
+
+            if (!empty($sprStatuses)) {
+                $this->db->select('id_spr, no_spr, tanggal, nama_customer, create_by, status, create_at');
+                $this->db->from('tbrp_spr_header');
+                $this->db->where_in('status', $sprStatuses);
+                $this->db->order_by('id_spr', 'DESC');
+                $this->db->limit(15);
+                $rows = $this->db->get()->result_array();
+
+                foreach ($rows as $row) {
+                    $st = $row['status'];
+                    $rule = $sprRules[$st] ?? null;
+                    $items[] = [
+                        'category'    => 'Retur Penjualan',
+                        'badge_class' => 'badge-info',
+                        'icon'        => 'fas fa-undo-alt text-info',
+                        'title'       => ($rule ? $rule['label'] : 'Pengajuan SPR') . ' · ' . ($row['no_spr'] ?: ('#' . $row['id_spr'])),
+                        'subtitle'    => ($row['create_by'] ?: 'Sales') . ' · ' . ($row['nama_customer'] ?: '-'),
+                        'detail'      => 'Status: ' . str_replace('_', ' ', strtoupper($st)),
+                        'url'         => base_url(($rule ? $rule['url'] : 'retur_penjualan/detail/') . $row['id_spr']),
+                        'datetime'    => $row['create_at'] ?: ($row['tanggal'] . ' 00:00:00'),
+                        'time_label'  => !empty($row['tanggal']) ? date('d M Y', strtotime($row['tanggal'])) : '-',
+                    ];
+                }
+            }
+        }
+
+        // 4B. Pending Retur Penjualan (tbrp_retur_penjualan_header)
+        if ($this->db->table_exists('tbrp_retur_penjualan_header')) {
+            $returRules = [
+                'menunggu_verifikasi' => [
+                    'roles' => ['ADMRETUR', 'ADMIN PRICELIST & RETUR PENJUALAN'],
+                    'label' => 'Verifikasi Retur (Admin Retur)',
+                    'url'   => 'retur_penjualan/retur/verifikasi/',
+                ],
+                'menunggu_collection' => [
+                    'roles' => ['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION'],
+                    'label' => 'Proses Retur (Collection)',
+                    'url'   => 'retur_penjualan/retur/collection/',
+                ],
+                'menunggu_kasir' => [
+                    'roles' => ['KASIR'],
+                    'label' => 'Penyelesaian Retur (Kasir)',
+                    'url'   => 'retur_penjualan/retur/kasir/',
+                ],
+                'retur_menunggu_kadepub' => [
+                    'roles' => ['KADEPUB', 'KEPALA UNIT BISNIS', 'KADEP_UB', 'MT ABM SEED JATIM TIMUR'],
+                    'label' => 'Approval Retur (Kadep UB)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+                'retur_menunggu_mngacc' => [
+                    'roles' => ['MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC'],
+                    'label' => 'Approval Retur (Manager Account)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+                'retur_menunggu_mngsc' => [
+                    'roles' => ['KOORDINATOR', 'KOOR', 'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER'],
+                    'label' => 'Approval Retur (Manager SC)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+                'retur_menunggu_mngse' => [
+                    'roles' => ['MANAGERSE', 'MANAGER SALES EXECUTIVE'],
+                    'label' => 'Approval Retur (Manager SE)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+                'retur_menunggu_kadepsc' => [
+                    'roles' => ['KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES'],
+                    'label' => 'Approval Retur (Kadep SC)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+                'retur_menunggu_dirop' => [
+                    'roles' => ['DIREKTUROP', 'MT DIREKTUR OPERASIONAL'],
+                    'label' => 'Approval Retur (Direktur Operasional)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
+            ];
+
+            $returStatuses = [];
+            foreach ($returRules as $st => $rule) {
+                if ($isSuper || in_array($jobdesk, $rule['roles'], true)) {
+                    $returStatuses[] = $st;
+                }
+            }
+
+            if (!empty($returStatuses)) {
+                $this->db->select('id_retur, no_retur, tanggal_retur, nama_customer, create_by_retur, status_retur, create_at_retur');
+                $this->db->from('tbrp_retur_penjualan_header');
+                $this->db->where_in('status_retur', $returStatuses);
+                $this->db->order_by('id_retur', 'DESC');
+                $this->db->limit(15);
+                $rows = $this->db->get()->result_array();
+
+                foreach ($rows as $row) {
+                    $st = $row['status_retur'];
+                    $rule = $returRules[$st] ?? null;
+                    $items[] = [
+                        'category'    => 'Retur Penjualan',
+                        'badge_class' => 'badge-warning',
+                        'icon'        => 'fas fa-file-invoice text-warning',
+                        'title'       => ($rule ? $rule['label'] : 'Approval Retur') . ' · ' . ($row['no_retur'] ?: ('#' . $row['id_retur'])),
+                        'subtitle'    => ($row['create_by_retur'] ?: 'User') . ' · ' . ($row['nama_customer'] ?: '-'),
+                        'detail'      => 'Status: ' . str_replace('_', ' ', strtoupper($st)),
+                        'url'         => base_url(($rule ? $rule['url'] : 'retur_penjualan/retur/detail/') . $row['id_retur']),
+                        'datetime'    => $row['create_at_retur'] ?: ($row['tanggal_retur'] . ' 00:00:00'),
+                        'time_label'  => !empty($row['tanggal_retur']) ? date('d M Y', strtotime($row['tanggal_retur'])) : '-',
+                    ];
+                }
+            }
         }
 
         return $items;

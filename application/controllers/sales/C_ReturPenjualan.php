@@ -39,7 +39,7 @@ class C_ReturPenjualan extends CI_Controller
             'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
             'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
             'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER',
-            'ADMRETUR', 'ADMSTOCK', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN',
+            'ADMRETUR', 'ADMSTOCK', 'ADMIN STOCK', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN',
             'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
             'KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR',
             'ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH',
@@ -101,15 +101,16 @@ class C_ReturPenjualan extends CI_Controller
     }
 
     /** Admin Retur */
+    /** Admin Retur (Dewi) — Verifikasi Retur setelah Admin LPB */
     private function _isAdminStock()
     {
         return $this->_isJobdesk(['ADMRETUR', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
     }
 
-    /** Admin Penjualan */
+    /** Admin Stock (Nila / Arfenila) — Cek SPR setelah Manager SC */
     private function _isAdmstock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN STOCK', 'ADMIN']);
     }
 
     /** Kepala Departemen SC / Keuangan & Sales */
@@ -2103,18 +2104,21 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 2. Admin Retur / Admin Penjualan
-        if ($this->_isAdminStock() || $this->_isAdmstock()) {
+        // 2. Admin Stock (Nila) — Cek SPR setelah Manager SC
+        if ($this->_isAdmstock()) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diverifikasi_koor'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
                     'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
-                    'title' => 'Pengecekan SPR (Admin Retur)',
+                    'title' => 'Pengecekan SPR (Admin Stock)',
                     'body' => 'SPR ' . $s['no_spr'] . ' menunggu pengecekan Anda.',
                     'url' => base_url('retur_penjualan/admretur/cek/' . $s['id_spr'])
                 ];
             }
-            
+        }
+
+        // 2.5. Admin Retur (Dewi) — Verifikasi Retur setelah Admin LPB
+        if ($this->_isAdminStock()) {
             $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'menunggu_verifikasi'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
