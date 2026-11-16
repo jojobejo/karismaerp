@@ -196,14 +196,7 @@ class C_Konsinyasi extends CI_Controller
             return;
         }
 
-        if ($noInvoice === '') {
-            $this->output
-                ->set_content_type('application/json')
-                ->set_output(json_encode(['status' => false, 'message' => 'Nomor Faktur / Invoice Supplier wajib diisi.']));
-            return;
-        }
-
-        if ($tglInvoice === '') {
+        if ($noInvoice !== '' && $tglInvoice === '') {
             $tglInvoice = date('Y-m-d');
         }
 

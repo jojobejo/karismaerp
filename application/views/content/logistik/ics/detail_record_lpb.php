@@ -468,13 +468,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                     <div class="d-flex align-items-center flex-wrap lpb-workflow-actions" id="lpbWorkflowActions" style="gap:8px; display:none;">
                                         <?php if (!$showLpbListPanel) : ?>
                                         <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
-                                            <i class="fas fa-file-invoice mr-1"></i> Update Invoice
-                                        </button>
-                                        <button type="button" class="btn btn-warning btn-sm" id="btnSplitInvoice">
-                                            <i class="fas fa-code-branch mr-1"></i> Pecah Invoice
-                                        </button>
-                                        <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
-                                            <i class="fas fa-receipt mr-1"></i> Update Faktur
+                                            <i class="fas fa-file-invoice mr-1"></i> Update Invoice &amp; Faktur Pajak
                                         </button>
                                         <button type="button" class="btn btn-info btn-sm" id="btnToggleLpbLog" title="Tampilkan log aktivitas detail PO">
                                             <i class="fas fa-eye"></i>
@@ -695,7 +689,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
         <div class="modal-dialog" role="document">
             <form id="formUpdateInvoice" class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalUpdateInvoiceLabel">Update Invoice</h5>
+                    <h5 class="modal-title" id="modalUpdateInvoiceLabel">Update Invoice &amp; Faktur Pajak</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -706,15 +700,24 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         <label>No Invoice</label>
                         <input type="text" class="form-control" id="invoiceNo" name="no_invoice" required>
                     </div>
-                    <div class="form-group mb-0">
+                    <div class="form-group">
                         <label>Tanggal Terbit Invoice</label>
                         <input type="date" class="form-control" id="invoiceTanggalTerbit" name="tanggal_invoice" required>
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <label>Kode Faktur Pajak</label>
+                        <input type="text" class="form-control" id="invoiceKodePajak" name="kode_faktur_pajak" placeholder="Opsional jika belum ada faktur pajak">
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Tanggal Terbit Faktur Pajak</label>
+                        <input type="date" class="form-control" id="invoiceTanggalFaktur" name="tanggal_faktur_pajak">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmitInvoice">
-                        <i class="fas fa-save mr-1"></i> Simpan Invoice
+                        <i class="fas fa-save mr-1"></i> Simpan Invoice &amp; Faktur
                     </button>
                 </div>
             </form>
@@ -820,16 +823,13 @@ $isAdmlpbUser = !empty($is_admlpb_user);
         <div class="modal-dialog modal-xl" role="document">
             <form id="formSplitInvoice" class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalSplitInvoiceLabel">Pecah LPB Multiple Invoice</h5>
+                    <h5 class="modal-title" id="modalSplitInvoiceLabel">Update Faktur Pajak &amp; Invoice</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="splitInvoiceIdLpb" name="id_lpb">
-                    <div class="alert alert-info">
-                        Invoice pertama tetap memakai LPB yang dipilih. Invoice berikutnya dibuat sebagai LPB baru dengan nomor LPB yang sama.
-                    </div>
                     <div class="d-flex justify-content-between align-items-center flex-wrap mb-2" style="gap:8px;">
                         <h6 class="font-weight-bold mb-0">Daftar Invoice</h6>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSplitInvoice">
@@ -849,7 +849,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-warning" id="btnSubmitSplitInvoice">
-                        <i class="fas fa-save mr-1"></i> Simpan Split Invoice
+                        <i class="fas fa-save mr-1"></i> Simpan Faktur Pajak &amp; Invoice
                     </button>
                 </div>
             </form>
@@ -1071,6 +1071,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
             var scopedIdLpb = selectedIdLpb;
             var selectedHeader = null;
             var selectedDetailRows = [];
+            var selectedSplitInvoices = [];
             var selectedPurchasingRows = [];
             var selectedActivityLogs = [];
             var detailViewMode = 'lpb';
@@ -1492,6 +1493,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 selectedIdLpb = 0;
                 selectedHeader = null;
                 selectedDetailRows = [];
+                selectedSplitInvoices = [];
                 selectedActivityLogs = [];
                 detailViewMode = 'lpb';
                 purchasingEditMode = false;
@@ -1655,14 +1657,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 var isUnpost = isSelectedLpbUnpost();
                 $('#btnUpdateInvoice')
                     .prop('disabled', false)
-                    .attr('title', 'Update Invoice');
-                $('#btnSplitInvoice')
-                    .toggle(isUnpost)
-                    .prop('disabled', !isUnpost)
-                    .attr('title', isUnpost ? 'Pecah Invoice' : 'UNPOST LPB terlebih dahulu untuk pecah invoice');
-                $('#btnUpdateFaktur')
-                    .prop('disabled', false)
-                    .attr('title', 'Update Faktur');
+                    .attr('title', 'Update Invoice & Faktur Pajak');
 
                 if (!showLpbListPanel || detailViewMode !== 'lpb') {
                     $('#lpbPostActions').hide();
@@ -1874,6 +1869,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
 
                         selectedHeader = res.header || {};
                         selectedDetailRows = res.rows || [];
+                        selectedSplitInvoices = res.split_invoices || [];
                         selectedActivityLogs = res.logs || [];
                         showLpbDetailView();
                         renderActivityLogs(selectedActivityLogs);
@@ -2198,6 +2194,8 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 $('#invoiceIdLpb').val(activeId);
                 $('#invoiceNo').val(hasInvoice(activeHeader.no_invoice) ? activeHeader.no_invoice : '');
                 $('#invoiceTanggalTerbit').val(activeHeader.tanggal_invoice || '');
+                $('#invoiceKodePajak').val(hasInvoice(activeHeader.kode_faktur_pajak) ? activeHeader.kode_faktur_pajak : '');
+                $('#invoiceTanggalFaktur').val(activeHeader.tanggal_faktur_pajak || '');
                 $('#modalUpdateInvoice').modal('show');
             }
 
@@ -2221,8 +2219,12 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 var invoices = [];
                 $('#splitInvoiceRows .js-split-invoice-row').each(function() {
                     invoices.push({
+                        id_lpb_invoice: parseInt($(this).attr('data-invoice-id') || '0', 10) || 0,
+                        is_locked: $(this).attr('data-locked') === '1',
                         no_invoice: $(this).find('.js-split-no-invoice').val() || '',
-                        tanggal_invoice: $(this).find('.js-split-tanggal-invoice').val() || ''
+                        tanggal_invoice: $(this).find('.js-split-tanggal-invoice').val() || '',
+                        kode_faktur_pajak: $(this).find('.js-split-kode-faktur').val() || '',
+                        tanggal_faktur_pajak: $(this).find('.js-split-tanggal-faktur').val() || ''
                     });
                 });
 
@@ -2251,23 +2253,18 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 $.each(rows, function(_, row) {
                     var idDetail = parseInt(row.id_detail_lpb || 0, 10);
                     var qty = getSplitRowQty(row);
-                    var firstQty = qty / 2;
                     allocations[idDetail] = {
-                        0: formatInputNumber(firstQty),
-                        1: formatInputNumber(qty - firstQty)
+                        0: formatInputNumber(qty)
                     };
                 });
 
                 return {
                     invoices: [{
-                            no_invoice: hasInvoice((selectedHeader || {}).no_invoice) ? selectedHeader.no_invoice : '',
-                            tanggal_invoice: invoiceDate
-                        },
-                        {
-                            no_invoice: '',
-                            tanggal_invoice: invoiceDate
-                        }
-                    ],
+                        no_invoice: hasInvoice((selectedHeader || {}).no_invoice) ? selectedHeader.no_invoice : '',
+                        tanggal_invoice: invoiceDate,
+                        kode_faktur_pajak: hasInvoice((selectedHeader || {}).kode_faktur_pajak) ? selectedHeader.kode_faktur_pajak : '',
+                        tanggal_faktur_pajak: (selectedHeader || {}).tanggal_faktur_pajak || ''
+                    }],
                     allocations: allocations
                 };
             }
@@ -2277,23 +2274,34 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 wrap.empty();
 
                 $.each(state.invoices, function(index, invoice) {
-                    var removeButton = state.invoices.length > 2 ?
+                    var isLocked = !!invoice.is_locked;
+                    var readonlyAttr = isLocked ? ' readonly disabled tabindex="-1"' : '';
+                    var readonlyStyle = isLocked ? ' style="pointer-events: none; background-color: #e9ecef;"' : '';
+                    var removeButton = (!isLocked && state.invoices.length > 1) ?
                         '<button type="button" class="btn btn-outline-danger btn-sm js-remove-split-invoice" data-index="' + index + '" title="Hapus invoice"><i class="fas fa-trash"></i></button>' :
                         '';
                     wrap.append(
-                        '<div class="lpb-split-invoice-row js-split-invoice-row" data-index="' + index + '">' +
+                        '<div class="lpb-split-invoice-row js-split-invoice-row" data-index="' + index + '" data-invoice-id="' + escAttr(invoice.id_lpb_invoice || 0) + '" data-locked="' + (isLocked ? '1' : '0') + '">' +
                         '<div class="row align-items-end">' +
-                        '<div class="col-md-2">' +
+                        '<div class="col-md-1">' +
                         '<label>Invoice</label>' +
-                        '<div class="font-weight-bold">Invoice ' + (index + 1) + '</div>' +
+                        '<div class="font-weight-bold">#' + (index + 1) + '</div>' +
                         '</div>' +
-                        '<div class="col-md-5">' +
+                        '<div class="col-md-3">' +
                         '<label>No Invoice</label>' +
-                        '<input type="text" class="form-control js-split-no-invoice" value="' + escAttr(invoice.no_invoice || '') + '" required>' +
+                        '<input type="text" class="form-control js-split-no-invoice" value="' + escAttr(invoice.no_invoice || '') + '"' + readonlyAttr + readonlyStyle + ' required>' +
                         '</div>' +
-                        '<div class="col-md-4">' +
+                        '<div class="col-md-2">' +
                         '<label>Tanggal Invoice</label>' +
-                        '<input type="date" class="form-control js-split-tanggal-invoice" value="' + escAttr(invoice.tanggal_invoice || '') + '" required>' +
+                        '<input type="date" class="form-control js-split-tanggal-invoice" value="' + escAttr(invoice.tanggal_invoice || '') + '"' + readonlyAttr + readonlyStyle + ' required>' +
+                        '</div>' +
+                        '<div class="col-md-3">' +
+                        '<label>Kode Faktur Pajak</label>' +
+                        '<input type="text" class="form-control js-split-kode-faktur" value="' + escAttr(invoice.kode_faktur_pajak || '') + '" placeholder="Opsional"' + readonlyAttr + readonlyStyle + '>' +
+                        '</div>' +
+                        '<div class="col-md-2">' +
+                        '<label>Tgl Faktur Pajak</label>' +
+                        '<input type="date" class="form-control js-split-tanggal-faktur" value="' + escAttr(invoice.tanggal_faktur_pajak || '') + '"' + readonlyAttr + readonlyStyle + '>' +
                         '</div>' +
                         '<div class="col-md-1 text-right">' + removeButton + '</div>' +
                         '</div>' +
@@ -2335,11 +2343,14 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-right js-source-qty">' + escHtml(formatNumber(qty)) + '</td>';
 
-                    $.each(state.invoices, function(index) {
+                    $.each(state.invoices, function(index, invoice) {
+                        var isLocked = !!invoice.is_locked;
+                        var readonlyAttr = isLocked ? ' readonly disabled tabindex="-1"' : '';
+                        var readonlyStyle = isLocked ? ' style="pointer-events: none; background-color: #e9ecef;"' : '';
                         var value = state.allocations[idDetail] && state.allocations[idDetail][index] != null ?
                             state.allocations[idDetail][index] :
                             '0';
-                        rowHtml += '<td><input type="number" min="0" step="0.0001" class="form-control text-right js-split-qty" data-detail-id="' + idDetail + '" data-index="' + index + '" value="' + escAttr(value) + '"></td>';
+                        rowHtml += '<td><input type="number" min="0" step="0.0001" class="form-control text-right js-split-qty" data-detail-id="' + idDetail + '" data-index="' + index + '" value="' + escAttr(value) + '"' + readonlyAttr + readonlyStyle + '></td>';
                     });
 
                     rowHtml += '<td class="text-right js-split-diff">0</td></tr>';
@@ -2365,14 +2376,16 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 var defaultDate = state.invoices.length > 0 ? state.invoices[0].tanggal_invoice : new Date().toISOString().slice(0, 10);
                 state.invoices.push({
                     no_invoice: '',
-                    tanggal_invoice: defaultDate
+                    tanggal_invoice: defaultDate,
+                    kode_faktur_pajak: '',
+                    tanggal_faktur_pajak: ''
                 });
                 renderSplitInvoiceModal(state);
             }
 
             function removeSplitInvoiceRow(index) {
                 var state = readSplitState();
-                if (state.invoices.length <= 2) {
+                if (state.invoices.length <= 1) {
                     return;
                 }
 
@@ -2400,8 +2413,12 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     });
 
                     return {
+                        id_lpb_invoice: invoice.id_lpb_invoice || 0,
+                        is_locked: !!invoice.is_locked,
                         no_invoice: $.trim(invoice.no_invoice || ''),
                         tanggal_invoice: $.trim(invoice.tanggal_invoice || ''),
+                        kode_faktur_pajak: $.trim(invoice.kode_faktur_pajak || ''),
+                        tanggal_faktur_pajak: $.trim(invoice.tanggal_faktur_pajak || ''),
                         details: details
                     };
                 });
@@ -2420,11 +2437,15 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 if (!payload.id_lpb) {
                     errors.push('LPB belum dipilih.');
                 }
-                if (!payload.splits || payload.splits.length < 2) {
-                    errors.push('Minimal harus ada 2 invoice.');
+                if (!payload.splits || payload.splits.length < 1) {
+                    errors.push('Minimal harus ada 1 invoice.');
                 }
 
+                var hasUnlockedInvoice = false;
                 $.each(payload.splits || [], function(index, split) {
+                    if (!split.is_locked) {
+                        hasUnlockedInvoice = true;
+                    }
                     var invoice = $.trim(split.no_invoice || '');
                     var tanggal = $.trim(split.tanggal_invoice || '');
                     if (!invoice) {
@@ -2432,6 +2453,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     }
                     if (!tanggal) {
                         errors.push('Tanggal Invoice ' + (index + 1) + ' wajib diisi.');
+                    }
+                    if ($.trim(split.kode_faktur_pajak || '') && !$.trim(split.tanggal_faktur_pajak || '')) {
+                        errors.push('Tanggal Faktur Pajak ' + (index + 1) + ' wajib diisi jika kode faktur pajak diisi.');
                     }
                     var key = invoice.toUpperCase();
                     if (key && invoiceKeys[key]) {
@@ -2447,6 +2471,10 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     }
                 });
 
+                if (!hasUnlockedInvoice) {
+                    errors.push('Tambahkan invoice baru terlebih dahulu (invoice yang sudah disimpan tidak dapat diedit).');
+                }
+
                 $.each(getSplitSourceRows(), function(_, row) {
                     var idDetail = parseInt(row.id_detail_lpb || 0, 10);
                     var sourceQty = getSplitRowQty(row);
@@ -2458,8 +2486,8 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                             }
                         });
                     });
-                    if (Math.abs(allocatedQty - sourceQty) > 0.0001) {
-                        errors.push('Total qty split barang ' + (row.kd_barang || '-') + ' harus sama dengan qty LPB awal.');
+                    if (allocatedQty > sourceQty + 0.0001) {
+                        errors.push('Total qty alokasi barang ' + (row.kd_barang || '-') + ' tidak boleh melebihi qty LPB awal.');
                     }
                 });
 
@@ -2469,6 +2497,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
             function updateSplitInvoiceValidationInfo() {
                 var payload = collectSplitPayload();
                 var invoiceTotals = [];
+                var hasRemainingDiff = false;
                 $('#splitInvoiceAllocationTable .js-split-invoice-total').each(function() {
                     invoiceTotals[parseInt($(this).data('index'), 10) || 0] = 0;
                 });
@@ -2483,8 +2512,12 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         invoiceTotals[index] = (invoiceTotals[index] || 0) + qty;
                     });
                     var diff = sourceQty - rowTotal;
+                    if (Math.abs(diff) > 0.0001) {
+                        hasRemainingDiff = true;
+                    }
                     $(this).find('.js-split-diff')
-                        .toggleClass('text-danger font-weight-bold', Math.abs(diff) > 0.0001)
+                        .toggleClass('text-danger font-weight-bold', diff < -0.0001)
+                        .toggleClass('text-warning font-weight-bold', diff > 0.0001)
                         .text(formatNumber(diff));
                 });
 
@@ -2493,21 +2526,62 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 });
 
                 var errors = validateSplitPayload(payload);
+                var infoText = errors.length > 0
+                    ? errors[0]
+                    : (hasRemainingDiff ? 'Masih ada selisih qty yang belum dialokasikan ke invoice (tetap bisa disimpan).' : 'Total qty setiap barang sudah balance (selisih 0).');
                 $('#splitInvoiceValidationInfo')
                     .toggleClass('text-danger', errors.length > 0)
-                    .toggleClass('text-muted', errors.length === 0)
-                    .text(errors.length > 0 ? errors[0] : 'Total qty setiap barang sudah balance.');
+                    .toggleClass('text-warning', errors.length === 0 && hasRemainingDiff)
+                    .toggleClass('text-muted', errors.length === 0 && !hasRemainingDiff)
+                    .text(infoText);
                 return errors;
+            }
+
+            function buildSplitStateFromSaved(savedInvoices) {
+                var invoices = [];
+                var allocations = {};
+                var rows = getSplitSourceRows();
+
+                $.each(rows, function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb || 0, 10);
+                    allocations[idDetail] = {};
+                });
+
+                $.each(savedInvoices || [], function(idx, inv) {
+                    invoices.push({
+                        id_lpb_invoice: parseInt(inv.id_lpb_invoice || 0, 10) || 0,
+                        is_locked: true,
+                        no_invoice: inv.no_invoice || '',
+                        tanggal_invoice: inv.tanggal_invoice || new Date().toISOString().slice(0, 10),
+                        kode_faktur_pajak: inv.kode_faktur_pajak || '',
+                        tanggal_faktur_pajak: inv.tanggal_faktur_pajak || ''
+                    });
+                    $.each(inv.details || [], function(_, det) {
+                        var idDetail = parseInt(det.id_detail_lpb || 0, 10);
+                        if (!allocations[idDetail]) {
+                            allocations[idDetail] = {};
+                        }
+                        allocations[idDetail][idx] = formatInputNumber(parseFloat(det.qty_alokasi || 0) || 0);
+                    });
+                });
+
+                $.each(allocations, function(idDetail, map) {
+                    for (var i = 0; i < invoices.length; i++) {
+                        if (typeof map[i] === 'undefined') {
+                            map[i] = '0';
+                        }
+                    }
+                });
+
+                return {
+                    invoices: invoices,
+                    allocations: allocations
+                };
             }
 
             function openSplitInvoiceModal() {
                 if (!selectedIdLpb || !selectedHeader) {
                     Swal.fire('Validasi', 'Silakan pilih LPB yang ingin dipecah terlebih dahulu.', 'warning');
-                    return;
-                }
-
-                if (!isSelectedLpbUnpost()) {
-                    Swal.fire('Validasi', 'Pecah LPB hanya bisa dilakukan saat status UNPOST.', 'warning');
                     return;
                 }
 
@@ -2517,7 +2591,28 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 }
 
                 $('#splitInvoiceIdLpb').val(selectedIdLpb);
-                renderSplitInvoiceModal(buildDefaultSplitState());
+                var hasSaved = (selectedSplitInvoices && selectedSplitInvoices.length >= 1);
+                var initialState = hasSaved
+                    ? buildSplitStateFromSaved(selectedSplitInvoices)
+                    : buildDefaultSplitState();
+                renderSplitInvoiceModal(initialState);
+
+                var hasRemainingQty = false;
+                $('#splitInvoiceAllocationTable tbody tr[data-detail-id]').each(function() {
+                    var diffVal = parseFloat($(this).find('.js-split-diff').text()) || 0;
+                    if (diffVal > 0.0001) {
+                        hasRemainingQty = true;
+                    }
+                });
+                var allLockedAndComplete = hasSaved && !hasRemainingQty;
+                $('#btnAddSplitInvoice').toggle(!allLockedAndComplete);
+                $('#btnSubmitSplitInvoice').toggle(!allLockedAndComplete);
+                if (allLockedAndComplete) {
+                    $('#splitInvoiceValidationInfo')
+                        .removeClass('text-danger text-warning')
+                        .addClass('text-muted')
+                        .text('Seluruh invoice & faktur pajak sudah tersimpan dan terkunci (tidak dapat diedit).');
+                }
                 $('#modalSplitInvoice').modal('show');
             }
 
@@ -2891,11 +2986,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
             });
 
             $('#btnUpdateInvoice').on('click', function() {
-                openUpdateInvoiceModal();
-            });
-
-            $('#btnUpdateFaktur').on('click', function() {
-                openUpdateFakturModal();
+                openSplitInvoiceModal();
             });
 
             $('#btnUpdateJenisPo').on('click', function() {
@@ -3050,7 +3141,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     data: {
                         id_lpb: $('#invoiceIdLpb').val(),
                         no_invoice: $('#invoiceNo').val(),
-                        tanggal_invoice: $('#invoiceTanggalTerbit').val()
+                        tanggal_invoice: $('#invoiceTanggalTerbit').val(),
+                        kode_faktur_pajak: $('#invoiceKodePajak').val(),
+                        tanggal_faktur_pajak: $('#invoiceTanggalFaktur').val()
                     },
                     success: function(res) {
                         if (res.status !== 'success') {

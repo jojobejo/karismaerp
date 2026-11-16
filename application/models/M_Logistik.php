@@ -4380,7 +4380,13 @@ FROM (
                 $row['lpb_active_journal_count'] = 0;
                 $row['_sales_samples'] = [];
                 $row['_journal_samples'] = [];
+                $row['_lpb_ids'] = [];
                 $grouped[$key] = $row;
+            }
+
+            $rowIdLpb = (int) ($row['id_lpb'] ?? 0);
+            if ($rowIdLpb > 0) {
+                $grouped[$key]['_lpb_ids'][$rowIdLpb] = $rowIdLpb;
             }
 
             $invoice = trim((string) ($row['no_invoice'] ?? ''));
@@ -4423,6 +4429,49 @@ FROM (
             }
         }
 
+        $allLpbIds = [];
+        foreach ($grouped as $gRow) {
+            foreach (($gRow['_lpb_ids'] ?? []) as $lid) {
+                $allLpbIds[$lid] = $lid;
+            }
+        }
+
+        // Hitung total qty LPB serta total qty yang sudah dialokasikan ke invoice & faktur pajak
+        $lpbQtyMap = [];
+        $invAlokasiMap = [];
+        $fpAlokasiMap = [];
+        $hasInvSplitMap = [];
+
+        if (!empty($allLpbIds)) {
+            $idList = array_values($allLpbIds);
+            $qtyRows = $this->db
+                ->select('id_lpb, COALESCE(SUM(qty_diterima), 0) AS total_qty', false)
+                ->where_in('id_lpb', $idList)
+                ->group_by('id_lpb')
+                ->get('tb_lpb_detail')
+                ->result_array();
+            foreach ($qtyRows as $qr) {
+                $lpbQtyMap[(int) $qr['id_lpb']] = (float) $qr['total_qty'];
+            }
+
+            if ($this->db->table_exists('tb_lpb_invoice') && $this->db->table_exists('tb_lpb_invoice_detail')) {
+                $splitRows = $this->db
+                    ->select("inv.id_lpb, COALESCE(SUM(det.qty_alokasi), 0) AS total_inv_qty, COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(inv.kode_faktur_pajak), ''), '-') != '-' THEN det.qty_alokasi ELSE 0 END), 0) AS total_fp_qty", false)
+                    ->from('tb_lpb_invoice inv')
+                    ->join('tb_lpb_invoice_detail det', 'det.id_lpb_invoice = inv.id_lpb_invoice', 'left')
+                    ->where_in('inv.id_lpb', $idList)
+                    ->group_by('inv.id_lpb')
+                    ->get()
+                    ->result_array();
+                foreach ($splitRows as $sr) {
+                    $lid = (int) $sr['id_lpb'];
+                    $hasInvSplitMap[$lid] = TRUE;
+                    $invAlokasiMap[$lid] = (float) $sr['total_inv_qty'];
+                    $fpAlokasiMap[$lid] = (float) $sr['total_fp_qty'];
+                }
+            }
+        }
+
         foreach ($grouped as &$row) {
             $invoiceValues = array_values($row['_invoice_map']);
             $fakturValues = array_values($row['_faktur_map']);
@@ -4433,6 +4482,35 @@ FROM (
             $row['progress_status'] = ((int) ($row['total_detail'] ?? 0) > 0 && (int) ($row['total_verified'] ?? 0) >= (int) ($row['total_detail'] ?? 0))
                 ? 'done'
                 : (((int) ($row['total_verified'] ?? 0) > 0) ? 'partial' : 'belum');
+
+            $totalQtyLpb = 0.0;
+            $totalQtyInv = 0.0;
+            $totalQtyFp = 0.0;
+            $anySplitRecord = FALSE;
+            foreach (($row['_lpb_ids'] ?? []) as $lid) {
+                $qLpb = (float) ($lpbQtyMap[$lid] ?? 0);
+                $totalQtyLpb += $qLpb;
+                if (!empty($hasInvSplitMap[$lid])) {
+                    $anySplitRecord = TRUE;
+                    $totalQtyInv += (float) ($invAlokasiMap[$lid] ?? 0);
+                    $totalQtyFp += (float) ($fpAlokasiMap[$lid] ?? 0);
+                } elseif ($row['invoice_count'] > 0) {
+                    // LPB lama tanpa record tb_lpb_invoice tetap dianggap penuh jika no_invoice sudah terisi
+                    $totalQtyInv += $qLpb;
+                }
+            }
+            if (!$anySplitRecord && $row['faktur_count'] > 0) {
+                $totalQtyFp = $totalQtyLpb;
+            } elseif ($anySplitRecord && $totalQtyFp <= 0 && $row['faktur_count'] > 0) {
+                // Jika faktur pajak diinput langsung pada header tb_lpb tanpa mengisi per baris split
+                $totalQtyFp = $totalQtyLpb;
+            }
+
+            $row['qty_lpb_total'] = $totalQtyLpb;
+            $row['qty_invoice_alokasi'] = $totalQtyInv;
+            $row['qty_faktur_alokasi'] = $totalQtyFp;
+            $row['invoice_qty_diff'] = max(0, $totalQtyLpb - $totalQtyInv);
+            $row['faktur_qty_diff'] = max(0, $totalQtyLpb - $totalQtyFp);
 
             if (!empty($row['_status_has_unpost'])) {
                 $row['status_lpb'] = 0;
@@ -4452,7 +4530,8 @@ FROM (
                 $row['_status_has_post'],
                 $row['_status_has_draft'],
                 $row['_sales_samples'],
-                $row['_journal_samples']
+                $row['_journal_samples'],
+                $row['_lpb_ids']
             );
         }
         unset($row);
@@ -4591,6 +4670,7 @@ FROM (
 
         $salesMap = $this->get_lpb_sales_usage_summary_map(array_values($ids));
         $journalMap = $this->get_lpb_goods_receipt_journal_summary_map(array_values($ids));
+        $invQtySummary = $this->get_lpb_invoice_qty_summary_map(array_values($ids));
 
         foreach ($rows as &$row) {
             $id = (int) ($row['id_lpb'] ?? 0);
@@ -4613,10 +4693,78 @@ FROM (
             $alert['lpb_operational_warning'] = implode(' ', $warnings);
 
             $row = array_merge($row, $alert);
+
+            // Hitung selisih qty LPB terhadap alokasi invoice & faktur pajak
+            $qLpb = (float) ($invQtySummary['lpb_qty'][$id] ?? 0);
+            $hasInv = trim((string) ($row['no_invoice'] ?? '')) !== '' && trim((string) ($row['no_invoice'] ?? '')) !== '-';
+            $hasFp = trim((string) ($row['kode_faktur_pajak'] ?? '')) !== '' && trim((string) ($row['kode_faktur_pajak'] ?? '')) !== '-';
+            if (!empty($invQtySummary['has_split'][$id])) {
+                $qInv = (float) ($invQtySummary['inv_qty'][$id] ?? 0);
+                $qFp = (float) ($invQtySummary['fp_qty'][$id] ?? 0);
+                if ($qFp <= 0 && $hasFp && empty($invQtySummary['has_fp_in_split'][$id])) {
+                    $qFp = $qLpb;
+                }
+            } else {
+                $qInv = $hasInv ? $qLpb : 0.0;
+                $qFp = $hasFp ? $qLpb : 0.0;
+            }
+            $row['qty_lpb_total'] = $qLpb;
+            $row['qty_invoice_alokasi'] = $qInv;
+            $row['qty_faktur_alokasi'] = $qFp;
+            $row['invoice_qty_diff'] = max(0, $qLpb - $qInv);
+            $row['faktur_qty_diff'] = max(0, $qLpb - $qFp);
         }
         unset($row);
 
         return $rows;
+    }
+
+    /**
+     * Mengambil ringkasan total qty LPB vs qty alokasi invoice dan faktur pajak per id_lpb.
+     */
+    private function get_lpb_invoice_qty_summary_map(array $idLpbs)
+    {
+        $idList = array_values(array_unique(array_filter(array_map('intval', $idLpbs))));
+        $result = [
+            'lpb_qty'          => [],
+            'inv_qty'          => [],
+            'fp_qty'           => [],
+            'has_split'        => [],
+            'has_fp_in_split'  => [],
+        ];
+        if (empty($idList)) {
+            return $result;
+        }
+
+        $qtyRows = $this->db
+            ->select('id_lpb, COALESCE(SUM(qty_diterima), 0) AS total_qty', false)
+            ->where_in('id_lpb', $idList)
+            ->group_by('id_lpb')
+            ->get('tb_lpb_detail')
+            ->result_array();
+        foreach ($qtyRows as $qr) {
+            $result['lpb_qty'][(int) $qr['id_lpb']] = (float) $qr['total_qty'];
+        }
+
+        if ($this->db->table_exists('tb_lpb_invoice') && $this->db->table_exists('tb_lpb_invoice_detail')) {
+            $splitRows = $this->db
+                ->select("inv.id_lpb, COALESCE(SUM(det.qty_alokasi), 0) AS total_inv_qty, COALESCE(SUM(CASE WHEN COALESCE(NULLIF(TRIM(inv.kode_faktur_pajak), ''), '-') != '-' THEN det.qty_alokasi ELSE 0 END), 0) AS total_fp_qty, MAX(CASE WHEN COALESCE(NULLIF(TRIM(inv.kode_faktur_pajak), ''), '-') != '-' THEN 1 ELSE 0 END) AS has_fp_in_split", false)
+                ->from('tb_lpb_invoice inv')
+                ->join('tb_lpb_invoice_detail det', 'det.id_lpb_invoice = inv.id_lpb_invoice', 'left')
+                ->where_in('inv.id_lpb', $idList)
+                ->group_by('inv.id_lpb')
+                ->get()
+                ->result_array();
+            foreach ($splitRows as $sr) {
+                $lid = (int) $sr['id_lpb'];
+                $result['has_split'][$lid] = TRUE;
+                $result['inv_qty'][$lid] = (float) $sr['total_inv_qty'];
+                $result['fp_qty'][$lid] = (float) $sr['total_fp_qty'];
+                $result['has_fp_in_split'][$lid] = ((int) ($sr['has_fp_in_split'] ?? 0)) === 1;
+            }
+        }
+
+        return $result;
     }
 
     private function append_lpb_operational_alerts_to_row($row)
@@ -7047,15 +7195,106 @@ FROM (
         return $this->update_pre_po_status_by_kd_po($row['kd_po'], 2);
     }
 
+    public function ensure_lpb_multi_invoice_tables()
+    {
+        if (!$this->db->table_exists('tb_lpb_invoice')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS tb_lpb_invoice (
+                    id_lpb_invoice INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    id_lpb INT NOT NULL,
+                    urutan INT NOT NULL DEFAULT 1,
+                    no_invoice VARCHAR(100) NOT NULL,
+                    tanggal_invoice DATE NOT NULL,
+                    kode_faktur_pajak VARCHAR(100) DEFAULT NULL,
+                    tanggal_faktur_pajak DATE DEFAULT NULL,
+                    total_qty DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+                    created_by VARCHAR(100) DEFAULT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_lpb (id_lpb)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } else {
+            if (!$this->db->field_exists('kode_faktur_pajak', 'tb_lpb_invoice')) {
+                $this->db->query("ALTER TABLE tb_lpb_invoice ADD COLUMN kode_faktur_pajak VARCHAR(100) DEFAULT NULL AFTER tanggal_invoice");
+            }
+            if (!$this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb_invoice')) {
+                $this->db->query("ALTER TABLE tb_lpb_invoice ADD COLUMN tanggal_faktur_pajak DATE DEFAULT NULL AFTER kode_faktur_pajak");
+            }
+        }
+
+        if (!$this->db->table_exists('tb_lpb_invoice_detail')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS tb_lpb_invoice_detail (
+                    id_lpb_invoice_detail INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    id_lpb_invoice INT NOT NULL,
+                    id_lpb INT NOT NULL,
+                    id_detail_lpb INT NOT NULL,
+                    kd_barang VARCHAR(100) DEFAULT NULL,
+                    qty_alokasi DECIMAL(18,4) NOT NULL DEFAULT 0.0000,
+                    KEY idx_lpb_inv (id_lpb_invoice),
+                    KEY idx_lpb (id_lpb),
+                    KEY idx_detail_lpb (id_detail_lpb)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+    }
+
+    /**
+     * Mengambil daftar pecahan invoice per LPB beserta alokasi qty detailnya.
+     */
+    public function get_lpb_split_invoices($idLpb)
+    {
+        $idLpb = (int) $idLpb;
+        if ($idLpb <= 0 || !$this->db->table_exists('tb_lpb_invoice')) {
+            return [];
+        }
+
+        $invoices = $this->db
+            ->where('id_lpb', $idLpb)
+            ->order_by('urutan', 'ASC')
+            ->order_by('id_lpb_invoice', 'ASC')
+            ->get('tb_lpb_invoice')
+            ->result_array();
+
+        if (empty($invoices)) {
+            return [];
+        }
+
+        $detailRows = [];
+        if ($this->db->table_exists('tb_lpb_invoice_detail')) {
+            $allDetails = $this->db
+                ->where('id_lpb', $idLpb)
+                ->get('tb_lpb_invoice_detail')
+                ->result_array();
+            foreach ($allDetails as $d) {
+                $detailRows[(int) $d['id_lpb_invoice']][] = $d;
+            }
+        }
+
+        foreach ($invoices as &$inv) {
+            $invId = (int) $inv['id_lpb_invoice'];
+            $inv['details'] = $detailRows[$invId] ?? [];
+        }
+        unset($inv);
+
+        return $invoices;
+    }
+
+    /**
+     * Mencatat pecahan multi-invoice pada satu LPB tanpa perlu UNPOST
+     * dan tanpa memecah/mengubah qty_diterima pada tb_lpb_detail maupun membuat LPB baru.
+     */
     public function split_lpb_multiple_invoice($payload)
     {
+        $this->ensure_lpb_multi_invoice_tables();
+
         $idLpb = (int) ($payload['id_lpb'] ?? 0);
         $splits = $payload['splits'] ?? [];
         $dilakukanOleh = $payload['dilakukan_oleh'] ?? 'SYSTEM';
         $tolerance = 0.0001;
 
-        if ($idLpb <= 0 || !is_array($splits) || count($splits) < 2) {
-            return ['status' => FALSE, 'message' => 'Data split invoice belum lengkap.'];
+        if ($idLpb <= 0 || !is_array($splits) || count($splits) < 1) {
+            return ['status' => FALSE, 'message' => 'Data invoice belum lengkap.'];
         }
 
         $header = $this->db
@@ -7066,10 +7305,6 @@ FROM (
 
         if (!$header) {
             return ['status' => FALSE, 'message' => 'Data LPB tidak ditemukan.'];
-        }
-
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            return ['status' => FALSE, 'message' => 'Pecah LPB multiple invoice hanya bisa dilakukan saat status UNPOST.'];
         }
 
         $details = $this->db
@@ -7087,17 +7322,73 @@ FROM (
             $detailsById[(int) $detail['id_detail_lpb']] = $detail;
         }
 
+        // Ambil invoice yang sudah pernah disimpan (terkunci, tidak boleh diubah/dihapus)
+        $existingInvoices = $this->db
+            ->where('id_lpb', $idLpb)
+            ->order_by('urutan', 'ASC')
+            ->order_by('id_lpb_invoice', 'ASC')
+            ->get('tb_lpb_invoice')
+            ->result_array();
+
+        $existingAllocatedByDetail = [];
+        $existingInvoiceKeys = [];
+        $maxUrutan = 0;
+        $invoiceNumbers = [];
+        $fakturNumbers = [];
+        $firstInvoiceDate = null;
+        $firstFakturDate = null;
+
+        if (!empty($existingInvoices)) {
+            $existingDetailRows = $this->db
+                ->where('id_lpb', $idLpb)
+                ->get('tb_lpb_invoice_detail')
+                ->result_array();
+            foreach ($existingDetailRows as $ed) {
+                $did = (int) $ed['id_detail_lpb'];
+                $existingAllocatedByDetail[$did] = ($existingAllocatedByDetail[$did] ?? 0.0) + (float) $ed['qty_alokasi'];
+            }
+            foreach ($existingInvoices as $ex) {
+                $maxUrutan = max($maxUrutan, (int) ($ex['urutan'] ?? 0));
+                $exNo = trim((string) ($ex['no_invoice'] ?? ''));
+                if ($exNo !== '') {
+                    $existingInvoiceKeys[strtoupper($exNo)] = TRUE;
+                    $invoiceNumbers[] = $exNo;
+                }
+                if ($firstInvoiceDate === null && !empty($ex['tanggal_invoice'])) {
+                    $firstInvoiceDate = $ex['tanggal_invoice'];
+                }
+                $exFp = trim((string) ($ex['kode_faktur_pajak'] ?? ''));
+                if ($exFp !== '') {
+                    $fakturNumbers[] = $exFp;
+                    if ($firstFakturDate === null && !empty($ex['tanggal_faktur_pajak'])) {
+                        $firstFakturDate = $ex['tanggal_faktur_pajak'];
+                    }
+                }
+            }
+        }
+
         $normalizedSplits = [];
-        $usedInvoices = [];
+        $usedInvoices = $existingInvoiceKeys;
         foreach ($splits as $index => $split) {
             if (!is_array($split)) {
                 return ['status' => FALSE, 'message' => 'Format split invoice tidak valid.'];
+            }
+
+            // Lewati invoice yang sudah tersimpan dan terkunci sebelumnya
+            if (!empty($split['is_locked']) || (!empty($split['id_lpb_invoice']) && (int) $split['id_lpb_invoice'] > 0)) {
+                continue;
             }
 
             $noInvoice = trim((string) ($split['no_invoice'] ?? ''));
             $tanggalInvoice = $this->_normalizeDate($split['tanggal_invoice'] ?? '');
             if ($noInvoice === '' || $tanggalInvoice === null) {
                 return ['status' => FALSE, 'message' => 'No invoice dan tanggal invoice wajib diisi.'];
+            }
+
+            $kodeFakturPajak = trim((string) ($split['kode_faktur_pajak'] ?? ''));
+            $tanggalFakturPajak = $this->_normalizeDate($split['tanggal_faktur_pajak'] ?? '');
+            if ($kodeFakturPajak !== '' && $tanggalFakturPajak === null) {
+                return ['status' => FALSE, 'message' => 'Tanggal faktur pajak wajib diisi jika kode faktur pajak diisi (Invoice ' . ($index + 1) . ').'];
             }
 
             $invoiceKey = strtoupper($noInvoice);
@@ -7131,211 +7422,123 @@ FROM (
             }
 
             $normalizedSplits[] = [
-                'no_invoice'       => $noInvoice,
-                'tanggal_invoice'  => $tanggalInvoice,
-                'allocations'      => $allocations,
-                'total_qty'        => $splitTotalQty
+                'no_invoice'           => $noInvoice,
+                'tanggal_invoice'      => $tanggalInvoice,
+                'kode_faktur_pajak'    => $kodeFakturPajak !== '' ? $kodeFakturPajak : null,
+                'tanggal_faktur_pajak' => $kodeFakturPajak !== '' ? $tanggalFakturPajak : null,
+                'allocations'          => $allocations,
+                'total_qty'            => $splitTotalQty
             ];
+        }
+
+        if (empty($normalizedSplits)) {
+            return ['status' => FALSE, 'message' => 'Data invoice yang sudah disimpan tidak dapat diedit. Tambahkan invoice baru jika masih ada sisa qty.'];
         }
 
         foreach ($detailsById as $idDetail => $detail) {
             $originalQty = (float) ($detail['qty_diterima'] ?? 0);
-            $allocatedQty = 0;
+            $allocatedQty = (float) ($existingAllocatedByDetail[$idDetail] ?? 0);
             foreach ($normalizedSplits as $split) {
                 $allocatedQty += (float) ($split['allocations'][$idDetail] ?? 0);
             }
 
-            if (abs($allocatedQty - $originalQty) > $tolerance) {
+            if ($allocatedQty > $originalQty + $tolerance) {
                 return [
                     'status' => FALSE,
-                    'message' => 'Total qty split barang ' . ($detail['kd_barang'] ?? '') . ' harus sama dengan qty LPB awal.'
+                    'message' => 'Total qty alokasi barang ' . ($detail['kd_barang'] ?? '') . ' tidak boleh melebihi qty LPB awal.'
                 ];
             }
         }
 
-        $createdIds = [$idLpb];
-        $firstSplit = $normalizedSplits[0];
-        $this->db
-            ->where('id_lpb', $idLpb)
-            ->update('tb_lpb', [
-                'no_invoice'       => $firstSplit['no_invoice'],
-                'tanggal_invoice'  => $firstSplit['tanggal_invoice']
-            ]);
-
-        foreach ($detailsById as $idDetail => $detail) {
-            $qty = (float) ($firstSplit['allocations'][$idDetail] ?? 0);
-            if ($qty <= 0) {
-                if ($this->db->table_exists('tb_lpb_batch')) {
-                    $this->db->where('id_detail_lpb', $idDetail)->delete('tb_lpb_batch');
+        // Hanya tambahkan invoice baru (baris yang sudah tersimpan tetap dipertahankan utuh/terkunci)
+        foreach ($normalizedSplits as $index => $split) {
+            $invoiceNumbers[] = $split['no_invoice'];
+            if ($firstInvoiceDate === null && !empty($split['tanggal_invoice'])) {
+                $firstInvoiceDate = $split['tanggal_invoice'];
+            }
+            if (!empty($split['kode_faktur_pajak'])) {
+                $fakturNumbers[] = $split['kode_faktur_pajak'];
+                if ($firstFakturDate === null && !empty($split['tanggal_faktur_pajak'])) {
+                    $firstFakturDate = $split['tanggal_faktur_pajak'];
                 }
-                $this->db->where('id_detail_lpb', $idDetail)->delete('tb_lpb_detail');
-                continue;
             }
 
-            $hargaSatuan = (float) ($detail['harga_satuan'] ?? 0);
-            $originalQty = (float) ($detail['qty_diterima'] ?? 0);
-            if ($hargaSatuan <= 0 && $originalQty > 0) {
-                $hargaSatuan = (float) ($detail['total_harga'] ?? 0) / $originalQty;
+            $this->db->insert('tb_lpb_invoice', [
+                'id_lpb'               => $idLpb,
+                'urutan'               => $maxUrutan + $index + 1,
+                'no_invoice'           => $split['no_invoice'],
+                'tanggal_invoice'      => $split['tanggal_invoice'],
+                'kode_faktur_pajak'    => $split['kode_faktur_pajak'],
+                'tanggal_faktur_pajak' => $split['tanggal_faktur_pajak'],
+                'total_qty'            => $split['total_qty'],
+                'created_by'           => $dilakukanOleh,
+                'created_at'           => date('Y-m-d H:i:s'),
+            ]);
+            $idLpbInvoice = (int) $this->db->insert_id();
+            if ($idLpbInvoice <= 0) {
+                return ['status' => FALSE, 'message' => 'Gagal menyimpan header split invoice LPB.'];
             }
-            $updateDetail = [
-                'qty_diterima'       => $qty,
-                'total_harga'        => $qty * $hargaSatuan
-            ];
-            $this->db
-                ->where('id_detail_lpb', $idDetail)
-                ->update('tb_lpb_detail', $updateDetail);
 
-            $this->replace_lpb_detail_batch($idDetail, $detail, $qty);
+            foreach ($detailsById as $idDetail => $detail) {
+                $qtyAlokasi = (float) ($split['allocations'][$idDetail] ?? 0);
+                if ($qtyAlokasi <= 0) {
+                    continue;
+                }
+
+                $this->db->insert('tb_lpb_invoice_detail', [
+                    'id_lpb_invoice' => $idLpbInvoice,
+                    'id_lpb'         => $idLpb,
+                    'id_detail_lpb'  => $idDetail,
+                    'kd_barang'      => $detail['kd_barang'] ?? '',
+                    'qty_alokasi'    => $qtyAlokasi,
+                ]);
+            }
         }
+
+        // Perbarui tampilan ringkasan no_invoice pada tb_lpb tanpa mengubah qty_diterima di tb_lpb_detail
+        $combinedInvoices = implode(', ', array_unique($invoiceNumbers));
+        $headerUpdate = [
+            'no_invoice' => mb_substr($combinedInvoices, 0, 100),
+        ];
+        if ($firstInvoiceDate !== null && $this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
+            $headerUpdate['tanggal_invoice'] = $firstInvoiceDate;
+        }
+        if (!empty($fakturNumbers) && $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+            $headerUpdate['kode_faktur_pajak'] = mb_substr(implode(', ', array_unique($fakturNumbers)), 0, 100);
+            if ($firstFakturDate !== null && $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
+                $headerUpdate['tanggal_faktur_pajak'] = $firstFakturDate;
+            }
+        }
+        $this->db->where('id_lpb', $idLpb)->update('tb_lpb', $headerUpdate);
 
         $this->insert_lpb_activity_log([
             'id_lpb'         => $idLpb,
             'kd_po'          => $header['kd_po'] ?? '',
-            'no_invoice'     => $firstSplit['no_invoice'],
+            'no_invoice'     => $headerUpdate['no_invoice'],
             'action_type'    => 'SPLIT_LPB_MULTIPLE_INVOICE',
             'status_before'  => $this->lpb_status_label($header['status_lpb'] ?? 1),
             'status_after'   => $this->lpb_status_label($header['status_lpb'] ?? 1),
             'data_before'    => [
-                'id_lpb' => $idLpb,
+                'id_lpb'     => $idLpb,
                 'no_invoice' => $header['no_invoice'] ?? '',
-                'details' => $details
             ],
             'data_after'     => [
-                'id_lpb' => $idLpb,
-                'no_invoice' => $firstSplit['no_invoice'],
-                'tanggal_invoice' => $firstSplit['tanggal_invoice'],
-                'total_qty' => $firstSplit['total_qty']
+                'id_lpb'   => $idLpb,
+                'invoices' => array_map(function ($s) {
+                    return [
+                        'no_invoice'      => $s['no_invoice'],
+                        'tanggal_invoice' => $s['tanggal_invoice'],
+                        'total_qty'       => $s['total_qty'],
+                    ];
+                }, $normalizedSplits),
             ],
-            'keterangan'     => 'LPB dipecah menjadi multiple invoice. Invoice pertama tetap pada LPB asal.',
+            'keterangan'     => 'LPB dicatat sebagai multi-invoice (' . count($normalizedSplits) . ' invoice) tanpa mengubah qty LPB asli.',
             'dilakukan_oleh' => $dilakukanOleh
         ]);
 
-        for ($i = 1; $i < count($normalizedSplits); $i++) {
-            $split = $normalizedSplits[$i];
-            $newHeader = [
-                'kd_po'       => $header['kd_po'] ?? null,
-                'nosj'        => $header['nosj'] ?? '',
-                'tgl_sj'      => $this->_normalizeDate($header['tgl_sj'] ?? ''),
-                'no_po'       => $header['no_po'] ?? null,
-                'no_invoice'  => $split['no_invoice'],
-                'gudang_id'   => $header['gudang_id'] ?? null,
-                'keterangan'  => $header['keterangan'] ?? null,
-                'input_at'    => date('Y-m-d H:i:s')
-            ];
-
-            if ($this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
-                $newHeader['tanggal_invoice'] = $split['tanggal_invoice'];
-            }
-            if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
-                $newHeader['kode_faktur_pajak'] = null;
-            }
-            if ($this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
-                $newHeader['tanggal_faktur_pajak'] = null;
-            }
-            if ($this->db->field_exists('jenis_lpb', 'tb_lpb')) {
-                $newHeader['jenis_lpb'] = $header['jenis_lpb'] ?? null;
-            }
-            if ($this->db->field_exists('nomor_lpb', 'tb_lpb')) {
-                $newHeader['nomor_lpb'] = $header['nomor_lpb'] ?? null;
-            }
-            if ($this->db->field_exists('status_lpb', 'tb_lpb')) {
-                $newHeader['status_lpb'] = (int) ($header['status_lpb'] ?? 1);
-            }
-            if ($this->db->field_exists('checker_name', 'tb_lpb')) {
-                $newHeader['checker_name'] = $header['checker_name'] ?? null;
-            }
-            if ($this->db->field_exists('checker_by', 'tb_lpb')) {
-                $newHeader['checker_by'] = $header['checker_by'] ?? null;
-            }
-            if ($this->db->field_exists('checker_at', 'tb_lpb')) {
-                $newHeader['checker_at'] = $header['checker_at'] ?? null;
-            }
-
-            $this->db->insert('tb_lpb', $newHeader);
-            $newIdLpb = (int) $this->db->insert_id();
-            if ($newIdLpb <= 0) {
-                return ['status' => FALSE, 'message' => 'Header LPB hasil split gagal dibuat.'];
-            }
-
-            $createdIds[] = $newIdLpb;
-            foreach ($detailsById as $idDetail => $detail) {
-                $qty = (float) ($split['allocations'][$idDetail] ?? 0);
-                if ($qty <= 0) {
-                    continue;
-                }
-
-                $hargaSatuan = (float) ($detail['harga_satuan'] ?? 0);
-                $originalQty = (float) ($detail['qty_diterima'] ?? 0);
-                if ($hargaSatuan <= 0 && $originalQty > 0) {
-                    $hargaSatuan = (float) ($detail['total_harga'] ?? 0) / $originalQty;
-                }
-                $newDetail = [
-                    'id_lpb'          => $newIdLpb,
-                    'kd_barang'       => $detail['kd_barang'] ?? '',
-                    'qty_diterima'    => $qty,
-                    'no_lot'          => $detail['no_lot'] ?? '',
-                    'expired_date'    => $this->_normalizeDate($detail['expired_date'] ?? ''),
-                    'input_at'        => date('Y-m-d H:i:s')
-                ];
-
-                foreach (['harga_satuan_sebelumnya', 'total_harga_sebelumnya', 'harga_satuan'] as $field) {
-                    if ($this->db->field_exists($field, 'tb_lpb_detail')) {
-                        $newDetail[$field] = $detail[$field] ?? 0;
-                    }
-                }
-                if ($this->db->field_exists('total_harga', 'tb_lpb_detail')) {
-                    $newDetail['total_harga'] = $qty * $hargaSatuan;
-                }
-                if ($this->db->field_exists('harga_update_by', 'tb_lpb_detail')) {
-                    $newDetail['harga_update_by'] = $detail['harga_update_by'] ?? null;
-                }
-                if ($this->db->field_exists('harga_update_at', 'tb_lpb_detail')) {
-                    $newDetail['harga_update_at'] = $detail['harga_update_at'] ?? null;
-                }
-                if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
-                    $newDetail['harga_verified_by'] = $detail['harga_verified_by'] ?? null;
-                }
-                if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
-                    $newDetail['harga_verified_at'] = $detail['harga_verified_at'] ?? null;
-                }
-
-                $this->db->insert('tb_lpb_detail', $newDetail);
-                $newIdDetail = (int) $this->db->insert_id();
-                if ($newIdDetail <= 0) {
-                    return ['status' => FALSE, 'message' => 'Detail LPB hasil split gagal dibuat.'];
-                }
-
-                $this->replace_lpb_detail_batch($newIdDetail, $detail, $qty);
-            }
-
-            $this->insert_lpb_activity_log([
-                'id_lpb'         => $newIdLpb,
-                'kd_po'          => $newHeader['kd_po'] ?? '',
-                'no_invoice'     => $newHeader['no_invoice'] ?? '',
-                'action_type'    => 'CREATE_LPB_SPLIT_INVOICE',
-                'status_before'  => null,
-                'status_after'   => $this->lpb_status_label($newHeader['status_lpb'] ?? 1),
-                'data_before'    => [
-                    'source_id_lpb' => $idLpb
-                ],
-                'data_after'     => [
-                    'id_lpb' => $newIdLpb,
-                    'nomor_lpb' => $newHeader['nomor_lpb'] ?? '',
-                    'no_invoice' => $newHeader['no_invoice'] ?? '',
-                    'tanggal_invoice' => $newHeader['tanggal_invoice'] ?? '',
-                    'total_qty' => $split['total_qty'],
-                    'checker_name' => $newHeader['checker_name'] ?? ''
-                ],
-                'keterangan'     => 'LPB baru dibuat dari pecah multiple invoice LPB #' . $idLpb . '.',
-                'dilakukan_oleh' => $dilakukanOleh,
-                'checker_name'   => $newHeader['checker_name'] ?? null,
-                'checker_by'     => $newHeader['checker_by'] ?? null
-            ]);
-        }
-
         return [
             'status' => TRUE,
-            'id_lpb' => $createdIds
+            'id_lpb' => [$idLpb]
         ];
     }
 

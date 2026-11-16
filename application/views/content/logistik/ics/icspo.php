@@ -537,8 +537,18 @@ $formatDate = function ($dateStr) {
                                                             $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
                                                             $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
                                                             $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
-                                                            $invoiceBtnClass = $hasInvoice ? 'btn-success' : 'btn-light text-secondary border';
-                                                            $fakturBtnClass = $hasFaktur ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $invoiceQtyDiff = (float) ($row['invoice_qty_diff'] ?? 0);
+                                                            $fakturQtyDiff = (float) ($row['faktur_qty_diff'] ?? 0);
+                                                            $isInvoiceComplete = $hasInvoice && $invoiceQtyDiff <= 0.0001;
+                                                            $isFakturComplete = $hasFaktur && $fakturQtyDiff <= 0.0001;
+                                                            $invoiceBtnClass = $isInvoiceComplete ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $fakturBtnClass = $isFakturComplete ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $invoiceTitle = !$hasInvoice
+                                                                ? 'Invoice belum ada'
+                                                                : ($isInvoiceComplete ? 'Invoice lengkap (selisih qty 0)' : 'Invoice masih ada selisih qty ' . rtrim(rtrim(number_format($invoiceQtyDiff, 4, '.', ''), '0'), '.'));
+                                                            $fakturTitle = !$hasFaktur
+                                                                ? 'Pajak/Faktur belum ada'
+                                                                : ($isFakturComplete ? 'Pajak/Faktur lengkap (selisih qty 0)' : 'Pajak/Faktur masih ada selisih qty ' . rtrim(rtrim(number_format($fakturQtyDiff, 4, '.', ''), '0'), '.'));
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                             $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
                                                             $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;
@@ -563,7 +573,7 @@ $formatDate = function ($dateStr) {
                                                                 : 'Belum ada jurnal LPB POSTED aktif';
                                                             $isManualRow = (int) ($row['is_manual_lpb'] ?? 0) === 1;
                                                         ?>
-                                                        <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
+                                                        <tr data-has-invoice="<?= $isInvoiceComplete ? '1' : '0' ?>" data-has-faktur="<?= $isFakturComplete ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
                                                             <td data-order="<?= htmlspecialchars($row['tgl_lpb'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_lpb'] ?? '')) ?></td>
                                                             <td>
                                                                 <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
@@ -597,10 +607,10 @@ $formatDate = function ($dateStr) {
                                                             <?php endif; ?>
                                                             <td class="text-center">
                                                                 <div class="lpb-status-actions">
-                                                                    <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= $hasInvoice ? 'Invoice sudah ada' : 'Invoice belum ada' ?>">
+                                                                    <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= htmlspecialchars($invoiceTitle, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-file-invoice"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= $hasFaktur ? 'Pajak/Faktur sudah ada' : 'Pajak/Faktur belum ada' ?>">
+                                                                    <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= htmlspecialchars($fakturTitle, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-percent"></i>
                                                                     </button>
                                                                     <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">

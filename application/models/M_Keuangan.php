@@ -1217,23 +1217,23 @@ class M_Keuangan extends CI_Model
             j.id_jurnal,
             j.nomor_jurnal,
             j.tanggal_transaksi,
-            j.source_no AS referensi,
-            j.source_id AS id_lpb,
+            COALESCE(NULLIF(h.nomor_lpb, ''), NULLIF(ks.nomor_lpb_asal, ''), j.source_no) AS referensi,
+            COALESCE(h.id_lpb, j.source_id) AS id_lpb,
             j.keterangan,
             j.total_debit AS nilai,
             j.status,
             j.source_type,
-            COALESCE(h.nomor_lpb, j.source_no, '') AS nomor_lpb,
+            COALESCE(NULLIF(h.nomor_lpb, ''), NULLIF(ks.nomor_lpb_asal, ''), j.source_no, '') AS nomor_lpb,
             COALESCE(h.no_po, '') AS no_po,
             {$supplierNameExpression} AS supplier,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
-        $this->db->join('tb_lpb h', 'h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'LOGISTIK\'', 'left', false);
+        // JOIN ke tabel settlement konsinyasi lebih dulu agar LPB asal konsinyasi bisa ikut terhubung
+        $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
+        $this->db->join('tb_lpb h', "(h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = 'LOGISTIK') OR (j.source_module = 'PURCHASING' AND j.source_type = 'CONSIGNMENT_SETTLEMENT' AND (h.id_lpb = ks.id_lpb_asal OR (ks.id_lpb_asal IS NULL AND h.nomor_lpb = ks.nomor_lpb_asal)))", 'left', false);
         $this->db->join('tbpo_po p', 'p.kd_po = h.kd_po AND p.no_po = h.no_po', 'left');
         $this->db->join('tbpo_suplier s', "s.kd_suplier = {$supplierCodeExpression}", 'left', false);
-        // JOIN ke tabel settlement konsinyasi untuk mengambil nama supplier
-        $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
         // Filter: LPB reguler ATAU konsinyasi settlement
         $this->db->group_start();
             $this->db->group_start();
@@ -1371,19 +1371,19 @@ class M_Keuangan extends CI_Model
         $this->db->select("
             j.*,
             jj.kode_jenis_jurnal,
-            COALESCE(h.nomor_lpb, ks.no_settlement, j.source_no, '') AS nomor_lpb,
-            COALESCE(h.no_po, ks.no_invoice_supplier, '') AS no_po,
+            COALESCE(NULLIF(h.nomor_lpb, ''), NULLIF(ks.nomor_lpb_asal, ''), ks.no_settlement, j.source_no, '') AS nomor_lpb,
+            COALESCE(NULLIF(h.no_po, ''), ks.no_invoice_supplier, '') AS no_po,
             {$supplierNameExpression} AS supplier,
             COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(u.nama_lngkp, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
-        $this->db->join('tb_lpb h', 'h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'LOGISTIK\'', 'left', false);
+        // JOIN tabel konsinyasi lebih dulu agar LPB asal konsinyasi ikut terhubung
+        $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
+        $this->db->join('tb_lpb h', "(h.id_lpb = CAST(j.source_id AS UNSIGNED) AND j.source_module = 'LOGISTIK') OR (j.source_module = 'PURCHASING' AND j.source_type = 'CONSIGNMENT_SETTLEMENT' AND (h.id_lpb = ks.id_lpb_asal OR (ks.id_lpb_asal IS NULL AND h.nomor_lpb = ks.nomor_lpb_asal)))", 'left', false);
         $this->db->join('tbpo_po p', 'p.kd_po = h.kd_po AND p.no_po = h.no_po', 'left');
         $this->db->join('tbpo_suplier s', "s.kd_suplier = {$supplierCodeExpression}", 'left', false);
-        // JOIN tabel konsinyasi untuk ambil info supplier dan invoice
-        $this->db->join('tb_konsinyasi_settlement ks', 'ks.id_settlement = CAST(j.source_id AS UNSIGNED) AND j.source_module = \'PURCHASING\'', 'left', false);
         $this->db->join('tb_karyawan k', 'k.id = j.created_by', 'left');
         $this->db->join('tb_users u', 'u.id = j.created_by', 'left');
         $this->db->where('j.id_jurnal', (int)$idJurnal);

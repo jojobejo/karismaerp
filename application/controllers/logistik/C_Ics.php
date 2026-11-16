@@ -1699,10 +1699,11 @@ class C_Ics extends CI_Controller
         }
 
         echo json_encode([
-            'status' => 'success',
-            'header' => $header,
-            'rows'   => $rows,
-            'logs'   => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
+            'status'         => 'success',
+            'header'         => $header,
+            'rows'           => $rows,
+            'split_invoices' => $this->M_Logistik->get_lpb_split_invoices($id_lpb),
+            'logs'           => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
         ]);
     }
 
@@ -2620,9 +2621,16 @@ class C_Ics extends CI_Controller
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
         $no_invoice = trim((string) $this->input->post('no_invoice', TRUE));
         $tanggal_invoice = trim((string) $this->input->post('tanggal_invoice', TRUE));
+        $kode_faktur_pajak = trim((string) $this->input->post('kode_faktur_pajak', TRUE));
+        $tanggal_faktur_pajak = trim((string) $this->input->post('tanggal_faktur_pajak', TRUE));
 
         if ($id_lpb <= 0 || $no_invoice === '' || $tanggal_invoice === '') {
             $this->json_response(['status' => 'error', 'message' => 'Data invoice belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        if ($kode_faktur_pajak !== '' && $tanggal_faktur_pajak === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Tanggal terbit faktur pajak wajib diisi jika kode faktur pajak diisi.', 'html' => '']);
             return;
         }
 
@@ -2649,10 +2657,32 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $extraMessage = '';
+        if ($kode_faktur_pajak !== '' && $tanggal_faktur_pajak !== '') {
+            $fakturSaved = $this->M_Logistik->update_faktur_pajak_lpb([
+                'id_lpb'               => $id_lpb,
+                'kode_faktur_pajak'    => $kode_faktur_pajak,
+                'tanggal_faktur_pajak' => $tanggal_faktur_pajak,
+                'dilakukan_oleh'       => $this->active_user_name()
+            ]);
+            if (!$fakturSaved || $this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                $this->json_response(['status' => 'error', 'message' => 'Update faktur pajak gagal disimpan.', 'html' => '']);
+                return;
+            }
+            $journalRes = $this->maybe_post_consignment_lpb_journal_on_faktur($id_lpb, $header);
+            if (!$journalRes['status']) {
+                $this->db->trans_rollback();
+                $this->json_response(['status' => 'error', 'message' => $journalRes['message'], 'html' => '']);
+                return;
+            }
+            $extraMessage = $journalRes['extra_message'];
+        }
+
         $this->db->trans_commit();
         $this->json_response([
             'status'  => 'success',
-            'message' => 'Invoice LPB berhasil diperbarui.',
+            'message' => ($kode_faktur_pajak !== '' ? 'Invoice & Faktur Pajak LPB berhasil diperbarui.' : 'Invoice LPB berhasil diperbarui.') . $extraMessage,
             'html'    => ''
         ]);
     }
@@ -2672,22 +2702,18 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        if (count($splits) < 2) {
-            $this->json_response(['status' => 'error', 'message' => 'Minimal harus ada 2 invoice untuk pecah LPB.', 'html' => '']);
+        if (count($splits) < 1) {
+            $this->json_response(['status' => 'error', 'message' => 'Minimal harus ada 1 invoice untuk disimpan.', 'html' => '']);
             return;
         }
 
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
         $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->M_Logistik->ensure_lpb_multi_invoice_tables();
 
         $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
         if (!$header) {
             $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
-            return;
-        }
-
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            $this->json_response(['status' => 'error', 'message' => 'Pecah LPB multiple invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
             return;
         }
 
@@ -2707,10 +2733,28 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $extraMessage = '';
+        $hasFakturInSplits = false;
+        foreach ($splits as $sp) {
+            if (is_array($sp) && trim((string)($sp['kode_faktur_pajak'] ?? '')) !== '') {
+                $hasFakturInSplits = true;
+                break;
+            }
+        }
+        if ($hasFakturInSplits) {
+            $journalRes = $this->maybe_post_consignment_lpb_journal_on_faktur($id_lpb, $header);
+            if (!$journalRes['status']) {
+                $this->db->trans_rollback();
+                $this->json_response(['status' => 'error', 'message' => $journalRes['message'], 'html' => '']);
+                return;
+            }
+            $extraMessage = $journalRes['extra_message'];
+        }
+
         $this->db->trans_commit();
         $this->json_response([
             'status'  => 'success',
-            'message' => 'LPB berhasil dipecah menjadi multiple invoice.',
+            'message' => 'Faktur pajak & multiple invoice LPB berhasil diperbarui.' . $extraMessage,
             'id_lpb'  => $saved['id_lpb'] ?? [],
             'html'    => ''
         ]);
@@ -2816,12 +2860,76 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $journalRes = $this->maybe_post_consignment_lpb_journal_on_faktur($id_lpb, $header);
+        if (!$journalRes['status']) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => $journalRes['message'], 'html' => '']);
+            return;
+        }
+
         $this->db->trans_commit();
         $this->json_response([
             'status' => 'success',
-            'message' => 'Faktur pajak berhasil diperbarui.',
+            'message' => 'Faktur pajak berhasil diperbarui.' . $journalRes['extra_message'],
             'html' => ''
         ]);
+    }
+
+    /**
+     * Helper untuk menerbitkan jurnal pembelian awal jika LPB Konsinyasi POST
+     * baru dilengkapi faktur pajaknya dan belum pernah dijurnal sebelumnya.
+     */
+    private function maybe_post_consignment_lpb_journal_on_faktur($id_lpb, array $header)
+    {
+        $jenisLpb = trim((string)($header['jenis_lpb'] ?? ''));
+        $nomorLpb = trim((string)($header['nomor_lpb'] ?? ''));
+        $isConsignment = (stripos($jenisLpb, 'konsinyasi') !== false) || (strtoupper(substr($nomorLpb, -1)) === 'K' && strlen($nomorLpb) >= 5);
+        $isPostedLpb = ((int)($header['status_lpb'] ?? 0) === 1);
+        $hasEarlyJournal = !empty($header['id_jurnal_pembelian']);
+
+        if (!$isConsignment || !$isPostedLpb || $hasEarlyJournal) {
+            return ['status' => true, 'extra_message' => ''];
+        }
+
+        $hasSettledJournal = false;
+        if ($this->db->table_exists('tb_konsinyasi_settlement')) {
+            $settledRow = $this->db
+                ->select('id_settlement')
+                ->where('id_lpb_asal', $id_lpb)
+                ->where('status', 'BILLED')
+                ->where('id_jurnal_pembelian IS NOT NULL', null, false)
+                ->limit(1)
+                ->get('tb_konsinyasi_settlement')
+                ->row_array();
+            $hasSettledJournal = !empty($settledRow);
+        }
+
+        if ($hasSettledJournal) {
+            return ['status' => true, 'extra_message' => ''];
+        }
+
+        try {
+            $this->load->library('Accounting_source_service');
+            $accountingResult = $this->accounting_source_service->post_goods_receipt(
+                $id_lpb,
+                (int) $this->session->userdata('id') ?: null
+            );
+            if (empty($accountingResult['success'])) {
+                return [
+                    'status' => false,
+                    'message' => 'Faktur pajak batal disimpan karena jurnal pembelian konsinyasi gagal dibuat: ' . ($accountingResult['message'] ?? 'Error akuntansi.'),
+                    'extra_message' => ''
+                ];
+            }
+            return ['status' => true, 'extra_message' => ' Jurnal pembelian konsinyasi otomatis diterbitkan.'];
+        } catch (Throwable $e) {
+            log_message('error', 'Posting jurnal LPB Konsinyasi saat update faktur pajak #' . $id_lpb . ' gagal: ' . $e->getMessage());
+            return [
+                'status' => false,
+                'message' => 'Faktur pajak batal disimpan karena proses jurnal mengalami kesalahan.',
+                'extra_message' => ''
+            ];
+        }
     }
 
     public function ajax_update_lpb_type()

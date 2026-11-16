@@ -1513,39 +1513,62 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', $updateData);
 
-        // Eksekusi Posting Jurnal Akuntansi untuk barang yang resmi dibeli kios
-        $this->load->library('Accounting_source_service');
-        $journalRes = $this->accounting_source_service->post_consignment_settlement($idSettlement, $userId);
-
-        if (!$journalRes['success']) {
-            $this->db->trans_rollback();
-            return [
-                'status'  => false,
-                'message' => 'Gagal memposting jurnal akuntansi: ' . ($journalRes['message'] ?? 'Error akuntansi.'),
-                'errors'  => $journalRes['errors'] ?? []
-            ];
-        }
-
         $idJurnal = null;
         $nomorJurnal = null;
-        if (!empty($journalRes['data'])) {
-            if (is_array($journalRes['data'])) {
-                $idJurnal = (int) ($journalRes['data']['id_jurnal'] ?? 0) ?: null;
-                $nomorJurnal = $journalRes['data']['nomor_jurnal'] ?? null;
-            } elseif (is_object($journalRes['data'])) {
-                $idJurnal = (int) ($journalRes['data']->id_jurnal ?? 0) ?: null;
-                $nomorJurnal = $journalRes['data']->nomor_jurnal ?? null;
-            }
-        }
-        if (!$idJurnal && !empty($journalRes['data']['journal'])) {
-            $idJurnal = (int) ($journalRes['data']['journal']->id_jurnal ?? 0) ?: null;
-            $nomorJurnal = $journalRes['data']['journal']->nomor_jurnal ?? null;
-        }
+        $isEarlyLpbJournal = false;
 
-        if ($idJurnal) {
-            $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', [
-                'id_jurnal_pembelian' => $idJurnal
-            ]);
+        // Cek apakah LPB asal sudah diakui pembelian & dijurnal di awal (mode SAAT_LPB / sudah ada Faktur Pajak LPB)
+        $earlyJournal = $this->get_lpb_early_purchase_journal(
+            (int)($settlement['id_lpb_asal'] ?? 0),
+            (string)($settlement['nomor_lpb_asal'] ?? '')
+        );
+
+        if ($earlyJournal && !empty($earlyJournal['id_jurnal'])) {
+            $idJurnal = (int)$earlyJournal['id_jurnal'];
+            $nomorJurnal = $earlyJournal['nomor_jurnal'] ?? null;
+            $isEarlyLpbJournal = true;
+
+            $linkUpdates = ['id_jurnal_pembelian' => $idJurnal];
+            if (empty($settlement['no_faktur_pajak']) && !empty($earlyJournal['kode_faktur_pajak'])) {
+                $linkUpdates['no_faktur_pajak'] = $earlyJournal['kode_faktur_pajak'];
+            }
+            if (empty($settlement['tgl_faktur_pajak']) && !empty($earlyJournal['tanggal_faktur_pajak'])) {
+                $linkUpdates['tgl_faktur_pajak'] = $earlyJournal['tanggal_faktur_pajak'];
+            }
+            $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', $linkUpdates);
+        } else {
+            // Eksekusi Posting Jurnal Akuntansi di akhir untuk barang yang resmi dibeli kios (mode SAAT_TERJUAL)
+            $this->load->library('Accounting_source_service');
+            $journalRes = $this->accounting_source_service->post_consignment_settlement($idSettlement, $userId);
+
+            if (!$journalRes['success']) {
+                $this->db->trans_rollback();
+                return [
+                    'status'  => false,
+                    'message' => 'Gagal memposting jurnal akuntansi: ' . ($journalRes['message'] ?? 'Error akuntansi.'),
+                    'errors'  => $journalRes['errors'] ?? []
+                ];
+            }
+
+            if (!empty($journalRes['data'])) {
+                if (is_array($journalRes['data'])) {
+                    $idJurnal = (int) ($journalRes['data']['id_jurnal'] ?? 0) ?: null;
+                    $nomorJurnal = $journalRes['data']['nomor_jurnal'] ?? null;
+                } elseif (is_object($journalRes['data'])) {
+                    $idJurnal = (int) ($journalRes['data']->id_jurnal ?? 0) ?: null;
+                    $nomorJurnal = $journalRes['data']->nomor_jurnal ?? null;
+                }
+            }
+            if (!$idJurnal && !empty($journalRes['data']['journal'])) {
+                $idJurnal = (int) ($journalRes['data']['journal']->id_jurnal ?? 0) ?: null;
+                $nomorJurnal = $journalRes['data']['journal']->nomor_jurnal ?? null;
+            }
+
+            if ($idJurnal) {
+                $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', [
+                    'id_jurnal_pembelian' => $idJurnal
+                ]);
+            }
         }
 
         // Catat jejak batch barang konsinyasi lunas ke Gudang Konsinyasi Lunas (qty_on_hand 0 karena langsung keluar/diserahkan ke Kios)
@@ -1579,7 +1602,9 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->trans_commit();
 
-        $pesanSukses = 'Penyelesaian konsinyasi berhasil diposting. Qty laku: ' . $qtyLaku . ' ' . $settlement['satuan'] . ' telah dilunasi dan resmi masuk ke Gudang Konsinyasi Lunas.';
+        $pesanSukses = $isEarlyLpbJournal
+            ? 'Penyelesaian konsinyasi berhasil (ditautkan ke jurnal pembelian LPB awal tanpa jurnal ganda). Qty laku: ' . $qtyLaku . ' ' . $settlement['satuan'] . '.'
+            : 'Penyelesaian konsinyasi berhasil diposting. Qty laku: ' . $qtyLaku . ' ' . $settlement['satuan'] . ' telah dilunasi dan resmi masuk ke Gudang Konsinyasi Lunas.';
         if ($isPartial) {
             $pesanSukses .= ' Sisa ' . $qtySisaDiKios . ' ' . $settlement['satuan'] . ' tetap tercatat sebagai titipan di kios.';
         }
@@ -1592,6 +1617,77 @@ class M_Konsinyasi extends CI_Model
             'total_tagihan' => $totalTagihanBeli,
             'qty_laku'      => $qtyLaku,
             'qty_sisa_kios' => $qtySisaDiKios
+        ];
+    }
+
+    /**
+     * Mengecek apakah LPB asal konsinyasi sudah memiliki jurnal pembelian awal (GOODS_RECEIPT / SAAT_LPB)
+     * agar tidak terjadi double-jurnal saat proses settlement di akhir.
+     */
+    private function get_lpb_early_purchase_journal($idLpbAsal, $nomorLpbAsal = '')
+    {
+        $idLpbAsal = (int)$idLpbAsal;
+        $nomorLpbAsal = trim((string)$nomorLpbAsal);
+        if ($idLpbAsal <= 0 && $nomorLpbAsal === '') {
+            return null;
+        }
+
+        $selectCols = 'id_lpb, nomor_lpb';
+        if ($this->db->field_exists('id_jurnal_pembelian', 'tb_lpb')) {
+            $selectCols .= ', id_jurnal_pembelian';
+        }
+        if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+            $selectCols .= ', kode_faktur_pajak, tanggal_faktur_pajak';
+        }
+
+        $this->db->select($selectCols)->from('tb_lpb');
+        if ($idLpbAsal > 0) {
+            $this->db->where('id_lpb', $idLpbAsal);
+        } else {
+            $this->db->where('nomor_lpb', $nomorLpbAsal);
+        }
+        $lpb = $this->db->limit(1)->get()->row_array();
+        if (!$lpb) {
+            return null;
+        }
+
+        $idJurnal = (int)($lpb['id_jurnal_pembelian'] ?? 0);
+        $nomorJurnal = null;
+
+        if ($idJurnal > 0 && $this->db->table_exists('tbkeu_jurnal')) {
+            $jRow = $this->db->select('id_jurnal, nomor_jurnal')->where('id_jurnal', $idJurnal)->get('tbkeu_jurnal')->row_array();
+            if ($jRow) {
+                $nomorJurnal = $jRow['nomor_jurnal'] ?? null;
+            } else {
+                $idJurnal = 0;
+            }
+        }
+
+        if ($idJurnal <= 0 && $this->db->table_exists('tbkeu_jurnal')) {
+            $jRow = $this->db
+                ->select('id_jurnal, nomor_jurnal')
+                ->where('source_type', 'LPB_FINAL')
+                ->where('source_id', (string)$lpb['id_lpb'])
+                ->where('posting_event', 'GOODS_RECEIPT')
+                ->order_by('id_jurnal', 'DESC')
+                ->limit(1)
+                ->get('tbkeu_jurnal')
+                ->row_array();
+            if ($jRow) {
+                $idJurnal = (int)$jRow['id_jurnal'];
+                $nomorJurnal = $jRow['nomor_jurnal'] ?? null;
+            }
+        }
+
+        if ($idJurnal <= 0) {
+            return null;
+        }
+
+        return [
+            'id_jurnal'            => $idJurnal,
+            'nomor_jurnal'         => $nomorJurnal,
+            'kode_faktur_pajak'    => $lpb['kode_faktur_pajak'] ?? null,
+            'tanggal_faktur_pajak' => $lpb['tanggal_faktur_pajak'] ?? null,
         ];
     }
 
@@ -1681,8 +1777,8 @@ class M_Konsinyasi extends CI_Model
         $this->db->trans_begin();
 
         $updatePayload = [
-            'no_invoice_supplier'  => $noInvoice,
-            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d'),
+            'no_invoice_supplier'  => $noInvoice !== '' ? $noInvoice : null,
+            'tgl_invoice_supplier' => $tglInvoice !== '' ? $tglInvoice : ($noInvoice !== '' ? date('Y-m-d') : null),
             'no_faktur_pajak'      => $noFakturPajak !== '' ? $noFakturPajak : null,
             'tgl_faktur_pajak'     => $tglFakturPajak !== '' ? $tglFakturPajak : null,
         ];
@@ -1691,7 +1787,8 @@ class M_Konsinyasi extends CI_Model
 
         // Jika terdapat jurnal pembelian terkait, sinkronkan catatan keterangan pada jurnal
         if (!empty($settlement['id_jurnal_pembelian'])) {
-            $keterangan = 'Pembelian Konsinyasi: ' . $settlement['nama_barang'] . ' (' . (float)$settlement['qty_net'] . ' ' . $settlement['satuan'] . '), Supplier: ' . $settlement['nama_suplier'] . ' [Inv: ' . $noInvoice . ']';
+            $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
+            $keterangan = 'Pembelian Konsinyasi: ' . $settlement['nama_barang'] . ' (' . (float)$settlement['qty_net'] . ' ' . $settlement['satuan'] . '), Supplier: ' . $settlement['nama_suplier'] . $invTag;
             $this->db->where('id_jurnal', (int) $settlement['id_jurnal_pembelian'])->update('tbkeu_jurnal', [
                 'keterangan' => $keterangan
             ]);
@@ -1704,9 +1801,13 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->trans_commit();
 
+        $msg = $noInvoice !== ''
+            ? 'Faktur / Invoice supplier berhasil diperbarui (No: ' . $noInvoice . ').'
+            : 'Data faktur supplier berhasil diperbarui.';
+
         return [
             'status'  => true,
-            'message' => 'Faktur / Invoice supplier berhasil diperbarui (No: ' . $noInvoice . ').'
+            'message' => $msg
         ];
     }
 
@@ -1745,17 +1846,18 @@ class M_Konsinyasi extends CI_Model
 
         $this->db->trans_begin();
         $this->db->where_in('id_settlement', $validIds)->update('tb_konsinyasi_settlement', [
-            'no_invoice_supplier'  => $noInvoice,
-            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d'),
+            'no_invoice_supplier'  => $noInvoice !== '' ? $noInvoice : null,
+            'tgl_invoice_supplier' => $tglInvoice !== '' ? $tglInvoice : ($noInvoice !== '' ? date('Y-m-d') : null),
             'no_faktur_pajak'      => $noFakturPajak !== '' ? $noFakturPajak : null,
             'tgl_faktur_pajak'     => $tglFakturPajak !== '' ? $tglFakturPajak : null,
         ]);
 
+        $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
         foreach ($rows as $row) {
             if (!in_array((int)$row['id_settlement'], $validIds, true) || empty($row['id_jurnal_pembelian'])) {
                 continue;
             }
-            $keterangan = 'Pembelian Konsinyasi: ' . $row['nama_barang'] . ' (' . (float)$row['qty_net'] . ' ' . $row['satuan'] . '), Supplier: ' . $row['nama_suplier'] . ' [Inv: ' . $noInvoice . ']';
+            $keterangan = 'Pembelian Konsinyasi: ' . $row['nama_barang'] . ' (' . (float)$row['qty_net'] . ' ' . $row['satuan'] . '), Supplier: ' . $row['nama_suplier'] . $invTag;
             $this->db->where('id_jurnal', (int)$row['id_jurnal_pembelian'])->update('tbkeu_jurnal', ['keterangan' => $keterangan]);
         }
 
@@ -1765,9 +1867,13 @@ class M_Konsinyasi extends CI_Model
         }
         $this->db->trans_commit();
 
+        $msg = $noInvoice !== ''
+            ? 'Invoice supplier ' . $noInvoice . ' berhasil diterapkan ke ' . count($validIds) . ' transaksi dalam satu kelompok LPB.'
+            : 'Data faktur berhasil diterapkan ke ' . count($validIds) . ' transaksi dalam satu kelompok LPB.';
+
         return [
             'status' => true,
-            'message' => 'Invoice supplier ' . $noInvoice . ' berhasil diterapkan ke ' . count($validIds) . ' transaksi dalam satu kelompok LPB.',
+            'message' => $msg,
         ];
     }
 

@@ -1047,15 +1047,14 @@
 
                     <div class="form-group mb-3">
                         <label class="small font-weight-bold text-dark">
-                            Nomor Faktur / Invoice Supplier <span class="text-danger">*</span>
+                            Nomor Faktur / Invoice Supplier
                         </label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-barcode"></i></span>
                             </div>
-                            <input type="text" name="no_invoice_supplier" id="upd_no_invoice_supplier" class="form-control font-weight-bold" placeholder="Contoh: INV-SUPP-2026/09/101" required>
+                            <input type="text" name="no_invoice_supplier" id="upd_no_invoice_supplier" class="form-control font-weight-bold" placeholder="Contoh: INV-SUPP-2026/09/101">
                         </div>
-                        <small class="text-muted mt-1 d-block">Masukkan nomor faktur/invoice resmi yang diterbitkan oleh supplier.</small>
                     </div>
 
                     <div class="form-group mb-3">

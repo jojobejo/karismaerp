@@ -401,17 +401,22 @@ class Accounting_source_service
             return $this->fail('LPB final tidak ditemukan.', ['SOURCE_NOT_FOUND']);
         }
 
-        // LPB Konsinyasi adalah titipan fisik (Off-balance sheet), tidak menimbulkan jurnal hutang/pembelian saat penerimaan fisik
+        // Tentukan mode pengakuan pembelian untuk LPB Konsinyasi:
+        // - SAAT_TERJUAL: hanya titipan fisik, jurnal terbit di akhir saat settlement
+        // - SAAT_LPB: langsung diakui pembelian dan dijurnal saat LPB datang (atau saat faktur pajak sudah ada)
         $jenisLpb = trim((string)($header->jenis_lpb ?? ''));
         $nomorLpbCheck = trim((string)($header->nomor_lpb ?? ''));
         $isConsignment = (stripos($jenisLpb, 'konsinyasi') !== false) || (strtoupper(substr($nomorLpbCheck, -1)) === 'K' && strlen($nomorLpbCheck) >= 5);
         if ($isConsignment) {
-            return [
-                'success' => true,
-                'message' => 'LPB Konsinyasi (titipan fisik) dilewati dari jurnal hutang/pembelian. Jurnal persediaan, PPN masukan, dan hutang usaha diterbitkan saat Penyelesaian (Settlement) setelah barang laku/dibayar customer.',
-                'data'    => null,
-                'errors'  => []
-            ];
+            $recognitionMode = $this->resolve_consignment_recognition_mode($header);
+            if ($recognitionMode === 'SAAT_TERJUAL') {
+                return [
+                    'success' => true,
+                    'message' => 'LPB Konsinyasi (mode pengakuan saat terjual) dilewati dari jurnal pembelian awal. Jurnal akan diterbitkan saat Penyelesaian (Settlement) setelah barang laku.',
+                    'data'    => null,
+                    'errors'  => []
+                ];
+            }
         }
 
         $nomorLpb = trim((string)($header->nomor_lpb ?? ''));
@@ -549,7 +554,87 @@ class Accounting_source_service
         $payload['cogs'] = '0.0000';
         $payload['lines'] = $lines;
 
-        return $this->CI->accounting_service->post_auto('GOODS_RECEIPT', $payload, $userId);
+        $postResult = $this->CI->accounting_service->post_auto('GOODS_RECEIPT', $payload, $userId);
+
+        // Simpan ID jurnal pembelian awal pada tb_lpb untuk mencegah double-jurnal saat settlement konsinyasi
+        if ($isConsignment && !empty($postResult['success']) && $this->CI->db->field_exists('id_jurnal_pembelian', 'tb_lpb')) {
+            $idJurnal = $this->extract_journal_id_from_result($postResult);
+            if ($idJurnal > 0) {
+                $this->CI->db->where('id_lpb', $idLpb)->update('tb_lpb', [
+                    'id_jurnal_pembelian' => $idJurnal
+                ]);
+            }
+        }
+
+        return $postResult;
+    }
+
+    /**
+     * Menentukan mode pengakuan pembelian untuk LPB konsinyasi (SAAT_LPB atau SAAT_TERJUAL)
+     * dan mengunci nilainya pada baris tb_lpb.
+     */
+    private function resolve_consignment_recognition_mode($header)
+    {
+        $idLpb = (int)($header->id_lpb ?? 0);
+        $kodeFakturPajak = trim((string)($header->kode_faktur_pajak ?? ''));
+        $hasTaxInvoice = ($kodeFakturPajak !== '' && $kodeFakturPajak !== '-');
+
+        // Jika faktur pajak sudah ada pada LPB, pembelian wajib diakui saat LPB
+        if ($hasTaxInvoice) {
+            $mode = 'SAAT_LPB';
+        } else {
+            $savedMode = strtoupper(trim((string)($header->pengakuan_pembelian ?? '')));
+            if ($savedMode === 'SAAT_LPB' || $savedMode === 'SAAT_TERJUAL') {
+                $mode = $savedMode;
+            } else {
+                $mode = 'SAAT_LPB';
+                $kdSuplier = trim((string)($header->kd_suplier_source ?? ''));
+                if ($kdSuplier !== '' && $this->CI->db->field_exists('pengakuan_konsinyasi', 'tbpo_suplier')) {
+                    $sup = $this->CI->db
+                        ->select('pengakuan_konsinyasi')
+                        ->where('kd_suplier', $kdSuplier)
+                        ->get('tbpo_suplier')
+                        ->row();
+                    if ($sup && in_array($sup->pengakuan_konsinyasi, ['SAAT_LPB', 'SAAT_TERJUAL'], true)) {
+                        $mode = $sup->pengakuan_konsinyasi;
+                    }
+                }
+            }
+        }
+
+        if ($idLpb > 0 && $this->CI->db->field_exists('pengakuan_pembelian', 'tb_lpb')) {
+            $currentMode = strtoupper(trim((string)($header->pengakuan_pembelian ?? '')));
+            if ($currentMode !== $mode) {
+                $this->CI->db->where('id_lpb', $idLpb)->update('tb_lpb', [
+                    'pengakuan_pembelian' => $mode
+                ]);
+            }
+        }
+
+        return $mode;
+    }
+
+    /**
+     * Mengambil id_jurnal dari berbagai kemungkinan struktur respons accounting_service.
+     */
+    private function extract_journal_id_from_result(array $result)
+    {
+        if (empty($result['data'])) {
+            return 0;
+        }
+        $data = $result['data'];
+        if (is_array($data)) {
+            if (!empty($data['id_jurnal'])) {
+                return (int)$data['id_jurnal'];
+            }
+            if (!empty($data['journal'])) {
+                $j = $data['journal'];
+                return is_object($j) ? (int)($j->id_jurnal ?? 0) : (int)($j['id_jurnal'] ?? 0);
+            }
+        } elseif (is_object($data)) {
+            return (int)($data->id_jurnal ?? 0);
+        }
+        return 0;
     }
 
     public function post_consignment_settlement($idSettlement, $userId = null)
@@ -630,6 +715,10 @@ class Accounting_source_service
             );
         }
 
+        $referensiNo = ($lpbRow && !empty($lpbRow->nomor_lpb))
+            ? trim((string)$lpbRow->nomor_lpb)
+            : (trim((string)($settlement->nomor_lpb_asal ?? '')) ?: $sourceNo);
+
         $payload = [
             'tanggal_transaksi' => $tanggalLpb,
             'journal_type'      => 'PJ',
@@ -637,7 +726,7 @@ class Accounting_source_service
             'source_module'     => 'PURCHASING',
             'source_type'       => 'CONSIGNMENT_SETTLEMENT',
             'source_id'         => (string)$idSettlement,
-            'source_no'         => $sourceNo,
+            'source_no'         => $referensiNo,
             'idempotency_key'   => 'CONSIGNMENT_SETTLEMENT-' . $idSettlement,
             'scope_type'        => 'WAREHOUSE',
             'scope_key'         => (string)$settlement->gudang_id,
