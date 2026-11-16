@@ -1671,7 +1671,7 @@ class M_Konsinyasi extends CI_Model
     /**
      * Memperbarui nomor faktur dan tanggal invoice supplier pada transaksi konsinyasi yang telah lunas
      */
-    public function update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING')
+    public function update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING', $noFakturPajak = '', $tglFakturPajak = '')
     {
         $settlement = $this->get_settlement_by_id((int) $idSettlement);
         if (!$settlement) {
@@ -1682,7 +1682,9 @@ class M_Konsinyasi extends CI_Model
 
         $updatePayload = [
             'no_invoice_supplier'  => $noInvoice,
-            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d')
+            'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d'),
+            'no_faktur_pajak'      => $noFakturPajak !== '' ? $noFakturPajak : null,
+            'tgl_faktur_pajak'     => $tglFakturPajak !== '' ? $tglFakturPajak : null,
         ];
 
         $this->db->where('id_settlement', (int) $idSettlement)->update('tb_konsinyasi_settlement', $updatePayload);
@@ -1711,7 +1713,7 @@ class M_Konsinyasi extends CI_Model
     /**
      * Memperbarui satu invoice supplier untuk seluruh settlement lunas dalam kelompok LPB/barang/lot.
      */
-    public function update_invoice_supplier_batch($idSettlement, array $ids, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING')
+    public function update_invoice_supplier_batch($idSettlement, array $ids, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING', $noFakturPajak = '', $tglFakturPajak = '')
     {
         $primary = $this->db->get_where('tb_konsinyasi_settlement', ['id_settlement' => (int)$idSettlement])->row_array();
         if (!$primary || $primary['status'] !== 'BILLED') {
@@ -1745,6 +1747,8 @@ class M_Konsinyasi extends CI_Model
         $this->db->where_in('id_settlement', $validIds)->update('tb_konsinyasi_settlement', [
             'no_invoice_supplier'  => $noInvoice,
             'tgl_invoice_supplier' => $tglInvoice ?: date('Y-m-d'),
+            'no_faktur_pajak'      => $noFakturPajak !== '' ? $noFakturPajak : null,
+            'tgl_faktur_pajak'     => $tglFakturPajak !== '' ? $tglFakturPajak : null,
         ]);
 
         foreach ($rows as $row) {

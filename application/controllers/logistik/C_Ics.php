@@ -1081,6 +1081,12 @@ class C_Ics extends CI_Controller
             // Jika inputer adalah admlpb, harga satuan selalu 0 karena akan diisi oleh Purchasing
             $hargaValue = $isDraft ? 0.0 : $this->_parse_harga_input($hargaSatuan[$index] ?? 0);
 
+            // Khusus LPB CP, harga yang diinput adalah harga include PPN 11%,
+            // sehingga yang disimpan ke database adalah HPP (harga setelah dikurangi PPN 11%)
+            if (!$isDraft && $hargaValue > 0 && strtoupper($payload['jenis_lpb']) === 'LPB CP') {
+                $hargaValue = round($hargaValue / 1.11, 2);
+            }
+
             $detailRows[] = [
                 'kd_barang' => $kode,
                 'qty_diterima' => $qtyValue,
