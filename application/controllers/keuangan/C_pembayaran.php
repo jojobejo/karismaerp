@@ -752,6 +752,21 @@ class C_pembayaran extends CI_Controller
             if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
                 $this->M_pembayaran->update_cara_pembayaran($faktur['id_faktur'], $cara_pembayaran_faktur);
             }
+
+            // Keluarkan stok konsinyasi dari Gdg. Titipan di Kios (gudang_id = 14) senilai qty yang dibeli kios
+            if ($is_konsinyasi && !$is_pending && $qty_konsinyasi > 0 && $kd_barang_konsinyasi !== '' && $this->db->table_exists('tberp_stock_ledger')) {
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $kd_barang_konsinyasi,
+                    'gudang_id'    => '14',
+                    'no_lot'       => '',
+                    'expired_date' => null,
+                    'qty'          => $qty_konsinyasi,
+                    'tipe'         => 'OUT',
+                    'ref_no'       => $no_faktur_konsinyasi ?: $faktur['no_faktur'],
+                    'ref_type'     => 'PEMBAYARAN_KONSINYASI',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+            }
             $msg_sukses = ($id_pembayaran_draft > 0) ? 'Draft pembayaran faktur berhasil diposting.' : 'Pembayaran faktur berhasil disimpan.';
             $this->session->set_flashdata('success', $msg_sukses);
             redirect('keuangan/pembayaran/customer/' . rawurlencode($faktur['kd_customer']));

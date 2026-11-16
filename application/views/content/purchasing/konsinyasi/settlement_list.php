@@ -1070,6 +1070,31 @@
                         </div>
                     </div>
 
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold text-dark">
+                            Nomor Faktur Pajak
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-receipt"></i></span>
+                            </div>
+                            <input type="text" name="no_faktur_pajak" id="upd_no_faktur_pajak" class="form-control font-weight-bold" placeholder="Contoh: 010.000-26.00000001">
+                        </div>
+                        <small class="text-muted mt-1 d-block">Opsional. Masukkan nomor faktur pajak dari supplier jika ada.</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="small font-weight-bold text-dark">
+                            Tanggal Faktur Pajak
+                        </label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                            </div>
+                            <input type="date" name="tgl_faktur_pajak" id="upd_tgl_faktur_pajak" class="form-control font-weight-bold">
+                        </div>
+                    </div>
+
                     <div class="alert alert-info py-2 px-3 small mb-0">
                         <i class="fas fa-info-circle mr-1"></i> Nomor faktur akan diterapkan sekaligus ke seluruh transaksi lunas dengan LPB, barang, dan lot yang sama, serta menyinkronkan voucher jurnal pembelian.
                     </div>
@@ -1992,6 +2017,8 @@ window.openModalUpdateInvoice = function(id, allIds) {
                 $('#upd_txt_total_tagihan').text('Rp ' + Number(d.total_tagihan_beli || 0).toLocaleString('id-ID', {minimumFractionDigits: 2}));
                 $('#upd_no_invoice_supplier').val(d.no_invoice_supplier || '');
                 $('#upd_tgl_invoice_supplier').val(d.tgl_invoice_supplier || '<?= date("Y-m-d") ?>');
+                $('#upd_no_faktur_pajak').val(d.no_faktur_pajak || '');
+                $('#upd_tgl_faktur_pajak').val(d.tgl_faktur_pajak || '');
                 showModalSafe('modalUpdateInvoice');
             } else {
                 var msg = (res && res.message) ? res.message : 'Gagal mengambil data settlement.';

@@ -186,6 +186,8 @@ class C_Konsinyasi extends CI_Controller
         $allIdsStr = trim((string)$this->input->post('all_settlement_ids'));
         $noInvoice = trim((string) $this->input->post('no_invoice_supplier', TRUE));
         $tglInvoice = trim((string) $this->input->post('tgl_invoice_supplier', TRUE));
+        $noFakturPajak = trim((string) $this->input->post('no_faktur_pajak', TRUE));
+        $tglFakturPajak = trim((string) $this->input->post('tgl_faktur_pajak', TRUE));
 
         if ($idSettlement <= 0) {
             $this->output
@@ -210,9 +212,9 @@ class C_Konsinyasi extends CI_Controller
 
         $ids = array_unique(array_filter(array_map('intval', explode(',', $allIdsStr))));
         if (count($ids) > 1) {
-            $result = $this->M_Konsinyasi->update_invoice_supplier_batch($idSettlement, $ids, $noInvoice, $tglInvoice, $userId, $userName);
+            $result = $this->M_Konsinyasi->update_invoice_supplier_batch($idSettlement, $ids, $noInvoice, $tglInvoice, $userId, $userName, $noFakturPajak, $tglFakturPajak);
         } else {
-            $result = $this->M_Konsinyasi->update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId, $userName);
+            $result = $this->M_Konsinyasi->update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId, $userName, $noFakturPajak, $tglFakturPajak);
         }
 
         $this->output
