@@ -51,17 +51,12 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Auth';
+$route['default_controller'] = 'auth';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
 // Portal Dashboard
 $route['portal'] = 'Portal/index';
-$route['sso/authorize'] = 'Sso/authorize';
-$route['sso/panduan-klien'] = 'SsoGuide/index';
-$route['api/sso/token'] = 'Sso/token';
-$route['api/sso/check'] = 'Sso/check';
-$route['api/sso/login-event'] = 'Sso/login_event';
 $route['auth'] = 'Auth/index';
 
 $route['presentasi_erp']                        = 'Presentasi/ppt_erp';
@@ -69,45 +64,9 @@ $route['presentasi_karismaonline']              = 'Presentasi/ppt_karismaonline'
 
 //Auth Login
 $route['process']                                   = 'Auth/process';
-$route['auth/forgot-password']                      = 'Auth/forgot_password';
-$route['admin/password-reset-requests']             = 'admin/C_PasswordResetRequests/index';
-$route['admin/password-reset-requests/reset/(:num)'] = 'admin/C_PasswordResetRequests/reset/$1';
-$route['admin/portal-app-access']                   = 'admin/C_PortalAccess/index';
-$route['admin/portal-app-access/detail']             = 'admin/C_PortalAccess/detail';
-$route['admin/portal-app-access/save']              = 'admin/C_PortalAccess/save';
-$route['admin/portal-app-access/account']           = 'admin/C_PortalAccess/account_setting';
-$route['admin/portal-app-access/account-options']   = 'admin/C_PortalAccess/account_options';
-$route['admin/portal-app-access/account-save']      = 'admin/C_PortalAccess/account_save';
-$route['admin/portal-app-directory']                 = 'admin/C_PortalAppDirectory/index';
-$route['admin/portal-app-directory/save']             = 'admin/C_PortalAppDirectory/save';
-$route['admin/portal-app-modules']                  = 'admin/C_PortalAppModules/index';
-$route['admin/portal-app-modules/list']             = 'admin/C_PortalAppModules/list';
-$route['admin/portal-app-modules/save']             = 'admin/C_PortalAppModules/save';
-$route['admin/portal-app-modules/update/(:num)']    = 'admin/C_PortalAppModules/update/$1';
-$route['admin/portal-app-modules/delete/(:num)']    = 'admin/C_PortalAppModules/delete/$1';
-$route['api/client/modules']                       = 'api/C_PortalModules/index';
-$route['api/client/modules/(:any)']                = 'api/C_PortalModules/item/$1';
-$route['admin/portal-sso-clients']                  = 'admin/C_PortalSsoClients/index';
-$route['admin/portal-sso-clients/accounts']          = 'admin/C_PortalSsoClients/accounts_index';
-$route['admin/portal-sso-clients/accounts/(:any)/upload'] = 'admin/C_PortalSsoClients/upload_accounts/$1';
-$route['admin/portal-sso-clients/accounts/(:any)/import'] = 'admin/C_PortalSsoClients/import_accounts/$1';
-$route['admin/portal-sso-clients/accounts/(:any)/pic/(:num)'] = 'admin/C_PortalSsoClients/assign_account_pic/$1/$2';
-$route['admin/portal-sso-clients/accounts/(:any)/reveal/(:num)'] = 'admin/C_PortalSsoClients/reveal_account_password/$1/$2';
-$route['admin/portal-sso-clients/accounts/(:any)/delete/(:num)'] = 'admin/C_PortalSsoClients/delete_account/$1/$2';
-$route['admin/portal-sso-clients/accounts/(:any)']  = 'admin/C_PortalSsoClients/accounts/$1';
-$route['admin/portal-sso-clients/login-history'] = 'admin/C_PortalSsoClients/login_history';
-$route['admin/portal-sso-clients/generate-encryption-key'] = 'admin/C_PortalSsoClients/generate_encryption_key';
-$route['admin/portal-sso-clients/save']             = 'admin/C_PortalSsoClients/save';
-$route['admin/portal-sso-clients/edit/(:any)']      = 'admin/C_PortalSsoClients/edit/$1';
-$route['admin/portal-sso-clients/update/(:any)']    = 'admin/C_PortalSsoClients/update/$1';
-$route['admin/portal-sso-clients/delete/(:any)']    = 'admin/C_PortalSsoClients/delete/$1';
-$route['admin/portal-sso-clients/rotate/(:any)']     = 'admin/C_PortalSsoClients/rotate/$1';
-$route['admin/portal-sso-clients/reveal/(:any)']     = 'admin/C_PortalSsoClients/reveal/$1';
-$route['admin/portal-sso-clients/toggle/(:any)']     = 'admin/C_PortalSsoClients/toggle/$1';
-$route['admin/api-documentation']                    = 'admin/C_ApiDocumentation/index';
-$route['admin/portal-sso-check'] = 'admin/C_PortalSsoCheck/index';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard/index';
+
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
 $route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
 $route['admin/stockopname/monitoring/activity-log'] = 'admin/C_Stockopname/monitoring_activity_log';
@@ -238,7 +197,6 @@ $route['master_customer/delete']                    = 'keuangan/C_Keuangan/maste
 // MASTER - USER MANAGEMENT
 $route['master/user-management']                    = 'master/C_Usermanagement';
 $route['master/user-management/list']               = 'master/C_Usermanagement/list';
-$route['master/user-management/import-sql']         = 'master/C_Usermanagement/import_sql';
 $route['master/user-management/detail/(:num)']      = 'master/C_Usermanagement/detail/$1';
 $route['master/user-management/save']               = 'master/C_Usermanagement/save';
 $route['master/user-management/update/(:num)']      = 'master/C_Usermanagement/update/$1';
@@ -246,12 +204,6 @@ $route['master/user-management/delete/(:num)']      = 'master/C_Usermanagement/d
 $route['master/user-management/reset-password/(:num)'] = 'master/C_Usermanagement/reset_password/$1';
 $route['master/user-management/toggle-status/(:num)'] = 'master/C_Usermanagement/toggle_status/$1';
 $route['master/user-management/options']            = 'master/C_Usermanagement/select_options';
-$route['master/organisasi']                         = 'master/C_Organisasi';
-$route['master/organisasi/list/(:any)']             = 'master/C_Organisasi/list/$1';
-$route['master/organisasi/detail/(:any)/(:num)']    = 'master/C_Organisasi/detail/$1/$2';
-$route['master/organisasi/save/(:any)']             = 'master/C_Organisasi/save/$1';
-$route['master/organisasi/save/(:any)/(:num)']      = 'master/C_Organisasi/save/$1/$2';
-$route['master/organisasi/delete/(:any)/(:num)']    = 'master/C_Organisasi/delete/$1/$2';
 $route['master/jobdesk']                            = 'master/C_Jobdesk';
 $route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
 $route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
@@ -533,11 +485,9 @@ $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_d
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
 
-// API data Purchasing dan Master Barang
-$route['api/v1/barang']                             = 'api/C_Api/get_data_barang';
-$route['api/v1/pre-po']                             = 'api/C_Api/get_data_pre_po_erp';
-$route['getdata_kiupo']                             = 'api/C_Api/get_data_pre_po_erp';
-$route['sync_pre_po_erp']                           = 'api/C_Api/get_data_pre_po_erp';
+// COBA API
+$route['getdata_kiupo']                             = 'api/C_Api';
+$route['sync_pre_po_erp']                          = 'api/C_Api/sync_pre_po_erp';
 
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';

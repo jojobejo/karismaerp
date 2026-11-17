@@ -54,6 +54,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 abstract class CI_DB_driver {
 
 	/**
+	 * Optional database failover connection definitions.
+	 *
+	 * @var	array
+	 */
+	public $failover = array();
+
+	/**
 	 * Data Source Name / Connect string
 	 *
 	 * @var	string

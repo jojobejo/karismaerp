@@ -31,6 +31,25 @@ class C_Hrd extends CI_Controller
         show_error('Akses hanya untuk Admin dan Superadmin', 403, 'Forbidden');
     }
 
+    private function _require_penilaian_input_access()
+    {
+        if (!$this->session->userdata('logged_in')) {
+            redirect('Auth');
+            exit;
+        }
+
+        $akses = intval($this->session->userdata('lv'));
+        $defaultRedirect = trim((string)$this->session->userdata('default_redirect'));
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        if (in_array($akses, array(1, 2), true)
+            || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)
+            || $defaultRedirect === 'penilaian_lingkungan') {
+            return;
+        }
+
+        show_error('Akses tidak diizinkan', 403, 'Forbidden');
+    }
+
     private function _get_current_user_id()
     {
         return $this->session->userdata('id') ?: $this->session->userdata('kode') ?: null;
@@ -995,13 +1014,13 @@ class C_Hrd extends CI_Controller
 
     public function penilaian_lingkungan()
     {
+        $this->_require_penilaian_input_access();
+
         if ($this->_is_penilaian_direksi_readonly()) {
             redirect('dashboard_penilaian');
             return;
         }
 
-        // temporarily disabled access check for penilaian lingkungan
-        // $this->_require_hak_akses(array(1, 2));
         $data['page_title'] = 'Penilaian Lingkungan Kantor';
         $data['page_heading'] = 'Input Laporan';
         $data['module_label'] = 'HRD Mobile';
@@ -1182,6 +1201,9 @@ class C_Hrd extends CI_Controller
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         );
+        if ($this->db->field_exists('created_by_name', 'tbhrd_environment_issues')) {
+            $issueData['created_by_name'] = $this->session->userdata('nama') ?: $this->session->userdata('username');
+        }
 
         if (!$this->M_Hrd->insert_environment_issue($issueData)) {
             echo json_encode(array('status' => false, 'message' => 'Gagal menyimpan issue.'));

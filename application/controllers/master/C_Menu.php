@@ -8,10 +8,7 @@ class C_Menu extends CI_Controller
         parent::__construct();
         $this->load->model('master/M_Menu', 'model');
         $this->load->library('permission');
-        if (!$this->session->userdata('logged_in')) {
-            $this->session->set_flashdata('gagal', 'Sesi Anda berakhir. Silakan login ulang.');
-            redirect('Auth');
-        }
+        if (!$this->session->userdata('logged_in')) redirect('Auth');
         $this->permission->guard('master/menu');
     }
 
@@ -23,7 +20,7 @@ class C_Menu extends CI_Controller
 
     public function index()
     {
-        $data['page_title'] = 'KARISMA ERP - Module Management';
+        $data['page_title'] = 'KARISMA ERP - Master Menu';
         $data['parents'] = $this->model->all_active();
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/master/menu/index.php', $data);

@@ -102,86 +102,6 @@
             text-transform: uppercase;
         }
 
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .admin-navigation {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .admin-navigation a {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            min-height: 38px;
-            padding: 8px 13px;
-            color: #16447c;
-            border: 1px solid rgba(32, 86, 158, .15);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .86);
-            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
-            font-size: .72rem;
-            font-weight: 800;
-            text-decoration: none;
-            transition: color .2s ease, background .2s ease, transform .2s ease;
-        }
-
-        .admin-navigation a:hover,
-        .admin-navigation a:focus-visible {
-            color: #fff;
-            background: #1769ff;
-            outline: none;
-            transform: translateY(-1px);
-        }
-
-        .logout-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-height: 38px;
-            padding: 8px 13px;
-            color: #b42335;
-            border: 1px solid rgba(180, 35, 53, .16);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .9);
-            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
-            font-size: .72rem;
-            font-weight: 800;
-            text-decoration: none;
-            transition: color .2s ease, background .2s ease, transform .2s ease;
-        }
-
-        .logout-link:hover,
-        .logout-link:focus-visible {
-            color: #fff;
-            background: #b42335;
-            outline: none;
-            transform: translateY(-1px);
-        }
-
-        .user-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            min-height: 38px;
-            padding: 8px 13px;
-            color: #16447c;
-            border: 1px solid rgba(32, 86, 158, .15);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .86);
-            box-shadow: 0 6px 18px rgba(25, 68, 125, .07);
-            font-size: .72rem;
-            font-weight: 800;
-        }
-
         .status-dot {
             width: 8px;
             height: 8px;
@@ -507,70 +427,6 @@
 
         .portal-card:hover .arrow-button { color: #fff; background: var(--accent); transform: translateX(3px); }
 
-        .card-action-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: auto; padding-top: 22px; }
-        .card-action-links .card-action { flex: 1 1 150px; margin-top: 0; padding-top: 0; text-decoration: none; }
-
-        .portal-card-not-configured {
-            --accent: #94a3b8 !important;
-            color: #64748b;
-            border-color: #d8dee8;
-            background: rgba(241, 245, 249, .88);
-            box-shadow: 0 12px 30px rgba(51, 65, 85, .06);
-        }
-
-        .portal-card-not-configured::before { opacity: .04; }
-        .portal-card-not-configured::after { background: #a8b1bf; opacity: .35; }
-        .portal-card-not-configured .portal-icon-wrap::after { background: #a8b1bf; opacity: .08; }
-        .portal-card-not-configured .portal-icon {
-            color: #64748b;
-            background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
-            box-shadow: inset 0 1px rgba(255,255,255,.7);
-        }
-        .portal-card-not-configured h3,
-        .portal-card-not-configured .card-action { color: #475569; }
-        .portal-card-not-configured p { color: #778397; }
-        .portal-card-not-configured .arrow-button { color: #7b8797; background: #eef2f6; border-color: #d7dee7; }
-        .portal-card-not-configured:hover,
-        .portal-card-not-configured:focus-visible {
-            border-color: #cbd5e1;
-            box-shadow: 0 18px 38px rgba(51, 65, 85, .1);
-        }
-        .portal-card-not-configured:hover::before { opacity: .06; }
-        .portal-card-not-configured:hover .arrow-button { color: #fff; background: #8793a3; }
-
-        .app-setup-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 12px;
-            padding: 5px 9px;
-            color: #64748b;
-            border: 1px solid #dbe2ea;
-            border-radius: 999px;
-            background: rgba(255,255,255,.74);
-            font-size: .68rem;
-            font-weight: 800;
-        }
-        .app-setup-status-waiting {
-            color: #9a4b12 !important;
-            border-color: rgba(217, 119, 6, .24) !important;
-            background: #fff7ed !important;
-        }
-        .app-user-instruction {
-            margin: 10px 0 0;
-            color: #17634f;
-            font-size: .82rem;
-            font-weight: 650;
-            line-height: 1.5;
-        }
-        .app-user-instruction-waiting { color: #9a4b12; }
-        .work-account-credentials { margin-top: 12px; padding: 12px; color: #1e3a8a; border: 1px solid #dbeafe; border-radius: 10px; background: #eff6ff; overflow-wrap: anywhere; }
-        .portal-card:not(.portal-card-not-configured) .app-setup-status {
-            color: #127252;
-            border-color: rgba(24, 179, 127, .2);
-            background: rgba(236, 253, 245, .82);
-        }
-
         .portal-footer {
             display: flex;
             justify-content: space-between;
@@ -633,11 +489,6 @@
             .brand { max-width: 230px; font-size: .86rem; }
             .brand-logo { width: 40px; height: 40px; }
             .system-status { padding: 8px 10px; font-size: .62rem; }
-            .topbar-actions { gap: 7px; }
-            .admin-navigation { justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
-            .admin-navigation a { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
-            .user-chip { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
-            .logout-link { min-height: 34px; padding: 7px 9px; font-size: .63rem; }
             .portal-hero { min-height: 0; border-radius: 24px; }
             .hero-copy { padding: 38px 24px 40px; }
             .portal-title { font-size: 2.55rem; }
@@ -669,29 +520,14 @@
             <img class="brand-logo" src="<?= $portal_asset_base ?>assets/images/Karisma.png" alt="Logo Karisma">
             <span>PT. Karisma Indoagro Universal</span>
         </div>
-        <div class="topbar-actions">
-            <?php if (!empty($is_admin_user)): ?><div class="system-status"><span class="status-dot"></span> System Online</div><?php endif; ?>
-            <span class="user-chip"><i class="fas fa-user-circle" aria-hidden="true"></i><span><?= html_escape($user_name ?: 'Pengguna') ?></span></span>
-            <a class="logout-link" href="<?= base_url('logout') ?>"><i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></a>
-            <?php if (!empty($is_admin_user)): ?>
-                <nav class="admin-navigation" aria-label="Navigasi administrasi">
-                    <a href="<?= base_url('admin/portal-app-directory') ?>"><i class="fas fa-th-large" aria-hidden="true"></i><span>Application Directory</span></a>
-                    <a href="<?= base_url('sso/panduan-klien') ?>"><i class="fas fa-book-reader" aria-hidden="true"></i><span>Panduan Integrasi SSO</span></a>
-                    <a href="<?= base_url('admin/portal-sso-clients') ?>"><i class="fas fa-link" aria-hidden="true"></i><span>Integrasi SSO</span></a>
-                    <a href="<?= base_url('admin/api-documentation') ?>"><i class="fas fa-book-open" aria-hidden="true"></i><span>Dokumentasi API</span></a>
-                    <a href="<?= base_url('admin/portal-sso-check') ?>"><i class="fas fa-vial" aria-hidden="true"></i><span>Cek API Klien SSO</span></a>
-                    <a href="<?= base_url('master/user-management') ?>"><i class="fas fa-users-cog" aria-hidden="true"></i><span>User Management</span></a>
-                    <a href="<?= base_url('master/menu') ?>"><i class="fas fa-cubes" aria-hidden="true"></i><span>Module Management</span></a>
-                </nav>
-            <?php endif; ?>
-        </div>
+        <div class="system-status"><span class="status-dot"></span> System Online</div>
     </header>
 
     <section class="portal-hero" aria-labelledby="portal-title">
         <div class="hero-copy">
             <div class="eyebrow"><i class="fas fa-layer-group"></i> Digital Ecosystem</div>
             <h1 class="portal-title" id="portal-title">KarismaERP<br><span>Portal Apps.</span></h1>
-            <p class="portal-subtitle">Pilih aplikasi yang tersedia untuk melanjutkan pekerjaan Anda. Jika akun kerja belum ditetapkan, hubungi admin.</p>
+            <p class="portal-subtitle">Satu gerbang menuju seluruh ekosistem digital Karisma. Pilih aplikasi untuk memulai pekerjaan dengan lebih cepat dan terhubung.</p>
         </div>
         <div class="hero-visual" aria-hidden="true">
             <div class="visual-core"><img src="<?= $portal_asset_base ?>assets/images/Karisma.png" alt=""></div>
@@ -713,19 +549,12 @@
 
         <div class="portal-grid">
             <?php foreach ($apps as $index => $app): ?>
-                <?php
-                $clientConfigured = !empty($app['client_configured']);
-                $accountAssigned = !empty($app['account_assigned_by_admin']);
-                $hasAccess = !empty($app['has_access']);
-                $cardOnline = $clientConfigured && (!empty($is_admin_user) || ($hasAccess && $accountAssigned));
-                $canLaunch = $clientConfigured && $hasAccess && $accountAssigned;
-                $blockReason = !$clientConfigured ? 'Integrasi aplikasi belum aktif. Hubungi admin.'
-                    : (!$hasAccess ? 'Akses kerja belum diberikan. Hubungi admin.' : 'Akun kerja belum ditetapkan. Hubungi admin.');
-                $userInstruction = $cardOnline ? 'Akun kerja tersedia dan integrasi aktif.' : $blockReason;
-                ?>
-                <article class="portal-card<?= !$cardOnline ? ' portal-card-not-configured' : '' ?>"
-                   style="--accent: <?= html_escape($cardOnline ? $app['accent'] : '#94a3b8') ?>; --index: <?= (int)$index ?>;"
-                   aria-label="Aplikasi <?= html_escape($app['name']) ?>. <?= html_escape($userInstruction) ?>">
+                <a class="portal-card"
+                   style="--accent: <?= html_escape($app['accent']) ?>; --index: <?= (int)$index ?>;"
+                   href="<?= html_escape($app['url']) ?>"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   aria-label="Buka <?= html_escape($app['name']) ?> di tab baru">
                     <div class="card-top">
                         <div class="portal-icon-wrap">
                             <div class="portal-icon"><i class="fas <?= html_escape($app['icon']) ?>"></i></div>
@@ -735,26 +564,12 @@
                     <div>
                         <h3><?= html_escape($app['name']) ?></h3>
                         <p><?= html_escape($app['description']) ?></p>
-                        <span class="app-setup-status<?= $cardOnline ? '' : ' app-setup-status-waiting' ?>"><i class="fas <?= $cardOnline ? 'fa-check-circle' : 'fa-power-off' ?>" aria-hidden="true"></i><?= $cardOnline ? 'Online' : 'Offline' ?></span>
-                        <?php if (!$is_admin_user): ?><p class="app-user-instruction<?= $accountAssigned ? '' : ' app-user-instruction-waiting' ?>"><?= $accountAssigned ? 'Status akun kerja: tersedia' : 'Status akun kerja: belum tersedia' ?></p><?php endif ?>
-                        <?php if ($accountAssigned && !empty($app['work_account_credentials'])): ?>
-                            <div class="work-account-credentials">
-                                <strong>Akun kerja</strong><br>
-                                <span>Username: <code><?= html_escape($app['work_account_credentials']['username']) ?></code></span><br>
-                                <span>Masuk otomatis melalui SSO tanpa password akun lokal.</span>
-                            </div>
-                        <?php elseif ($accountAssigned): ?>
-                            <p class="app-user-instruction app-user-instruction-waiting">Hubungi admin untuk memeriksa penetapan akun kerja.</p>
-                        <?php endif ?>
-                        <p class="app-user-instruction<?= $cardOnline ? '' : ' app-user-instruction-waiting' ?>"><?= html_escape($userInstruction) ?></p>
                     </div>
-                    <div class="card-action-links">
-                        <a class="card-action<?= $canLaunch ? '' : ' portal-card-no-redirect' ?>" href="<?= html_escape($canLaunch ? $app['redirect_url'] : '#') ?>" <?= $canLaunch ? 'target="_blank" rel="noopener noreferrer"' : 'data-block-reason="' . html_escape($blockReason) . '"' ?> aria-label="Buka <?= html_escape($app['name']) ?>">
-                            <span><?= $canLaunch ? 'Mulai Bekerja' : 'Belum tersedia' ?></span><span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
-                        </a>
-                        <?php if ($is_admin_user): ?><a class="card-action" href="<?= base_url('admin/portal-sso-clients') ?>?app_code=<?= rawurlencode($app['app_code']) ?>" aria-label="Atur URL aplikasi dan callback <?= html_escape($app['name']) ?>"><span>Atur URL aplikasi &amp; callback</span><span class="arrow-button"><i class="fas fa-cog"></i></span></a><?php endif ?>
+                    <div class="card-action">
+                        <span>Buka Aplikasi</span>
+                        <span class="arrow-button"><i class="fas fa-arrow-right"></i></span>
                     </div>
-                </article>
+                </a>
             <?php endforeach; ?>
         </div>
     </section>
@@ -764,13 +579,5 @@
         <span>Independent application access gateway</span>
     </footer>
 </main>
-<script>
-document.querySelectorAll('.portal-card-no-redirect').forEach(function (card) {
-    card.addEventListener('click', function (event) {
-        event.preventDefault();
-        alert(card.dataset.blockReason || 'Aplikasi belum dapat dibuka. Hubungi admin.');
-    });
-});
-</script>
 </body>
 </html>

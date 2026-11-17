@@ -19,164 +19,86 @@ class M_Auth extends CI_Model
         return in_array($field, $this->fields($table), true);
     }
 
+    private function uses_employee_auth($username)
+    {
+        return strtolower(trim((string)$username)) === 'superadmin';
+    }
+
     function cek_username($username)
     {
+        if ($this->uses_employee_auth($username)) {
+            $this->db->where('username', $username);
+            return $this->db->get('tb_karyawan');
+        }
         $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan');
+        return $this->db->get('tb_users');
     }
 
     function cek_password($username)
     {
-        $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan')->result();
-    }
-
-    public function get_auth_user($username)
-    {
-        $candidates = $this->get_auth_candidates($username);
-        return $candidates[0] ?? null;
-    }
-
-    public function get_auth_candidates($username)
-    {
-        $username = trim((string) $username);
-        if ($username === '') {
-            return [];
+        if ($this->uses_employee_auth($username)) {
+            $this->db->select("k.*, k.id AS id_karyawan, 'tb_karyawan' AS auth_table", false);
+            $this->db->from('tb_karyawan k');
+            $this->db->where('k.username', $username);
+            return $this->db->get()->result();
         }
 
-        $candidates = [];
-        $seen = [];
+        $userFields = $this->fields('tb_users');
+        $employeeFields = $this->fields('tb_karyawan');
+        $matchByNik = in_array('nik', $userFields, true) && in_array('nik', $employeeFields, true);
+        $matchByUsername = in_array('username', $userFields, true) && in_array('username', $employeeFields, true);
 
-        $tbUsers = $this->get_tb_users_user($username);
-        if ($tbUsers) {
-            $key = $tbUsers->auth_source . ':' . $tbUsers->id;
-            $candidates[] = $tbUsers;
-            $seen[$key] = true;
+        // Tables can have different collations. Normalize both sides for the lookup.
+        $match = [];
+        if ($matchByNik) {
+            $match[] = "(u.nik IS NOT NULL AND CHAR_LENGTH(u.nik) > 0 AND CONVERT(k.nik USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(u.nik USING utf8mb4) COLLATE utf8mb4_general_ci)";
         }
-
-        $tbKaryawan = $this->get_tb_karyawan_user($username);
-        if ($tbKaryawan) {
-            $this->apply_tb_users_hrd_access($tbKaryawan);
-            $key = $tbKaryawan->auth_source . ':' . $tbKaryawan->id;
-            if (!isset($seen[$key])) {
-                $candidates[] = $tbKaryawan;
-                $seen[$key] = true;
+        if ($matchByUsername) {
+            $match[] = "CONVERT(k.username USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(u.username USING utf8mb4) COLLATE utf8mb4_general_ci";
+        }
+        $matchSql = empty($match) ? '1 = 0' : '(' . implode(' OR ', $match) . ')';
+        $orderByNik = $matchByNik
+            ? "(CONVERT(k.nik USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(u.nik USING utf8mb4) COLLATE utf8mb4_general_ci) DESC, "
+            : '';
+        $employeeLookup = function ($field) use ($employeeFields, $matchSql, $orderByNik) {
+            if (!in_array($field, $employeeFields, true)) {
+                return null;
             }
-        }
+            return "(SELECT k.`{$field}` FROM tb_karyawan k WHERE {$matchSql} ORDER BY {$orderByNik} k.id ASC LIMIT 1)";
+        };
+        $profileAliases = [
+            'departemen' => ['departemen', 'departement', 'bagian'],
+            'akses_lv' => ['akses_lv', 'level'],
+            'jobdesk' => ['jobdesk', 'jabatan', 'jobdesk_hrd'],
+            'nm_karyawan' => ['nm_karyawan', 'nama_lngkp'],
+            'tim' => ['tim'],
+            'wilayah' => ['wilayah'],
+        ];
 
-        return $candidates;
+        $this->db->select("u.*, 'tb_users' AS auth_table", false);
+        $this->db->select("(SELECT k.id FROM tb_karyawan k WHERE {$matchSql} ORDER BY {$orderByNik} k.id ASC LIMIT 1) AS id_karyawan", false);
+        foreach ($profileAliases as $alias => $fields) {
+            $expressions = [];
+            $employeeExpression = $employeeLookup(array_shift($fields));
+            if ($employeeExpression !== null) {
+                $expressions[] = $employeeExpression;
+            }
+            foreach ($fields as $field) {
+                if (in_array($field, $userFields, true)) {
+                    $expressions[] = 'u.`' . $field . '`';
+                }
+            }
+            $valueExpression = empty($expressions) ? "''" : 'COALESCE(' . implode(', ', $expressions) . ", '')";
+            $this->db->select($valueExpression . " AS `{$alias}`", false);
+        }
+        $this->db->from('tb_users u');
+        $this->db->where('u.username', $username);
+        return $this->db->get()->result();
     }
 
-    public function get_tb_users_user($username)
+    public function update_last_login($id, $table = 'tb_users')
     {
-        if (!$this->db->table_exists('tb_users')) {
-            return null;
-        }
-
-        $this->db->where('username', $username);
-        $row = $this->db->get('tb_users')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_users';
-        return $row;
-    }
-
-    public function get_tb_karyawan_user($username)
-    {
-        $this->db->where('username', $username);
-        $this->db->order_by('id', 'ASC');
-        $row = $this->db->get('tb_karyawan')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_karyawan';
-        return $row;
-    }
-
-    private function apply_tb_users_hrd_access($karyawan)
-    {
-        if (!$karyawan || !$this->db->table_exists('tb_users') || !$this->has('tb_users', 'jobdesk_hrd')) {
-            return $karyawan;
-        }
-
-        $this->db->group_start();
-        if (!empty($karyawan->username) && $this->has('tb_users', 'username')) {
-            $this->db->or_where('username', $karyawan->username);
-        }
-        if (!empty($karyawan->nm_karyawan) && $this->has('tb_users', 'nama_lngkp')) {
-            $this->db->or_where('nama_lngkp', $karyawan->nm_karyawan);
-        }
-        if (!empty($karyawan->nik) && $this->has('tb_users', 'nik')) {
-            $this->db->or_where('nik', $karyawan->nik);
-        }
-        $this->db->group_end();
-
-        $this->db->where('jobdesk_hrd', 'inputer_laporan');
-        if ($this->has('tb_users', 'status')) {
-            $this->db->where('status', 1);
-        }
-
-        $tbUsers = $this->db->get('tb_users')->row();
-        if (!$tbUsers) {
-            return $karyawan;
-        }
-
-        $karyawan->jobdesk_hrd = $tbUsers->jobdesk_hrd ?? 'inputer_laporan';
-        $karyawan->default_redirect = $tbUsers->default_redirect ?? 'penilaian_lingkungan';
-        $karyawan->tb_users_match_id = $tbUsers->id ?? null;
-
-        return $karyawan;
-    }
-
-    public function verify_password($plainPassword, $storedPassword)
-    {
-        $plainPassword = (string) $plainPassword;
-        $storedPassword = (string) $storedPassword;
-
-        if ($storedPassword === '') {
-            return false;
-        }
-
-        $info = password_get_info($storedPassword);
-        if (!empty($info['algo'])) {
-            return password_verify($plainPassword, $storedPassword);
-        }
-
-        return hash_equals($storedPassword, $plainPassword);
-    }
-
-    public function password_should_be_hashed($storedPassword)
-    {
-        $storedPassword = (string) $storedPassword;
-        if ($storedPassword === '') {
-            return false;
-        }
-
-        $info = password_get_info($storedPassword);
-        if ((int) $info['algo'] === 0) {
-            return true;
-        }
-
-        return password_needs_rehash($storedPassword, PASSWORD_DEFAULT);
-    }
-
-    public function update_password_hash($id, $table, $plainPassword)
-    {
-        if (!$id || !$this->has($table, 'password')) {
-            return false;
-        }
-
-        return $this->db
-            ->where('id', $id)
-            ->update($table, ['password' => password_hash((string) $plainPassword, PASSWORD_DEFAULT)]);
-    }
-
-    public function update_last_login($id, $table = 'tb_karyawan')
-    {
-        if (!$this->has($table, 'last_login')) {
+        if (!in_array($table, ['tb_users', 'tb_karyawan'], true) || !$this->has($table, 'last_login')) {
             return true;
         }
         return $this->db->where('id', $id)->update($table, ['last_login' => date('Y-m-d H:i:s')]);
@@ -189,35 +111,19 @@ class M_Auth extends CI_Model
         }
 
         $payload = [
-            'id_karyawan' => $user->id ?? null,
+            'id_karyawan' => $user->id_karyawan ?? null,
             'nik' => $user->nik ?? null,
             'username' => $user->username ?? null,
             'ip_address' => $this->input->ip_address(),
             'user_agent' => $this->input->user_agent(),
             'status' => $status,
+            'status_login' => strtolower((string)$status) === 'success' ? 'SUCCESS' : 'FAILED',
+            'browser' => $this->input->user_agent(),
             'message' => $message,
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
         $payload = array_intersect_key($payload, array_flip($this->fields('tb_login_log')));
         return empty($payload) ? true : $this->db->insert('tb_login_log', $payload);
-    }
-
-    public function request_password_reset($user)
-    {
-        if (!$this->db->table_exists('tb_password_reset_request')) return false;
-        $source = $user->auth_source ?? 'tb_karyawan';
-        $userId = (int)($user->id ?? 0);
-        if ($userId < 1 || !in_array($source, ['tb_users', 'tb_karyawan'], true)) return false;
-        $pending = $this->db->where(['auth_source' => $source, 'user_id' => $userId, 'status' => 'PENDING'])
-            ->get('tb_password_reset_request')->row();
-        if ($pending) return true;
-        return $this->db->insert('tb_password_reset_request', [
-            'auth_source' => $source,
-            'user_id' => $userId,
-            'username' => (string)($user->username ?? ''),
-            'status' => 'PENDING',
-            'requested_at' => date('Y-m-d H:i:s'),
-        ]);
     }
 }

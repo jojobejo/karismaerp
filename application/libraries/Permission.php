@@ -20,7 +20,6 @@ class Permission
     public function guard($url, $permission = 'can_view')
     {
         if (!$this->CI->session->userdata('logged_in')) {
-            $this->CI->session->set_flashdata('gagal', 'Sesi Anda berakhir. Silakan login ulang.');
             redirect('Auth');
             return false;
         }

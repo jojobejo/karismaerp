@@ -50,6 +50,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @author		EllisLab Dev Team
  * @link		https://codeigniter.com/userguide3/general/controllers.html
  */
+// CodeIgniter 3 exposes loaded libraries/models as properties at runtime.
+// Keep that legacy dependency-injection pattern compatible with PHP 8.2+.
+#[\AllowDynamicProperties]
 class CI_Controller {
 
 	/**

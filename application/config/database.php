@@ -74,19 +74,14 @@ defined('BASEPATH') or exit('No direct script access allowed');
 $active_group = 'default';
 $query_builder = TRUE;
 
-// Profil Portal memakai hanya tabel akun dan tabel Portal ber-prefix.
-$portalErpProfile = getenv('KARISMA_DB_PROFILE') === 'portalerp';
-$databaseName = $portalErpProfile ? 'portalerp' : 'kiucoid_karismaerp_dev';
-$databasePrefix = $portalErpProfile ? 'portalerp_' : '';
-
 $db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => 'localhost',
 	'username' => 'root',
 	'password' => '',
-	'database' => $databaseName,
+	'database' => 'kiucoid_portal_lingkungan',
 	'dbdriver' => 'mysqli',
-	'dbprefix' => $databasePrefix,
+	'dbprefix' => '',
 	'pconnect' => FALSE,
 	'db_debug' => (ENVIRONMENT !== 'production'),
 	'cache_on' => FALSE,

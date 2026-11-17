@@ -347,15 +347,25 @@ class M_Hrd extends CI_Model
         }
     }
 
+    private function issue_reporter_name_sql($issueAlias = 'e')
+    {
+        $snapshot = $this->db->field_exists('created_by_name', 'tbhrd_environment_issues')
+            ? "NULLIF({$issueAlias}.created_by_name, '')"
+            : 'NULL';
+
+        return "COALESCE({$snapshot}, NULLIF(tu.nama_lngkp, ''), NULLIF(tu.username, ''), NULLIF(u.nama_user, ''), NULLIF(u.nama_lengkap, ''), NULLIF(u.username, ''), NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), CONCAT('User #', {$issueAlias}.created_by))";
+    }
+
     public function get_issue_list($filters = array())
     {
         $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
-            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by", false)
+            ->select($this->issue_reporter_name_sql('e') . ' AS created_by', false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
             ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
+            ->join('tb_users tu', 'e.created_by = tu.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left');
 
         $this->apply_issue_filters($filters, 'e');
@@ -366,12 +376,13 @@ class M_Hrd extends CI_Model
     public function get_issue_by_id($id)
     {
         return $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
-            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by_name", false)
+            ->select($this->issue_reporter_name_sql('e') . ' AS created_by_name', false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
             ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
+            ->join('tb_users tu', 'e.created_by = tu.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left')
             ->where('e.id', $id)
             ->get()

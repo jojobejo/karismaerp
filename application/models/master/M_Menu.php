@@ -76,7 +76,6 @@ class M_Menu extends CI_Model
         $start = (int)($post['start'] ?? 0);
         $id = $this->idField();
         $name = $this->nameField();
-        $status = isset($post['status']) ? (string)$post['status'] : '';
 
         $this->db->from($this->table);
         $total = $this->db->count_all_results('', false);
@@ -89,9 +88,6 @@ class M_Menu extends CI_Model
                 $this->db->or_like('url', $search);
             }
             $this->db->group_end();
-        }
-        if (in_array($status, ['0', '1'], true) && $this->has($this->table, 'status')) {
-            $this->db->where('status', (int)$status);
         }
         $filtered = $this->db->count_all_results('', false);
         $this->db->order_by($this->has($this->table, 'urutan') ? 'urutan' : $id, 'ASC');
