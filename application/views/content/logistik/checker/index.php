@@ -746,12 +746,11 @@ tr.row-pending { background:#fafafa !important; }
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
                                                 </button>
-                                                <!--
                                                 <button class="btn btn-sm btn-danger btn-hapus-lk"
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
                                                     <i class="fas fa-trash"></i> Hapus
-                                                </button> -->
+                                                </button>
                                             </div>
                                         <?php endif; ?>
 
@@ -1106,12 +1105,11 @@ tr.row-pending { background:#fafafa !important; }
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
                                                 </button>
-                                                <!--
                                                 <button class="btn btn-sm btn-danger btn-hapus-kk"
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
                                                     <i class="fas fa-trash"></i> Hapus
-                                                </button> -->
+                                                </button>
                                             </div>
                                         <?php endif; ?>
 
