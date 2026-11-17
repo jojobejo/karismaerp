@@ -52,7 +52,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class CI_URI {
 
 	/**
-	 * CI_Config class object.
+	 * CI_Config class object
 	 *
 	 * @var	CI_Config
 	 */

@@ -49,8 +49,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  * @author		EllisLab Dev Team
  * @link		https://codeigniter.com/userguide3/libraries/loader.html
  */
-// The loader mirrors CI super-object properties at runtime for views/libraries.
-// PHP 8.2 deprecates undeclared properties without this compatibility marker.
+// CodeIgniter 3 stores loaded services and models as runtime properties.
+// PHP 8.2+ deprecates that legacy pattern.
 #[\AllowDynamicProperties]
 class CI_Loader {
 

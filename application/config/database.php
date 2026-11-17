@@ -70,16 +70,15 @@ defined('BASEPATH') or exit('No direct script access allowed');
 | The $query_builder variables lets you determine whether or not to load
 | the query builder class.
 */
-
 $active_group = 'default';
 $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => '',
-	'database' => 'kiucoid_portal_lingkungan',
+	'username' => 'u676129830_katalogproduk',
+	'password' => '#Kiukatalog89',
+	'database' => 'u676129830_katalaogproduk',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
@@ -99,9 +98,9 @@ $db['default'] = array(
 // $db['default'] = array(
 // 	'dsn'	=> '',
 // 	'hostname' => 'localhost',
-// 	'username' => 'u676129830_karismaerp',
-// 	'password' => '#Kiuerp89',
-// 	'database' => 'u676129830_karismaerp',
+// 	'username' => 'u676129830_katalaogproduk',
+// 	'password' => '#Kiukatalog89',
+// 	'database' => 'u676129830_katalaogproduk',
 // 	'dbdriver' => 'mysqli',
 // 	'dbprefix' => '',
 // 	'pconnect' => FALSE,

@@ -52,18 +52,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class CI_Router {
 
 	/**
+	 * CI_URI class object
+	 *
+	 * @var	CI_URI
+	 */
+	public $uri;
+
+	/**
 	 * CI_Config class object
 	 *
 	 * @var	object
 	 */
 	public $config;
-
-	/**
-	 * CI_URI class object.
-	 *
-	 * @var	CI_URI
-	 */
-	public $uri;
 
 	/**
 	 * List of routes
