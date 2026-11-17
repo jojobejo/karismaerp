@@ -40,6 +40,17 @@ class C_Pelanggan extends CI_Controller
 
     public function rating_review()
     {
+        $isLoggedIn = $this->session->userdata('status') === 'is_login'
+            && (int) $this->session->userdata('id') > 0
+            && trim((string) $this->session->userdata('username')) !== ''
+            && in_array((int) $this->session->userdata('akses_lv'), [1, 2, 3, 4, 5], true);
+
+        if (!$isLoggedIn) {
+            $this->session->set_flashdata('gagal', 'Silakan login terlebih dahulu.');
+            redirect('Auth');
+            return;
+        }
+
         $data['page_title'] = 'KARISMA';
 
 

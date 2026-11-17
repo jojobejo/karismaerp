@@ -27,18 +27,25 @@
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
           </div>
         </div>
+        <div class="row mt-2">
+          <div class="col-sm">
+            <a href="<?= base_url('sso/login') ?>" class="btn btn-outline-primary btn-block">
+              <i class="fas fa-shield-alt mr-1"></i> Masuk melalui SSO Portal
+            </a>
+          </div>
+        </div>
       </form>
       <?php if ($this->session->flashdata("gagal")) : ?>
         <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("gagal") . "</center>" ?>
+          <center><?= html_escape($this->session->flashdata("gagal")) ?></center>
         </div>
       <?php elseif ($this->session->flashdata("logout")) : ?>
         <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("logout") . "</center>" ?>
+          <center><?= html_escape($this->session->flashdata("logout")) ?></center>
         </div>
       <?php elseif ($this->session->flashdata("edited")) : ?>
         <div class="alert alert-warning alert-dismissible fade show mt-3" role="alert">
-          <?php echo "<center>" . $this->session->flashdata("edited") . "</center>" ?>
+          <center><?= html_escape($this->session->flashdata("edited")) ?></center>
         </div>
       <?php endif ?>
     </div>

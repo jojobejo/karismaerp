@@ -8,7 +8,42 @@ class C_Logistik extends CI_Controller
     function __construct()
     {
         parent::__construct();
+        $this->require_authenticated_session();
         $this->load->model('M_Logistik');
+    }
+
+    /**
+     * Memastikan setiap route/endpoint modul Logistik hanya diakses oleh session lokal yang terotorisasi.
+     */
+    private function require_authenticated_session()
+    {
+        $isLoggedIn = $this->session->userdata('status') === 'is_login'
+            && (int) $this->session->userdata('id') > 0
+            && trim((string) $this->session->userdata('username')) !== ''
+            && in_array((int) $this->session->userdata('akses_lv'), [1, 2, 3, 4, 5], true);
+
+        if ($isLoggedIn) {
+            return;
+        }
+
+        $acceptHeader = (string) $this->input->server('HTTP_ACCEPT');
+        if ($this->input->is_ajax_request() || stripos($acceptHeader, 'application/json') !== false) {
+            $this->output
+                ->set_header('Cache-Control: no-store')
+                ->set_status_header(401)
+                ->set_content_type('application/json', 'utf-8')
+                ->set_output(json_encode([
+                    'success' => false,
+                    'error' => 'unauthenticated',
+                    'message' => 'Sesi login telah berakhir. Silakan login kembali.',
+                ]))
+                ->_display();
+            exit;
+        }
+
+        $this->session->set_flashdata('gagal', 'Silakan login terlebih dahulu.');
+        redirect('Auth');
+        exit;
     }
 
     public function index()

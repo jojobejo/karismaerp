@@ -59,6 +59,14 @@ $route['translate_uri_dashes'] = FALSE;
 $route['process']   = 'Auth/process';
 $route['logout']    = 'Auth/logout';
 
+// SSO Portal KARISMA ERP (pos_security)
+$route['sso/login']         = 'Auth/sso_login';
+$route['sso/callback']      = 'Auth/sso_callback';
+$route['auth/sso/start']    = 'Auth/sso_login';
+$route['auth/sso/callback'] = 'Auth/sso_callback';
+$route['auth/logout']       = 'Auth/logout';
+$route['api/session']       = 'Auth/session_info';
+
 //Dashboard
 $route['dashboard'] = 'Dashboard';
 $route['konfirm_tamu'] = 'Dashboard/konfirm_tamu';

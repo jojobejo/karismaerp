@@ -8,6 +8,11 @@ class Admin extends CI_Controller
     function __construct()
     {
         parent::__construct();
+        if ($this->session->userdata('status') !== 'is_login'
+            || (string) $this->session->userdata('akses_lv') !== '1'
+            || $this->session->userdata('departemen') !== 'IT') {
+            show_error('Halaman ini hanya dapat diakses admin IT.', 403);
+        }
         $this->load->model('M_User');
     }
 
