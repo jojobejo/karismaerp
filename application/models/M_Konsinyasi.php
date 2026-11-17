@@ -1787,12 +1787,21 @@ class M_Konsinyasi extends CI_Model
 
         // Jika terdapat jurnal pembelian terkait, sinkronkan catatan keterangan pada jurnal
         if (!empty($settlement['id_jurnal_pembelian'])) {
-            $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
+            // Sinkronkan invoice & faktur pajak ke LPB asal jika tersedia
+        $totalQtyBatch = array_sum(array_map(static function ($r) {
+            return (float) ($r['qty_net'] ?? 0);
+        }, $rows));
+        $this->sync_invoice_faktur_to_lpb($primary, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, $totalQtyBatch, $userName);
+
+        $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
             $keterangan = 'Pembelian Konsinyasi: ' . $settlement['nama_barang'] . ' (' . (float)$settlement['qty_net'] . ' ' . $settlement['satuan'] . '), Supplier: ' . $settlement['nama_suplier'] . $invTag;
             $this->db->where('id_jurnal', (int) $settlement['id_jurnal_pembelian'])->update('tbkeu_jurnal', [
                 'keterangan' => $keterangan
             ]);
         }
+
+        // Sinkronkan invoice & faktur pajak ke LPB asal jika tersedia
+        $this->sync_invoice_faktur_to_lpb($settlement, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, (float) ($settlement['qty_net'] ?? 0), $userName);
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
@@ -1809,6 +1818,131 @@ class M_Konsinyasi extends CI_Model
             'status'  => true,
             'message' => $msg
         ];
+    }
+
+    /**
+     * Menyinkronkan data invoice dan faktur pajak dari settlement konsinyasi ke tabel tb_lpb asal
+     * beserta split invoice (tb_lpb_invoice & tb_lpb_invoice_detail) agar qty dan modal detail LPB sesuai.
+     */
+    private function sync_invoice_faktur_to_lpb($settlement, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, $qtyAlokasi = 0, $userName = 'PURCHASING')
+    {
+        if (!is_array($settlement) || empty($settlement)) {
+            return;
+        }
+        $idLpbAsal = (int) ($settlement['id_lpb_asal'] ?? 0);
+        $nomorLpbAsal = trim((string) ($settlement['nomor_lpb_asal'] ?? ''));
+
+        if ($idLpbAsal <= 0 && $nomorLpbAsal === '') {
+            return;
+        }
+
+        if (!$this->db->table_exists('tb_lpb')) {
+            return;
+        }
+
+        if ($idLpbAsal <= 0 && $nomorLpbAsal !== '') {
+            $lpbRow = $this->db->select('id_lpb')->get_where('tb_lpb', ['nomor_lpb' => $nomorLpbAsal])->row_array();
+            $idLpbAsal = (int) ($lpbRow['id_lpb'] ?? 0);
+        }
+
+        $tglInvFinal = $tglInvoice !== '' ? $tglInvoice : ($noInvoice !== '' ? date('Y-m-d') : null);
+        $tglFakturFinal = $tglFakturPajak !== '' ? $tglFakturPajak : null;
+
+        $lpbPayload = [
+            'no_invoice' => $noInvoice !== '' ? $noInvoice : null,
+        ];
+
+        if ($this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
+            $lpbPayload['tanggal_invoice'] = $tglInvFinal;
+        }
+        if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+            $lpbPayload['kode_faktur_pajak'] = $noFakturPajak !== '' ? $noFakturPajak : null;
+        }
+        if ($this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
+            $lpbPayload['tanggal_faktur_pajak'] = $tglFakturFinal;
+        }
+
+        if ($idLpbAsal > 0) {
+            $this->db->where('id_lpb', $idLpbAsal)->update('tb_lpb', $lpbPayload);
+        } elseif ($nomorLpbAsal !== '') {
+            $this->db->where('nomor_lpb', $nomorLpbAsal)->update('tb_lpb', $lpbPayload);
+        }
+
+        // Sinkronkan ke tb_lpb_invoice & tb_lpb_invoice_detail agar modal & qty split di detail_record_lpb terisi akurat
+        if ($idLpbAsal > 0 && $noInvoice !== '' && $this->db->table_exists('tb_lpb_invoice') && $this->db->table_exists('tb_lpb_invoice_detail')) {
+            $kdBarang = trim((string) ($settlement['kd_barang'] ?? ''));
+            $qtyFinal = (float) $qtyAlokasi;
+
+            $detailLpb = $this->db
+                ->select('id_detail_lpb, kd_barang')
+                ->where('id_lpb', $idLpbAsal)
+                ->where('kd_barang', $kdBarang)
+                ->get('tb_lpb_detail')
+                ->row_array();
+
+            if (empty($detailLpb)) {
+                $detailLpb = $this->db
+                    ->select('id_detail_lpb, kd_barang')
+                    ->where('id_lpb', $idLpbAsal)
+                    ->get('tb_lpb_detail')
+                    ->row_array();
+            }
+
+            $existingInv = $this->db
+                ->where('id_lpb', $idLpbAsal)
+                ->where('no_invoice', $noInvoice)
+                ->get('tb_lpb_invoice')
+                ->row_array();
+
+            if (!empty($existingInv)) {
+                $idLpbInvoice = (int) $existingInv['id_lpb_invoice'];
+                $this->db->where('id_lpb_invoice', $idLpbInvoice)->update('tb_lpb_invoice', [
+                    'tanggal_invoice'      => $tglInvFinal,
+                    'kode_faktur_pajak'    => $noFakturPajak !== '' ? $noFakturPajak : null,
+                    'tanggal_faktur_pajak' => $tglFakturFinal,
+                    'total_qty'            => $qtyFinal,
+                ]);
+
+                if (!empty($detailLpb)) {
+                    $this->db
+                        ->where('id_lpb_invoice', $idLpbInvoice)
+                        ->where('id_detail_lpb', (int) $detailLpb['id_detail_lpb'])
+                        ->update('tb_lpb_invoice_detail', [
+                            'qty_alokasi' => $qtyFinal,
+                        ]);
+                }
+            } else {
+                $maxUrutanRow = $this->db
+                    ->select_max('urutan')
+                    ->where('id_lpb', $idLpbAsal)
+                    ->get('tb_lpb_invoice')
+                    ->row_array();
+                $nextUrutan = (int) ($maxUrutanRow['urutan'] ?? 0) + 1;
+
+                $this->db->insert('tb_lpb_invoice', [
+                    'id_lpb'               => $idLpbAsal,
+                    'urutan'               => $nextUrutan,
+                    'no_invoice'           => $noInvoice,
+                    'tanggal_invoice'      => $tglInvFinal,
+                    'kode_faktur_pajak'    => $noFakturPajak !== '' ? $noFakturPajak : null,
+                    'tanggal_faktur_pajak' => $tglFakturFinal,
+                    'total_qty'            => $qtyFinal,
+                    'created_by'           => $userName,
+                    'created_at'           => date('Y-m-d H:i:s'),
+                ]);
+                $idLpbInvoice = (int) $this->db->insert_id();
+
+                if ($idLpbInvoice > 0 && !empty($detailLpb) && $qtyFinal > 0) {
+                    $this->db->insert('tb_lpb_invoice_detail', [
+                        'id_lpb_invoice' => $idLpbInvoice,
+                        'id_lpb'         => $idLpbAsal,
+                        'id_detail_lpb'  => (int) $detailLpb['id_detail_lpb'],
+                        'kd_barang'      => $detailLpb['kd_barang'] ?? $kdBarang,
+                        'qty_alokasi'    => $qtyFinal,
+                    ]);
+                }
+            }
+        }
     }
 
     /**
@@ -1852,6 +1986,12 @@ class M_Konsinyasi extends CI_Model
             'tgl_faktur_pajak'     => $tglFakturPajak !== '' ? $tglFakturPajak : null,
         ]);
 
+        // Sinkronkan invoice & faktur pajak ke LPB asal jika tersedia
+        $totalQtyBatch = array_sum(array_map(static function ($r) {
+            return (float) ($r['qty_net'] ?? 0);
+        }, $rows));
+        $this->sync_invoice_faktur_to_lpb($primary, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, $totalQtyBatch, $userName);
+
         $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
         foreach ($rows as $row) {
             if (!in_array((int)$row['id_settlement'], $validIds, true) || empty($row['id_jurnal_pembelian'])) {
@@ -1860,6 +2000,9 @@ class M_Konsinyasi extends CI_Model
             $keterangan = 'Pembelian Konsinyasi: ' . $row['nama_barang'] . ' (' . (float)$row['qty_net'] . ' ' . $row['satuan'] . '), Supplier: ' . $row['nama_suplier'] . $invTag;
             $this->db->where('id_jurnal', (int)$row['id_jurnal_pembelian'])->update('tbkeu_jurnal', ['keterangan' => $keterangan]);
         }
+
+        // Sinkronkan invoice & faktur pajak ke LPB asal jika tersedia
+        $this->sync_invoice_faktur_to_lpb($settlement, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, (float) ($settlement['qty_net'] ?? 0), $userName);
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();

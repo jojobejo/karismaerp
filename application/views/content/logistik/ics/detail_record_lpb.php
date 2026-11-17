@@ -491,6 +491,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <?php endif; ?>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleFakturPajakSederhana" title="Tandai jika supplier tidak menerbitkan faktur pajak dan invoice">
+                                            <i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana
+                                        </button>
                                         <div class="text-muted small d-none" id="selectedLpbText">Belum ada LPB dipilih</div>
                                     </div>
                                 </div>
@@ -1600,7 +1603,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     },
                     {
                         label: 'Faktur Pajak',
-                        value: header.kode_faktur_pajak || '-'
+                        value: parseInt(header.is_faktur_pajak_sederhana || 0, 10) === 1
+                            ? ((header.kode_faktur_pajak && header.kode_faktur_pajak !== '-') ? header.kode_faktur_pajak + ' (Faktur Pajak Sederhana)' : 'Faktur Pajak Sederhana')
+                            : (header.kode_faktur_pajak || '-')
                     },
                     {
                         label: 'Tanggal Terbit Faktur',
@@ -1640,7 +1645,65 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 });
 
                 $('#lpbDetailHeaderGrid').html(html);
+                syncFakturPajakSederhanaButton(header);
             }
+
+            // Sinkronisasi tampilan tombol penanda faktur pajak sederhana
+            function syncFakturPajakSederhanaButton(header) {
+                var $btn = $('#btnToggleFakturPajakSederhana');
+                if (!$btn.length) {
+                    return;
+                }
+                var isSederhana = parseInt((header || {}).is_faktur_pajak_sederhana || 0, 10) === 1;
+                if (isSederhana) {
+                    $btn
+                        .removeClass('btn-outline-secondary')
+                        .addClass('btn-success')
+                        .html('<i class="fas fa-check-circle mr-1"></i> Faktur Pajak Sederhana');
+                } else {
+                    $btn
+                        .removeClass('btn-success')
+                        .addClass('btn-outline-secondary')
+                        .html('<i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana');
+                }
+            }
+
+            $(document).on('click', '#btnToggleFakturPajakSederhana', function() {
+                if (!activeHeader || !activeHeader.id_lpb) {
+                    Swal.fire('Info', 'Silakan pilih LPB terlebih dahulu.', 'info');
+                    return;
+                }
+
+                var currentVal = parseInt(activeHeader.is_faktur_pajak_sederhana || 0, 10) === 1 ? 1 : 0;
+                var nextVal = currentVal === 1 ? 0 : 1;
+                var $btn = $(this);
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: '<?= site_url('logistik/C_Ics/ajax_toggle_faktur_pajak_sederhana') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: activeHeader.id_lpb,
+                        is_faktur_pajak_sederhana: nextVal
+                    },
+                    success: function(res) {
+                        if (res && res.status === 'success') {
+                            activeHeader.is_faktur_pajak_sederhana = nextVal;
+                            renderHeaderGrid(activeHeader);
+                            Swal.fire('Berhasil', res.message || 'Status faktur pajak sederhana diperbarui.', 'success');
+                        } else {
+                            Swal.fire('Gagal', (res && res.message) || 'Gagal memperbarui status.', 'error');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan jaringan saat memperbarui status.', 'error');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
 
             function renderPurchasingHeader(header) {
                 renderDetailHeader(header || {});

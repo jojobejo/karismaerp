@@ -4128,6 +4128,9 @@ FROM (
         $tanggalFakturSelect = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
             ? "COALESCE(DATE_FORMAT(h.tanggal_faktur_pajak, '%Y-%m-%d'), '-') AS tgl_faktur"
             : "'-' AS tgl_faktur";
+        $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
+            : "0 AS is_faktur_pajak_sederhana";
         $tanggalInvoiceGroup = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
             ? ",
                 h.tanggal_invoice"
@@ -4139,6 +4142,13 @@ FROM (
         $tanggalFakturGroup = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
             ? ",
                 h.tanggal_faktur_pajak"
+            : "";
+        $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
+            : "0 AS is_faktur_pajak_sederhana";
+        $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? ",
+                h.is_faktur_pajak_sederhana"
             : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
@@ -4237,6 +4247,7 @@ FROM (
                 {$tanggalInvoiceSelect},
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
+                {$fakturSederhanaSelect},
                 {$checkerSelect},
                 {$checkerBySelect},
                 {$checkerAtSelect},
@@ -4340,6 +4351,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
+                {$fakturSederhanaGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -5193,6 +5205,13 @@ FROM (
             ? ",
                 h.tanggal_faktur_pajak"
             : "";
+        $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
+            : "0 AS is_faktur_pajak_sederhana";
+        $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? ",
+                h.is_faktur_pajak_sederhana"
+            : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
             : "'' AS jenis_lpb";
@@ -5280,6 +5299,7 @@ FROM (
                 {$tanggalInvoiceSelect},
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
+                {$fakturSederhanaSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -5313,6 +5333,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
+                {$fakturSederhanaGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -5349,6 +5370,13 @@ FROM (
         $tanggalFakturGroup = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
             ? ",
                 h.tanggal_faktur_pajak"
+            : "";
+        $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
+            : "0 AS is_faktur_pajak_sederhana";
+        $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
+            ? ",
+                h.is_faktur_pajak_sederhana"
             : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
@@ -5412,6 +5440,7 @@ FROM (
                 {$tanggalInvoiceSelect},
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
+                {$fakturSederhanaSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -5454,6 +5483,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
+                {$fakturSederhanaGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -7661,11 +7691,40 @@ FROM (
             ];
         }
 
+        if (!$this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')) {
+            $fields['is_faktur_pajak_sederhana'] = [
+                'type' => 'TINYINT',
+                'constraint' => 1,
+                'default' => 0,
+                'null' => FALSE,
+                'after' => 'tanggal_faktur_pajak'
+            ];
+        }
+
         if (!empty($fields) && !$this->dbforge->add_column('tb_lpb', $fields)) {
             return FALSE;
         }
 
         return TRUE;
+    }
+
+    /**
+     * Memperbarui penanda faktur pajak sederhana pada record LPB.
+     */
+    public function update_lpb_faktur_pajak_sederhana($id_lpb, $is_sederhana)
+    {
+        $id_lpb = (int) $id_lpb;
+        if ($id_lpb <= 0) {
+            return FALSE;
+        }
+
+        $this->ensure_lpb_invoice_faktur_columns();
+
+        return $this->db
+            ->where('id_lpb', $id_lpb)
+            ->update('tb_lpb', [
+                'is_faktur_pajak_sederhana' => (int) ($is_sederhana ? 1 : 0)
+            ]);
     }
 
     public function ensure_lpb_workflow_columns()

@@ -536,19 +536,24 @@ $formatDate = function ($dateStr) {
                                                             $fakturValue = trim((string) ($row['kode_faktur_pajak'] ?? ''));
                                                             $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
                                                             $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
+                                                            $isFakturPajakSederhana = (int) ($row['is_faktur_pajak_sederhana'] ?? 0) === 1;
                                                             $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
                                                             $invoiceQtyDiff = (float) ($row['invoice_qty_diff'] ?? 0);
                                                             $fakturQtyDiff = (float) ($row['faktur_qty_diff'] ?? 0);
-                                                            $isInvoiceComplete = $hasInvoice && $invoiceQtyDiff <= 0.0001;
-                                                            $isFakturComplete = $hasFaktur && $fakturQtyDiff <= 0.0001;
+                                                            $isInvoiceComplete = $isFakturPajakSederhana || ($hasInvoice && $invoiceQtyDiff <= 0.0001);
+                                                            $isFakturComplete = $isFakturPajakSederhana || ($hasFaktur && $fakturQtyDiff <= 0.0001);
                                                             $invoiceBtnClass = $isInvoiceComplete ? 'btn-success' : 'btn-light text-secondary border';
                                                             $fakturBtnClass = $isFakturComplete ? 'btn-success' : 'btn-light text-secondary border';
-                                                            $invoiceTitle = !$hasInvoice
-                                                                ? 'Invoice belum ada'
-                                                                : ($isInvoiceComplete ? 'Invoice lengkap (selisih qty 0)' : 'Invoice masih ada selisih qty ' . rtrim(rtrim(number_format($invoiceQtyDiff, 4, '.', ''), '0'), '.'));
-                                                            $fakturTitle = !$hasFaktur
-                                                                ? 'Pajak/Faktur belum ada'
-                                                                : ($isFakturComplete ? 'Pajak/Faktur lengkap (selisih qty 0)' : 'Pajak/Faktur masih ada selisih qty ' . rtrim(rtrim(number_format($fakturQtyDiff, 4, '.', ''), '0'), '.'));
+                                                            $invoiceTitle = $isFakturPajakSederhana
+                                                                ? 'Faktur Pajak Sederhana'
+                                                                : (!$hasInvoice
+                                                                    ? 'Invoice belum ada'
+                                                                    : ($isInvoiceComplete ? 'Invoice lengkap (selisih qty 0)' : 'Invoice masih ada selisih qty ' . rtrim(rtrim(number_format($invoiceQtyDiff, 4, '.', ''), '0'), '.')));
+                                                            $fakturTitle = $isFakturPajakSederhana
+                                                                ? 'Faktur Pajak Sederhana'
+                                                                : (!$hasFaktur
+                                                                    ? 'Pajak/Faktur belum ada'
+                                                                    : ($isFakturComplete ? 'Pajak/Faktur lengkap (selisih qty 0)' : 'Pajak/Faktur masih ada selisih qty ' . rtrim(rtrim(number_format($fakturQtyDiff, 4, '.', ''), '0'), '.')));
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                             $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
                                                             $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;

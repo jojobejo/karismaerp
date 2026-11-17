@@ -966,6 +966,46 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    /**
+     * Toggle penanda faktur pajak sederhana pada LPB via AJAX.
+     */
+    public function ajax_toggle_faktur_pajak_sederhana()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $is_sederhana = (int) $this->input->post('is_faktur_pajak_sederhana', TRUE) === 1 ? 1 : 0;
+
+        if ($id_lpb <= 0) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'status'  => 'error',
+                    'message' => 'ID LPB tidak valid.'
+                ]));
+            return;
+        }
+
+        $updated = $this->M_Logistik->update_lpb_faktur_pajak_sederhana($id_lpb, $is_sederhana);
+        if (!$updated) {
+            $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'status'  => 'error',
+                    'message' => 'Gagal memperbarui status faktur pajak sederhana.'
+                ]));
+            return;
+        }
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status'                   => 'success',
+                'is_faktur_pajak_sederhana' => $is_sederhana,
+                'message'                  => $is_sederhana === 1
+                    ? 'LPB ditandai sebagai Faktur Pajak Sederhana.'
+                    : 'Penanda Faktur Pajak Sederhana dibatalkan.'
+            ]));
+    }
+
     public function lpb_manual()
     {
         if (!$this->can_access_lpb_manual()) {
@@ -2034,6 +2074,7 @@ class C_Ics extends CI_Controller
             'tanggal_invoice' => $header['tanggal_invoice'] ?? '',
             'kode_faktur_pajak' => $header['kode_faktur_pajak'] ?? '',
             'tanggal_faktur_pajak' => $header['tanggal_faktur_pajak'] ?? '',
+            'is_faktur_pajak_sederhana' => (int) ($header['is_faktur_pajak_sederhana'] ?? 0),
             'checker_name' => $header['checker_name'] ?? '',
             'checker_by' => $header['checker_by'] ?? '',
             'checker_at' => $header['checker_at'] ?? '',
