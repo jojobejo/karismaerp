@@ -11,8 +11,25 @@ class Pricelist extends CI_Controller
         $this->load->helper('form');
     }
 
+    /**
+     * Memastikan pengguna memiliki session login aktif dan hak_akses yang diizinkan (deny-by-default).
+     */
+    private function _require_access(array $allowedRoles = [1, 2, 3, 4, 5])
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            redirect('login');
+            exit;
+        }
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, $allowedRoles, true)) {
+            show_error('Anda tidak memiliki hak akses untuk aksi ini.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
+        $this->_require_access([1, 2, 3, 4, 5]);
         $id = $this->input->get('id');
         $kd = $this->input->get('kd');
 
@@ -34,6 +51,7 @@ class Pricelist extends CI_Controller
 
     public function updatePrice()
     {
+        $this->_require_access([1, 3]);
         $idprice = $this->input->post("id_isi");
         $kdbarang = $this->input->post('kd_isi');
         $r1      = $this->input->post('r1_isi');
@@ -54,6 +72,7 @@ class Pricelist extends CI_Controller
 
     public function insertQty()
     {
+        $this->_require_access([1, 3]);
         $kd_barang = $this->input->post("kdbarang");
         $nmbarang = $this->input->post("nm_barang");
         $hargaR1 = $this->input->post("harga_isi1");
@@ -81,6 +100,7 @@ class Pricelist extends CI_Controller
 
     public function insertQtyPrice()
     {
+        $this->_require_access([1, 3]);
         $kodebarang = $this->input->post('kdbarang');
         $namabarang = $this->input->post('nm_barang');
         $hargaQty1  = $this->input->post('hr_1');
@@ -111,6 +131,7 @@ class Pricelist extends CI_Controller
 
     public function editSpecialPrice()
     {
+        $this->_require_access([1, 3]);
         $id = $this->input->get('id');
 
         $idsprice = $this->input->post("id_isi");
@@ -134,6 +155,7 @@ class Pricelist extends CI_Controller
 
     public function editHargaPrice()
     {
+        $this->_require_access([1, 3]);
         $idharga = $this->input->post('idharga');
         $kodebarang = $this->input->post('kdbarang');
         $namabarang = $this->input->post('nm_barang');
@@ -165,25 +187,20 @@ class Pricelist extends CI_Controller
 
     public function hapusHargaEcer($id, $kode)
     {
+        $this->_require_access([1, 3]);
         $this->M_Pricelist->deleteHargaEcer($id);
         redirect('pricelist?id=' . $kode);
     }
     public function hapusQty($id, $kode)
     {
+        $this->_require_access([1, 3]);
         $this->M_Pricelist->deleteHargaQty($id);
         redirect('pricelist?id=' . $kode);
     }
 
     public function addPromoImg1()
     {
-
-        // // Tambahkan validasi akses
-        // $hak = $this->session->userdata('hak_akses');
-        // if ($hak != '1' && $hak != '2') {
-        //     redirect('pricelist');
-        //     return;
-        // }
-
+        $this->_require_access([1, 2]);
         $id_barang = $this->input->post("id_bar");
         $kd_barang = $this->input->post("kode_barang_isi");
         $nama_bar = $this->input->post("nama_barang_isi");
@@ -240,14 +257,7 @@ class Pricelist extends CI_Controller
 
     public function addPromoImg2()
     {
-
-        // $hak = $this->session->userdata('hak_akses');
-        // if ($hak != '1' && $hak != '2') {
-        //     redirect('pricelist');
-        //     return;
-        // }
-
-
+        $this->_require_access([1, 2]);
         $id_barang = $this->input->post("id_bar");
         $kd_barang = $this->input->post("kode_barang_isi");
         $nama_bar = $this->input->post("nama_barang_isi");
@@ -295,13 +305,7 @@ class Pricelist extends CI_Controller
 
     public function gambarproduk_br()
     {
-
-        $hak = $this->session->userdata('hak_akses');
-        if ($hak != '1' && $hak != '2' && $hak != '4') {
-            redirect('pricelist');
-            return;
-        }
-
+        $this->_require_access([1, 2, 4]);
         $id_barang = $this->input->post("id_bar");
         $kd_barang = $this->input->post("kode_barang_isi");
         $nama_bar  = preg_replace('/[^A-Za-z0-9_\-]/', '_', $this->input->post("nama_barang_isi"));
@@ -338,13 +342,7 @@ class Pricelist extends CI_Controller
 
     public function addPromoImg3()
     {
-
-        // $hak = $this->session->userdata('hak_akses');
-        // if ($hak != '1' && $hak != '2') {
-        //     redirect('pricelist');
-        //     return;
-        // }
-
+        $this->_require_access([1, 2]);
         $id_barang = $this->input->post("id_bar");
         $kd_barang = $this->input->post("kode_barang_isi");
         $nama_bar = $this->input->post("nama_barang_isi");
@@ -392,6 +390,7 @@ class Pricelist extends CI_Controller
 
     public function convertRtoQty()
     {
+        $this->_require_access([1, 3]);
         $idR        = $this->input->post('id_harga');
         $nm_barang  = $this->input->post('nm_barang');
         $kd_barang  = $this->input->post('kdbarang');
@@ -423,6 +422,7 @@ class Pricelist extends CI_Controller
 
     public function convertToNett()
     {
+        $this->_require_access([1, 3]);
         $idNett     = $this->input->post('idbarang');
         $nm_barang  = $this->input->post('nm_barang');
         $kd_barang  = $this->input->post('kdbarang');
@@ -446,6 +446,7 @@ class Pricelist extends CI_Controller
 
     public function add()
     {
+        $this->_require_access([1, 3]);
         $kode_barang = $this->input->post('id_barang');
         $satuan = $this->input->post('satuan');
         $r1 = $this->input->post('r1');
@@ -546,6 +547,7 @@ class Pricelist extends CI_Controller
 
     public function delete_item()
     {
+        $this->_require_access([1, 3]);
         $id = $this->input->post('id_pricelist');
         $qty_slot = $this->input->post('qty_slot');
         $kode_barang = $this->input->post('kode_barang');
@@ -601,6 +603,7 @@ class Pricelist extends CI_Controller
 
     public function edit()
     {
+        $this->_require_access([1, 3]);
         $id = $this->input->post('id_pricelist');
         $kode_barang = $this->input->post('kode_barang');
         $qty_slot = $this->input->post('qty_slot'); // qty_1, qty_2, qty_3, atau qty_4

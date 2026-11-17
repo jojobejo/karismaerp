@@ -7,6 +7,10 @@ class Pricelist extends CI_Controller
     {
         parent::__construct();
         $this->load->model("M_Pricelist");
+        if ($this->session->userdata('status') !== 'login' || (int) $this->session->userdata('hak_akses') !== 1) {
+            redirect('login');
+            exit;
+        }
     }
 
     function index()

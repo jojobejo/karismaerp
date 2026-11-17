@@ -12,11 +12,32 @@ class Keuangan extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    private function _require_access($isJson = false)
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(401)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir.']);
+                exit;
+            }
+            redirect('login');
+            exit;
+        }
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, [1, 3], true)) {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(403)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Akses tidak diizinkan.']);
+                exit;
+            }
+            show_error('Akses modul keuangan tidak diizinkan.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") {
-            redirect('login');
-        }
+        $this->_require_access();
 
         $this->load->view("partial/katalog/header");
         $this->load->view("content/katalog/dashboardkeu");
@@ -25,6 +46,7 @@ class Keuangan extends CI_Controller
 
     function getBarang()
     {
+        $this->_require_access(true);
         $list = $this->M_Katalog->get_datatables();
         $data = array();
         foreach ($list as $field) {
@@ -61,12 +83,14 @@ class Keuangan extends CI_Controller
 
     public function barang_edit($id)
     {
+        $this->_require_access(true);
         $data = $this->M_Katalog->get_by_id($id);
         echo json_encode($data);
     }
 
     public function ajax_update_barang()
     {
+        $this->_require_access(true);
         $nama_barang = $this->input->post();
         $produk_fokus  = $this->input->post();
         $nama_suplier  = $this->input->post();
@@ -87,6 +111,7 @@ class Keuangan extends CI_Controller
 
     public function add()
     {
+        $this->_require_access();
         $kd_barang  = $this->input->post("kode_barang_isi");
         $nama_bar   = $this->input->post("nama_barang_isi");
         $prdk_fks   = $this->input->post("produk_fokus_isi");
@@ -113,6 +138,7 @@ class Keuangan extends CI_Controller
 
     public function editKat()
     {
+        $this->_require_access();
         $id_barang  = $this->input->post("id_bar");
         $kd_barang  = $this->input->post("kode_barang_isi");
         $nama_bar   = $this->input->post("nama_barang_isi");
@@ -135,6 +161,7 @@ class Keuangan extends CI_Controller
 
     public function deleteDat($hapus)
     {
+        $this->_require_access();
         $id_barang = $hapus;
 
 

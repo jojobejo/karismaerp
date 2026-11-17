@@ -20,7 +20,7 @@
       </div>
       <!-- /.card-header -->
       <div class="card-body">
-        <?php echo $this->session->flashdata("gagal") ?>
+        <?php echo htmlspecialchars((string) $this->session->flashdata("gagal"), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <!-- /.card-body -->
     </div>
@@ -59,6 +59,11 @@
             <button type="submit" class="btn btn-primary btn-block">Log in</button>
             <!-- /.col -->
           </div>
+          <div class="col-xl mt-2">
+            <a href="<?php echo base_url('sso/login') ?>" class="btn btn-outline-primary btn-block">
+              <i class="fas fa-shield-alt mr-1"></i> Masuk melalui SSO Portal
+            </a>
+          </div>
         </form>
 
         <!-- /.card-body -->
@@ -71,7 +76,7 @@
       $(document).ready(function() {
         $('.confirm-div').hide();
         <?php if ($this->session->flashdata('gagal')) { ?>
-          $('.confirm-div').html('<?php echo $this->session->flashdata('gagal'); ?>').show();
+          $('.confirm-div').text(<?php echo json_encode((string) $this->session->flashdata('gagal')); ?>).show();
         <?php } ?>
       });
     </script>

@@ -10,6 +10,10 @@ class Katalog extends CI_Controller
         parent::__construct();
         $this->load->model("M_Katalog");
         $this->load->library('form_validation');
+        if ($this->session->userdata('status') !== 'login' || (int) $this->session->userdata('hak_akses') !== 1) {
+            redirect('login');
+            exit;
+        }
     }
 
     function index()

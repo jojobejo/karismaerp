@@ -10,10 +10,32 @@ class SalesOnline extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    private function _require_access($isJson = false)
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(401)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir.']);
+                exit;
+            }
+            redirect('login');
+            exit;
+        }
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, [1, 4], true)) {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(403)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Akses tidak diizinkan.']);
+                exit;
+            }
+            redirect('dashboard');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") redirect('login');
-        if ($this->session->userdata('hak_akses') != '4')  redirect('dashboard');
+        $this->_require_access();
 
         $data['statistik'] = $this->M_Katalog->getStatistik(); // ← tambahan
 
@@ -24,6 +46,7 @@ class SalesOnline extends CI_Controller
 
     function getBarang()
     {
+        $this->_require_access(true);
         $list = $this->M_Katalog->get_datatables();
         $data = array();
 
@@ -81,6 +104,7 @@ class SalesOnline extends CI_Controller
 
     public function updateOnlineShop()
     {
+        $this->_require_access();
         $id_barang   = $this->input->post('id_barang');
         $shopee      = $this->input->post('shopee')    ? 1 : 0;
         $tokopedia   = $this->input->post('tokopedia') ? 1 : 0;

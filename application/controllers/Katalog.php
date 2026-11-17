@@ -12,11 +12,36 @@ class Katalog extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    /**
+     * Memastikan pengguna memiliki session login aktif dan hak_akses yang diizinkan (deny-by-default).
+     */
+    private function _require_access(array $allowedRoles = [1, 2, 3, 4, 5], $isJson = false)
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(401)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir. Silakan login kembali.']);
+                exit;
+            }
+            redirect('login');
+            exit;
+        }
+
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, $allowedRoles, true)) {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(403)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Anda tidak memiliki hak akses untuk aksi ini.']);
+                exit;
+            }
+            show_error('Anda tidak memiliki hak akses untuk mengakses halaman atau aksi ini.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") {
-            redirect('login');
-        }
+        $this->_require_access([1, 2, 3, 4, 5]);
 
         $data['barang'] = $this->M_Katalog->getAll();
         $data['statistik'] = $this->M_Katalog->getStatistik();
@@ -28,6 +53,7 @@ class Katalog extends CI_Controller
 
     function getBarang()
     {
+        $this->_require_access([1, 2, 3, 4, 5], true);
         $hak_akses = $this->session->userdata('hak_akses');
         $list = $this->M_Katalog->get_datatables();
         $data = array();
@@ -110,6 +136,7 @@ class Katalog extends CI_Controller
 
     public function add()
     {
+        $this->_require_access([1]);
         $kd_barang  = $this->input->post("kode_barang_isi");
         $nama_bar   = $this->input->post("nama_barang_isi");
         $prdk_fks   = $this->input->post("produk_fokus_isi");
@@ -136,6 +163,7 @@ class Katalog extends CI_Controller
 
     public function editKat()
     {
+        $this->_require_access([1]);
         $id_barang  = $this->input->post("id_bar");
         $kd_barang  = $this->input->post("kode_barang_isi");
         $nama_bar   = $this->input->post("nama_barang_isi");
@@ -158,6 +186,7 @@ class Katalog extends CI_Controller
 
     public function deleteDat($hapus)
     {
+        $this->_require_access([1]);
         $id_barang = $hapus;
 
 
@@ -168,6 +197,7 @@ class Katalog extends CI_Controller
 
     public function uploadProduk()
     {
+        $this->_require_access([1]);
         $id_barang  = $this->input->post("id_bar");
         $kd_barang  = $this->input->post("kode_barang_isi");
         $nama_bar   = $this->input->post("nama_barang_isi");
@@ -215,6 +245,7 @@ class Katalog extends CI_Controller
 
     public function updateOnlineShop()
     {
+        $this->_require_access([1, 4]);
         $id_barang   = $this->input->post('id_barang');
         $kode_barang = $this->input->post('kode_barang');
         $shopee      = $this->input->post('shopee')    ? 1 : 0;

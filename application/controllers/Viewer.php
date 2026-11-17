@@ -12,11 +12,32 @@ class Viewer extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    private function _require_access($isJson = false)
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(401)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir.']);
+                exit;
+            }
+            redirect('login');
+            exit;
+        }
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, [1, 5], true)) {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(403)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Akses tidak diizinkan.']);
+                exit;
+            }
+            show_error('Akses tidak diizinkan.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") {
-            redirect('login');
-        }
+        $this->_require_access();
 
         $data['tot_gbr'] = $this->M_Katalog->get_total()->result();
         $data['statistik'] = $this->M_Katalog->getStatistik();
@@ -28,6 +49,7 @@ class Viewer extends CI_Controller
 
     function getBarang()
     {
+        $this->_require_access(true);
         $list = $this->M_Katalog->get_datatables();
         $data = array();
 

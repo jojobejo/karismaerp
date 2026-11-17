@@ -55,13 +55,21 @@ $route['404_override'] = '';
 $route['dashboard'] = 'katalog';
 $route['dashboardsales'] = 'Sales';
 $route['getBarangServer'] = 'Katalog/getBarang';
-$route['hapusBarang/(:num)'] = 'Katalog/deleteDat';
+$route['hapusBarang/(:num)'] = 'Katalog/deleteDat/$1';
 $route['user'] = 'User';
 $route['sales'] = 'Sales';
 $route['viewer'] = 'Viewer';
 $route['salesonline'] = 'SalesOnline';
 $route['keuangan'] = 'Keuangan';
-$route['keuangan'] = 'pricelist/addPromoImg1';
 $route['keuangan/add'] = 'Keuangan/add';
 $route['logout'] = 'login/logout';
+
+// SSO Portal KARISMA ERP (katalog_produk)
+$route['sso/login'] = 'login/sso_login';
+$route['sso/callback'] = 'login/sso_callback';
+$route['auth/sso/start'] = 'login/sso_login';
+$route['auth/sso/callback'] = 'login/sso_callback';
+$route['auth/logout'] = 'login/logout';
+$route['api/session'] = 'login/session_info';
+
 $route['translate_uri_dashes'] = FALSE;

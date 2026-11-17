@@ -14,11 +14,24 @@ class User extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    /**
+     * Memastikan hanya Admin (hak_akses = 1) yang telah login yang dapat mengelola user.
+     */
+    private function _require_admin_access()
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            redirect('login');
+            exit;
+        }
+        if ((int) $this->session->userdata('hak_akses') !== 1) {
+            show_error('Akses pengelolaan user hanya diizinkan untuk Administrator.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") {
-            redirect('login');
-        }
+        $this->_require_admin_access();
 
         $data["user"] = $this->M_User->getAll();
 
@@ -28,6 +41,7 @@ class User extends CI_Controller
     }
     public function AddUser()
     {
+        $this->_require_admin_access();
         $kode_user  = $this->input->post("id_user_isi");
         $nama_user  = $this->input->post("nama_isi");
         $username   = $this->input->post("username_isi");

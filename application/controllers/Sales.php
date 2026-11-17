@@ -12,11 +12,32 @@ class Sales extends CI_Controller
         $this->load->library('form_validation');
     }
 
+    private function _require_access(array $allowedRoles = [1, 2, 4, 5], $isJson = false)
+    {
+        if ($this->session->userdata('status') !== 'login') {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(401)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Sesi login telah berakhir. Silakan login kembali.']);
+                exit;
+            }
+            redirect('login');
+            exit;
+        }
+        $hakAkses = (int) $this->session->userdata('hak_akses');
+        if (!in_array($hakAkses, $allowedRoles, true)) {
+            if ($isJson || $this->input->is_ajax_request()) {
+                $this->output->set_status_header(403)->set_content_type('application/json');
+                echo json_encode(['status' => false, 'message' => 'Anda tidak memiliki hak akses untuk aksi ini.']);
+                exit;
+            }
+            show_error('Akses tidak diizinkan.', 403, 'Forbidden');
+            exit;
+        }
+    }
+
     function index()
     {
-        if ($this->session->userdata('status') != "login") {
-            redirect('login');
-        }
+        $this->_require_access([1, 2, 4, 5]);
 
         $data['tot_gbr'] = $this->M_Katalog->get_total()->result();
         $data['statistik'] = $this->M_Katalog->getStatistik();
@@ -28,6 +49,7 @@ class Sales extends CI_Controller
 
     function getBarang()
     {
+        $this->_require_access([1, 2, 4, 5], true);
         $list = $this->M_Katalog->get_datatables();
         $data = array();
 
@@ -98,6 +120,7 @@ class Sales extends CI_Controller
         if (!$this->input->is_ajax_request()) {
             show_404();
         }
+        $this->_require_access([1, 2, 4, 5], true);
 
         $page = max(1, (int) $this->input->get('page'));
         $per_page = (int) $this->input->get('per_page');
@@ -160,6 +183,7 @@ class Sales extends CI_Controller
         if (!$this->input->is_ajax_request()) {
             show_404();
         }
+        $this->_require_access([1, 2, 4], true);
 
         $id_barang = (int) $this->input->post('id_barang');
         $bahan_aktif = trim((string) $this->input->post('bahan_aktif'));
@@ -196,6 +220,7 @@ class Sales extends CI_Controller
         if (!$this->input->is_ajax_request()) {
             show_404();
         }
+        $this->_require_access([1, 2, 4], true);
 
         $id_barang = (int) $this->input->post('id_barang');
         if (!$id_barang) {
