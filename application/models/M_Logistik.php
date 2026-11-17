@@ -4146,9 +4146,16 @@ FROM (
         $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
             : "0 AS is_faktur_pajak_sederhana";
+        $tanpaFakturSelect = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? "COALESCE(h.is_tanpa_faktur_pajak, 0) AS is_tanpa_faktur_pajak"
+            : "0 AS is_tanpa_faktur_pajak";
         $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? ",
                 h.is_faktur_pajak_sederhana"
+            : "";
+        $tanpaFakturGroup = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.is_tanpa_faktur_pajak"
             : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
@@ -4248,6 +4255,7 @@ FROM (
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
                 {$fakturSederhanaSelect},
+                {$tanpaFakturSelect},
                 {$checkerSelect},
                 {$checkerBySelect},
                 {$checkerAtSelect},
@@ -4351,7 +4359,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
-                {$fakturSederhanaGroup}
+                {$fakturSederhanaGroup}{$tanpaFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -5208,9 +5216,16 @@ FROM (
         $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
             : "0 AS is_faktur_pajak_sederhana";
+        $tanpaFakturSelect = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? "COALESCE(h.is_tanpa_faktur_pajak, 0) AS is_tanpa_faktur_pajak"
+            : "0 AS is_tanpa_faktur_pajak";
         $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? ",
                 h.is_faktur_pajak_sederhana"
+            : "";
+        $tanpaFakturGroup = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.is_tanpa_faktur_pajak"
             : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
@@ -5300,6 +5315,7 @@ FROM (
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
                 {$fakturSederhanaSelect},
+                {$tanpaFakturSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -5333,7 +5349,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
-                {$fakturSederhanaGroup}
+                {$fakturSederhanaGroup}{$tanpaFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -5374,9 +5390,16 @@ FROM (
         $fakturSederhanaSelect = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? "COALESCE(h.is_faktur_pajak_sederhana, 0) AS is_faktur_pajak_sederhana"
             : "0 AS is_faktur_pajak_sederhana";
+        $tanpaFakturSelect = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? "COALESCE(h.is_tanpa_faktur_pajak, 0) AS is_tanpa_faktur_pajak"
+            : "0 AS is_tanpa_faktur_pajak";
         $fakturSederhanaGroup = $this->db->field_exists('is_faktur_pajak_sederhana', 'tb_lpb')
             ? ",
                 h.is_faktur_pajak_sederhana"
+            : "";
+        $tanpaFakturGroup = $this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.is_tanpa_faktur_pajak"
             : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
@@ -5441,6 +5464,7 @@ FROM (
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
                 {$fakturSederhanaSelect},
+                {$tanpaFakturSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -5483,7 +5507,7 @@ FROM (
                 {$tanggalInvoiceGroup}
                 {$kodeFakturGroup}
                 {$tanggalFakturGroup}
-                {$fakturSederhanaGroup}
+                {$fakturSederhanaGroup}{$tanpaFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -7701,6 +7725,16 @@ FROM (
             ];
         }
 
+        if (!$this->db->field_exists('is_tanpa_faktur_pajak', 'tb_lpb')) {
+            $fields['is_tanpa_faktur_pajak'] = [
+                'type' => 'TINYINT',
+                'constraint' => 1,
+                'default' => 0,
+                'null' => FALSE,
+                'after' => 'is_faktur_pajak_sederhana'
+            ];
+        }
+
         if (!empty($fields) && !$this->dbforge->add_column('tb_lpb', $fields)) {
             return FALSE;
         }
@@ -7709,12 +7743,12 @@ FROM (
     }
 
     /**
-     * Memperbarui penanda faktur pajak sederhana pada record LPB.
+     * Memperbarui penanda faktur pajak sederhana atau tanpa faktur pajak pada record LPB.
      */
-    public function update_lpb_faktur_pajak_sederhana($id_lpb, $is_sederhana)
+    public function update_lpb_faktur_flag($id_lpb, $column, $flag)
     {
         $id_lpb = (int) $id_lpb;
-        if ($id_lpb <= 0) {
+        if ($id_lpb <= 0 || !in_array($column, ['is_faktur_pajak_sederhana', 'is_tanpa_faktur_pajak'], TRUE)) {
             return FALSE;
         }
 
@@ -7723,8 +7757,24 @@ FROM (
         return $this->db
             ->where('id_lpb', $id_lpb)
             ->update('tb_lpb', [
-                'is_faktur_pajak_sederhana' => (int) ($is_sederhana ? 1 : 0)
+                $column => (int) ($flag ? 1 : 0)
             ]);
+    }
+
+    /**
+     * Memperbarui penanda faktur pajak sederhana pada record LPB.
+     */
+    public function update_lpb_faktur_pajak_sederhana($id_lpb, $is_sederhana)
+    {
+        return $this->update_lpb_faktur_flag($id_lpb, 'is_faktur_pajak_sederhana', $is_sederhana);
+    }
+
+    /**
+     * Memperbarui penanda supplier tidak menerbitkan faktur pajak pada record LPB.
+     */
+    public function update_lpb_tanpa_faktur_pajak($id_lpb, $is_tanpa)
+    {
+        return $this->update_lpb_faktur_flag($id_lpb, 'is_tanpa_faktur_pajak', $is_tanpa);
     }
 
     public function ensure_lpb_workflow_columns()

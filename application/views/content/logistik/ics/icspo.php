@@ -475,12 +475,6 @@ $formatDate = function ($dateStr) {
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
-                                            <?php else : ?>
-                                                <tr>
-                                                    <td colspan="<?= $lpbTableColspan ?>" class="text-center text-muted">
-                                                        <i class="fas fa-inbox mr-1"></i> Tidak ada data
-                                                    </td>
-                                                </tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -500,7 +494,8 @@ $formatDate = function ($dateStr) {
                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="pajak">
                                                 <i class="fas fa-percent mr-1"></i> Belum Pajak
                                             </button>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="uang">
+                                            <!-- Disembunyikan sementara hingga alur afirmasi harga diaktifkan kembali -->
+                                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-filter="uang">
                                                 <i class="fas fa-check-double mr-1"></i> Belum Afirmasi Harga
                                             </button>
                                         </div>
@@ -537,13 +532,21 @@ $formatDate = function ($dateStr) {
                                                             $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
                                                             $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
                                                             $isFakturPajakSederhana = (int) ($row['is_faktur_pajak_sederhana'] ?? 0) === 1;
+                                                            $isTanpaFakturPajak = (int) ($row['is_tanpa_faktur_pajak'] ?? 0) === 1;
                                                             $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
                                                             $invoiceQtyDiff = (float) ($row['invoice_qty_diff'] ?? 0);
                                                             $fakturQtyDiff = (float) ($row['faktur_qty_diff'] ?? 0);
                                                             $isInvoiceComplete = $isFakturPajakSederhana || ($hasInvoice && $invoiceQtyDiff <= 0.0001);
-                                                            $isFakturComplete = $isFakturPajakSederhana || ($hasFaktur && $fakturQtyDiff <= 0.0001);
-                                                            $invoiceBtnClass = $isInvoiceComplete ? 'btn-success' : 'btn-light text-secondary border';
-                                                            $fakturBtnClass = $isFakturComplete ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $isFakturComplete = $isFakturPajakSederhana || $isTanpaFakturPajak || ($hasFaktur && $fakturQtyDiff <= 0.0001);
+                                                            // Penanda untuk filter tombol Belum Invoice / Belum Pajak (hanya ikon abu-abu yang dianggap belum ada)
+                                                            $hasInvoiceData = $isFakturPajakSederhana || $hasInvoice;
+                                                            $hasFakturData = $isFakturPajakSederhana || $isTanpaFakturPajak || $hasFaktur;
+                                                            $invoiceBtnClass = $isInvoiceComplete
+                                                                ? 'btn-success'
+                                                                : ($hasInvoice ? 'btn-warning text-dark' : 'btn-light text-secondary border');
+                                                            $fakturBtnClass = $isFakturComplete
+                                                                ? 'btn-success'
+                                                                : ($hasFaktur ? 'btn-warning text-dark' : 'btn-light text-secondary border');
                                                             $invoiceTitle = $isFakturPajakSederhana
                                                                 ? 'Faktur Pajak Sederhana'
                                                                 : (!$hasInvoice
@@ -551,9 +554,11 @@ $formatDate = function ($dateStr) {
                                                                     : ($isInvoiceComplete ? 'Invoice lengkap (selisih qty 0)' : 'Invoice masih ada selisih qty ' . rtrim(rtrim(number_format($invoiceQtyDiff, 4, '.', ''), '0'), '.')));
                                                             $fakturTitle = $isFakturPajakSederhana
                                                                 ? 'Faktur Pajak Sederhana'
-                                                                : (!$hasFaktur
-                                                                    ? 'Pajak/Faktur belum ada'
-                                                                    : ($isFakturComplete ? 'Pajak/Faktur lengkap (selisih qty 0)' : 'Pajak/Faktur masih ada selisih qty ' . rtrim(rtrim(number_format($fakturQtyDiff, 4, '.', ''), '0'), '.')));
+                                                                : ($isTanpaFakturPajak
+                                                                    ? 'Supplier tidak menerbitkan faktur pajak'
+                                                                    : (!$hasFaktur
+                                                                        ? 'Pajak/Faktur belum ada'
+                                                                        : ($isFakturComplete ? 'Pajak/Faktur lengkap (selisih qty 0)' : 'Pajak/Faktur masih ada selisih qty ' . rtrim(rtrim(number_format($fakturQtyDiff, 4, '.', ''), '0'), '.'))));
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                             $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
                                                             $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;
@@ -578,7 +583,7 @@ $formatDate = function ($dateStr) {
                                                                 : 'Belum ada jurnal LPB POSTED aktif';
                                                             $isManualRow = (int) ($row['is_manual_lpb'] ?? 0) === 1;
                                                         ?>
-                                                        <tr data-has-invoice="<?= $isInvoiceComplete ? '1' : '0' ?>" data-has-faktur="<?= $isFakturComplete ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
+                                                        <tr data-has-invoice="<?= $hasInvoiceData ? '1' : '0' ?>" data-has-faktur="<?= $hasFakturData ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
                                                             <td data-order="<?= htmlspecialchars($row['tgl_lpb'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_lpb'] ?? '')) ?></td>
                                                             <td>
                                                                 <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
@@ -618,7 +623,8 @@ $formatDate = function ($dateStr) {
                                                                     <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= htmlspecialchars($fakturTitle, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-percent"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
+                                                                    <!-- Disembunyikan sementara hingga alur afirmasi harga diaktifkan kembali -->
+                                                                    <button type="button" class="btn btn-sm d-none <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
                                                                         <i class="fas fa-check-double"></i>
                                                                     </button>
                                                                 </div>
@@ -636,12 +642,6 @@ $formatDate = function ($dateStr) {
                                                             </td>
                                                         </tr>
                                                         <?php endforeach; ?>
-                                                    <?php else : ?>
-                                                        <tr>
-                                                            <td colspan="12" class="text-center text-muted">
-                                                                <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
-                                                            </td>
-                                                        </tr>
                                                     <?php endif; ?>
                                                 </tbody>
                                             </table>
@@ -738,12 +738,6 @@ $formatDate = function ($dateStr) {
                                                             </td>
                                                         </tr>
                                                         <?php endforeach; ?>
-                                                    <?php else : ?>
-                                                        <tr>
-                                                            <td colspan="<?= $canViewLpbNominal ? 12 : 11 ?>" class="text-center text-muted py-4">
-                                                                <i class="fas fa-check-circle text-success mr-1"></i> Tidak ada antrean LPB Manual yang belum diposting. Semua LPB Manual yang telah diposting Purchasing dapat dilihat pada tab <strong>Data LPB</strong>.
-                                                            </td>
-                                                        </tr>
                                                     <?php endif; ?>
                                                 </tbody>
                                             </table>
@@ -766,9 +760,18 @@ $formatDate = function ($dateStr) {
     </div>
 
     <script>
-        $(document).ready(function() {
-            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust().responsive.recalc();
+        window.addEventListener('DOMContentLoaded', function() {
+            var $ = window.jQuery || window.$;
+            if (!$ || !$.fn || !$.fn.DataTable) {
+                return;
+            }
+
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function() {
+                var tables = $.fn.dataTable.tables({ visible: true, api: true });
+                tables.columns.adjust();
+                if (tables.responsive && typeof tables.responsive.recalc === 'function') {
+                    tables.responsive.recalc();
+                }
             });
 
             <?php if ($showLogistikPanel) : ?>
@@ -783,8 +786,12 @@ $formatDate = function ($dateStr) {
                     return true;
                 }
 
-                var $row = $(settings.aoData[dataIndex].nTr);
-                return String($row.data('lpb-status')) === lpbStatusFilter;
+                var rowData = settings.aoData[dataIndex];
+                if (!rowData || !rowData.nTr) {
+                    return true;
+                }
+                var $row = $(rowData.nTr);
+                return String($row.attr('data-lpb-status') || '') === lpbStatusFilter;
             });
 
             var lpbTable = $('#idtb_ics_po').DataTable({
@@ -813,8 +820,8 @@ $formatDate = function ($dateStr) {
                 }
             });
 
-            $('#lpbStatusFilter').on('click', 'button[data-filter]', function() {
-                lpbStatusFilter = $(this).data('filter') || 'all';
+            $(document).on('click', '#lpbStatusFilter button[data-filter]', function() {
+                lpbStatusFilter = $(this).attr('data-filter') || 'all';
                 $('#lpbStatusFilter button[data-filter]')
                     .removeClass('btn-primary active')
                     .addClass('btn-outline-secondary');
@@ -837,18 +844,22 @@ $formatDate = function ($dateStr) {
                     return true;
                 }
 
-                var $row = $(settings.aoData[dataIndex].nTr);
+                var rowData = settings.aoData[dataIndex];
+                if (!rowData || !rowData.nTr) {
+                    return true;
+                }
+                var $row = $(rowData.nTr);
 
                 if (purchasingStatusFilter === 'invoice') {
-                    return String($row.data('has-invoice')) === '0';
+                    return String($row.attr('data-has-invoice')) === '0';
                 }
 
                 if (purchasingStatusFilter === 'pajak') {
-                    return String($row.data('has-faktur')) === '0';
+                    return String($row.attr('data-has-faktur')) === '0';
                 }
 
                 if (purchasingStatusFilter === 'uang') {
-                    return String($row.data('is-verified')) === '0';
+                    return String($row.attr('data-is-verified')) === '0';
                 }
 
                 return true;
@@ -880,8 +891,8 @@ $formatDate = function ($dateStr) {
                 }
             });
 
-            $('#purchasingStatusFilter').on('click', 'button[data-filter]', function() {
-                purchasingStatusFilter = $(this).data('filter') || 'all';
+            $(document).on('click', '#purchasingStatusFilter button[data-filter]', function() {
+                purchasingStatusFilter = $(this).attr('data-filter') || 'all';
                 $('#purchasingStatusFilter button[data-filter]')
                     .removeClass('btn-primary active')
                     .addClass('btn-outline-secondary');
@@ -904,8 +915,12 @@ $formatDate = function ($dateStr) {
                     return true;
                 }
 
-                var $row = $(settings.aoData[dataIndex].nTr);
-                return String($row.data('lpb-status')) === lpbManualStatusFilter;
+                var rowData = settings.aoData[dataIndex];
+                if (!rowData || !rowData.nTr) {
+                    return true;
+                }
+                var $row = $(rowData.nTr);
+                return String($row.attr('data-lpb-status') || '') === lpbManualStatusFilter;
             });
 
             var lpbManualTable = $('#idtb_ics_lpb_manual').DataTable({
@@ -934,8 +949,8 @@ $formatDate = function ($dateStr) {
                 }
             });
 
-            $('#lpbManualStatusFilter').on('click', 'button[data-filter]', function() {
-                lpbManualStatusFilter = $(this).data('filter') || 'all';
+            $(document).on('click', '#lpbManualStatusFilter button[data-filter]', function() {
+                lpbManualStatusFilter = $(this).attr('data-filter') || 'all';
                 $('#lpbManualStatusFilter button[data-filter]')
                     .removeClass('btn-primary active')
                     .addClass('btn-outline-secondary');

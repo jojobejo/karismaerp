@@ -971,8 +971,36 @@ class C_Ics extends CI_Controller
      */
     public function ajax_toggle_faktur_pajak_sederhana()
     {
+        $this->handle_toggle_lpb_faktur_flag(
+            'is_faktur_pajak_sederhana',
+            'is_faktur_pajak_sederhana',
+            'LPB ditandai sebagai Faktur Pajak Sederhana.',
+            'Penanda Faktur Pajak Sederhana dibatalkan.',
+            'Gagal memperbarui status faktur pajak sederhana.'
+        );
+    }
+
+    /**
+     * Toggle penanda supplier tidak menerbitkan faktur pajak pada LPB via AJAX.
+     */
+    public function ajax_toggle_tanpa_faktur_pajak()
+    {
+        $this->handle_toggle_lpb_faktur_flag(
+            'is_tanpa_faktur_pajak',
+            'is_tanpa_faktur_pajak',
+            'LPB ditandai bahwa supplier tidak menerbitkan faktur pajak.',
+            'Penanda Tanpa Faktur Pajak dibatalkan.',
+            'Gagal memperbarui status tanpa faktur pajak.'
+        );
+    }
+
+    /**
+     * Helper terpusat untuk memperbarui flag faktur pajak pada LPB via AJAX.
+     */
+    private function handle_toggle_lpb_faktur_flag($postField, $column, $enabledMessage, $disabledMessage, $errorMessage)
+    {
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
-        $is_sederhana = (int) $this->input->post('is_faktur_pajak_sederhana', TRUE) === 1 ? 1 : 0;
+        $flagVal = (int) $this->input->post($postField, TRUE) === 1 ? 1 : 0;
 
         if ($id_lpb <= 0) {
             $this->output
@@ -984,13 +1012,13 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $updated = $this->M_Logistik->update_lpb_faktur_pajak_sederhana($id_lpb, $is_sederhana);
+        $updated = $this->M_Logistik->update_lpb_faktur_flag($id_lpb, $column, $flagVal);
         if (!$updated) {
             $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode([
                     'status'  => 'error',
-                    'message' => 'Gagal memperbarui status faktur pajak sederhana.'
+                    'message' => $errorMessage
                 ]));
             return;
         }
@@ -998,11 +1026,9 @@ class C_Ics extends CI_Controller
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode([
-                'status'                   => 'success',
-                'is_faktur_pajak_sederhana' => $is_sederhana,
-                'message'                  => $is_sederhana === 1
-                    ? 'LPB ditandai sebagai Faktur Pajak Sederhana.'
-                    : 'Penanda Faktur Pajak Sederhana dibatalkan.'
+                'status'   => 'success',
+                $postField => $flagVal,
+                'message'  => $flagVal === 1 ? $enabledMessage : $disabledMessage
             ]));
     }
 
@@ -2075,6 +2101,7 @@ class C_Ics extends CI_Controller
             'kode_faktur_pajak' => $header['kode_faktur_pajak'] ?? '',
             'tanggal_faktur_pajak' => $header['tanggal_faktur_pajak'] ?? '',
             'is_faktur_pajak_sederhana' => (int) ($header['is_faktur_pajak_sederhana'] ?? 0),
+            'is_tanpa_faktur_pajak' => (int) ($header['is_tanpa_faktur_pajak'] ?? 0),
             'checker_name' => $header['checker_name'] ?? '',
             'checker_by' => $header['checker_by'] ?? '',
             'checker_at' => $header['checker_at'] ?? '',
@@ -2926,7 +2953,18 @@ class C_Ics extends CI_Controller
         $nomorLpb = trim((string)($header['nomor_lpb'] ?? ''));
         $isConsignment = (stripos($jenisLpb, 'konsinyasi') !== false) || (strtoupper(substr($nomorLpb, -1)) === 'K' && strlen($nomorLpb) >= 5);
         $isPostedLpb = ((int)($header['status_lpb'] ?? 0) === 1);
-        $hasEarlyJournal = !empty($header['id_jurnal_pembelian']);
+        $hasEarlyJournal = false;
+        if ($this->db->table_exists('tbkeu_jurnal')) {
+            $earlyRow = $this->db
+                ->select('id_jurnal')
+                ->where('source_type', 'LPB_FINAL')
+                ->where('source_id', (string)$id_lpb)
+                ->where('posting_event', 'GOODS_RECEIPT')
+                ->limit(1)
+                ->get('tbkeu_jurnal')
+                ->row_array();
+            $hasEarlyJournal = !empty($earlyRow);
+        }
 
         if (!$isConsignment || !$isPostedLpb || $hasEarlyJournal) {
             return ['status' => true, 'extra_message' => ''];

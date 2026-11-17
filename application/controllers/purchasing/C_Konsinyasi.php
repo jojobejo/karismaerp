@@ -363,20 +363,18 @@ class C_Konsinyasi extends CI_Controller
         $title = $isBilled ? 'Riwayat Barang Konsinyasi Lunas' : 'Barang Konsinyasi Laku';
         $sheet->setTitle($isBilled ? 'Riwayat Lunas' : 'Barang Laku');
 
-        $includeNoFaktur = $isBilled; // Kolom No. Faktur Kios ditiadakan untuk export Barang Laku
-
         $headers = [
             'No.', 'Tanggal Laku', 'No. Settlement', 'Kode Supplier', 'Nama Supplier',
-            'Kode Barang', 'Nama Barang', 'Lot', 'Expired', 'No. LPB', 'No. PO',
-            'Kios / Customer', 'No. SO'
+            'Kode Barang', 'Nama Barang', 'Lot', 'Expired', 'No. LPB', 'No. PO'
         ];
-        if ($includeNoFaktur) {
-            $headers[] = 'No. Faktur';
-        }
+        // Kolom No. Faktur Pajak & Tanggal Faktur Pajak ditambahkan khusus untuk export Barang Lunas
+        $extraBilledColumns = $isBilled ? ['No. Faktur Pajak', 'Tanggal Faktur Pajak'] : [];
         $headers = array_merge($headers, [
             'Qty LPB Masuk', 'Qty Laku',
             'Satuan', 'Sisa Belum Lunas', 'Harga PO', 'Nilai Tagihan',
-            'Invoice Supplier', 'Tanggal Invoice', 'No. Jurnal', 'Status'
+            'Invoice Supplier', 'Tanggal Invoice'
+        ], $extraBilledColumns, [
+            'No. Jurnal', 'Status'
         ]);
 
         $totalColumns = count($headers);
@@ -405,12 +403,7 @@ class C_Konsinyasi extends CI_Controller
                 $this->export_date($row['expired_date'] ?? ''),
                 $row['lpb_no'] ?? ($row['nomor_lpb_asal'] ?? ''),
                 $row['po_no_po'] ?? '',
-                $row['customer_name'] ?? '',
-                $row['no_so'] ?? '',
             ];
-            if ($includeNoFaktur) {
-                $values[] = $row['no_faktur'] ?? '';
-            }
             $values = array_merge($values, [
                 (float)($row['qty_lpb_masuk'] ?? 0),
                 (float)($row['qty_net'] ?? 0),
@@ -420,9 +413,13 @@ class C_Konsinyasi extends CI_Controller
                 (float)($row['total_tagihan_beli'] ?? 0),
                 $row['no_invoice_supplier'] ?? '',
                 $this->export_date($row['tgl_invoice_supplier'] ?? ''),
-                $row['nomor_jurnal'] ?? '',
-                $row['status'] ?? $status,
             ]);
+            if ($isBilled) {
+                $values[] = $row['no_faktur_pajak'] ?? '';
+                $values[] = $this->export_date($row['tgl_faktur_pajak'] ?? '');
+            }
+            $values[] = $row['nomor_jurnal'] ?? '';
+            $values[] = $row['status'] ?? $status;
 
             foreach ($values as $columnIndex => $value) {
                 $sheet->setCellValueByColumnAndRow($columnIndex + 1, $excelRow, $value);

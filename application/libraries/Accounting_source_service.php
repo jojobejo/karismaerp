@@ -554,64 +554,36 @@ class Accounting_source_service
         $payload['cogs'] = '0.0000';
         $payload['lines'] = $lines;
 
-        $postResult = $this->CI->accounting_service->post_auto('GOODS_RECEIPT', $payload, $userId);
-
-        // Simpan ID jurnal pembelian awal pada tb_lpb untuk mencegah double-jurnal saat settlement konsinyasi
-        if ($isConsignment && !empty($postResult['success']) && $this->CI->db->field_exists('id_jurnal_pembelian', 'tb_lpb')) {
-            $idJurnal = $this->extract_journal_id_from_result($postResult);
-            if ($idJurnal > 0) {
-                $this->CI->db->where('id_lpb', $idLpb)->update('tb_lpb', [
-                    'id_jurnal_pembelian' => $idJurnal
-                ]);
-            }
-        }
-
-        return $postResult;
+        return $this->CI->accounting_service->post_auto('GOODS_RECEIPT', $payload, $userId);
     }
 
     /**
      * Menentukan mode pengakuan pembelian untuk LPB konsinyasi (SAAT_LPB atau SAAT_TERJUAL)
-     * dan mengunci nilainya pada baris tb_lpb.
+     * berdasarkan keberadaan faktur pajak pada LPB atau pengaturan di tbpo_suplier.
      */
     private function resolve_consignment_recognition_mode($header)
     {
-        $idLpb = (int)($header->id_lpb ?? 0);
         $kodeFakturPajak = trim((string)($header->kode_faktur_pajak ?? ''));
         $hasTaxInvoice = ($kodeFakturPajak !== '' && $kodeFakturPajak !== '-');
 
         // Jika faktur pajak sudah ada pada LPB, pembelian wajib diakui saat LPB
         if ($hasTaxInvoice) {
-            $mode = 'SAAT_LPB';
-        } else {
-            $savedMode = strtoupper(trim((string)($header->pengakuan_pembelian ?? '')));
-            if ($savedMode === 'SAAT_LPB' || $savedMode === 'SAAT_TERJUAL') {
-                $mode = $savedMode;
-            } else {
-                $mode = 'SAAT_LPB';
-                $kdSuplier = trim((string)($header->kd_suplier_source ?? ''));
-                if ($kdSuplier !== '' && $this->CI->db->field_exists('pengakuan_konsinyasi', 'tbpo_suplier')) {
-                    $sup = $this->CI->db
-                        ->select('pengakuan_konsinyasi')
-                        ->where('kd_suplier', $kdSuplier)
-                        ->get('tbpo_suplier')
-                        ->row();
-                    if ($sup && in_array($sup->pengakuan_konsinyasi, ['SAAT_LPB', 'SAAT_TERJUAL'], true)) {
-                        $mode = $sup->pengakuan_konsinyasi;
-                    }
-                }
+            return 'SAAT_LPB';
+        }
+
+        $kdSuplier = trim((string)($header->kd_suplier_source ?? ''));
+        if ($kdSuplier !== '' && $this->CI->db->field_exists('pengakuan_konsinyasi', 'tbpo_suplier')) {
+            $sup = $this->CI->db
+                ->select('pengakuan_konsinyasi')
+                ->where('kd_suplier', $kdSuplier)
+                ->get('tbpo_suplier')
+                ->row();
+            if ($sup && in_array($sup->pengakuan_konsinyasi, ['SAAT_LPB', 'SAAT_TERJUAL'], true)) {
+                return $sup->pengakuan_konsinyasi;
             }
         }
 
-        if ($idLpb > 0 && $this->CI->db->field_exists('pengakuan_pembelian', 'tb_lpb')) {
-            $currentMode = strtoupper(trim((string)($header->pengakuan_pembelian ?? '')));
-            if ($currentMode !== $mode) {
-                $this->CI->db->where('id_lpb', $idLpb)->update('tb_lpb', [
-                    'pengakuan_pembelian' => $mode
-                ]);
-            }
-        }
-
-        return $mode;
+        return 'SAAT_LPB';
     }
 
     /**

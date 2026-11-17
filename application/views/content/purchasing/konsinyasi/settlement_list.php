@@ -699,10 +699,13 @@
                                                             <span class="badge badge-secondary ml-1">Non-PPN</span>
                                                         <?php endif; ?>
                                                         <br><span class="text-dark">Inv:
+                                                            <?php $isPengakuanSaatTerjual = (($s['pengakuan_konsinyasi'] ?? 'SAAT_LPB') === 'SAAT_TERJUAL'); ?>
                                                             <?php if (!empty($s['no_invoice_supplier'])): ?>
                                                                 <?= htmlspecialchars($s['no_invoice_supplier']) ?>
-                                                            <?php else: ?>
+                                                            <?php elseif ($isPengakuanSaatTerjual): ?>
                                                                 <span class="badge badge-warning text-dark font-weight-bold" style="cursor:pointer;" onclick="openModalUpdateInvoice(<?= (int)$s['id_settlement'] ?>, '<?= $groupSettlementIdsEscaped ?>')" title="Input satu invoice untuk seluruh transaksi dalam kelompok LPB ini"><i class="fas fa-exclamation-circle mr-1"></i>Belum Ada Inv (Klik Input)</span>
+                                                            <?php else: ?>
+                                                                <span class="text-muted">-</span>
                                                             <?php endif; ?>
                                                         </span>
                                                         <?php if (!empty($s['tgl_invoice_supplier'])): ?>
@@ -736,10 +739,13 @@
                                                         </div>
                                                     <?php endif; ?>
                                                 <?php else: ?>
+                                                    <?php $isPengakuanSaatTerjual = (($s['pengakuan_konsinyasi'] ?? 'SAAT_LPB') === 'SAAT_TERJUAL'); ?>
                                                     <div class="btn-group btn-group-sm">
-                                                        <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>, '<?= $groupSettlementIdsEscaped ?>')" title="<?= empty($s['no_invoice_supplier']) ? 'Input satu invoice untuk kelompok LPB' : 'Update invoice seluruh kelompok LPB' ?>">
-                                                            <i class="fas fa-file-invoice mr-1"></i> <?= empty($s['no_invoice_supplier']) ? 'Input Inv' : 'Edit Inv' ?>
-                                                        </button>
+                                                        <?php if ($isPengakuanSaatTerjual): ?>
+                                                            <button type="button" class="btn <?= empty($s['no_invoice_supplier']) ? 'btn-warning text-dark' : 'btn-outline-primary' ?> font-weight-bold shadow-xs" onclick="openModalUpdateInvoice(<?= (int) $s['id_settlement'] ?>, '<?= $groupSettlementIdsEscaped ?>')" title="<?= empty($s['no_invoice_supplier']) ? 'Input satu invoice untuk kelompok LPB' : 'Update invoice seluruh kelompok LPB' ?>">
+                                                                <i class="fas fa-file-invoice mr-1"></i> <?= empty($s['no_invoice_supplier']) ? 'Input Inv' : 'Edit Inv' ?>
+                                                            </button>
+                                                        <?php endif; ?>
                                                         <button type="button" class="btn btn-outline-secondary font-weight-bold btnViewSettlement" id="btn-view-<?= (int) $s['id_settlement'] ?>" data-id="<?= (int) $s['id_settlement'] ?>" onclick="openModalDetailSettlement(<?= (int) $s['id_settlement'] ?>)" title="Lihat Detail Settlement">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
