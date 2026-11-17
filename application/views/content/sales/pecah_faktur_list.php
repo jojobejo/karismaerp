@@ -152,18 +152,6 @@
                         <a href="<?= base_url('sales_order/customer_acak') ?>" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-users mr-1"></i> Master Customer Acak
                         </a>
-                        <a href="<?= base_url('master_barang') ?>" class="btn btn-outline-primary btn-sm ml-1">
-                            <i class="fas fa-boxes mr-1"></i> Master Barang
-                        </a>
-                        <button type="button" class="btn btn-primary btn-sm ml-1" data-toggle="modal" data-target="#modalImportMasterBarang">
-                            <i class="fas fa-file-excel mr-1"></i> Import Master Barang
-                        </button>
-                        <button type="button" class="btn btn-purple text-white btn-sm ml-1 shadow-sm" style="background-color: #6f42c1; border-color: #6f42c1;" data-toggle="modal" data-target="#modalImportFakturH" title="Import Faktur H khusus kebutuhan cetak nota">
-                            <i class="fas fa-file-import mr-1"></i> Import Faktur H (Print)
-                        </button>
-                        <button type="button" class="btn btn-success btn-sm ml-1" data-toggle="modal" data-target="#modalImportFakturZ">
-                            <i class="fas fa-file-import mr-1"></i> Import Faktur Z
-                        </button>
                     </div>
                     <div>
                         <span class="text-muted small">
@@ -791,56 +779,6 @@
         </section>
     </div>
 
-    
-    <!-- Modal Import Faktur H Khusus Kebutuhan Cetak Nota LX-310 -->
-    <div class="modal fade" id="modalImportFakturH" tabindex="-1" role="dialog" aria-labelledby="modalImportFakturHLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content shadow-lg border-0">
-                <form action="<?= base_url('sales_order/import_faktur_h') ?>" method="post" enctype="multipart/form-data" id="formImportFakturH">
-                    <div class="modal-header text-white" style="background-color: #6f42c1;">
-                        <h5 class="modal-title font-weight-bold" id="modalImportFakturHLabel">
-                            <i class="fas fa-file-import mr-1"></i> Import Faktur H (Khusus Cetak Nota LX-310)
-                        </h5>
-                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info py-2" style="font-size: 13px;">
-                            <i class="fas fa-shield-alt mr-1"></i> <strong>Aman & Terisolasi:</strong>
-                            Data faktur H yang diimpor melalui modul ini disimpan pada tabel terpisah khusus kebutuhan cetak nota.
-                            Proses ini <strong>sama sekali TIDAK mempengaruhi</strong> master customer acak, stok gudang, piutang, maupun jurnal sistem.
-                        </div>
-                        <div class="alert alert-light border py-2" style="font-size: 12.5px;">
-                            <strong>Petunjuk:</strong>
-                            <ol class="mb-0 pl-3">
-                                <li>Unduh template Excel resmi melalui tombol <strong>Unduh Template Excel</strong> di bawah.</li>
-                                <li>Buka template dan salin data faktur H Anda (bulan Januari - September atau periode lainnya).</li>
-                                <li>Satu nomor faktur H dapat memuat beberapa baris barang (multi-item).</li>
-                                <li>Simpan file dalam format <code>.xlsx</code> atau <code>.xls</code>, lalu pilih file pada kolom di bawah dan klik <strong>Proses Import</strong>.</li>
-                            </ol>
-                        </div>
-                        <div class="form-group">
-                            <label for="fileImportFakturH" class="font-weight-bold text-dark">Pilih File Excel Faktur H (.xlsx / .xls)</label>
-                            <div class="custom-file">
-                                <input type="file" name="file_faktur_h" id="fileImportFakturH" class="custom-file-input" accept=".xlsx,.xls" required>
-                                <label class="custom-file-label" for="fileImportFakturH" id="labelFileImportFakturH">Pilih file Excel Faktur H...</label>
-                            </div>
-                            <small class="form-text text-muted">Format file yang didukung: .xlsx atau .xls (Ukuran maksimal: 10 MB).</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <a href="<?= base_url('sales_order/template_import_faktur_h') ?>" class="btn btn-outline-primary btn-sm mr-auto font-weight-bold shadow-sm">
-                            <i class="fas fa-download mr-1"></i> Unduh Template Excel (.xlsx)
-                        </a>
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn text-white btn-sm font-weight-bold shadow-sm" style="background-color: #6f42c1; border-color: #6f42c1;" id="btnSubmitImportFakturH">
-                            <i class="fas fa-upload mr-1"></i> Proses Import
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal Import Pelunasan Faktur Pecahan H (Sistem) -->
     <div class="modal fade" id="modalImportPelunasanFakturZ" tabindex="-1" role="dialog" aria-labelledby="modalImportPelunasanFakturZLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
@@ -1168,94 +1106,6 @@
                         </button>
                         <button type="submit" class="btn btn-warning btn-sm font-weight-bold px-3 shadow-sm">
                             <i class="fas fa-arrow-right mr-1"></i> Lanjut Pemecahan Faktur
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalImportFakturZ" tabindex="-1" role="dialog" aria-labelledby="modalImportFakturZLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <form action="<?= base_url('sales_order/import_faktur_z') ?>" method="post" enctype="multipart/form-data" id="formImportFakturZ">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title" id="modalImportFakturZLabel">
-                            <i class="fas fa-file-import mr-1"></i> Import Faktur Z Eksternal
-                        </h5>
-                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info py-2">
-                            <strong>Alur:</strong> unduh template, isi satu baris untuk setiap barang, lalu unggah kembali file Excel. Satu file dapat berisi beberapa Faktur Z.
-                        </div>
-                        <div class="form-group">
-                            <label for="fileImportFakturZ" class="font-weight-bold">File Excel (.xlsx atau .xls)</label>
-                            <div class="custom-file">
-                                <input type="file" name="file_faktur_z" id="fileImportFakturZ" class="custom-file-input" accept=".xlsx,.xls" required>
-                                <label class="custom-file-label" for="fileImportFakturZ">Pilih file template yang telah diisi</label>
-                            </div>
-                            <small class="form-text text-muted">Maksimal 5 MB dan 5.000 baris. Seluruh file dibatalkan apabila ada satu baris yang tidak valid.</small>
-                        </div>
-                        <ul class="small text-muted mb-0 pl-3">
-                            <li>Nomor faktur harus unik dan maksimal 30 karakter.</li>
-                            <li>Kode customer dan kode barang harus tersedia pada master KARISMA ERP.</li>
-                            <li>Kuantitas diisi terpisah pada <code>qty_box</code> dan <code>qty_pcs</code>; total pcs dihitung otomatis.</li>
-                            <li>Harga per pcs sudah termasuk PPN; persentase pajak hanya memisahkan DPP dan PPN, bukan menambah harga.</li>
-                            <li>Import ini hanya menjadi sumber pemecahan Faktur Z; tidak mengurangi stok dan tidak membentuk jurnal.</li>
-                        </ul>
-                    </div>
-                    <div class="modal-footer">
-                        <a href="<?= base_url('sales_order/template_import_faktur_z') ?>" class="btn btn-outline-success btn-sm mr-auto">
-                            <i class="fas fa-download mr-1"></i> Unduh Template
-                        </a>
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-success btn-sm" id="btnImportFakturZ">
-                            <i class="fas fa-upload mr-1"></i> Proses Import
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="modalImportMasterBarang" tabindex="-1" role="dialog" aria-labelledby="modalImportMasterBarangLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <form action="<?= base_url('sales_order/import_master_barang') ?>" method="post" enctype="multipart/form-data" id="formImportMasterBarang">
-                    <input type="hidden" name="redirect_to" value="sales_order/pecah_faktur">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="modalImportMasterBarangLabel">
-                            <i class="fas fa-boxes mr-1"></i> Import Data Master Barang
-                        </h5>
-                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-info py-2">
-                            <strong>Alur:</strong> unduh template Master Barang, isi daftar barang, lalu unggah kembali file Excel/CSV. Barang dengan kode baru akan ditambahkan, sedangkan kode yang sudah ada akan diperbarui otomatis.
-                        </div>
-                        <div class="form-group">
-                            <label for="fileImportMasterBarang" class="font-weight-bold">File Excel / CSV (.xlsx, .xls, atau .csv)</label>
-                            <div class="custom-file">
-                                <input type="file" name="file_master_barang" id="fileImportMasterBarang" class="custom-file-input" accept=".xlsx,.xls,.csv" required>
-                                <label class="custom-file-label" for="fileImportMasterBarang">Pilih file template Master Barang yang telah diisi</label>
-                            </div>
-                            <small class="form-text text-muted">Maksimal 5 MB dan 10.000 baris. Seluruh file dibatalkan apabila ada baris dengan format tidak valid.</small>
-                        </div>
-                        <ul class="small text-muted mb-0 pl-3">
-                            <li>Kolom <code>kode_barang</code> (maks. 25 karakter) dan <code>nama_barang</code> wajib diisi pada setiap baris.</li>
-                            <li>Kolom <code>isi_per_box</code> digunakan sebagai acuan konversi kuantitas box ke pcs pada Faktur Z.</li>
-                            <li>Kolom opsional seperti <code>satuan</code>, <code>berat_gram</code>, <code>kubikasi_m3</code>, <code>kd_suplier</code>, <code>merk_barang</code>, dan <code>bahan_aktif</code> akan otomatis dilengkapi nilai standar apabila dikosongkan.</li>
-                            <li>Jika <code>kode_barang</code> sudah terdaftar di Master Barang, data barang tersebut akan diperbarui (Upsert).</li>
-                        </ul>
-                    </div>
-                    <div class="modal-footer">
-                        <a href="<?= base_url('sales_order/template_import_master_barang') ?>" class="btn btn-outline-primary btn-sm mr-auto">
-                            <i class="fas fa-download mr-1"></i> Unduh Template Master Barang
-                        </a>
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary btn-sm" id="btnImportMasterBarang">
-                            <i class="fas fa-upload mr-1"></i> Proses Import
                         </button>
                     </div>
                 </form>

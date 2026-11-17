@@ -27,10 +27,11 @@
                 <div class="row mb-3">
                     <?php
                     // Kasir TIDAK bisa mengatur saldo. Hanya admin keuangan / kiukeu / superadmin yang bisa.
-                    $jobdeskUser = strtoupper((string)$this->session->userdata('jobdesk'));
-                    $is_admpnj   = ($jobdeskUser === 'ADMPNJ');
-                    $isKeuangan  = in_array($jobdeskUser, ['ADMINKEU','ADMINKEUTC','KIUKEU','ADMIN', 'ADMPNJ'], true) 
-                                   || $this->session->userdata('username') === 'admin';
+                    $jobdeskUser = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+                    $is_admpnj   = in_array($jobdeskUser, ['ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN'], true);
+                    $isKeuangan  = in_array($jobdeskUser, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ADMIN', 'ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN'], true) 
+                                   || $this->session->userdata('username') === 'admin'
+                                   || (bool)$this->session->userdata('is_admin_dashboard');
                     ?>
 
                     <!-- Saldo Kasir -->

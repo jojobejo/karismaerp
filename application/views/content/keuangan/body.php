@@ -20,7 +20,15 @@
             </div>
             <!-- /.content-header -->
             <section class="content">
-                <?php if ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+                <?php
+                $jobdeskKeuBody = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+                $deptKeuBody = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+                $isAdminKeuTc = in_array($jobdeskKeuBody, ['ADMINKEUTC', 'MT MANAGER KEUANGAN'], true);
+                $isAdminKeu = in_array($jobdeskKeuBody, ['ADMINKEU', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT KADEP KEUANGAN & SALES', 'KASIR', 'TEAM COLLECTION', 'ADMIN'], true) || (bool) $this->session->userdata('is_admin_dashboard');
+                $isDirekturKeu = in_array($jobdeskKeuBody, ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true);
+                $isPurchasingKeu = in_array($jobdeskKeuBody, ['ADMINPURCHASING', 'ADMIN PURCHASING', 'MT KADEP PURCHASING', 'PURCHASING'], true);
+                ?>
+                <?php if ($isAdminKeuTc) : ?>
                     <div class="container-fluid">
                         <div class="card">
                             <div class="card-body">
@@ -81,9 +89,9 @@
                         </div>
                     </div>
 
-                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
+                <?php elseif ($isAdminKeu) : ?>
                     <div class="container-fluid">
-                        <?php if ($this->session->userdata('lv') == 1) : ?>
+                        <?php if ((int) $this->session->userdata('lv') >= 1) : ?>
                             <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
@@ -131,7 +139,7 @@
                         </div>
                     </div>
 
-                <?php elseif ($this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
+                <?php elseif ($isDirekturKeu) : ?>
                     <div class="card">
                         <div class="card-header">
                             <h3>Stock Log </h3>
@@ -162,7 +170,7 @@
                             </table>
                         </div>
                     </div>
-                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINPURCHASING') : ?>
+                <?php elseif ($isPurchasingKeu) : ?>
                     <div class="container-fluid">
                         <a href="<?= base_url('pendingpo') ?>" class="btn btn-secondary mb-2">Dashboard</a>
                         <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>

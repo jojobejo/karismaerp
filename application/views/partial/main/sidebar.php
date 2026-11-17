@@ -8,13 +8,20 @@
     </a>
 
     <?php 
-    $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK'];
+    $allowed_roles = [
+      'DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK',
+      'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'MT MANAGER WAREHOUSE',
+      'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'CHECKER', 'MT CHECKER', 'SALES'
+    ];
     $CI =& get_instance();
-    $hasMasterUserManagementAccess = (strtolower((string) $CI->session->userdata('username')) === 'admin');
+    $sbJobdesk = strtoupper(trim((string) $CI->session->userdata('jobdesk')));
+    $sbUsername = strtolower(trim((string) $CI->session->userdata('username')));
+    $sbLv = (int) $CI->session->userdata('lv');
+    $hasMasterUserManagementAccess = ($sbUsername === 'admin' || $sbJobdesk === 'ADMIN' || $sbLv >= 99);
     $dynamicSidebarTree = [];
-    if (isset($CI->db) && $CI->db->table_exists('tb_menu')) {
+    if (isset($CI->db) && $CI->db->table_exists('tb_menu') && $CI->session->userdata('akses_lv_id')) {
       $CI->load->model('master/M_Menu', 'sidebarMenuModel');
-      $dynamicSidebarTree = $CI->sidebarMenuModel->sidebar_tree($CI->session->userdata('akses_lv_id') ?: $CI->session->userdata('lv'));
+      $dynamicSidebarTree = $CI->sidebarMenuModel->sidebar_tree($CI->session->userdata('akses_lv_id'));
     }
 
     $renderDynamicMenu = function ($menus) use (&$renderDynamicMenu) {
@@ -158,7 +165,7 @@
           </ul>
         </nav>
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMINKEU', 'ADMIN KEUANGAN', 'ADMIN JURNAL', 'MT ADMIN ACCOUNTING'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -263,7 +270,7 @@
         <!-- /.sidebar-menu -->
       </div>
 
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'KIUKEU') : ?>
+    <?php elseif (in_array($sbJobdesk, ['KIUKEU', 'ADMIN JURNAL PAJAK'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -344,7 +351,7 @@
         <!-- /.sidebar-menu -->
       </div>
 
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINGA') : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMINGA', 'GENERAL AFFAIR', 'ADMIN GA', 'HRD & GA', 'MT HRD & GA', 'MANAGER HRD & GA'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -384,7 +391,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '5' && $this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
+    <?php elseif (in_array($sbJobdesk, ['DIREKTUR', 'DIREKSI', 'DIREKTUR UTAMA'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -432,7 +439,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+    <?php elseif (in_array($sbJobdesk, ['LOGISTIK', 'ADMIN GUDANG'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -472,7 +479,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['SC', 'KIUSCC', 'SALESCOUNTER', 'LOBY', 'SALESLOBY', 'ADMINLOBY'], true)) : ?>
+    <?php elseif (in_array($sbJobdesk, ['SC', 'KIUSCC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'LOBY', 'SALESLOBY', 'ADMINLOBY'], true)) : ?>
     <div class="sidebar">
       <!-- Sidebar Menu -->
       <nav class="mt-2">
@@ -528,7 +535,7 @@
       </nav>
       <!-- /.sidebar-menu -->
     </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+    <?php elseif ($sbJobdesk === 'ADMINICS') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -568,7 +575,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
+    <?php elseif ($sbJobdesk === 'STOCKOPNAME') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -608,7 +615,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array(str_replace(['-', ' '], '_', strtoupper((string)$this->session->userdata('jobdesk'))), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) : ?>
+    <?php elseif (in_array(str_replace(['-', ' '], '_', $sbJobdesk), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) : ?>
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
@@ -635,7 +642,7 @@
           </ul>
         </nav>
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMINKEUTC'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -675,7 +682,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-      <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), $allowed_roles)) : ?>
+      <?php elseif (in_array($sbJobdesk, $allowed_roles, true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -713,7 +720,7 @@
               </a>
             </li>
         </nav>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC'], true)) : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -776,7 +783,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'MANAGERSC', 'KADEP', 'MANAGERTC'])) : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN', 'KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR', 'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES', 'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER', 'KADEP', 'MANAGERTC', 'MT MANAGER KEUANGAN'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -793,7 +800,7 @@
                 <p>Sales Order</p>
               </a>
             </li>
-            <?php if ($this->session->userdata('jobdesk') === 'ADMPNJ') : ?>
+            <?php if (in_array($sbJobdesk, ['ADMPNJ', 'ADMIN PRICELIST & RETUR PENJUALAN'], true)) : ?>
             <li class="nav-item">
               <a href="<?php echo base_url('admin/transaksi') ?>" class="nav-link">
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
@@ -819,7 +826,7 @@
                 <p>Daftar SPR</p>
               </a>
             </li>
-            <?php if ($this->session->userdata('jobdesk') !== 'ADMPNJ') : ?>
+            <?php if ($sbJobdesk !== 'ADMPNJ') : ?>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
@@ -849,7 +856,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMRETUR', 'COLLECTION', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'])) : ?>
+    <?php elseif (in_array($sbJobdesk, ['ADMRETUR', 'COLLECTION', 'TEAM COLLECTION', 'MT TEAM COLLECTION', 'KASIR', 'MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MANAGERSE', 'MANAGER SALES EXECUTIVE', 'DIREKTUROP', 'MT DIREKTUR OPERASIONAL', 'DIREKTURUTAMA'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -862,7 +869,7 @@
                 </p>
               </a>
             </li>
-            <?php if ($this->session->userdata('jobdesk') != 'KASIR') : ?>
+            <?php if ($sbJobdesk != 'KASIR') : ?>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
@@ -892,7 +899,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && (strtolower((string)$this->session->userdata('username')) === 'admlpb' || in_array($this->session->userdata('jobdesk'), ['ADMLPB', 'ADMINLOGLPB'], true))) : ?>
+    <?php elseif (in_array($sbUsername, ['admlpb', 'yunika'], true) || in_array($sbJobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'], true)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">

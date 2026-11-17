@@ -1,7 +1,7 @@
 <!-- views/content/sales/so_detail.php -->
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
-$hide_activity_log = $jobdesk === 'SC';
+$hide_activity_log = in_array($jobdesk, ['SC', 'SALES COUNTER', 'MT SALES COUNTER'], true);
 $back_url = base_url('sales_order');
 $back_label = 'Kembali';
 $format_date = function($date) {
@@ -765,6 +765,7 @@ $(document).ready(function () {
     <?php endif; ?>
 });
 
+var BASE_URL = '<?= base_url() ?>';
 var IS_ATASAN_USER = <?= !empty($is_atasan) ? 'true' : 'false' ?>;
 
 function openModalCancelSo(idSo, noSo) {
@@ -807,9 +808,6 @@ function openModalCancelSo(idSo, noSo) {
 }
 
 function submitCancelSoRequest(idSo, alasan, directCancel) {
-    if (window.Swal) {
-        Swal.fire({ title: 'Memproses...', text: 'Mengirim permohonan pembatalan...', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
-    }
     $.ajax({
         url: BASE_URL + 'sales_order/request_cancel_so',
         type: 'POST',
@@ -823,9 +821,9 @@ function submitCancelSoRequest(idSo, alasan, directCancel) {
             if (res.success) {
                 if (window.Swal) {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: res.message || 'Permintaan pembatalan berhasil diproses.',
+                        icon: 'info',
+                        title: 'Menunggu Approval Atasan',
+                        text: res.message || 'Permintaan pembatalan SO berhasil diajukan dan sedang menunggu persetujuan atasan.',
                         confirmButtonText: 'OK'
                     }).then(function() {
                         window.location.reload();

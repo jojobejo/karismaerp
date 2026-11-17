@@ -406,16 +406,43 @@
     }
     requestNotifPermission();
 
+    function showInAppReturToast(item) {
+        // Tampilkan toast in-app sekali per sesi jika Web Notification tidak aktif/diblokir
+        var sessionKey = 'notif_retur_toast_' + item.id;
+        if (sessionStorage.getItem(sessionKey)) return;
+        sessionStorage.setItem(sessionKey, '1');
+
+        if (typeof Swal !== 'undefined' && typeof Swal.mixin === 'function') {
+            var Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: true,
+                confirmButtonText: 'Lihat',
+                showCloseButton: true,
+                timer: 10000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'info',
+                title: item.title,
+                text: item.body
+            }).then(function(result) {
+                if (result.isConfirmed && item.url) {
+                    window.location.href = item.url;
+                }
+            });
+        }
+    }
+
     function pollReturNotifications() {
         var base_url = '<?= base_url() ?>';
         $.getJSON(base_url + 'retur_penjualan/get_pending_notifications', function(res) {
             if (res && res.status && res.data && res.data.length > 0) {
                 res.data.forEach(function(item) {
                     var storageKey = 'notif_retur_' + item.id;
-                    if (!localStorage.getItem(storageKey)) {
-                        localStorage.setItem(storageKey, '1');
-                        
-                        if ('Notification' in window && Notification.permission === 'granted') {
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        if (!localStorage.getItem(storageKey)) {
+                            localStorage.setItem(storageKey, '1');
                             var notif = new Notification('🔔 ' + item.title, {
                                 body: item.body,
                                 icon: base_url + 'assets/images/Karisma.png',
@@ -423,13 +450,15 @@
                                 tag: item.id,
                                 requireInteraction: true
                             });
-                            
                             notif.onclick = function() {
                                 window.focus();
                                 window.location.href = item.url;
                                 notif.close();
                             };
                         }
+                    } else {
+                        // Fallback in-app toast jika izin notifikasi browser belum granted/ditolak
+                        showInAppReturToast(item);
                     }
                 });
             }

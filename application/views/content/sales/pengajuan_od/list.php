@@ -39,7 +39,7 @@
                         <a href="<?= base_url('sales/C_PengajuanOD/activity_log') ?>" class="btn btn-secondary mr-2">
                             <i class="fas fa-history mr-1"></i> Activity Log
                         </a>
-                        <?php if (in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
+                        <?php if (in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) : ?>
                             <a href="<?= base_url('sales/C_PengajuanOD/create') ?>" class="btn btn-primary">
                                 <i class="fas fa-plus mr-1"></i> Buat Pengajuan OD Baru
                             </a>
@@ -138,7 +138,7 @@
                                          </a>
 
                                          <!-- Edit Button for SC / Admin -->
-                                         <?php if (in_array($row['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
+                                         <?php if (in_array($row['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMINSC', 'ADMIN SALES COUNTER', 'ADMIN'])) : ?>
                                          <a href="<?= base_url('sales/C_PengajuanOD/edit/'.$row['id']) ?>" class="btn btn-warning btn-sm">
                                              <i class="fas fa-edit"></i> <?= $row['status'] == 'rejected' ? 'Ajukan Ulang' : 'Edit' ?>
                                          </a>
@@ -147,9 +147,9 @@
                                         <!-- Approval Action Buttons -->
                                         <?php
                                         $show_approve = false;
-                                        if ($row['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'ADMIN'])) $show_approve = true;
-                                        if ($row['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'ADMIN'])) $show_approve = true;
-                                        if ($row['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'ADMIN'])) $show_approve = true;
+                                        if ($row['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'MANAGER SALES COUNTER', 'ADMIN'])) $show_approve = true;
+                                        if ($row['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN', 'ADMIN'])) $show_approve = true;
+                                        if ($row['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'MT KADEP KEUANGAN & SALES', 'KADEP KEUANGAN & SALES', 'ADMIN'])) $show_approve = true;
                                         
                                         if ($show_approve) :
                                         ?>

@@ -78,7 +78,7 @@ tr.row-pending { background:#fafafa !important; }
             <section class="content">
 
                 <div class="row mb-3">
-                    <?php if ($role === 'MANAGERWH') : ?>
+                    <?php if (in_array($role, ['MANAGERWH', 'MANAGERCK'])) : ?>
                     <div class="col-auto">
                         <button class="btn btn-primary" data-toggle="modal" data-target="#modalBuatBongkaran">
                             <i class="fas fa-plus"></i> Buat Bongkaran
@@ -358,7 +358,7 @@ tr.row-pending { background:#fafafa !important; }
                         <?php
                         // Bongkaran tidak punya halaman detail, jadi kolom Aksi hanya untuk role operasional
                         $has_aksi_b = in_array($role, ['CHECKER','MANAGERCK','MANAGERWH','ADMLOG']);
-                        $can_edit_b = ($role === 'MANAGERWH');
+                        $can_edit_b = in_array($role, ['MANAGERWH','MANAGERCK']);
                         $colspan_b  = $has_aksi_b ? 12 : 11;
                         $b_aktif    = array_filter($bongkaran, function ($r) { return in_array($r['status'], ['PROSES','PENYIAPAN_BARANG','CETAK_DO']); });
                         $b_pending  = array_filter($bongkaran, function ($r) { return $r['status'] === 'MENUNGGU'; });
@@ -458,9 +458,21 @@ tr.row-pending { background:#fafafa !important; }
                                     <?php else : ?>
                                         <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($b['nm_checker'] ?? 'checker lain') ?></span>
                                     <?php endif; ?>
-                                <?php elseif ($role === 'MANAGERCK') : ?>
+                                <?php elseif (in_array($role, ['MANAGERCK', 'MANAGERWH'])) : ?>
                                     <?php if (!$is_taken) : ?>
-                                        <button class="btn btn-sm btn-success btn-start-mck" data-id="<?= $b['id'] ?>" data-type="bongkaran"><i class="fas fa-play"></i> Start</button>
+                                        <button class="btn btn-sm btn-success btn-start-mck mr-1" data-id="<?= $b['id'] ?>" data-type="bongkaran"><i class="fas fa-play"></i> Start</button>
+                                        <?php if ($can_edit_row) : ?>
+                                            <button class="btn btn-sm btn-warning btn-aksi-edit btn-edit-bongkaran mr-1"
+                                                data-id="<?= $b['id'] ?>"
+                                                data-ket="<?= htmlspecialchars($b['keterangan'] ?? '') ?>">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-danger btn-aksi-hapus btn-hapus-bongkaran"
+                                                data-id="<?= $b['id'] ?>"
+                                                data-ket="<?= htmlspecialchars($b['keterangan'] ?? $b['kode_bongkar']) ?>">
+                                                <i class="fas fa-trash"></i> Hapus
+                                            </button>
+                                        <?php endif; ?>
                                     <?php elseif ($b['status'] === 'PROSES') : ?>
                                         <?php if ($is_paused) : ?>
                                         <div class="aksi-managerck">
@@ -499,21 +511,6 @@ tr.row-pending { background:#fafafa !important; }
                                         </div>
                                         <?php endif; ?>
                                     <?php else : ?><span class="text-muted small">—</span><?php endif; ?>
-                                <?php elseif ($role === 'MANAGERWH') : ?>
-                                    <?php if ($can_edit_row) : ?>
-                                        <button class="btn btn-sm btn-warning btn-aksi-edit btn-edit-bongkaran mr-1"
-                                            data-id="<?= $b['id'] ?>"
-                                            data-ket="<?= htmlspecialchars($b['keterangan'] ?? '') ?>">
-                                            <i class="fas fa-pencil-alt"></i> Edit
-                                        </button>
-                                        <button class="btn btn-sm btn-danger btn-aksi-hapus btn-hapus-bongkaran"
-                                            data-id="<?= $b['id'] ?>"
-                                            data-ket="<?= htmlspecialchars($b['keterangan'] ?? $b['kode_bongkar']) ?>">
-                                            <i class="fas fa-trash"></i> Hapus
-                                        </button>
-                                    <?php else : ?>
-                                        <span class="text-muted small">—</span>
-                                    <?php endif; ?>
                                 <?php else : ?><span class="text-muted small">—</span><?php endif; ?>
                             </td>
                             <?php endif; ?>
@@ -560,7 +557,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = true; // selalu tampil kolom aksi (minimal tombol Detail)
-                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK']); // yang bisa operasi
+                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK','MANAGERWH']); // yang bisa operasi
                         $can_edit_lk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_lk  = 13;
                         $lk_aktif    = array_filter($list_lk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
@@ -788,7 +785,7 @@ tr.row-pending { background:#fafafa !important; }
                                             <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($lk['nm_checker'] ?? '') ?></span>
                                         <?php endif; ?>
 
-                                    <?php elseif ($role === 'MANAGERCK'): ?>
+                                    <?php elseif (in_array($role, ['MANAGERCK', 'MANAGERWH'])): ?>
                                         <?php if ($lk['status'] === 'DO_SELESAI' && !$is_paused_siapkan && !$is_paused): ?>
                                             <button class="btn btn-sm btn-siapkan btn-start-siapkan-mck"
                                                     data-id="<?= $lk['id'] ?>" data-type="lk">
@@ -916,7 +913,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = true;
-                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK']);
+                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK','MANAGERWH']);
                         $can_edit_kk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_kk  = 13;
                         $kk_aktif    = array_filter($list_kk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
@@ -1137,7 +1134,7 @@ tr.row-pending { background:#fafafa !important; }
                                             <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($kk['nm_checker'] ?? '') ?></span>
                                         <?php endif; ?>
 
-                                    <?php elseif ($role === 'MANAGERCK'): ?>
+                                    <?php elseif (in_array($role, ['MANAGERCK', 'MANAGERWH'])): ?>
                                         <?php if ($kk['status'] === 'DO_SELESAI' && !$is_paused_siapkan && !$is_paused): ?>
                                             <button class="btn btn-sm btn-siapkan btn-start-siapkan-mck"
                                                     data-id="<?= $kk['id'] ?>" data-type="kk">
@@ -1268,7 +1265,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 
 <!-- MODALS (tidak berubah, sama persis seperti sebelumnya) -->
-<?php if ($role === 'MANAGERWH') : ?>
+<?php if (in_array($role, ['MANAGERWH', 'MANAGERCK'])) : ?>
 <div class="modal fade" id="modalBuatBongkaran" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -1374,7 +1371,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if ($role === 'MANAGERCK') : ?>
+<?php if (in_array($role, ['MANAGERCK', 'MANAGERWH'])) : ?>
 <div class="modal fade" id="modalStartMCK" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-success text-white">
@@ -1413,7 +1410,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if ($role === 'MANAGERCK') : ?>
+<?php if (in_array($role, ['MANAGERCK', 'MANAGERWH'])) : ?>
 <div class="modal fade" id="modalGantiChecker" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-warning">

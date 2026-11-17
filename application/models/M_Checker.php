@@ -74,14 +74,14 @@ class M_Checker extends CI_Model
         return $this->db->get_where('tb_bongkaran', ['id' => $id])->row_array();
     }
 
-    // Daftar karyawan dengan jobdesk CHECKER (untuk dropdown MANAGERCK)
+    // Daftar user dengan bagian CHECKER (untuk dropdown MANAGERCK)
     public function get_list_checker()
     {
         return $this->db
-            ->select('nik, nm_karyawan')
-            ->where('jobdesk', 'CHECKER')
-            ->order_by('nm_karyawan', 'ASC')
-            ->get('tb_karyawan')->result_array();
+            ->select('nik, nama_lngkp AS nm_karyawan')
+            ->where_in('bagian', ['CHECKER', 'MT CHECKER'])
+            ->order_by('nama_lngkp', 'ASC')
+            ->get('tb_users')->result_array();
     }
 
     // Ambil id_bongkaran yang sedang aktif (PROSES) milik checker ini

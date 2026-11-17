@@ -71,9 +71,11 @@ class C_Keuangan extends CI_Controller
 
     public function import()
     {
-        $session    = $this->session->userdata('jobdesk');
+        $session = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $dept = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $isKeuAllow = in_array($session, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ADMIN'], true) || strpos($dept, 'KEUANGAN') !== false || (bool)$this->session->userdata('is_admin_dashboard');
 
-        if ($session == 'ADMINKEU') {
+        if ($isKeuAllow) {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
             fgetcsv($file_data);
 
@@ -233,9 +235,11 @@ class C_Keuangan extends CI_Controller
     }
     public function csv_import_po_pnd()
     {
-        $session    = $this->session->userdata('jobdesk');
+        $session = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $dept = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $isKeuAllow = in_array($session, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ADMIN'], true) || strpos($dept, 'KEUANGAN') !== false || (bool)$this->session->userdata('is_admin_dashboard');
 
-        if ($session == 'ADMINKEU') {
+        if ($isKeuAllow) {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
             fgetcsv($file_data); // Skip header row
 
@@ -274,9 +278,11 @@ class C_Keuangan extends CI_Controller
 
     public function csv_import_lot()
     {
-        $session    = $this->session->userdata('jobdesk');
+        $session = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $dept = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $isKeuAllow = in_array($session, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ADMIN'], true) || strpos($dept, 'KEUANGAN') !== false || (bool)$this->session->userdata('is_admin_dashboard');
 
-        if ($session == 'ADMINKEU') {
+        if ($isKeuAllow) {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
             fgetcsv($file_data); // Skip header row
 
@@ -694,17 +700,26 @@ class C_Keuangan extends CI_Controller
     private function can_full_edit_master_barang()
     {
         $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $username = strtolower(trim((string)$this->session->userdata('username')));
         $level = (int)$this->session->userdata('lv');
 
-        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'ADMINPURCHASING', 'ADMKEU'], true)
+        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ADMINPURCHASING', 'ADMIN PURCHASING', 'MT KADEP PURCHASING', 'PURCHASING', 'ADMKEU', 'ADMIN'], true)
+            || strpos($departemen, 'KEUANGAN') !== false
+            || strpos($departemen, 'PURCHASING') !== false
             || $username === 'admkeu'
-            || $level === 1;
+            || $username === 'admin'
+            || $level >= 99
+            || (bool)$this->session->userdata('is_admin_dashboard');
     }
 
     private function can_edit_info_lain_master_barang()
     {
-        return $this->can_full_edit_master_barang() || (string)$this->session->userdata('jobdesk') === 'LOGISTIK';
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        return $this->can_full_edit_master_barang()
+            || in_array($jobdesk, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT MANAGER WAREHOUSE', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'ADMINICS'], true)
+            || strpos($departemen, 'LOGISTIK') !== false;
     }
 
     private function validate_master_barang_kelompok_dagang($payload)
@@ -1125,12 +1140,17 @@ class C_Keuangan extends CI_Controller
     private function can_access_jurnal()
     {
         $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $username = strtolower(trim((string)$this->session->userdata('username')));
         $level = (int)$this->session->userdata('lv');
 
         return $username === 'admin'
             || (bool)$this->session->userdata('is_admin_dashboard')
-            || ($level === 1 && in_array($jobdesk, ['ADMIN', 'ADMINKEU', 'ADMINKEUTC'], true));
+            || $level >= 99
+            || strpos($departemen, 'KEUANGAN') !== false
+            || strpos($departemen, 'ACCOUNTING') !== false
+            || strpos($departemen, 'FINANCE') !== false
+            || in_array($jobdesk, ['ADMIN', 'ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'ADMIN JURNAL PAJAK', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES', 'ACCOUNTING', 'FINANCE'], true);
     }
 
     private function require_jurnal_access($json = false)
@@ -2018,9 +2038,9 @@ class C_Keuangan extends CI_Controller
             return true;
         }
         if ($level === 'MANAGER') {
-            return in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING'], true);
+            return in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES'], true);
         }
-        return $level === 'DIRECTOR' && in_array($jobdesk, ['DIREKTUR', 'DIRECTOR'], true);
+        return $level === 'DIRECTOR' && in_array($jobdesk, ['DIREKTUR', 'DIRECTOR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true);
     }
 
     private function can_approve_closing()
@@ -2029,7 +2049,7 @@ class C_Keuangan extends CI_Controller
         $username = strtolower(trim((string)$this->session->userdata('username')));
         return $username === 'admin'
             || (bool)$this->session->userdata('is_admin_dashboard')
-            || in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING'], true);
+            || in_array($jobdesk, ['MANAGERKEU', 'MANAGER ACCOUNTING', 'KEPALA ACCOUNTING', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MT KADEP KEUANGAN & SALES'], true);
     }
 
     private function is_closing_superuser()

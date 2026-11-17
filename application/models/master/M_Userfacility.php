@@ -4,7 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class M_Userfacility extends CI_Model
 {
     private $table = 'tb_user_facility';
-    private $userTable = 'tb_karyawan';
+    private $userTable = 'tb_users';
 
     public function ensure_schema()
     {
@@ -31,9 +31,6 @@ class M_Userfacility extends CI_Model
     {
         return [
             ['key' => 'menu.ics_lpb', 'label' => 'Akses Menu LPB', 'module' => 'LPB', 'group' => 'Menu / Module'],
-            ['key' => 'action.add', 'label' => 'Tambah Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
-            ['key' => 'action.edit', 'label' => 'Edit Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
-            ['key' => 'action.delete', 'label' => 'Hapus Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.approve', 'label' => 'Approve / Afirmasi', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.print', 'label' => 'Print Dokumen', 'module' => 'GENERAL', 'group' => 'Aksi'],
             ['key' => 'action.export', 'label' => 'Export Data', 'module' => 'GENERAL', 'group' => 'Aksi'],
@@ -54,18 +51,18 @@ class M_Userfacility extends CI_Model
             return [];
         }
 
-        $this->db->select('id, nik, nm_karyawan, username, departemen, jobdesk, akses_lv');
+        $this->db->select('id, nik, nama_lngkp AS nm_karyawan, username, departement AS departemen, bagian AS jobdesk, level AS akses_lv');
         $this->db->from($this->userTable);
         if ($search !== '') {
             $this->db->group_start()
                 ->like('nik', $search)
-                ->or_like('nm_karyawan', $search)
+                ->or_like('nama_lngkp', $search)
                 ->or_like('username', $search)
-                ->or_like('jobdesk', $search)
-                ->or_like('departemen', $search)
+                ->or_like('bagian', $search)
+                ->or_like('departement', $search)
                 ->group_end();
         }
-        $this->db->order_by('nm_karyawan', 'ASC');
+        $this->db->order_by('nama_lngkp', 'ASC');
         $this->db->limit($limit);
 
         return $this->db->get()->result_array();
@@ -78,7 +75,7 @@ class M_Userfacility extends CI_Model
         }
 
         return $this->db
-            ->select('id, nik, nm_karyawan, username, departemen, jobdesk, akses_lv')
+            ->select('id, nik, nama_lngkp AS nm_karyawan, username, departement AS departemen, bagian AS jobdesk, level AS akses_lv')
             ->where('id', (int) $userId)
             ->get($this->userTable)
             ->row_array();
@@ -183,12 +180,53 @@ class M_Userfacility extends CI_Model
         $jobdesk = strtoupper(trim((string) ($user['jobdesk'] ?? '')));
         $departemen = strtoupper(trim((string) ($user['departemen'] ?? '')));
 
-        if (in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true)
-            || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], true)
-            || ($departemen === 'LOGISTIK' && $jobdesk === 'ADMLPB')) {
+        if (in_array($username, ['admlpb', 'adminloglpb', 'admlpb2', 'yunika'], true)
+            || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'ADMIN LPB & GUDANG BENIH'], true)
+            || (in_array($departemen, ['LOGISTIK', 'LOGISTIC'], true) && strpos($jobdesk, 'LPB') !== false)) {
             return 0;
         }
 
         return $fallback ? 1 : 0;
+    }
+
+    /**
+     * Salin seluruh pengaturan fasilitas dari satu user ke user lain
+     */
+    public function clone_from_user($sourceUserId, $targetUserId)
+    {
+        $this->ensure_schema();
+        $sourceUserId = (int) $sourceUserId;
+        $targetUserId = (int) $targetUserId;
+        if ($sourceUserId <= 0 || $targetUserId <= 0 || $sourceUserId === $targetUserId) {
+            return false;
+        }
+
+        $sourceRows = $this->db->where('user_id', $sourceUserId)->get($this->table)->result_array();
+        $this->db->trans_begin();
+        $this->db->where('user_id', $targetUserId)->delete($this->table);
+
+        $now = date('Y-m-d H:i:s');
+        foreach ($sourceRows as $row) {
+            if (!$this->catalog_item($row['facility_key'])) {
+                continue;
+            }
+            $this->db->insert($this->table, [
+                'user_id'        => $targetUserId,
+                'facility_key'   => $row['facility_key'],
+                'facility_label' => $row['facility_label'],
+                'module_key'     => $row['module_key'],
+                'facility_group' => $row['facility_group'],
+                'is_allowed'     => (int) $row['is_allowed'],
+                'created_at'     => $now,
+                'updated_at'     => $now,
+            ]);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return false;
+        }
+        $this->db->trans_commit();
+        return true;
     }
 }

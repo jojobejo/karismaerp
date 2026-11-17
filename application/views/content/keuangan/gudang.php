@@ -81,7 +81,7 @@
                                         <h2>(<?= $gudang ?>) Updated : <?= format_indo($date) ?></h2>
                                     </div>
                                     <div class="col-4">
-                                        <?php if ($this->session->userdata('lv') == 1) : ?>
+                                        <?php if ((int) $this->session->userdata('lv') >= 1 && !in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                                             <a href="<?= base_url('truncateitm/' . $u->kd . '/' . $u->gdgid) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
                                             <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
                                         <?php else : ?>
@@ -92,7 +92,7 @@
                             <?php endforeach; ?>
 
 
-                            <?php if ($this->session->userdata('lv') != '1') : ?>
+                            <?php if (in_array(strtoupper(trim((string) $this->session->userdata('jobdesk'))), ['DIREKTUR', 'DIREKSI', 'MT DIREKTUR OPERASIONAL'], true)) : ?>
                                 <div class="row">
                                     <div class="col">
                                         <a href="<?= base_url('gudang/' . $gudangid . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a>

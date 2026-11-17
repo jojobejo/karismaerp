@@ -11,8 +11,14 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
+            <?php
+            $jobdeskMb = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+            $deptMb = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+            $isAdminIcsMb = in_array($jobdeskMb, ['ADMINICS', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'MT MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'ADMIN'], true) || (bool) $this->session->userdata('is_admin_dashboard');
+            $isLogistikMb = !$isAdminIcsMb && (in_array($jobdeskMb, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI'], true) || strpos($deptMb, 'LOGISTIK') !== false);
+            ?>
             <div class="content-header">
-                <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                <?php if ($isAdminIcsMb) : ?>
                     <section class="content">
                         <div class="card">
                             <div class="card-body">
@@ -69,7 +75,7 @@
                 <?php endif; ?>
             </div>
 
-            <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+            <?php if ($isAdminIcsMb) : ?>
                 <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
                         <form action="<?= base_url('ics/save_edit_mbarang') ?>" method="post">
@@ -116,7 +122,7 @@
                     </div>
                 </div>
 
-            <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+            <?php elseif ($isLogistikMb) : ?>
                 <section class="content">
                     <div class="card">
                         <div class="card-body">

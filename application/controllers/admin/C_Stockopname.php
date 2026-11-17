@@ -21,7 +21,7 @@ class C_Stockopname extends CI_Controller
         $lvuser = (int)$this->session->userdata('lv');
         $jobdesk = $this->session_jobdesk_code();
         $username = strtolower(trim((string)$this->session->userdata('username')));
-        $isAdminDashboard = (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || ($lvuser === 1 && $jobdesk === 'ADMIN');
+        $isAdminDashboard = (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || $lvuser >= 99 || ($lvuser === 1 && $jobdesk === 'ADMIN');
 
         $method = $this->router->fetch_method();
         $inputMethods = [

@@ -57,30 +57,29 @@ class Auth extends CI_Controller
             return;
         }
 
-        $auth_source = $key->auth_source ?? 'tb_karyawan';
-        $akses_lv = (int)($key->akses_lv ?? $key->level ?? 0);
-        $jobdesk_hrd = strtolower(trim((string)($key->jobdesk_hrd ?? '')));
-        $jobdesk = strtoupper(trim((string)($key->jobdesk ?? $key->jabatan ?? '')));
+        // Di tb_users semakin tinggi angka level maka semakin tinggi jabatan (Admin = 99, Direksi = 5, Kadep = 4, Manager = 3, Koordinator = 2, Karyawan = 1)
+        $level = (int)($key->level ?? 1);
+        // Jobdesk mengikuti kolom bagian pada tb_users
+        $bagian = strtoupper(trim((string)($key->bagian ?? '')));
         $username_login = strtolower(trim((string)($key->username ?? '')));
-        $is_admin_dashboard = ($username_login === 'admin' || ($akses_lv === 1 && $jobdesk === 'ADMIN'));
-        $nama = $key->nm_karyawan ?? $key->nama_lngkp ?? $key->nama_user ?? $key->username;
-        $departemen = $key->departemen ?? $key->departement ?? null;
+        $is_admin_dashboard = ($username_login === 'admin' || $bagian === 'ADMIN' || $level >= 99);
+        $nama_lngkp = $key->nama_lngkp ?? $key->username;
+        $departement = trim((string)($key->departement ?? ''));
 
         $data_session = array(
             'id'            => $key->id,
-            'id_karyawan'   => $auth_source === 'tb_karyawan' ? $key->id : null,
-            'auth_source'   => $auth_source,
+            'id_karyawan'   => $key->id,
             'nik'           => $key->nik ?? null,
             'username'      => $key->username,
-            'departemen'    => $departemen,
-            'lv'            => $akses_lv,
-            'akses_lv'      => $akses_lv,
-            'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
-            'jobdesk'       => $jobdesk,
-            'jobdesk_hrd'   => $jobdesk_hrd,
-            'jobdesk_id'    => $key->jobdesk_id ?? null,
-            'nama'          => $nama,
-            'nama_user'     => $nama,
+            'departemen'    => $departement,
+            'departement'   => $departement,
+            'lv'            => $level,
+            'akses_lv'      => $level,
+            'akses_lv_id'   => $level,
+            'jobdesk'       => $bagian,
+            'nama'          => $nama_lngkp,
+            'nm_karyawan'   => $nama_lngkp,
+            'nama_user'     => $nama_lngkp,
             'tim'           => $key->tim ?? null,
             'wilayah'       => $key->wilayah ?? null,
             'is_admin_dashboard' => $is_admin_dashboard,
@@ -89,65 +88,14 @@ class Auth extends CI_Controller
 
         $this->session->set_userdata($data_session);
         if ($this->M_Auth->password_should_be_hashed($key->password ?? '')) {
-            $this->M_Auth->update_password_hash($key->id, $auth_source, $password);
+            $this->M_Auth->update_password_hash($key->id, 'tb_users', $password);
         }
-        $this->M_Auth->update_last_login($key->id, $auth_source);
+        $this->M_Auth->update_last_login($key->id, 'tb_users');
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        // Redirect based on jobdesk / username
-        if ($username_login === 'admkeu') {
-            redirect('sales_order/pecah_faktur');
-        } else if ($jobdesk_hrd === 'direksi_readonly') {
-            redirect('dashboard_penilaian');
-        } else if ($jobdesk == 'LOGISTIK') {
-            redirect('logistik');
-        } else if ($jobdesk == 'ADMINICS') {
-            redirect('ics/ics_diffrent');
-        } else if ($jobdesk == 'ADMINKEU') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'KIUKEU') {
-            redirect('keuangan/pembayaran');
-        } else if ($jobdesk == 'ADMINPURCHASING') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'DIREKTUR') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'ADMINGA') {
-            redirect('schedule_direktur');
-        } else if ($jobdesk == 'ADMINKEUTC') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'STOCKOPNAME') {
-            redirect('stockopname');
-        } else if ($jobdesk == 'ADMIN') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'SALESONLINE') {
-            redirect('stock');
-        } else if ($jobdesk == 'SALESCOUNTER') {
-            redirect('sales_report');
-        } else if ($jobdesk == 'SALES') {
-            redirect('kiu_katalog');
-        } else if ($jobdesk == 'DISTRIBUSI') {
-            redirect('logistik/distibusi');
-        } else if ($jobdesk == 'ADMINLOGLPB') {
-            redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMLOG') {
-            redirect('checker');
-        } else if ($jobdesk == 'CHECKER') {
-            redirect('checker');
-        } else if ($jobdesk == 'MANAGERWH') {
-            redirect('checker');
-        } else if ($jobdesk == 'SALESCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard');
-        } else if ($jobdesk == 'MANAGERCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'ADMINSC') {
-            redirect('sales_order/admin_sc');
-        } else if ($jobdesk == 'SC') {
-            redirect('sales_order');
-        } else {
-            redirect('dashboard');
-        }
+        // Seluruh user yang berhasil login langsung diarahkan ke halaman Dashboard;
+        // pembatasan akses modul/menu dikendalikan terpusat melalui hak akses menu Dashboard.
+        redirect('dashboard');
     }
 
     function logout()

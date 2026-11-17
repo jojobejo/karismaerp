@@ -18,12 +18,14 @@ class C_ImportLpb extends CI_Controller {
      * @return bool
      */
     private function can_access_import_lpb() {
-        $department = strtoupper($this->session->userdata('departemen'));
-        $level = $this->session->userdata('lv');
+        $department = strtoupper((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement')));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $level = (int) $this->session->userdata('lv');
         
-        $allowed_departments = ['PURCHASING', 'ADMIN ERP', 'ADMLPB', 'ADMINLOGLPB'];
+        $allowed_departments = ['PURCHASING', 'ADMIN ERP', 'ADMIN', 'ADMLPB', 'ADMINLOGLPB'];
+        $allowed_jobdesks = ['ADMINPURCHASING', 'ADMIN PURCHASING', 'MT KADEP PURCHASING', 'PURCHASING', 'ADMIN PO', 'ADMIN'];
         
-        if ((in_array($department, $allowed_departments) || $level == 1) && $this->can_view_lpb_nominal()) {
+        if ((in_array($department, $allowed_departments, true) || in_array($jobdesk, $allowed_jobdesks, true) || $level >= 99 || (bool) $this->session->userdata('is_admin_dashboard')) && $this->can_view_lpb_nominal()) {
             return true;
         }
         
@@ -33,8 +35,8 @@ class C_ImportLpb extends CI_Controller {
     private function can_view_lpb_nominal() {
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         $username = strtolower(trim((string) $this->session->userdata('username')));
-        $default = !(in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], true)
-            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true));
+        $default = !(in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2', 'ADMIN LPB & GUDANG BENIH'], true)
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2', 'yunika'], true));
 
         return $this->permission->facility('lpb.view_nominal', $default);
     }

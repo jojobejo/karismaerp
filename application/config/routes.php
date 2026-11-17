@@ -495,6 +495,7 @@ $route['master/user-facility']                      = 'master/C_Userfacility';
 $route['master/user-facility/users']                = 'master/C_Userfacility/users';
 $route['master/user-facility/matrix/(:num)']        = 'master/C_Userfacility/matrix/$1';
 $route['master/user-facility/update']               = 'master/C_Userfacility/update';
+$route['master/user-facility/clone']                = 'master/C_Userfacility/clone_facility';
 $route['master/jobdesk']                            = 'master/C_Jobdesk';
 $route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
 $route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
@@ -516,6 +517,19 @@ $route['master/menu/save']                          = 'master/C_Menu/save';
 $route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
 $route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
 $route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
+$route['master/akses-dashboard']                    = 'master/C_Aksesdashboard';
+$route['master/akses-dashboard/users']              = 'master/C_Aksesdashboard/users';
+$route['master/akses-dashboard/matrix/(:num)']      = 'master/C_Aksesdashboard/matrix/$1';
+$route['master/akses-dashboard/update']             = 'master/C_Aksesdashboard/update';
+$route['master/akses-dashboard/update-action']      = 'master/C_Aksesdashboard/update_action';
+$route['master/akses-dashboard/bulk']               = 'master/C_Aksesdashboard/bulk';
+$route['master/akses-dashboard/reset/(:num)']       = 'master/C_Aksesdashboard/reset/$1';
+$route['master/akses-dashboard/clone']              = 'master/C_Aksesdashboard/clone_access';
+$route['master/menu-departemen']                    = 'master/C_Sectionmenu';
+$route['master/menu-departemen/sections']           = 'master/C_Sectionmenu/sections';
+$route['master/menu-departemen/detail/(:any)']      = 'master/C_Sectionmenu/detail/$1';
+$route['master/menu-departemen/save']               = 'master/C_Sectionmenu/save';
+$route['master/menu-departemen/reset']              = 'master/C_Sectionmenu/reset';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
@@ -1141,6 +1155,7 @@ $route['sales_order/admin_sc_approve_cancel_partial']      = 'sales/C_SalesOrder
 $route['sales_order/admin_sc_reject_cancel_partial']       = 'sales/C_SalesOrder/admin_sc_reject_cancel_partial';
 
 // Pembatalan Sales Order (Cancel SO dengan Approval Atasan)
+$route['sales_order/get_pending_cancel_so_requests']        = 'sales/C_SalesOrder/get_pending_cancel_so_requests';
 $route['sales_order/request_cancel_so']                     = 'sales/C_SalesOrder/request_cancel_so';
 $route['sales_order/approve_cancel_so']                     = 'sales/C_SalesOrder/approve_cancel_so';
 $route['sales_order/reject_cancel_so']                      = 'sales/C_SalesOrder/reject_cancel_so';

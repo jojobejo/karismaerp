@@ -11,11 +11,6 @@ class Dashboard extends CI_Controller
             redirect('Auth');
         }
 
-        // User admkeu hanya diizinkan mengakses modul Pecah Faktur
-        if (strtolower(trim((string)$this->session->userdata('username'))) === 'admkeu') {
-            redirect('sales_order/pecah_faktur');
-        }
-
         $this->load->model('M_Dashboard');
     }
 
@@ -30,7 +25,18 @@ class Dashboard extends CI_Controller
 
         // Ambil notifikasi request revisi harga LPB khusus untuk ADMPNJ & Admin
         $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
-        $is_admpnj = !empty($context['is_admin']) || in_array($jobdesk, ['ADMPNJ', 'SC', 'MANAGERSC', 'KADEPSC'], true);
+        $is_admpnj = !empty($context['is_admin']) || in_array($jobdesk, [
+            'ADMPNJ',
+            'ADMIN PRICELIST & RETUR PENJUALAN',
+            'SC',
+            'SALESCOUNTER',
+            'SALES COUNTER',
+            'MT SALES COUNTER',
+            'MANAGERSC',
+            'MANAGER SALES COUNTER',
+            'KADEPSC',
+            'MT KADEP KEUANGAN & SALES'
+        ], true);
         $data['is_admpnj'] = $is_admpnj;
         $data['lpb_notifications'] = [];
         $data['lpb_notification_count'] = 0;
@@ -40,6 +46,19 @@ class Dashboard extends CI_Controller
             $data['lpb_notifications'] = $this->M_LpbRevisionRequest->get_active_notifications_for_admpnj();
             $data['lpb_notification_count'] = count($data['lpb_notifications']);
         }
+
+        // Ambil seluruh notifikasi pending approval lintas modul untuk icon lonceng
+        $this->load->model('M_ApprovalNotification');
+        $notifUser = [
+            'id'       => $this->session->userdata('id'),
+            'nama'     => $this->session->userdata('nama'),
+            'username' => $this->session->userdata('username'),
+            'jobdesk'  => strtoupper((string)($context['jobdesk'] ?? $this->session->userdata('jobdesk'))),
+            'lv'       => (int)($context['lv'] ?? $this->session->userdata('lv') ?? 1),
+        ];
+        $approvalNotif = $this->M_ApprovalNotification->get_pending_approvals_for_user($notifUser);
+        $data['approval_notifications'] = $approvalNotif['items'];
+        $data['approval_notification_count'] = $approvalNotif['total'];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/dashboard/index.php', $data);

@@ -104,7 +104,7 @@ class M_Akseslevel extends CI_Model
             $this->db->order_by($this->nameField() ?: $this->idField(), 'ASC');
             return array_map([$this, 'normalize'], $this->db->get($this->table)->result_array());
         }
-        return $this->db->select('akses_lv AS id_akses_level, akses_lv AS nama_akses_level')->distinct()->where('akses_lv IS NOT NULL', null, false)->order_by('akses_lv', 'ASC')->get('tb_karyawan')->result_array();
+        return $this->db->select('level AS id_akses_level, level AS nama_akses_level')->distinct()->where('level IS NOT NULL', null, false)->order_by('level', 'ASC')->get('tb_users')->result_array();
     }
 
     public function find($id)

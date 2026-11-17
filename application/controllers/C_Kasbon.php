@@ -10,7 +10,7 @@ class C_Kasbon extends CI_Controller
             redirect('Auth');
         }
         $this->load->model('M_Kasbon');
-        $this->load->library('session');
+        $this->load->library(['session', 'permission']);
     }
 
     private function _getUser()
@@ -26,9 +26,13 @@ class C_Kasbon extends CI_Controller
 
     public function index()
     {
+        if (!$this->permission->guard_menu('kas_bon', 'view')) {
+            return;
+        }
         $user = $this->_getUser();
         $data['page_title'] = 'Daftar Kas Bon';
         $data['user'] = $user;
+        $data['can_create'] = $this->permission->can_menu('kas_bon', 'create');
         
         $data['kasbon']           = $this->M_Kasbon->get_kasbon_for_user($user);
         $data['approval_history'] = $this->M_Kasbon->get_approval_history_for_user($user);
@@ -44,6 +48,9 @@ class C_Kasbon extends CI_Controller
      */
     public function history()
     {
+        if (!$this->permission->guard_menu('kas_bon', 'view')) {
+            return;
+        }
         $user = $this->_getUser();
         $data['page_title']       = 'Riwayat Approval Kas Bon';
         $data['user']             = $user;
@@ -57,6 +64,9 @@ class C_Kasbon extends CI_Controller
 
     public function create()
     {
+        if (!$this->permission->guard_menu('kas_bon', 'create')) {
+            return;
+        }
         $user = $this->_getUser();
         $data['page_title'] = 'Form Pengajuan Kas Bon';
         $data['user'] = $user;
@@ -68,6 +78,9 @@ class C_Kasbon extends CI_Controller
 
     public function store()
     {
+        if (!$this->permission->guard_menu('kas_bon', 'create')) {
+            return;
+        }
         $user = $this->_getUser();
         
         $rawNominal = (string)$this->input->post('nominal');
@@ -108,13 +121,26 @@ class C_Kasbon extends CI_Controller
             }
         }
 
-        // Tentukan rantai approval berdasarkan jobdesk pemohon (dari session tb_karyawan)
+        // Tentukan rantai approval:
+        // Khusus user lv 1, gunakan atasan & penilai dari tb_users terlebih dahulu
         $jobdesk_pemohon = strtoupper(trim((string)$user['jobdesk']));
-        $chain           = $this->M_Kasbon->get_approval_chain($jobdesk_pemohon);
+        $user_level      = (int)($user['lv'] ?? 1);
+        $chain           = [];
+        $workflow_type   = $jobdesk_pemohon;
 
-        $approver_1    = isset($chain[0]) ? $chain[0] : null;
-        $approver_2    = isset($chain[1]) ? $chain[1] : null;
-        $workflow_type = $jobdesk_pemohon; // Simpan jobdesk pemohon sebagai tipe workflow
+        if ($user_level === 1) {
+            $chain = $this->M_Kasbon->get_user_approval_chain($user['id']);
+            if (!empty($chain)) {
+                $workflow_type = 'ATASAN_PENILAI';
+            }
+        }
+
+        if (empty($chain)) {
+            $chain = $this->M_Kasbon->get_approval_chain($jobdesk_pemohon);
+        }
+
+        $approver_1 = isset($chain[0]) ? $chain[0] : null;
+        $approver_2 = isset($chain[1]) ? $chain[1] : null;
 
         // Tentukan status awal berdasarkan rantai yang ada
         if ($approver_1) {
@@ -201,6 +227,9 @@ class C_Kasbon extends CI_Controller
      */
     public function detail($id)
     {
+        if (!$this->permission->guard_menu('kas_bon', 'view')) {
+            return;
+        }
         $user = $this->_getUser();
         $kasbon = $this->M_Kasbon->get_kasbon_by_id($id);
 

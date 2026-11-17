@@ -38,9 +38,30 @@ class C_Usermanagement extends CI_Controller
 
     public function index()
     {
+        $this->load->model('M_Dashboard');
+        $canDashboardAccess = $this->M_Dashboard->is_strict_admin();
+        $canUserFacility = $this->permission->can('master/user-facility');
+        $canAksesLevel = $this->permission->can('master/akses-level');
+        $canSectionMenu = $canDashboardAccess;
+
+        if ($canDashboardAccess) {
+            $this->load->model('master/M_Dashboardaccess', 'dashboardAccess');
+            $this->dashboardAccess->ensure_schema();
+            $this->load->model('master/M_Sectionmenu', 'sectionMenu');
+            $this->sectionMenu->ensure_schema();
+        }
+        if ($canUserFacility) {
+            $this->load->model('master/M_Userfacility', 'userFacility');
+            $this->userFacility->ensure_schema();
+        }
+
         $data['page_title'] = 'KARISMA ERP - User Management';
-        $data['jobdesk'] = $this->jobdeskModel->options();
-        $data['akses_level'] = $this->aksesModel->options();
+        $data['can_dashboard_access'] = $canDashboardAccess;
+        $data['can_user_facility'] = $canUserFacility;
+        $data['can_akses_level'] = $canAksesLevel;
+        $data['can_section_menu'] = $canSectionMenu;
+        $data['jobdesk'] = $this->users->bagian_options();
+        $data['akses_level'] = $this->users->level_options();
         $data['departemen'] = $this->users->distinct_options('departemen');
         $data['tim'] = $this->users->distinct_options('tim');
         $data['wilayah'] = $this->users->distinct_options('wilayah');
@@ -62,14 +83,13 @@ class C_Usermanagement extends CI_Controller
 
     private function validate_user($input, $id = null)
     {
-        foreach (['nik' => 'NIK', 'nm_karyawan' => 'Nama karyawan', 'username' => 'Username', 'jobdesk' => 'Jobdesk', 'akses_lv' => 'Akses level'] as $field => $label) {
+        foreach (['nik' => 'NIK', 'nm_karyawan' => 'Nama lengkap', 'username' => 'Username', 'jobdesk' => 'Bagian / Jobdesk', 'akses_lv' => 'Level akses'] as $field => $label) {
             if (trim((string)($input[$field] ?? '')) === '' && trim((string)($input[$field . '_id'] ?? '')) === '') {
                 return $label . ' wajib diisi.';
             }
         }
         if (!$id && strlen((string)($input['password'] ?? '')) < 6) return 'Password minimum 6 karakter.';
         if (!$this->users->unique('username', $input['username'] ?? '', $id)) return 'Username sudah digunakan.';
-        if (!$this->users->unique('nik', $input['nik'] ?? '', $id)) return 'NIK sudah digunakan.';
         return true;
     }
 
@@ -119,6 +139,9 @@ class C_Usermanagement extends CI_Controller
 
     public function delete($id = null)
     {
+        if ((int)$id === (int)$this->session->userdata('id')) {
+            return $this->json(false, 'Anda tidak dapat menghapus akun yang sedang Anda gunakan untuk login.');
+        }
         $ok = $this->users->delete((int)$id);
         $this->json($ok, $ok ? 'Data berhasil dihapus' : 'Data gagal dihapus');
     }
@@ -133,6 +156,9 @@ class C_Usermanagement extends CI_Controller
 
     public function toggle_status($id = null)
     {
+        if ((int)$id === (int)$this->session->userdata('id')) {
+            return $this->json(false, 'Anda tidak dapat menonaktifkan akun yang sedang Anda gunakan untuk login.');
+        }
         $ok = $this->users->toggle_status((int)$id);
         $this->json($ok, $ok ? 'Status user berhasil diperbarui' : 'Kolom status belum tersedia atau data tidak ditemukan');
     }
@@ -140,8 +166,8 @@ class C_Usermanagement extends CI_Controller
     public function select_options()
     {
         $data = [
-            'jobdesk' => $this->jobdeskModel->options(),
-            'akses_level' => $this->aksesModel->options(),
+            'jobdesk' => $this->users->bagian_options(),
+            'akses_level' => $this->users->level_options(),
             'departemen' => $this->users->distinct_options('departemen'),
             'tim' => $this->users->distinct_options('tim'),
             'wilayah' => $this->users->distinct_options('wilayah'),

@@ -49,14 +49,24 @@ class C_SalesOrderLoby extends CI_Controller
         }
 
         $row = null;
-        if (!empty($id))  $row = $this->db->get_where('tb_karyawan', ['id'       => $id])->row_array();
-        if (!$row && !empty($usn)) $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
+        if (!empty($id) && $this->db->table_exists('tb_users')) {
+            $row = $this->db->get_where('tb_users', ['id' => $id])->row_array();
+        }
+        if (!$row && !empty($usn) && $this->db->table_exists('tb_users')) {
+            $row = $this->db->get_where('tb_users', ['username' => $usn])->row_array();
+        }
+        if (!$row && !empty($id) && $this->db->table_exists('tb_karyawan')) {
+            $row = $this->db->get_where('tb_karyawan', ['id' => $id])->row_array();
+        }
+        if (!$row && !empty($usn) && $this->db->table_exists('tb_karyawan')) {
+            $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
+        }
 
         if ($row) {
             return [
                 'id'          => $row['id']          ?? $id,
-                'nm_karyawan' => $row['nm_karyawan'] ?? ($nama ?? 'system'),
-                'wilayah'     => $row['wilayah']     ?? ($wil ?? ''),
+                'nm_karyawan' => $row['nama_lngkp']  ?? $row['nm_karyawan'] ?? ($nama ?? 'system'),
+                'wilayah'     => $row['wilayah']     ?? $row['wilayah_id']  ?? ($wil ?? ''),
                 'username'    => $row['username']    ?? ($usn ?? 'system'),
             ];
         }

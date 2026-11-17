@@ -237,7 +237,7 @@
                                         </div>
                                     </div>
 
-                                    <?php if ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'ADMIN'])) : ?>
+                                    <?php if ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'MT MANAGER KEUANGAN', 'MANAGER KEUANGAN', 'ADMIN'])) : ?>
                                     <div class="form-group mb-3">
                                         <label class="font-weight-bold mb-1">Upload Lampiran (Opsional)</label>
                                         <input type="file" name="lampiran_mngtc" class="form-control-file" accept="image/*,.pdf">

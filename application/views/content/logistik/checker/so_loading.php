@@ -117,7 +117,7 @@
                                         <?php endif; ?>
                                     </div>
                                     <?php if ($trip['status'] === 'MENUNGGU_TAMBAHAN'): ?><small class="text-warning">Menunggu SO tambahan dari Sales</small><?php endif; ?>
-                                    <?php if ((!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT' || (float)$trip['loaded_tonase'] == 0) && in_array($role, ['CHECKER','MANAGERCK','ADMLOG'], true)): ?>
+                                    <?php if ((!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT' || (float)$trip['loaded_tonase'] == 0) && in_array($role, ['CHECKER','MANAGERCK','MANAGERWH','ADMLOG'], true)): ?>
                                     <div class="mt-2 text-right">
                                         <?php if ($trip['status'] !== 'MENUNGGU_TAMBAHAN' && (!empty($trip['has_do']) || $trip['status'] === 'SIAP_BERANGKAT')): ?>
                                         <button class="btn btn-warning btn-xs btn-trip-action" data-action="open" data-trip="<?= (int)$trip['id_trip'] ?>">Buka Tambahan</button>
@@ -153,7 +153,7 @@
                                         && !empty($activity['waktu_mulai']);
                                     $is_loading_done = $activity && ($activity['status'] ?? '') === 'DONE';
                                     $detail_url = base_url('checker/so_loading/detail/' . rawurlencode($route['kd_rute']) . '?date=' . $route['tgl_transaksi']);
-                                    $can_start = in_array($role, ['CHECKER', 'MANAGERCK', 'ADMLOG'], true);
+                                    $can_start = in_array($role, ['CHECKER', 'MANAGERCK', 'MANAGERWH', 'ADMLOG'], true);
                                 ?>
                                     <div class="route-card">
                                         <div class="route-code"><?= htmlspecialchars($route['kd_rute']) ?></div>

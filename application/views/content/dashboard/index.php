@@ -71,6 +71,67 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
         white-space: nowrap;
     }
 
+    .btn-approval-bell {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        background: #fff;
+        color: #64748b;
+        border: 1px solid rgba(18, 127, 173, .16);
+        box-shadow: 0 10px 24px rgba(23, 32, 42, .06);
+        cursor: pointer;
+        transition: all .2s ease;
+    }
+
+    .btn-approval-bell:hover {
+        background: #f0f9ff;
+        color: #127fad;
+        transform: translateY(-1px);
+    }
+
+    .btn-approval-bell.has-notif {
+        color: #d97706;
+        border-color: rgba(217, 119, 6, .35);
+        background: #fffbeb;
+    }
+
+    .btn-approval-bell.has-notif i {
+        animation: bellRing 1.6s ease-in-out infinite;
+        transform-origin: top center;
+    }
+
+    .bell-count-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #dc2626;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, .4);
+    }
+
+    @keyframes bellRing {
+        0%, 100% { transform: rotate(0deg); }
+        10% { transform: rotate(16deg); }
+        20% { transform: rotate(-14deg); }
+        30% { transform: rotate(12deg); }
+        40% { transform: rotate(-10deg); }
+        50% { transform: rotate(6deg); }
+        60% { transform: rotate(0deg); }
+    }
+
     .dashboard-nav-bar {
         display: flex;
         align-items: center;
@@ -277,6 +338,7 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
     .dashboard-tone-teal { --tile-a: #2d929b; --tile-b: #50b8c0; }
     .dashboard-tone-dark { --tile-a: #343a40; --tile-b: #59626e; }
     .dashboard-tone-cyan { --tile-a: #1287a8; --tile-b: #26bad1; }
+    .dashboard-tone-brown { --tile-a: #7c4a2d; --tile-b: #a46b48; }
 
     @keyframes bellShake {
         0% { transform: rotate(0deg) scale(1); }
@@ -526,6 +588,65 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
         padding: 4px 12px;
         border-radius: 999px;
     }
+
+    /* Styling Menu Terkunci (Ikon Gembok) */
+    .dashboard-menu-tile.is-locked {
+        cursor: not-allowed;
+        filter: saturate(0.42) brightness(0.86);
+    }
+
+    .dashboard-menu-tile.is-locked:hover,
+    .dashboard-menu-tile.is-locked:focus {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 34px rgba(22, 31, 44, .14);
+    }
+
+    .dashboard-menu-tile.is-locked::before {
+        background: linear-gradient(135deg, rgba(15, 23, 42, .45), rgba(15, 23, 42, .58)),
+                    linear-gradient(135deg, var(--tile-a), var(--tile-b));
+    }
+
+    .dashboard-lock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(15, 23, 42, .72);
+        color: #fef2f2;
+        border: 1px solid rgba(255, 255, 255, .35);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .3px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .25);
+        flex-shrink: 0;
+    }
+
+    .dashboard-lock-badge i {
+        color: #fbbf24;
+    }
+
+    .dashboard-tile-icon-wrap {
+        position: relative;
+        display: inline-flex;
+    }
+
+    .dashboard-tile-lock-corner {
+        position: absolute;
+        right: -8px;
+        bottom: -8px;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: #dc2626;
+        color: #fff;
+        border: 2px solid #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+    }
 </style>
 
 <body class="hold-transition layout-top-nav app-dashboard-body">
@@ -554,6 +675,18 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                                     <span class="notif-badge"><?= (int)$lpb_notification_count ?></span>
                                 </button>
                             <?php endif; ?>
+                            <?php $approvalCount = (int)($approval_notification_count ?? 0); ?>
+                            <button type="button"
+                                class="btn-approval-bell <?= $approvalCount > 0 ? 'has-notif' : '' ?>"
+                                data-toggle="modal"
+                                data-target="#modalNotifikasiApproval"
+                                title="<?= $approvalCount > 0 ? $approvalCount . ' pengajuan menunggu approval Anda' : 'Tidak ada notifikasi approval' ?>"
+                                aria-label="Notifikasi Approval">
+                                <i class="fas fa-bell fa-lg"></i>
+                                <?php if ($approvalCount > 0): ?>
+                                    <span class="bell-count-badge"><?= $approvalCount > 99 ? '99+' : $approvalCount ?></span>
+                                <?php endif; ?>
+                            </button>
                             <div class="dashboard-badge">
                                 <i class="fas fa-user-shield mr-2"></i> <?= html_escape($jobdesk ?: 'USER') ?> · LV <?= html_escape((string)$lv) ?>
                             </div>
@@ -623,25 +756,43 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                         </div>
 
                         <div class="dashboard-menu-grid" id="dashboardSearchGrid">
-                            <?php foreach ($uniqueSearchMenus as $menu) : 
+                            <?php foreach ($uniqueSearchMenus as $menu) :
                                 $secLabelStr = implode(' · ', $menu['section_labels']);
                                 $searchKeywords = strtolower($menu['title'] . ' ' . $menu['description'] . ' ' . $menu['route'] . ' ' . implode(' ', $menu['section_labels']));
+                                $isLocked = !empty($menu['is_locked']);
                             ?>
-                                <a href="<?= base_url($menu['route']) ?>" 
-                                   class="dashboard-menu-tile dashboard-tone-<?= html_escape($menu['tone']) ?> dashboard-search-item" 
+                                <a href="<?= $isLocked ? '#' : base_url($menu['route']) ?>"
+                                   class="dashboard-menu-tile dashboard-tone-<?= html_escape($menu['tone']) ?> dashboard-search-item <?= $isLocked ? 'is-locked' : '' ?>"
                                    data-keywords="<?= html_escape($searchKeywords) ?>"
                                    data-title="<?= html_escape(strtolower($menu['title'])) ?>"
+                                   <?= $isLocked ? 'data-locked="1" data-lock-title="' . html_escape($menu['title']) . '" aria-disabled="true"' : '' ?>
                                    style="display: none;">
                                     <span class="dashboard-menu-content">
-                                        <span class="d-flex justify-content-between align-items-start">
-                                            <span class="dashboard-tile-icon"><i class="<?= html_escape($menu['icon']) ?>"></i></span>
-                                            <span class="dashboard-tile-badge" title="<?= html_escape($secLabelStr) ?>"><?= html_escape($secLabelStr) ?></span>
+                                        <span class="d-flex justify-content-between align-items-start" style="gap: 8px;">
+                                            <span class="dashboard-tile-icon-wrap">
+                                                <span class="dashboard-tile-icon"><i class="<?= html_escape($menu['icon']) ?>"></i></span>
+                                                <?php if ($isLocked) : ?>
+                                                    <span class="dashboard-tile-lock-corner" title="Menu Terkunci"><i class="fas fa-lock"></i></span>
+                                                <?php endif; ?>
+                                            </span>
+                                            <span class="d-flex flex-column align-items-end" style="gap: 6px;">
+                                                <span class="dashboard-tile-badge" title="<?= html_escape($secLabelStr) ?>"><?= html_escape($secLabelStr) ?></span>
+                                                <?php if ($isLocked) : ?>
+                                                    <span class="dashboard-lock-badge"><i class="fas fa-lock"></i> Terkunci</span>
+                                                <?php endif; ?>
+                                            </span>
                                         </span>
                                         <span>
                                             <h3 class="dashboard-menu-title"><?= html_escape($menu['title']) ?></h3>
                                             <p class="dashboard-menu-desc"><?= html_escape($menu['description']) ?></p>
                                         </span>
-                                        <span class="dashboard-menu-action">Buka modul <i class="fas fa-arrow-right"></i></span>
+                                        <span class="dashboard-menu-action">
+                                            <?php if ($isLocked) : ?>
+                                                <i class="fas fa-lock"></i> Tidak ada akses
+                                            <?php else : ?>
+                                                Buka modul <i class="fas fa-arrow-right"></i>
+                                            <?php endif; ?>
+                                        </span>
                                     </span>
                                 </a>
                             <?php endforeach; ?>
@@ -664,25 +815,36 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
 
                     <?php foreach ($sections as $key => $section) : ?>
                         <div class="dashboard-panel <?= $key === $activeKey ? 'active' : '' ?>" data-panel="<?= html_escape($key) ?>">
-                            <div class="dashboard-panel-head">
-                                <div>
-                                    <h2><?= html_escape($section['label']) ?></h2>
-                                    <p><?= html_escape($section['description']) ?></p>
-                                </div>
-                            </div>
-
                             <div class="dashboard-menu-grid">
-                                <?php foreach ($section['menus'] as $menu) : ?>
-                                    <a href="<?= base_url($menu['route']) ?>" class="dashboard-menu-tile dashboard-tone-<?= html_escape($menu['tone']) ?>">
+                                <?php foreach ($section['menus'] as $menu) :
+                                    $isLocked = !empty($menu['is_locked']);
+                                ?>
+                                    <a href="<?= $isLocked ? '#' : base_url($menu['route']) ?>"
+                                       class="dashboard-menu-tile dashboard-tone-<?= html_escape($menu['tone']) ?> <?= $isLocked ? 'is-locked' : '' ?>"
+                                       <?= $isLocked ? 'data-locked="1" data-lock-title="' . html_escape($menu['title']) . '" aria-disabled="true"' : '' ?>>
                                         <span class="dashboard-menu-content">
-                                            <span>
-                                                <span class="dashboard-tile-icon"><i class="<?= html_escape($menu['icon']) ?>"></i></span>
+                                            <span class="d-flex justify-content-between align-items-start" style="gap: 8px;">
+                                                <span class="dashboard-tile-icon-wrap">
+                                                    <span class="dashboard-tile-icon"><i class="<?= html_escape($menu['icon']) ?>"></i></span>
+                                                    <?php if ($isLocked) : ?>
+                                                        <span class="dashboard-tile-lock-corner" title="Menu Terkunci"><i class="fas fa-lock"></i></span>
+                                                    <?php endif; ?>
+                                                </span>
+                                                <?php if ($isLocked) : ?>
+                                                    <span class="dashboard-lock-badge" title="Anda tidak memiliki akses untuk membuka modul ini"><i class="fas fa-lock"></i> Terkunci</span>
+                                                <?php endif; ?>
                                             </span>
                                             <span>
                                                 <h3 class="dashboard-menu-title"><?= html_escape($menu['title']) ?></h3>
                                                 <p class="dashboard-menu-desc"><?= html_escape($menu['description']) ?></p>
                                             </span>
-                                            <span class="dashboard-menu-action">Buka modul <i class="fas fa-arrow-right"></i></span>
+                                            <span class="dashboard-menu-action">
+                                                <?php if ($isLocked) : ?>
+                                                    <i class="fas fa-lock"></i> Tidak ada akses
+                                                <?php else : ?>
+                                                    Buka modul <i class="fas fa-arrow-right"></i>
+                                                <?php endif; ?>
+                                            </span>
                                         </span>
                                     </a>
                                 <?php endforeach; ?>
@@ -795,6 +957,27 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                 resetSearch();
             });
 
+            function showLockedAlert(menuTitle) {
+                const msg = 'Anda tidak memiliki akses untuk membuka menu "' + (menuTitle || 'ini') + '". Hubungi Administrator untuk membuka akses.';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Akses Menu Terkunci',
+                        text: msg,
+                        confirmButtonColor: '#127fad',
+                        confirmButtonText: 'Mengerti'
+                    });
+                } else {
+                    alert(msg);
+                }
+            }
+
+            // Blokir klik pada tile menu yang terkunci (ikon gembok)
+            $(document).on('click', '.dashboard-menu-tile.is-locked', function(e) {
+                e.preventDefault();
+                showLockedAlert($(this).data('lock-title') || $(this).find('.dashboard-menu-title').text());
+            });
+
             // Shortcut Keyboard:
             // 1. Enter pada input pencarian: langsung buka modul hasil pencarian pertama
             $searchInput.on('keydown', function(e) {
@@ -802,8 +985,12 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
                     e.preventDefault();
                     const $firstMatch = $searchItems.filter(':visible').first();
                     if ($firstMatch.length > 0) {
+                        if ($firstMatch.hasClass('is-locked')) {
+                            showLockedAlert($firstMatch.data('lock-title') || $firstMatch.find('.dashboard-menu-title').text());
+                            return;
+                        }
                         const targetUrl = $firstMatch.attr('href');
-                        if (targetUrl) {
+                        if (targetUrl && targetUrl !== '#') {
                             window.location.href = targetUrl;
                         }
                     }
@@ -928,3 +1115,62 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
     </div>
 </div>
 <?php endif; ?>
+
+<!-- MODAL NOTIFIKASI -->
+<div class="modal fade" id="modalNotifikasiApproval" tabindex="-1" role="dialog" aria-labelledby="modalNotifApprovalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white py-3" style="background: linear-gradient(135deg, #1e293b 0%, #0f4c81 60%, #127fad 100%);">
+                <h5 class="modal-title font-weight-bold" id="modalNotifApprovalTitle">
+                    <i class="fas fa-bell mr-2"></i> Notifikasi
+                    <?php if (!empty($approval_notification_count)): ?>
+                        <span class="badge badge-danger ml-2"><?= (int)$approval_notification_count ?></span>
+                    <?php endif; ?>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 1;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-3 p-md-4" style="background-color: #f8fafc; max-height: 70vh; overflow-y: auto;">
+                <?php if (empty($approval_notifications)): ?>
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="font-weight-bold text-dark">Semua Sudah Diproses</h5>
+                        <p class="small mb-0">Tidak ada pengajuan atau dokumen yang memerlukan approval Anda saat ini.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="list-group shadow-sm">
+                        <?php foreach ($approval_notifications as $item): ?>
+                            <a href="<?= html_escape($item['url']) ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap" style="gap: 12px; padding: 14px 16px;">
+                                <div class="d-flex align-items-start" style="gap: 12px; min-width: 0; flex: 1;">
+                                    <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                                        <i class="<?= html_escape($item['icon']) ?>"></i>
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                            <span class="badge <?= html_escape($item['badge_class']) ?>"><?= html_escape($item['category']) ?></span>
+                                            <strong class="text-dark"><?= html_escape($item['title']) ?></strong>
+                                        </div>
+                                        <div class="small text-dark mt-1 font-weight-bold"><?= html_escape($item['subtitle']) ?></div>
+                                        <div class="small text-muted"><?= html_escape($item['detail']) ?></div>
+                                    </div>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <div class="small text-muted mb-1"><?= html_escape($item['time_label']) ?></div>
+                                    <span class="btn btn-sm btn-outline-primary font-weight-bold">
+                                        Buka <i class="fas fa-arrow-right ml-1"></i>
+                                    </span>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

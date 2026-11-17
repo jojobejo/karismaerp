@@ -1,7 +1,7 @@
 <!-- views/content/sales/faktur_split_form.php -->
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
-$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true);
+$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER', 'SALESCOUNTER'], true);
 $back_url = !empty($back_url) ? $back_url : base_url('sales_order/pecah_faktur');
 ?>
 <style>

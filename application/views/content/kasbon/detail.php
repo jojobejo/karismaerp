@@ -109,7 +109,12 @@ $st = $status_map[$kasbon['status']] ?? ['label' => ucfirst($kasbon['status']), 
                                             <td style="padding:12px 16px;" class="align-middle">
                                                 <?php
                                                     $wt = $kasbon['workflow_type'] ?? '-';
-                                                    $wt_label = ['IT' => 'IT (Atasan → Kasir)', 'KEUANGAN_SALES' => 'Keuangan/Sales (Penilai 1 → Penilai 2 → Kasir)', 'DEFAULT' => 'Default (Atasan → Kasir)'];
+                                                    $wt_label = [
+                                                        'ATASAN_PENILAI' => 'Atasan → Penilai → Kasir',
+                                                        'IT' => 'IT (Atasan → Kasir)',
+                                                        'KEUANGAN_SALES' => 'Keuangan/Sales (Penilai 1 → Penilai 2 → Kasir)',
+                                                        'DEFAULT' => 'Default (Atasan → Kasir)'
+                                                    ];
                                                     echo '<span class="badge badge-light border px-2 py-1">' . ($wt_label[$wt] ?? $wt) . '</span>';
                                                 ?>
                                             </td>

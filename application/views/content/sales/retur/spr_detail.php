@@ -300,13 +300,13 @@ if (!function_exists('hitung_durasi')) {
                                     <?php endif; ?>
                                     <?php
                                     $jobdesk = strtoupper((string)($user['jobdesk'] ?? $this->session->userdata('jobdesk') ?? ''));
-                                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
-                                    $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
-                                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','LOGISTIK','ADMIN']);
-                                    $is_admpnj = in_array($jobdesk, ['ADMPNJ','ADMIN']);
-                                    $is_kadepub = in_array($jobdesk, ['KADEPUB','ADMIN']);
-                                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
-                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','SALES COUNTER','MT SALES COUNTER','ADMIN']);
+                                    $is_koor = in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
+                                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','LOGISTIK','MT KADEP LOGISTIK','ADMIN']);
+                                    $is_admpnj = in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                                    $is_kadepub = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
+                                    $is_kadep = in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
+                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','MT KADEP LOGISTIK','MT ADMIN LOGISTIK','ADMIN']);
 
                                     $tindak_url = '';
                                     $tindak_label = '';

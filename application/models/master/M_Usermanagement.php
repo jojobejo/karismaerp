@@ -3,7 +3,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class M_Usermanagement extends CI_Model
 {
-    private $table = 'tb_karyawan';
+    private $table = 'tb_users';
 
     private function fields($table = null)
     {
@@ -22,12 +22,37 @@ class M_Usermanagement extends CI_Model
 
     private function select_base()
     {
-        $select = ['k.id', 'k.nik', 'k.nm_karyawan', 'k.departemen', 'k.jobdesk', 'k.username', 'k.tim', 'k.wilayah', 'k.akses_lv'];
-        foreach (['jobdesk_id', 'akses_lv_id', 'status', 'foto', 'last_login'] as $field) {
+        $select = [
+            'k.id',
+            'k.nik',
+            'k.nama_lngkp AS nm_karyawan',
+            'k.nama_lngkp',
+            'k.departement AS departemen',
+            'k.departement',
+            'k.bagian AS jobdesk',
+            'k.bagian',
+            'k.jabatan',
+            'k.username',
+            'k.level AS akses_lv',
+            'k.level',
+        ];
+        foreach (['tim', 'wilayah', 'wilayah_id', 'faktur_prefix', 'jobdesk_id', 'akses_lv_id', 'status', 'status_karyawan', 'foto', 'last_login', 'email', 'no_telp'] as $field) {
             if ($this->has($field)) $select[] = 'k.' . $field;
         }
         $this->db->select(implode(',', $select));
         $this->db->from($this->table . ' k');
+    }
+
+    private function normalize($row)
+    {
+        if (!$row) return $row;
+        $row['nm_karyawan'] = $row['nm_karyawan'] ?? $row['nama_lngkp'] ?? '';
+        $row['departemen'] = $row['departemen'] ?? $row['departement'] ?? '';
+        $row['jobdesk'] = $row['jobdesk'] ?? $row['bagian'] ?? '';
+        $row['akses_lv'] = $row['akses_lv'] ?? $row['level'] ?? 1;
+        $row['jobdesk_id'] = !empty($row['jobdesk_id']) ? $row['jobdesk_id'] : $row['jobdesk'];
+        $row['akses_lv_id'] = !empty($row['akses_lv_id']) ? $row['akses_lv_id'] : (string)$row['akses_lv'];
+        return $row;
     }
 
     private function apply_filters($post)
@@ -36,24 +61,33 @@ class M_Usermanagement extends CI_Model
         if ($search !== '') {
             $this->db->group_start()
                 ->like('k.nik', $search)
-                ->or_like('k.nm_karyawan', $search)
+                ->or_like('k.nama_lngkp', $search)
                 ->or_like('k.username', $search)
-                ->or_like('k.jobdesk', $search)
-                ->or_like('k.departemen', $search)
+                ->or_like('k.bagian', $search)
+                ->or_like('k.departement', $search)
+                ->or_like('k.jabatan', $search)
                 ->group_end();
         }
-        foreach (['departemen', 'jobdesk', 'akses_lv'] as $field) {
-            $value = trim((string)($post[$field] ?? ''));
-            if ($value !== '') $this->db->where('k.' . $field, $value);
+        $departemen = trim((string)($post['departemen'] ?? $post['departement'] ?? ''));
+        if ($departemen !== '') {
+            $this->db->where('k.departement', $departemen);
         }
-        if ($this->has('jobdesk_id') && trim((string)($post['jobdesk_id'] ?? '')) !== '') {
+        $jobdesk = trim((string)($post['jobdesk'] ?? $post['bagian'] ?? ''));
+        if ($jobdesk !== '') {
+            $this->db->where('k.bagian', $jobdesk);
+        }
+        $aksesLv = trim((string)($post['akses_lv'] ?? $post['level'] ?? ''));
+        if ($aksesLv !== '') {
+            $this->db->where('k.level', (int)$aksesLv);
+        }
+        if ($this->has('jobdesk_id') && trim((string)($post['jobdesk_id'] ?? '')) !== '' && is_numeric($post['jobdesk_id'])) {
             $this->db->where('k.jobdesk_id', $post['jobdesk_id']);
         }
-        if ($this->has('akses_lv_id') && trim((string)($post['akses_lv_id'] ?? '')) !== '') {
-            $this->db->where('k.akses_lv_id', $post['akses_lv_id']);
+        if ($this->has('akses_lv_id') && trim((string)($post['akses_lv_id'] ?? '')) !== '' && is_numeric($post['akses_lv_id'])) {
+            $this->db->where('k.level', (int)$post['akses_lv_id']);
         }
         if ($this->has('status') && trim((string)($post['status'] ?? '')) !== '') {
-            $this->db->where('k.status', $post['status']);
+            $this->db->where('k.status', (int)$post['status']);
         }
     }
 
@@ -66,9 +100,10 @@ class M_Usermanagement extends CI_Model
         $this->select_base();
         $this->apply_filters($post);
         $filtered = $this->db->count_all_results('', false);
+        $this->db->order_by('k.level', 'DESC');
         $this->db->order_by('k.id', 'DESC');
         if ($length > 0) $this->db->limit($length, $start);
-        $rows = $this->db->get()->result_array();
+        $rows = array_map([$this, 'normalize'], $this->db->get()->result_array());
 
         return [
             'draw' => (int)($post['draw'] ?? 1),
@@ -81,12 +116,15 @@ class M_Usermanagement extends CI_Model
     public function find($id)
     {
         $this->select_base();
-        return $this->db->where('k.id', $id)->get()->row_array();
+        $row = $this->db->where('k.id', $id)->get()->row_array();
+        return $this->normalize($row);
     }
 
     public function unique($field, $value, $excludeId = null)
     {
         if (!$this->has($field)) return true;
+        $value = trim((string)$value);
+        if ($value === '') return true;
         $this->db->where($field, $value);
         if ($excludeId) $this->db->where('id !=', $excludeId);
         return $this->db->count_all_results($this->table) === 0;
@@ -95,54 +133,85 @@ class M_Usermanagement extends CI_Model
     public function resolve_jobdesk_name($id, $fallback)
     {
         $fallback = trim((string)$fallback);
+        if ($fallback !== '' && strtoupper($fallback) !== 'PILIH') {
+            return strtoupper($fallback);
+        }
+        if ($id !== '' && !is_numeric($id)) {
+            return strtoupper(trim((string)$id));
+        }
         if ($id && $this->db->table_exists('tb_jobdesk')) {
             $fields = $this->fields('tb_jobdesk');
             $idField = in_array('id_jobdesk', $fields, true) ? 'id_jobdesk' : (in_array('id', $fields, true) ? 'id' : null);
             $nameField = in_array('nama_jobdesk', $fields, true) ? 'nama_jobdesk' : (in_array('jobdesk', $fields, true) ? 'jobdesk' : null);
             if ($idField && $nameField) {
                 $row = $this->db->select($nameField)->where($idField, $id)->get('tb_jobdesk')->row_array();
-                if ($row) return $row[$nameField];
+                if ($row) return strtoupper(trim((string)$row[$nameField]));
             }
         }
-        return $fallback;
+        return strtoupper($fallback);
     }
 
-    public function resolve_akses_name($id, $fallback)
+    public function resolve_akses_level($id, $fallback)
+    {
+        if (is_numeric($id) && (int)$id > 0) {
+            return (int)$id;
+        }
+        if (is_numeric($fallback) && (int)$fallback > 0) {
+            return (int)$fallback;
+        }
+        if (preg_match('/^(\d+)/', trim((string)$fallback), $m)) {
+            return (int)$m[1];
+        }
+        return 1;
+    }
+
+    public function resolve_jabatan_by_level($level, $fallback = '')
     {
         $fallback = trim((string)$fallback);
-        if ($id && $this->db->table_exists('tb_akses_level')) {
-            $fields = $this->fields('tb_akses_level');
-            $idField = in_array('id_akses_level', $fields, true) ? 'id_akses_level' : (in_array('id', $fields, true) ? 'id' : null);
-            $nameField = in_array('nama_akses_level', $fields, true) ? 'nama_akses_level' : (in_array('akses_lv', $fields, true) ? 'akses_lv' : null);
-            if ($idField && $nameField) {
-                $row = $this->db->select($nameField)->where($idField, $id)->get('tb_akses_level')->row_array();
-                if ($row) return $row[$nameField];
-            }
-        }
-        return $fallback;
+        if ($fallback !== '') return strtoupper($fallback);
+        $map = [
+            1 => 'KARYAWAN',
+            2 => 'KOORDINATOR',
+            3 => 'MANAGER',
+            4 => 'KADEP',
+            5 => 'DIREKTUR',
+            99 => 'ADMIN',
+        ];
+        return $map[(int)$level] ?? 'KARYAWAN';
     }
 
     private function payload($input, $isUpdate = false)
     {
         $jobdeskId = trim((string)($input['jobdesk_id'] ?? ''));
         $aksesId = trim((string)($input['akses_lv_id'] ?? ''));
-        $jobdesk = $this->resolve_jobdesk_name($jobdeskId, $input['jobdesk'] ?? '');
-        $akses = $this->resolve_akses_name($aksesId, $input['akses_lv'] ?? '');
+        $bagian = $this->resolve_jobdesk_name($jobdeskId, $input['jobdesk'] ?? $input['bagian'] ?? '');
+        $level = $this->resolve_akses_level($aksesId, $input['akses_lv'] ?? $input['level'] ?? 1);
+        $statusInt = (int)($input['status'] ?? 1);
 
         $data = [
             'nik' => trim((string)($input['nik'] ?? '')),
-            'nm_karyawan' => trim((string)($input['nm_karyawan'] ?? '')),
-            'departemen' => trim((string)($input['departemen'] ?? '')),
-            'jobdesk' => $jobdesk,
-            'username' => trim((string)($input['username'] ?? '')),
+            'nama_lngkp' => trim((string)($input['nm_karyawan'] ?? $input['nama_lngkp'] ?? '')),
+            'departement' => strtoupper(trim((string)($input['departemen'] ?? $input['departement'] ?? ''))),
+            'bagian' => $bagian,
+            'jabatan' => $this->resolve_jabatan_by_level($level, $input['jabatan'] ?? ''),
+            'username' => strtolower(trim((string)($input['username'] ?? ''))),
             'tim' => (int)($input['tim'] ?? 0),
             'wilayah' => (int)($input['wilayah'] ?? 0),
-            'akses_lv' => $akses,
-            'jobdesk_id' => $jobdeskId !== '' ? $jobdeskId : null,
-            'akses_lv_id' => $aksesId !== '' ? $aksesId : null,
-            'status' => (int)($input['status'] ?? 1),
-            'foto' => $input['foto'] ?? null,
+            'wilayah_id' => (int)($input['wilayah_id'] ?? $input['wilayah'] ?? 0),
+            'level' => $level,
+            'jobdesk_id' => is_numeric($jobdeskId) ? (int)$jobdeskId : null,
+            'akses_lv_id' => $level,
+            'status' => $statusInt,
+            'status_karyawan' => $statusInt === 1 ? 'AKTIF' : 'NONAKTIF',
+            'faktur_prefix' => trim((string)($input['faktur_prefix'] ?? '')) ?: null,
+            'updated_at' => date('Y-m-d H:i:s'),
         ];
+        if (!empty($input['foto'])) {
+            $data['foto'] = $input['foto'];
+        }
+        if (!$isUpdate) {
+            $data['created_at'] = date('Y-m-d H:i:s');
+        }
         if (!$isUpdate || trim((string)($input['password'] ?? '')) !== '') {
             $data['password'] = password_hash((string)$input['password'], PASSWORD_DEFAULT);
         }
@@ -167,7 +236,10 @@ class M_Usermanagement extends CI_Model
 
     public function reset_password($id, $password)
     {
-        return $this->db->where('id', $id)->update($this->table, ['password' => password_hash($password, PASSWORD_DEFAULT)]);
+        return $this->db->where('id', $id)->update($this->table, [
+            'password' => password_hash($password, PASSWORD_DEFAULT),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
     }
 
     public function toggle_status($id)
@@ -175,7 +247,12 @@ class M_Usermanagement extends CI_Model
         if (!$this->has('status')) return false;
         $row = $this->db->select('status')->where('id', $id)->get($this->table)->row_array();
         if (!$row) return false;
-        return $this->db->where('id', $id)->update($this->table, ['status' => ((int)$row['status'] === 1 ? 0 : 1)]);
+        $newStatus = ((int)$row['status'] === 1 ? 0 : 1);
+        $update = ['status' => $newStatus];
+        if ($this->has('status_karyawan')) {
+            $update['status_karyawan'] = $newStatus === 1 ? 'AKTIF' : 'NONAKTIF';
+        }
+        return $this->db->where('id', $id)->update($this->table, $update);
     }
 
     public function reference($table, $valueField, $textField)
@@ -189,7 +266,48 @@ class M_Usermanagement extends CI_Model
 
     public function distinct_options($field)
     {
-        if (!$this->has($field)) return [];
-        return $this->db->select($field . ' AS id, ' . $field . ' AS text')->distinct()->where($field . ' IS NOT NULL', null, false)->order_by($field, 'ASC')->get($this->table)->result_array();
+        $fieldMap = [
+            'departemen' => 'departement',
+            'jobdesk' => 'bagian',
+            'akses_lv' => 'level',
+        ];
+        $actualField = $fieldMap[$field] ?? $field;
+        if (!$this->has($actualField)) return [];
+        return $this->db
+            ->select($actualField . ' AS id, ' . $actualField . ' AS text')
+            ->distinct()
+            ->where($actualField . ' IS NOT NULL', null, false)
+            ->where("TRIM(" . $actualField . ") !=", '')
+            ->order_by($actualField, 'ASC')
+            ->get($this->table)
+            ->result_array();
+    }
+
+    public function bagian_options()
+    {
+        $rows = $this->distinct_options('bagian');
+        $result = [];
+        foreach ($rows as $r) {
+            $val = strtoupper(trim((string)($r['id'] ?? '')));
+            if ($val === '') continue;
+            $result[$val] = [
+                'id_jobdesk' => $val,
+                'nama_jobdesk' => $val,
+            ];
+        }
+        ksort($result);
+        return array_values($result);
+    }
+
+    public function level_options()
+    {
+        return [
+            ['id_akses_level' => '1', 'nama_akses_level' => '1 - Karyawan / Staff'],
+            ['id_akses_level' => '2', 'nama_akses_level' => '2 - Koordinator'],
+            ['id_akses_level' => '3', 'nama_akses_level' => '3 - Manager'],
+            ['id_akses_level' => '4', 'nama_akses_level' => '4 - Kepala Departemen (Kadep)'],
+            ['id_akses_level' => '5', 'nama_akses_level' => '5 - Direktur'],
+            ['id_akses_level' => '99', 'nama_akses_level' => '99 - Super Admin'],
+        ];
     }
 }

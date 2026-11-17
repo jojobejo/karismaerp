@@ -327,17 +327,24 @@ class C_PenyesuaianBarang extends CI_Controller
         $user_name = '-';
         $userId = !empty($pb['created_by']) ? (int)$pb['created_by'] : (!empty($jurnal['created_by']) ? (int)$jurnal['created_by'] : 0);
         if ($userId > 0) {
-            $karyawan = $this->db->select('nm_karyawan, username')->where('id', $userId)->get('tb_karyawan')->row_array();
-            if ($karyawan && !empty($karyawan['nm_karyawan'])) {
-                $user_name = $karyawan['nm_karyawan'];
-            } else if ($karyawan && !empty($karyawan['username'])) {
-                $user_name = $karyawan['username'];
+            $uRow = $this->db->select('nama_lngkp, username')->where('id', $userId)->get('tb_users')->row_array();
+            if ($uRow && !empty($uRow['nama_lngkp'])) {
+                $user_name = $uRow['nama_lngkp'];
+            } elseif ($uRow && !empty($uRow['username'])) {
+                $user_name = $uRow['username'];
             } else {
-                $user = $this->db->select('nama_user, username')->where('id', $userId)->get('tb_user')->row_array();
-                if ($user && !empty($user['nama_user'])) {
-                    $user_name = $user['nama_user'];
-                } else if ($user && !empty($user['username'])) {
-                    $user_name = $user['username'];
+                $karyawan = $this->db->select('nm_karyawan, username')->where('id', $userId)->get('tb_karyawan')->row_array();
+                if ($karyawan && !empty($karyawan['nm_karyawan'])) {
+                    $user_name = $karyawan['nm_karyawan'];
+                } else if ($karyawan && !empty($karyawan['username'])) {
+                    $user_name = $karyawan['username'];
+                } else {
+                    $user = $this->db->select('nama_user, username')->where('id', $userId)->get('tb_user')->row_array();
+                    if ($user && !empty($user['nama_user'])) {
+                        $user_name = $user['nama_user'];
+                    } else if ($user && !empty($user['username'])) {
+                        $user_name = $user['username'];
+                    }
                 }
             }
         }

@@ -13,7 +13,10 @@
         <div class="content-wrapper">
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
-            <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+            <?php
+            $jobdeskTon = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+            $deptTon = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+            if (in_array($jobdeskTon, ['LOGISTIK', 'MT KADEP LOGISTIK', 'MT ADMIN LOGISTIK', 'MT MANAGER DISTRIBUSI', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE', 'MT MANAGER WAREHOUSE', 'ADMIN GUDANG', 'ADMIN LPB & GUDANG BENIH', 'ADMIN'], true) || strpos($deptTon, 'LOGISTIK') !== false || (bool) $this->session->userdata('is_admin_dashboard')) : ?>
 
                 <div class="content-header">
                     <div class="container-fluid">

@@ -26,11 +26,8 @@ class C_Userfacility extends CI_Controller
 
     public function index()
     {
-        $this->facility->ensure_schema();
-        $data['page_title'] = 'KARISMA ERP - Fasilitas Per User';
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/master/userfacility/index.php', $data);
-        $this->load->view('partial/main/footer.php');
+        // Halaman pengaturan fasilitas per user telah digabungkan ke User Management
+        redirect('master/user-management?tab=fasilitas');
     }
 
     public function users()
@@ -64,5 +61,23 @@ class C_Userfacility extends CI_Controller
 
         $ok = $this->facility->save_facility($userId, $facilityKey, $isAllowed);
         $this->json($ok, $ok ? 'Fasilitas user berhasil diperbarui.' : 'Fasilitas user gagal diperbarui.');
+    }
+
+    /**
+     * Salin pengaturan fasilitas dari user sumber ke user target
+     */
+    public function clone_facility()
+    {
+        $sourceUserId = (int) $this->input->post('source_user_id', true);
+        $targetUserId = (int) $this->input->post('target_user_id', true);
+
+        if ($sourceUserId <= 0 || $targetUserId <= 0 || $sourceUserId === $targetUserId) {
+            return $this->json(false, 'Pilih user sumber yang berbeda dengan user target.');
+        }
+
+        $ok = $this->facility->clone_from_user($sourceUserId, $targetUserId);
+        $this->json($ok, $ok ? 'Fasilitas user berhasil disalin.' : 'Gagal menyalin fasilitas user.', [
+            'facilities' => $ok ? $this->facility->matrix($targetUserId) : [],
+        ]);
     }
 }

@@ -12,7 +12,7 @@ class C_Checker extends CI_Controller
 
     private function isDoer()
     {
-        return in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK]);
+        return in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK, self::ROLE_MANAGER_WH]);
     }
 
     private function canOperateSoLoading()
@@ -20,13 +20,14 @@ class C_Checker extends CI_Controller
         return in_array($this->role(), [
             self::ROLE_CHECKER,
             self::ROLE_MANAGERCK,
+            self::ROLE_MANAGER_WH,
             self::ROLE_ADMLOG,
         ], true);
     }
 
     private function isMCK()
     {
-        return $this->role() === self::ROLE_MANAGERCK;
+        return in_array($this->role(), [self::ROLE_MANAGERCK, self::ROLE_MANAGER_WH]);
     }
 
     private function canView()
@@ -51,13 +52,34 @@ class C_Checker extends CI_Controller
     private function role()
     {
         $jobdesk = strtoupper((string) $this->session->userdata('jobdesk'));
+        $lv      = (int) $this->session->userdata('lv');
 
-        if (in_array($jobdesk, ['SALES', 'SALESMAN', 'SALESORDER', 'SALES_ORDER', 'SC'], true)) {
+        if ($jobdesk === 'ADMIN' || $lv >= 99) {
+            return self::ROLE_MANAGER_WH;
+        }
+
+        if (in_array($jobdesk, ['CHECKER', 'MT CHECKER'], true)) {
+            return self::ROLE_CHECKER;
+        }
+
+        if (in_array($jobdesk, ['MANAGERCK', 'MT MANAGER WAREHOUSE'], true)) {
+            return self::ROLE_MANAGERCK;
+        }
+
+        if (in_array($jobdesk, ['MANAGERWH', 'MANAGER WAREHOUSE', 'ADMIN DISTRIBUSI & MANAGER WAREHOUSE'], true)) {
+            return self::ROLE_MANAGER_WH;
+        }
+
+        if (in_array($jobdesk, ['SALES', 'SALESMAN', 'SALESORDER', 'SALES_ORDER', 'SC', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMIN SALES COUNTER'], true)) {
             return self::ROLE_SALES;
         }
 
-        if (in_array($jobdesk, ['LOGISTIK', 'ADMLOGISTIK', 'ADMIN LOGISTIK', 'ADMIN_LOGISTIK', 'DISTRIBUSI'], true)) {
+        if (in_array($jobdesk, ['LOGISTIK', 'ADMLOGISTIK', 'ADMIN LOGISTIK', 'ADMIN_LOGISTIK', 'MT ADMIN LOGISTIK', 'MT KADEP LOGISTIK', 'DISTRIBUSI', 'MT MANAGER DISTRIBUSI', 'ADMIN GUDANG'], true)) {
             return self::ROLE_ADMLOG;
+        }
+
+        if (in_array($jobdesk, ['DIREKTURCK', 'DIREKSI', 'DIREKTUR', 'MT DIREKTUR OPERASIONAL', 'DIREKTUR UTAMA'], true)) {
+            return self::ROLE_DIREKTUR;
         }
 
         return $jobdesk;
@@ -198,7 +220,7 @@ class C_Checker extends CI_Controller
     // ================================================================
     public function store()
     {
-        if ($this->role() !== self::ROLE_MANAGER_WH) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $ok = $this->M_Checker->create([
@@ -285,7 +307,7 @@ class C_Checker extends CI_Controller
 
     public function archive_all_today()
     {
-        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_ADMLOG])) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK, self::ROLE_ADMLOG])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $result = $this->M_Checker->archive_all_done($this->nama());
@@ -301,7 +323,7 @@ class C_Checker extends CI_Controller
 
     public function edit_bongkaran()
     {
-        if ($this->role() !== self::ROLE_MANAGER_WH) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
@@ -319,7 +341,7 @@ class C_Checker extends CI_Controller
 
     public function hapus_bongkaran()
     {
-        if ($this->role() !== self::ROLE_MANAGER_WH) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
@@ -431,7 +453,7 @@ class C_Checker extends CI_Controller
 
     public function start_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
@@ -460,7 +482,7 @@ class C_Checker extends CI_Controller
 
     public function update_progres_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -476,7 +498,7 @@ class C_Checker extends CI_Controller
 
     public function done_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -492,7 +514,7 @@ class C_Checker extends CI_Controller
 
     public function archive_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_ADMLOG])) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK, self::ROLE_ADMLOG])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $ok = $this->M_Checker->archive_kk((int)$this->input->post('id'), $this->nama());
@@ -628,7 +650,7 @@ class C_Checker extends CI_Controller
 
     public function update_progres_lk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -644,7 +666,7 @@ class C_Checker extends CI_Controller
 
     public function done_lk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -660,7 +682,7 @@ class C_Checker extends CI_Controller
 
     public function archive_lk()
     {
-        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_ADMLOG])) {
+        if (!in_array($this->role(), [self::ROLE_MANAGER_WH, self::ROLE_MANAGERCK, self::ROLE_ADMLOG])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $ok = $this->M_Checker->archive_lk((int)$this->input->post('id'), $this->nama());
@@ -709,7 +731,7 @@ class C_Checker extends CI_Controller
  
     public function pause_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -725,7 +747,7 @@ class C_Checker extends CI_Controller
  
     public function resume_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -781,7 +803,7 @@ class C_Checker extends CI_Controller
 
     public function start_siapkan_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id    = (int)$this->input->post('id');
@@ -809,7 +831,7 @@ class C_Checker extends CI_Controller
 
     public function update_progres_siapkan_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -825,7 +847,7 @@ class C_Checker extends CI_Controller
 
     public function done_siapkan_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -841,7 +863,7 @@ class C_Checker extends CI_Controller
 
     public function pause_siapkan_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
@@ -857,7 +879,7 @@ class C_Checker extends CI_Controller
 
     public function resume_siapkan_kk()
     {
-        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+        if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');

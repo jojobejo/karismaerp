@@ -21,14 +21,14 @@ class M_Auth extends CI_Model
 
     function cek_username($username)
     {
-        $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan');
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
+        return $this->db->get('tb_users');
     }
 
     function cek_password($username)
     {
-        $this->db->where('username', $username);
-        return $this->db->get('tb_karyawan')->result();
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
+        return $this->db->get('tb_users')->result();
     }
 
     public function get_auth_user($username)
@@ -44,27 +44,13 @@ class M_Auth extends CI_Model
             return [];
         }
 
-        $candidates = [];
-        $seen = [];
-
+        // Autentikasi utama menggunakan tabel tb_users
         $tbUsers = $this->get_tb_users_user($username);
         if ($tbUsers) {
-            $key = $tbUsers->auth_source . ':' . $tbUsers->id;
-            $candidates[] = $tbUsers;
-            $seen[$key] = true;
+            return [$tbUsers];
         }
 
-        $tbKaryawan = $this->get_tb_karyawan_user($username);
-        if ($tbKaryawan) {
-            $this->apply_tb_users_hrd_access($tbKaryawan);
-            $key = $tbKaryawan->auth_source . ':' . $tbKaryawan->id;
-            if (!isset($seen[$key])) {
-                $candidates[] = $tbKaryawan;
-                $seen[$key] = true;
-            }
-        }
-
-        return $candidates;
+        return [];
     }
 
     public function get_tb_users_user($username)
@@ -73,61 +59,8 @@ class M_Auth extends CI_Model
             return null;
         }
 
-        $this->db->where('username', $username);
-        $row = $this->db->get('tb_users')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_users';
-        return $row;
-    }
-
-    public function get_tb_karyawan_user($username)
-    {
-        $this->db->where('username', $username);
-        $row = $this->db->get('tb_karyawan')->row();
-        if (!$row) {
-            return null;
-        }
-
-        $row->auth_source = 'tb_karyawan';
-        return $row;
-    }
-
-    private function apply_tb_users_hrd_access($karyawan)
-    {
-        if (!$karyawan || !$this->db->table_exists('tb_users') || !$this->has('tb_users', 'jobdesk_hrd')) {
-            return $karyawan;
-        }
-
-        $this->db->group_start();
-        if (!empty($karyawan->username) && $this->has('tb_users', 'username')) {
-            $this->db->or_where('username', $karyawan->username);
-        }
-        if (!empty($karyawan->nm_karyawan) && $this->has('tb_users', 'nama_lngkp')) {
-            $this->db->or_where('nama_lngkp', $karyawan->nm_karyawan);
-        }
-        if (!empty($karyawan->nik) && $this->has('tb_users', 'nik')) {
-            $this->db->or_where('nik', $karyawan->nik);
-        }
-        $this->db->group_end();
-
-        $this->db->where('jobdesk_hrd', 'inputer_laporan');
-        if ($this->has('tb_users', 'status')) {
-            $this->db->where('status', 1);
-        }
-
-        $tbUsers = $this->db->get('tb_users')->row();
-        if (!$tbUsers) {
-            return $karyawan;
-        }
-
-        $karyawan->jobdesk_hrd = $tbUsers->jobdesk_hrd ?? 'inputer_laporan';
-        $karyawan->default_redirect = $tbUsers->default_redirect ?? 'penilaian_lingkungan';
-        $karyawan->tb_users_match_id = $tbUsers->id ?? null;
-
-        return $karyawan;
+        $this->db->where('LOWER(username)', strtolower(trim((string) $username)));
+        return $this->db->get('tb_users')->row() ?: null;
     }
 
     public function verify_password($plainPassword, $storedPassword)
@@ -173,7 +106,7 @@ class M_Auth extends CI_Model
             ->update($table, ['password' => password_hash((string) $plainPassword, PASSWORD_DEFAULT)]);
     }
 
-    public function update_last_login($id, $table = 'tb_karyawan')
+    public function update_last_login($id, $table = 'tb_users')
     {
         if (!$this->has($table, 'last_login')) {
             return true;

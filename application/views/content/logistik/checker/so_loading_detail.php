@@ -62,7 +62,7 @@ $loading_started = !empty($activity)
     && !empty($activity['waktu_mulai']);
 $is_preparing_goods = $loading_started && ($activity['status'] ?? '') === 'PENYIAPAN_BARANG';
 $is_loading_paused = $loading_started && !$is_preparing_goods && !empty($activity['is_paused']);
-$has_loading_permission = in_array($role, ['CHECKER', 'MANAGERCK', 'ADMLOG'], true);
+$has_loading_permission = in_array($role, ['CHECKER', 'MANAGERCK', 'MANAGERWH', 'ADMLOG'], true);
 $can_operate_loading = $loading_started && !$is_preparing_goods && !$is_loading_paused && $has_loading_permission;
 $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
 ?>

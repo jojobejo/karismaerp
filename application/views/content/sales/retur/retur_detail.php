@@ -70,22 +70,22 @@ if (!function_exists('hitung_durasi')) {
             <div class="container-fluid">
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
-                $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','TEAM COLLECTION','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','LOGISTIK','ADMIN'], true) || strtolower((string)($user['username'] ?? '')) === 'admlpb';
+                $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','ADMIN LPB & GUDANG BENIH','LOGISTIK','MT KADEP LOGISTIK','ADMIN'], true) || in_array(strtolower((string)($user['username'] ?? '')), ['admlpb', 'yunika'], true);
                 $st = $retur['status_retur'];
 
                 $show_approval_card = false;
                 $approval_role_label = '';
 
-                $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
-                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
-                $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
-                $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
-                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','ADMIN']);
-                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','ADMIN']);
-                $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                $is_koor = in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
+                $is_kadep = in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
+                $is_mngacc      = in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','ADMIN']);
+                $is_mngse       = in_array($jobdesk, ['MANAGERSE','MANAGER SALES EXECUTIVE','ADMIN']);
+                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','MT DIREKTUR OPERASIONAL','ADMIN']);
+                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','DIREKSI','ADMIN']);
+                $is_kadepub     = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
                 ?>
 
                 <?php foreach (['success' => 'success', 'error' => 'danger'] as $k => $c): ?>
@@ -180,7 +180,7 @@ if (!function_exists('hitung_durasi')) {
                                                 <th>No. Batch</th>
                                                 <th class="text-center">Exp. Date</th>
                                                 <th class="text-center">Qty</th>
-                                                <?php $hide_harga = in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB'], true); ?>
+                                                <?php $hide_harga = in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'], true); ?>
                                                 <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Harga</th>
                                                 <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Subtotal</th>
                                             </tr>
