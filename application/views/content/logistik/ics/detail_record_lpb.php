@@ -494,6 +494,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleFakturPajakSederhana" title="Tandai jika supplier tidak menerbitkan faktur pajak dan invoice">
                                             <i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana
                                         </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleTanpaFakturPajak" title="Tandai jika supplier tidak menerbitkan faktur pajak">
+                                            <i class="fas fa-ban mr-1"></i> Tandai Tanpa Faktur Pajak
+                                        </button>
                                         <div class="text-muted small d-none" id="selectedLpbText">Belum ada LPB dipilih</div>
                                     </div>
                                 </div>
@@ -1605,7 +1608,9 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         label: 'Faktur Pajak',
                         value: parseInt(header.is_faktur_pajak_sederhana || 0, 10) === 1
                             ? ((header.kode_faktur_pajak && header.kode_faktur_pajak !== '-') ? header.kode_faktur_pajak + ' (Faktur Pajak Sederhana)' : 'Faktur Pajak Sederhana')
-                            : (header.kode_faktur_pajak || '-')
+                            : (parseInt(header.is_tanpa_faktur_pajak || 0, 10) === 1
+                                ? ((header.kode_faktur_pajak && header.kode_faktur_pajak !== '-') ? header.kode_faktur_pajak + ' (Tanpa Faktur Pajak)' : 'Tanpa Faktur Pajak (Non-PKP)')
+                                : (header.kode_faktur_pajak || '-'))
                     },
                     {
                         label: 'Tanggal Terbit Faktur',
@@ -1646,52 +1651,71 @@ $isAdmlpbUser = !empty($is_admlpb_user);
 
                 $('#lpbDetailHeaderGrid').html(html);
                 syncFakturPajakSederhanaButton(header);
+                syncTanpaFakturPajakButton(header);
             }
 
-            // Sinkronisasi tampilan tombol penanda faktur pajak sederhana
-            function syncFakturPajakSederhanaButton(header) {
-                var $btn = $('#btnToggleFakturPajakSederhana');
+            // Sinkronisasi tampilan tombol penanda faktur pajak sederhana & tanpa faktur pajak
+            function syncFakturFlagButton($btn, isActive, activeHtml, inactiveHtml) {
                 if (!$btn.length) {
                     return;
                 }
-                var isSederhana = parseInt((header || {}).is_faktur_pajak_sederhana || 0, 10) === 1;
-                if (isSederhana) {
+                if (isActive) {
                     $btn
                         .removeClass('btn-outline-secondary')
                         .addClass('btn-success')
-                        .html('<i class="fas fa-check-circle mr-1"></i> Faktur Pajak Sederhana');
+                        .html(activeHtml);
                 } else {
                     $btn
                         .removeClass('btn-success')
                         .addClass('btn-outline-secondary')
-                        .html('<i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana');
+                        .html(inactiveHtml);
                 }
             }
 
-            $(document).on('click', '#btnToggleFakturPajakSederhana', function() {
-                if (!activeHeader || !activeHeader.id_lpb) {
+            function syncFakturPajakSederhanaButton(header) {
+                var isSederhana = parseInt((header || {}).is_faktur_pajak_sederhana || 0, 10) === 1;
+                syncFakturFlagButton(
+                    $('#btnToggleFakturPajakSederhana'),
+                    isSederhana,
+                    '<i class="fas fa-check-circle mr-1"></i> Faktur Pajak Sederhana',
+                    '<i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana'
+                );
+            }
+
+            function syncTanpaFakturPajakButton(header) {
+                var isTanpa = parseInt((header || {}).is_tanpa_faktur_pajak || 0, 10) === 1;
+                syncFakturFlagButton(
+                    $('#btnToggleTanpaFakturPajak'),
+                    isTanpa,
+                    '<i class="fas fa-check-circle mr-1"></i> Tanpa Faktur Pajak',
+                    '<i class="fas fa-ban mr-1"></i> Tandai Tanpa Faktur Pajak'
+                );
+            }
+
+            function toggleLpbFakturFlag($btn, fieldName, endpointUrl, defaultSuccessMsg) {
+                var activeIdLpb = selectedIdLpb || (selectedHeader && selectedHeader.id_lpb ? parseInt(selectedHeader.id_lpb, 10) : 0);
+                if (!selectedHeader || !activeIdLpb) {
                     Swal.fire('Info', 'Silakan pilih LPB terlebih dahulu.', 'info');
                     return;
                 }
 
-                var currentVal = parseInt(activeHeader.is_faktur_pajak_sederhana || 0, 10) === 1 ? 1 : 0;
+                var currentVal = parseInt(selectedHeader[fieldName] || 0, 10) === 1 ? 1 : 0;
                 var nextVal = currentVal === 1 ? 0 : 1;
-                var $btn = $(this);
+                var payload = { id_lpb: activeIdLpb };
+                payload[fieldName] = nextVal;
                 $btn.prop('disabled', true);
 
                 $.ajax({
-                    url: '<?= site_url('logistik/C_Ics/ajax_toggle_faktur_pajak_sederhana') ?>',
+                    url: endpointUrl,
                     type: 'POST',
                     dataType: 'json',
-                    data: {
-                        id_lpb: activeHeader.id_lpb,
-                        is_faktur_pajak_sederhana: nextVal
-                    },
+                    data: payload,
                     success: function(res) {
                         if (res && res.status === 'success') {
-                            activeHeader.is_faktur_pajak_sederhana = nextVal;
-                            renderHeaderGrid(activeHeader);
-                            Swal.fire('Berhasil', res.message || 'Status faktur pajak sederhana diperbarui.', 'success');
+                            selectedHeader[fieldName] = nextVal;
+                            renderDetailHeader(selectedHeader);
+                            loadList();
+                            Swal.fire('Berhasil', res.message || defaultSuccessMsg, 'success');
                         } else {
                             Swal.fire('Gagal', (res && res.message) || 'Gagal memperbarui status.', 'error');
                         }
@@ -1703,6 +1727,24 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         $btn.prop('disabled', false);
                     }
                 });
+            }
+
+            $(document).on('click', '#btnToggleFakturPajakSederhana', function() {
+                toggleLpbFakturFlag(
+                    $(this),
+                    'is_faktur_pajak_sederhana',
+                    '<?= site_url('logistik/C_Ics/ajax_toggle_faktur_pajak_sederhana') ?>',
+                    'Status faktur pajak sederhana diperbarui.'
+                );
+            });
+
+            $(document).on('click', '#btnToggleTanpaFakturPajak', function() {
+                toggleLpbFakturFlag(
+                    $(this),
+                    'is_tanpa_faktur_pajak',
+                    '<?= site_url('logistik/C_Ics/ajax_toggle_tanpa_faktur_pajak') ?>',
+                    'Status tanpa faktur pajak diperbarui.'
+                );
             });
 
             function renderPurchasingHeader(header) {

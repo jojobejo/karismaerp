@@ -438,7 +438,8 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="pajak">
                                     <i class="fas fa-percent mr-1"></i> Belum Pajak
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="uang">
+                                <!-- Disembunyikan sementara hingga alur afirmasi harga diaktifkan kembali -->
+                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-filter="uang">
                                     <i class="fas fa-check-double mr-1"></i> Belum Afirmasi Harga
                                 </button>
                             </div>
@@ -536,7 +537,8 @@
                                                         <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= $hasFaktur ? 'Pajak/Faktur sudah ada' : 'Pajak/Faktur belum ada' ?>">
                                                             <i class="fas fa-percent"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
+                                                        <!-- Disembunyikan sementara hingga alur afirmasi harga diaktifkan kembali -->
+                                                        <button type="button" class="btn btn-sm d-none <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
                                                             <i class="fas fa-check-double"></i>
                                                         </button>
                                                     </div>

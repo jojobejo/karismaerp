@@ -227,6 +227,15 @@ class M_Konsinyasi extends CI_Model
             ");
         }
 
+        if ($this->db->table_exists('tb_konsinyasi_settlement')) {
+            if (!$this->db->field_exists('no_faktur_pajak', 'tb_konsinyasi_settlement')) {
+                $this->db->query("ALTER TABLE `tb_konsinyasi_settlement` ADD COLUMN `no_faktur_pajak` VARCHAR(100) DEFAULT NULL AFTER `tgl_invoice_supplier`");
+            }
+            if (!$this->db->field_exists('tgl_faktur_pajak', 'tb_konsinyasi_settlement')) {
+                $this->db->query("ALTER TABLE `tb_konsinyasi_settlement` ADD COLUMN `tgl_faktur_pajak` DATE DEFAULT NULL AFTER `no_faktur_pajak`");
+            }
+        }
+
         // Pastikan Master Gudang Konsinyasi, Gudang Titipan di Kios, dan Gudang Konsinyasi Lunas tersedia di tb_gudang
         $this->ensure_consignment_warehouses();
     }
@@ -1102,11 +1111,13 @@ class M_Konsinyasi extends CI_Model
                 WHEN LOWER(po.keterangan_harga_ppn) = 'include' THEN 'INCLUDE'
                 WHEN LOWER(po.keterangan_harga_ppn) = 'non_ppn' THEN 'NON_PPN'
                 ELSE 'EXCLUDE'
-            END AS po_tipe_pajak
+            END AS po_tipe_pajak,
+            COALESCE(sup.pengakuan_konsinyasi, 'SAAT_LPB') AS pengakuan_konsinyasi
         ", false);
         $this->db->from('tb_konsinyasi_settlement s');
         $this->db->join('tb_gudang g', 'g.id_gudang = s.gudang_id', 'left');
         $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = s.id_jurnal_pembelian', 'left');
+        $this->db->join('tbpo_suplier sup', 'sup.kd_suplier = s.kd_suplier', 'left');
         $this->db->join('tb_lpb lpb', '(lpb.id_lpb = s.id_lpb_asal OR (s.id_lpb_asal IS NULL AND lpb.nomor_lpb = s.nomor_lpb_asal))', 'left');
         $this->db->join('tbpo_po po', 'po.no_po = lpb.no_po', 'left');
         $this->db->join('tbpo_detail_po pod', 'pod.no_po = po.no_po AND pod.kd_barang = s.kd_barang', 'left');
@@ -1186,6 +1197,8 @@ class M_Konsinyasi extends CI_Model
                 $grouped[$groupKey]['_sales_orders'] = [];
                 $grouped[$groupKey]['_invoices'] = [];
                 $grouped[$groupKey]['_supplier_invoices'] = [];
+                $grouped[$groupKey]['_tax_invoices'] = [];
+                $grouped[$groupKey]['_tax_invoice_dates'] = [];
                 $grouped[$groupKey]['_journals'] = [];
             }
 
@@ -1201,6 +1214,8 @@ class M_Konsinyasi extends CI_Model
             if (!empty($row['no_so'])) $grouped[$groupKey]['_sales_orders'][] = $row['no_so'];
             if (!empty($row['no_faktur'])) $grouped[$groupKey]['_invoices'][] = $row['no_faktur'];
             if (!empty($row['no_invoice_supplier'])) $grouped[$groupKey]['_supplier_invoices'][] = $row['no_invoice_supplier'];
+            if (!empty($row['no_faktur_pajak'])) $grouped[$groupKey]['_tax_invoices'][] = $row['no_faktur_pajak'];
+            if (!empty($row['tgl_faktur_pajak']) && $row['tgl_faktur_pajak'] !== '0000-00-00') $grouped[$groupKey]['_tax_invoice_dates'][] = $row['tgl_faktur_pajak'];
             if (!empty($row['nomor_jurnal'])) $grouped[$groupKey]['_journals'][] = $row['nomor_jurnal'];
         }
 
@@ -1212,6 +1227,9 @@ class M_Konsinyasi extends CI_Model
             $row['no_so'] = implode(', ', array_unique($row['_sales_orders']));
             $row['no_faktur'] = implode(', ', array_unique($row['_invoices']));
             $row['no_invoice_supplier'] = implode(', ', array_unique($row['_supplier_invoices']));
+            $row['no_faktur_pajak'] = implode(', ', array_unique($row['_tax_invoices']));
+            $uniqueTaxDates = array_values(array_unique($row['_tax_invoice_dates']));
+            $row['tgl_faktur_pajak'] = !empty($uniqueTaxDates) ? $uniqueTaxDates[0] : '';
             $row['nomor_jurnal'] = implode(', ', array_unique($row['_journals']));
             $row['status'] = 'BILLED';
             unset(
@@ -1221,6 +1239,8 @@ class M_Konsinyasi extends CI_Model
                 $row['_sales_orders'],
                 $row['_invoices'],
                 $row['_supplier_invoices'],
+                $row['_tax_invoices'],
+                $row['_tax_invoice_dates'],
                 $row['_journals']
             );
         }
@@ -1633,9 +1653,6 @@ class M_Konsinyasi extends CI_Model
         }
 
         $selectCols = 'id_lpb, nomor_lpb';
-        if ($this->db->field_exists('id_jurnal_pembelian', 'tb_lpb')) {
-            $selectCols .= ', id_jurnal_pembelian';
-        }
         if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
             $selectCols .= ', kode_faktur_pajak, tanggal_faktur_pajak';
         }
@@ -1651,19 +1668,10 @@ class M_Konsinyasi extends CI_Model
             return null;
         }
 
-        $idJurnal = (int)($lpb['id_jurnal_pembelian'] ?? 0);
+        $idJurnal = 0;
         $nomorJurnal = null;
 
-        if ($idJurnal > 0 && $this->db->table_exists('tbkeu_jurnal')) {
-            $jRow = $this->db->select('id_jurnal, nomor_jurnal')->where('id_jurnal', $idJurnal)->get('tbkeu_jurnal')->row_array();
-            if ($jRow) {
-                $nomorJurnal = $jRow['nomor_jurnal'] ?? null;
-            } else {
-                $idJurnal = 0;
-            }
-        }
-
-        if ($idJurnal <= 0 && $this->db->table_exists('tbkeu_jurnal')) {
+        if ($this->db->table_exists('tbkeu_jurnal')) {
             $jRow = $this->db
                 ->select('id_jurnal, nomor_jurnal')
                 ->where('source_type', 'LPB_FINAL')
@@ -1769,6 +1777,7 @@ class M_Konsinyasi extends CI_Model
      */
     public function update_invoice_supplier($idSettlement, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING', $noFakturPajak = '', $tglFakturPajak = '')
     {
+        $this->ensure_schema();
         $settlement = $this->get_settlement_by_id((int) $idSettlement);
         if (!$settlement) {
             return ['status' => false, 'message' => 'Data settlement tidak ditemukan.'];
@@ -1787,13 +1796,7 @@ class M_Konsinyasi extends CI_Model
 
         // Jika terdapat jurnal pembelian terkait, sinkronkan catatan keterangan pada jurnal
         if (!empty($settlement['id_jurnal_pembelian'])) {
-            // Sinkronkan invoice & faktur pajak ke LPB asal jika tersedia
-        $totalQtyBatch = array_sum(array_map(static function ($r) {
-            return (float) ($r['qty_net'] ?? 0);
-        }, $rows));
-        $this->sync_invoice_faktur_to_lpb($primary, $noInvoice, $tglInvoice, $noFakturPajak, $tglFakturPajak, $totalQtyBatch, $userName);
-
-        $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
+            $invTag = $noInvoice !== '' ? ' [Inv: ' . $noInvoice . ']' : '';
             $keterangan = 'Pembelian Konsinyasi: ' . $settlement['nama_barang'] . ' (' . (float)$settlement['qty_net'] . ' ' . $settlement['satuan'] . '), Supplier: ' . $settlement['nama_suplier'] . $invTag;
             $this->db->where('id_jurnal', (int) $settlement['id_jurnal_pembelian'])->update('tbkeu_jurnal', [
                 'keterangan' => $keterangan
@@ -1950,6 +1953,7 @@ class M_Konsinyasi extends CI_Model
      */
     public function update_invoice_supplier_batch($idSettlement, array $ids, $noInvoice, $tglInvoice, $userId = 1, $userName = 'PURCHASING', $noFakturPajak = '', $tglFakturPajak = '')
     {
+        $this->ensure_schema();
         $primary = $this->db->get_where('tb_konsinyasi_settlement', ['id_settlement' => (int)$idSettlement])->row_array();
         if (!$primary || $primary['status'] !== 'BILLED') {
             return ['status' => false, 'message' => 'Data settlement lunas tidak ditemukan.'];
