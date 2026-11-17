@@ -27,6 +27,13 @@
             <button type="submit" class="btn btn-primary btn-block">Sign In</button>
           </div>
         </div>
+        <div class="row mt-2">
+          <div class="col-sm">
+            <a href="<?= base_url('sso/login') ?>" class="btn btn-outline-primary btn-block">
+              <i class="fas fa-shield-alt mr-1"></i> Masuk melalui SSO Portal
+            </a>
+          </div>
+        </div>
       </form>
       <?php if ($this->session->flashdata("gagal")) : ?>
         <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">

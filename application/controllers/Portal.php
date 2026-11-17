@@ -73,7 +73,7 @@ class Portal extends CI_Controller
             ],
             [
                 'name' => 'Penilaian Lingkungan Kerja',
-                'url' => 'https://karismaerp.com/auth',
+                'url' => 'https://lingkungan.karismaerp.com/sso/login',
                 'icon' => 'fa-leaf',
                 'description' => 'Work Environment Assessment & Monitoring.',
                 'accent' => '#16a34a',

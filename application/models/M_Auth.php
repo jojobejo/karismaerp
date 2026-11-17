@@ -126,4 +126,167 @@ class M_Auth extends CI_Model
         $payload = array_intersect_key($payload, array_flip($this->fields('tb_login_log')));
         return empty($payload) ? true : $this->db->insert('tb_login_log', $payload);
     }
+
+    /**
+     * Memvalidasi dan menemukan tepat satu akun lokal sesuai client_account_username dari klaim SSO Portal.
+     * Menolak akun yang hilang, duplikat, nonaktif, atau memiliki level akses yang tidak didukung.
+     */
+    public function resolve_sso_local_account($provider, array $claims)
+    {
+        $clientAccountUsername = isset($claims['client_account_username'])
+            ? trim((string) $claims['client_account_username'])
+            : '';
+        $sub = isset($claims['user']['sub']) ? trim((string) $claims['user']['sub']) : '';
+        $authSource = isset($claims['user']['auth_source']) ? trim((string) $claims['user']['auth_source']) : '';
+
+        if ($clientAccountUsername === '' || $sub === '' || !in_array($authSource, ['tb_users', 'tb_karyawan'], true)) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_claims',
+                'message' => 'Klaim akun kerja atau identitas Portal tidak lengkap.',
+            ];
+        }
+
+        // Cari akun lokal secara persis berdasarkan client_account_username (tanpa fallback ke username Portal)
+        $candidates = $this->cek_password($clientAccountUsername);
+        $exactMatches = [];
+        foreach ($candidates as $candidate) {
+            if (isset($candidate->username) && (string) $candidate->username === $clientAccountUsername) {
+                $exactMatches[] = $candidate;
+            }
+        }
+
+        if (count($exactMatches) === 0) {
+            return [
+                'ok' => false,
+                'reason' => 'account_not_found',
+                'message' => 'Akun lokal yang ditetapkan tidak ditemukan pada aplikasi ini.',
+            ];
+        }
+
+        if (count($exactMatches) > 1) {
+            return [
+                'ok' => false,
+                'reason' => 'account_duplicate',
+                'message' => 'Ditemukan lebih dari satu akun lokal dengan username yang sama. Hubungi administrator.',
+            ];
+        }
+
+        $account = $exactMatches[0];
+
+        // Periksa status aktif akun lokal
+        $isInactiveStatus = isset($account->status) && (int) $account->status !== 1;
+        $isInactiveEmployee = isset($account->status_karyawan)
+            && trim((string) $account->status_karyawan) !== ''
+            && strtoupper(trim((string) $account->status_karyawan)) !== 'AKTIF';
+
+        if ($isInactiveStatus || $isInactiveEmployee) {
+            return [
+                'ok' => false,
+                'reason' => 'account_inactive',
+                'user' => $account,
+                'message' => 'Akun lokal yang ditetapkan sedang nonaktif. Hubungi administrator.',
+            ];
+        }
+
+        // Periksa level akses lokal yang didukung aplikasi (1 s/d 5)
+        $accessLevel = (int) ($account->akses_lv ?? $account->level ?? 0);
+        if (!in_array($accessLevel, [1, 2, 3, 4, 5], true)) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_role',
+                'user' => $account,
+                'message' => 'Level akses akun lokal tidak valid untuk aplikasi Penilaian Lingkungan.',
+            ];
+        }
+
+        // Selaraskan pemetaan identitas subject Portal ke akun lokal
+        $localAuthTable = isset($account->auth_table) ? (string) $account->auth_table : 'tb_users';
+        $localUserId = isset($account->id) ? (int) $account->id : 0;
+        if ($localUserId < 1) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_account_id',
+                'user' => $account,
+                'message' => 'ID akun lokal tidak valid.',
+            ];
+        }
+
+        if (!$this->sync_sso_identity_link($provider, $authSource, $sub, $localAuthTable, $localUserId, $clientAccountUsername)) {
+            return [
+                'ok' => false,
+                'reason' => 'identity_link_failed',
+                'user' => $account,
+                'message' => 'Gagal menyelaraskan pemetaan identitas SSO lokal.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'user' => $account,
+        ];
+    }
+
+    /**
+     * Menyimpan atau menyelaraskan tautan identitas subject Portal (external_sub) ke akun lokal pada tb_sso_identity.
+     */
+    public function sync_sso_identity_link($provider, $authSource, $externalSub, $localAuthTable, $localUserId, $localUsername)
+    {
+        if (!$this->db->table_exists('tb_sso_identity')) {
+            return true;
+        }
+
+        $provider = rtrim(trim((string) $provider), '/');
+        if ($provider === '') {
+            $provider = 'https://portal.karismaerp.com';
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $this->db->trans_begin();
+
+        $bySub = $this->db->get_where('tb_sso_identity', [
+            'provider' => $provider,
+            'external_sub' => $externalSub,
+        ])->row_array();
+
+        $byLocal = $this->db->get_where('tb_sso_identity', [
+            'provider' => $provider,
+            'local_auth_table' => $localAuthTable,
+            'local_user_id' => (int) $localUserId,
+        ])->row_array();
+
+        // Jika akun lokal sebelumnya terikat ke subject lain, lepaskan ikatan lama agar mengikuti assignment terbaru Portal
+        if ($byLocal && (!$bySub || (int) $byLocal['id'] !== (int) $bySub['id'])) {
+            $this->db->where('id', (int) $byLocal['id'])->delete('tb_sso_identity');
+        }
+
+        if ($bySub) {
+            $this->db->where('id', (int) $bySub['id'])->update('tb_sso_identity', [
+                'auth_source' => $authSource,
+                'local_auth_table' => $localAuthTable,
+                'local_user_id' => (int) $localUserId,
+                'local_username' => $localUsername,
+                'updated_at' => $now,
+            ]);
+        } else {
+            $this->db->insert('tb_sso_identity', [
+                'provider' => $provider,
+                'auth_source' => $authSource,
+                'external_sub' => $externalSub,
+                'local_auth_table' => $localAuthTable,
+                'local_user_id' => (int) $localUserId,
+                'local_username' => $localUsername,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        if (!$this->db->trans_status()) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        $this->db->trans_commit();
+        return true;
+    }
 }

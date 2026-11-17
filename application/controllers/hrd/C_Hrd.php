@@ -20,31 +20,98 @@ class C_Hrd extends CI_Controller
         }
     }
 
-    private function _require_penilaian_admin_access()
+    private function _require_penilaian_authenticated($isJson = false)
     {
+        if ($this->session->userdata('logged_in')) {
+            return;
+        }
+
+        if ($isJson || $this->input->is_ajax_request()) {
+            $this->output->set_status_header(401)->set_content_type('application/json');
+            echo json_encode(array(
+                'status' => false,
+                'message' => 'Sesi login telah berakhir. Silakan login kembali.',
+            ));
+            exit;
+        }
+
+        redirect('Auth');
+        exit;
+    }
+
+    private function _require_penilaian_admin_access($isJson = false)
+    {
+        $this->_require_penilaian_authenticated($isJson);
+
         $akses = intval($this->session->userdata('lv'));
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         if ($akses === 1 || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)) {
             return;
         }
 
-        show_error('Akses hanya untuk Admin dan Superadmin', 403, 'Forbidden');
-    }
-
-    private function _require_penilaian_input_access()
-    {
-        if (!$this->session->userdata('logged_in')) {
-            redirect('Auth');
+        if ($isJson || $this->input->is_ajax_request()) {
+            $this->output->set_status_header(403)->set_content_type('application/json');
+            echo json_encode(array(
+                'status' => false,
+                'message' => 'Akses hanya untuk Admin dan Superadmin.',
+            ));
             exit;
         }
 
+        show_error('Akses hanya untuk Admin dan Superadmin', 403, 'Forbidden');
+    }
+
+    private function _require_penilaian_dashboard_access($isJson = false)
+    {
+        $this->_require_penilaian_authenticated($isJson);
+
         $akses = intval($this->session->userdata('lv'));
-        $defaultRedirect = trim((string)$this->session->userdata('default_redirect'));
-        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
-        if (in_array($akses, array(1, 2), true)
-            || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)
-            || $defaultRedirect === 'penilaian_lingkungan') {
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $defaultRedirect = trim((string) $this->session->userdata('default_redirect'));
+        if ($akses === 1
+            || in_array($jobdesk, array('ADMIN', 'SUPERADMIN', 'DIREKTUR', 'DIREKSI'), true)
+            || $defaultRedirect === 'dashboard_penilaian'
+            || $this->_is_penilaian_direksi_readonly()
+        ) {
             return;
+        }
+
+        if ($isJson || $this->input->is_ajax_request()) {
+            $this->output->set_status_header(403)->set_content_type('application/json');
+            echo json_encode(array(
+                'status' => false,
+                'message' => 'Akses dashboard penilaian tidak diizinkan.',
+            ));
+            exit;
+        }
+
+        show_error('Akses tidak diizinkan', 403, 'Forbidden');
+    }
+
+    private function _require_penilaian_input_access($isJson = false)
+    {
+        $this->_require_penilaian_authenticated($isJson);
+
+        $akses = intval($this->session->userdata('lv'));
+        $defaultRedirect = trim((string) $this->session->userdata('default_redirect'));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $jobdeskHrd = strtolower(trim((string) $this->session->userdata('jobdesk_hrd')));
+        if (in_array($akses, array(1, 2, 3, 4, 5), true)
+            || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)
+            || $defaultRedirect === 'penilaian_lingkungan'
+            || $jobdeskHrd === 'inputer_laporan'
+            || $this->_is_penilaian_direksi_readonly()
+        ) {
+            return;
+        }
+
+        if ($isJson || $this->input->is_ajax_request()) {
+            $this->output->set_status_header(403)->set_content_type('application/json');
+            echo json_encode(array(
+                'status' => false,
+                'message' => 'Akses tidak diizinkan.',
+            ));
+            exit;
         }
 
         show_error('Akses tidak diizinkan', 403, 'Forbidden');
@@ -999,6 +1066,8 @@ class C_Hrd extends CI_Controller
 
     public function dashboard_penilaian()
     {
+        $this->_require_penilaian_dashboard_access();
+
         $data['page_title'] = 'KARISMA';
         $data['lokasi'] = $this->M_Hrd->get_locations()->result();
         $data['status'] = $this->M_Hrd->get_statuses()->result();
@@ -1034,6 +1103,8 @@ class C_Hrd extends CI_Controller
 
     public function mobile_erp_dashboard()
     {
+        $this->_require_penilaian_input_access();
+
         $data['page_title'] = 'Mobile ERP';
         $data['page_heading'] = 'Dashboard';
         $data['module_label'] = 'Karisma ERP';
@@ -1047,6 +1118,8 @@ class C_Hrd extends CI_Controller
 
     public function mobile_erp_list()
     {
+        $this->_require_penilaian_input_access();
+
         $data['page_title'] = 'List Laporan';
         $data['page_heading'] = 'Laporan';
         $data['module_label'] = 'Karisma ERP';
@@ -1057,6 +1130,8 @@ class C_Hrd extends CI_Controller
 
     public function mobile_erp_detail($id = 0)
     {
+        $this->_require_penilaian_input_access();
+
         $data['page_title'] = 'Detail Laporan';
         $data['page_heading'] = 'Detail Data';
         $data['module_label'] = 'Karisma ERP';
@@ -1068,6 +1143,8 @@ class C_Hrd extends CI_Controller
 
     public function mobile_erp_profile()
     {
+        $this->_require_penilaian_input_access();
+
         $data['page_title'] = 'Profile User';
         $data['page_heading'] = 'Profile';
         $data['module_label'] = 'Karisma ERP';
@@ -1079,8 +1156,8 @@ class C_Hrd extends CI_Controller
 
     public function penilaian_lingkungan_admin()
     {
-        // temporarily disabled access check for admin GA dashboard
-        // $this->_require_hak_akses(array(1));
+        $this->_require_penilaian_dashboard_access();
+
         $data['page_title'] = 'Admin GA - Penilaian Lingkungan';
         $data['lokasi'] = $this->M_Hrd->get_locations()->result();
         $data['status'] = $this->M_Hrd->get_statuses()->result();
@@ -1112,8 +1189,8 @@ class C_Hrd extends CI_Controller
 
     public function penilaian_lingkungan_monitoring()
     {
-        // temporarily disabled access check for monitoring
-        // $this->_require_hak_akses(array(1, 3));
+        $this->_require_penilaian_dashboard_access();
+
         $data['page_title'] = 'Monitoring Direksi - Penilaian Lingkungan';
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['ratings'] = $this->M_Hrd->get_ratings()->result();
@@ -1128,8 +1205,7 @@ class C_Hrd extends CI_Controller
 
     public function submit_environment_issue()
     {
-        // temporarily disabled access check for submit_environment_issue
-        // $this->_require_hak_akses(array(1, 2));
+        $this->_require_penilaian_input_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }
@@ -1232,8 +1308,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_issue_list()
     {
-        // temporarily disabled access check for get_environment_issue_list
-        // $this->_require_hak_akses(array(1, 3));
+        $this->_require_penilaian_authenticated(true);
         $this->output->set_content_type('application/json');
         $filters = array(
             'location_id' => $this->input->get_post('location_id'),
@@ -1249,7 +1324,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_assessment_list()
     {
-        $this->_require_penilaian_admin_access();
+        $this->_require_penilaian_admin_access(true);
         $this->output->set_content_type('application/json');
 
         $filters = array(
@@ -1265,7 +1340,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_assessment_detail($id)
     {
-        $this->_require_penilaian_admin_access();
+        $this->_require_penilaian_admin_access(true);
         $this->output->set_content_type('application/json');
         $assessment = $this->M_Hrd->get_assessment_by_id($id);
         if (!$assessment) {
@@ -1278,8 +1353,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_issue_detail($id)
     {
-        // temporarily disabled access check for get_environment_issue_detail
-        // $this->_require_hak_akses(array(1, 3));
+        $this->_require_penilaian_authenticated(true);
         $this->output->set_content_type('application/json');
         $issue = $this->M_Hrd->get_issue_by_id($id);
         if (!$issue) {
@@ -1298,8 +1372,7 @@ class C_Hrd extends CI_Controller
 
     public function update_environment_issue()
     {
-        // temporarily disabled access check for update_environment_issue
-        // $this->_require_hak_akses(array(1));
+        $this->_require_penilaian_admin_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }
@@ -1355,7 +1428,7 @@ class C_Hrd extends CI_Controller
             return;
         }
 
-        $this->_require_penilaian_admin_access();
+        $this->_require_penilaian_admin_access(true);
         $this->output->set_content_type('application/json');
         $this->load->library('form_validation');
 
@@ -1392,8 +1465,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_issue_stats()
     {
-        // temporarily disabled access check for get_environment_issue_stats
-        // $this->_require_hak_akses(array(1, 3));
+        $this->_require_penilaian_dashboard_access(true);
         $this->output->set_content_type('application/json');
         $filters = array(
             'location_id' => $this->input->get('location_id'),
@@ -1443,6 +1515,7 @@ class C_Hrd extends CI_Controller
 
     public function get_environment_issue_breakdown()
     {
+        $this->_require_penilaian_dashboard_access(true);
         $this->output->set_content_type('application/json');
 
         $type = strtolower(trim($this->input->get('type')));
@@ -1490,6 +1563,7 @@ class C_Hrd extends CI_Controller
 
     public function get_hrd_locations()
     {
+        $this->_require_penilaian_authenticated(true);
         $this->output->set_content_type('application/json');
         $locations = $this->M_Hrd->get_all_locations()->result();
         echo json_encode(array('status' => true, 'data' => $locations));
@@ -1497,6 +1571,7 @@ class C_Hrd extends CI_Controller
 
     public function save_hrd_location()
     {
+        $this->_require_penilaian_admin_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }
@@ -1530,6 +1605,7 @@ class C_Hrd extends CI_Controller
 
     public function delete_hrd_location()
     {
+        $this->_require_penilaian_admin_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }
@@ -1551,6 +1627,7 @@ class C_Hrd extends CI_Controller
 
     public function get_hrd_ratings()
     {
+        $this->_require_penilaian_authenticated(true);
         $this->output->set_content_type('application/json');
         $ratings = $this->M_Hrd->get_all_ratings()->result();
         echo json_encode(array('status' => true, 'data' => $ratings));
@@ -1558,6 +1635,7 @@ class C_Hrd extends CI_Controller
 
     public function save_hrd_rating()
     {
+        $this->_require_penilaian_admin_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }
@@ -1595,6 +1673,7 @@ class C_Hrd extends CI_Controller
 
     public function delete_hrd_rating()
     {
+        $this->_require_penilaian_admin_access(true);
         if ($this->_block_penilaian_direksi_crud()) {
             return;
         }

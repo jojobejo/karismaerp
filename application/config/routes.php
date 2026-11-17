@@ -59,6 +59,14 @@ $route['translate_uri_dashes'] = FALSE;
 $route['portal'] = 'Portal/index';
 $route['auth'] = 'Auth/index';
 
+// SSO Portal KARISMA ERP (penilaian_lingkungan)
+$route['sso/login']                                 = 'Auth/sso_login';
+$route['sso/callback']                              = 'Auth/sso_callback';
+$route['auth/sso/start']                            = 'Auth/sso_login';
+$route['auth/sso/callback']                         = 'Auth/sso_callback';
+$route['auth/logout']                               = 'Auth/logout';
+$route['api/session']                               = 'Auth/session_info';
+
 $route['presentasi_erp']                        = 'Presentasi/ppt_erp';
 $route['presentasi_karismaonline']              = 'Presentasi/ppt_karismaonline';
 
