@@ -1813,6 +1813,8 @@ class C_Keuangan extends CI_Controller
 
         $start_date = trim((string)$this->input->post('start_date', true));
         $end_date = trim((string)$this->input->post('end_date', true));
+        $keteranganJurnal = trim((string)$this->input->post('keterangan_jurnal', true));
+        $nomorJurnal = trim((string)$this->input->post('nomor_jurnal', true));
 
         // Basic validation if dates are empty, maybe default to current month
         if (empty($start_date)) {
@@ -1823,7 +1825,43 @@ class C_Keuangan extends CI_Controller
         }
 
         return $this->accounting_ajax_response(true, 'Data laporan jurnal penjualan berhasil dimuat.', [
-            'data' => $this->M_Journal->accounting_sales_journal_report($start_date, $end_date),
+            'data' => $this->M_Journal->accounting_sales_journal_report($start_date, $end_date, $keteranganJurnal, $nomorJurnal),
+            'start_date' => $start_date,
+            'end_date' => $end_date
+        ]);
+    }
+
+    /**
+     * Endpoint data laporan Jurnal Potongan Penjualan.
+     */
+    public function jurnal_sales_discount_report_data()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $start_date = trim((string)$this->input->post('start_date', true));
+        $end_date = trim((string)$this->input->post('end_date', true));
+        $keteranganJurnal = trim((string)$this->input->post('keterangan_jurnal', true));
+        $nomorJurnal = trim((string)$this->input->post('nomor_jurnal', true));
+
+        if (empty($start_date)) {
+            $start_date = date('Y-m-01');
+        }
+        if (empty($end_date)) {
+            $end_date = date('Y-m-t');
+        }
+
+        return $this->accounting_ajax_response(true, 'Data laporan jurnal potongan penjualan berhasil dimuat.', [
+            'data' => $this->M_Journal->accounting_sales_discount_journal_report($start_date, $end_date, $keteranganJurnal, $nomorJurnal),
             'start_date' => $start_date,
             'end_date' => $end_date
         ]);

@@ -121,6 +121,18 @@ class C_Usermanagement extends CI_Controller
         $valid = $this->validate_user($input);
         if ($valid !== true) return $this->json(false, $valid);
         $id = $this->users->save($input);
+
+        // Kunci seluruh akses modul dashboard untuk user baru (non-admin) agar Admin yang mengatur aksesnya
+        if ($id) {
+            $this->load->model('M_Dashboard');
+            $this->load->model('master/M_Dashboardaccess', 'dashboardAccess');
+            $allMenuKeys = array_keys($this->M_Dashboard->menu_catalog_map());
+            if (!empty($allMenuKeys)) {
+                $actor = (string)($this->session->userdata('username') ?: 'admin');
+                $this->dashboardAccess->bulk_update((int)$id, $allMenuKeys, 0, $actor);
+            }
+        }
+
         $this->json((bool)$id, $id ? 'Data berhasil disimpan' : 'Data gagal disimpan', ['id' => $id]);
     }
 

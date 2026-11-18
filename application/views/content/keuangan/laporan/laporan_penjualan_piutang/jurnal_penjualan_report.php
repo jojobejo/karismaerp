@@ -33,9 +33,10 @@
     
     /* Report Header */
     .report-header { margin-bottom: 24px; }
-    .report-title { font-size: 20px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; text-align: center;}
-    .report-subtitle { font-size: 14px; text-align: center; color: #4b5563; margin-bottom: 20px;}
-    .report-meta { font-size: 13px; color: #374151; display: flex; justify-content: space-between;}
+    .report-company { font-size: 18px; font-weight: 700; text-transform: uppercase; text-align: center; color: #111827; margin-bottom: 2px; }
+    .report-title { font-size: 20px; font-weight: 700; text-align: center; color: #0284c7; margin-bottom: 12px; }
+    .report-subtitle { font-size: 13px; font-weight: 600; text-align: center; color: #991b1b; margin-bottom: 16px; }
+    .report-meta { font-size: 12px; color: #374151; display: flex; justify-content: space-between; margin-bottom: 6px; }
     
     /* Report Table */
     .report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -84,7 +85,7 @@
                 <div class="container-fluid">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <a href="<?= base_url('laporan/penjualan') ?>" class="btn btn-sm btn-outline-secondary" title="Kembali"><i class="fas fa-arrow-left"></i> Kembali</a>
-                        <h4 class="m-0 ml-2 font-weight-bold text-dark">Jurnal - Penjualan</h4>
+                        <h4 class="m-0 ml-2 font-weight-bold text-dark"><?= htmlspecialchars($page_heading ?? 'Jurnal - Penjualan') ?></h4>
                     </div>
                 </div>
             </div>
@@ -103,6 +104,7 @@
                             <input type="date" id="filterEndDate" class="form-control form-control-sm" value="<?= date('Y-m-t') ?>">
                         </div>
                         <div class="form-group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnOpenFilterModal"><i class="fas fa-sliders-h"></i> Filter Data</button>
                             <button type="button" class="btn btn-sm btn-primary" id="btnFilter"><i class="fas fa-filter"></i> Terapkan Filter</button>
                             <button type="button" class="btn btn-sm btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
                         </div>
@@ -115,8 +117,9 @@
                                 <div><span id="printTime"></span></div>
                                 <div></div>
                             </div>
-                            <div class="report-title">Buku Jurnal Penjualan</div>
-                            <div class="report-subtitle">Periode: <span id="lblPeriode">-</span></div>
+                            <div class="report-company">KARISMA <?= date('Y') ?></div>
+                            <div class="report-title"><?= htmlspecialchars($report_title ?? 'Jurnal Penjualan') ?></div>
+                            <div class="report-subtitle"><span id="lblPeriode">-</span></div>
                         </div>
 
                         <table class="report-table">
@@ -142,13 +145,72 @@
             </section>
         </div>
     </div>
+
+    <div class="modal fade" id="modalFilterData" tabindex="-1" role="dialog" aria-labelledby="modalFilterDataLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content" style="background:#f3f4f6; border:1px solid #d1d5db;">
+                <div class="modal-body p-4">
+                    <h5 class="mb-3" id="modalFilterDataLabel" style="font-weight:400; color:#1f2937;">Filter Data</h5>
+
+                    <ul class="nav nav-pills mb-4" id="filterDataTabs" role="tablist" style="gap:4px;">
+                        <li class="nav-item">
+                            <a class="nav-link active py-1 px-3" id="tab-standar-link" data-toggle="pill" href="#tabFilterStandar" role="tab" style="border-radius:2px; font-size:13px;">Standar</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link py-1 px-3" id="tab-pencarian-link" data-toggle="pill" href="#tabFilterPencarian" role="tab" style="border-radius:2px; font-size:13px;">Pencarian</a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" style="min-height:110px;">
+                        <div class="tab-pane fade show active" id="tabFilterStandar" role="tabpanel">
+                            <div class="form-row align-items-end">
+                                <div class="col-auto pt-2 pr-3" style="font-size:13px; color:#374151;">
+                                    Tanggal :
+                                </div>
+                                <div class="col-auto">
+                                    <label class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Dari :</label>
+                                    <input type="date" id="modalStartDate" class="form-control form-control-sm" value="<?= date('Y-m-01') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; width:160px;">
+                                </div>
+                                <div class="col-auto pb-1 px-2 font-weight-bold" style="color:#111827;">&gt;</div>
+                                <div class="col-auto">
+                                    <label class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Hingga :</label>
+                                    <input type="date" id="modalEndDate" class="form-control form-control-sm" value="<?= date('Y-m-t') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; width:160px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabFilterPencarian" role="tabpanel">
+                            <div class="form-group row mb-2 align-items-center">
+                                <label for="modalKeteranganJurnal" class="col-sm-3 col-form-label text-right" style="font-size:13px; color:#374151; font-weight:400;">Keterangan Jurnal :</label>
+                                <div class="col-sm-6">
+                                    <input type="text" id="modalKeteranganJurnal" class="form-control form-control-sm" placeholder="Contoh: Penjualan / nama pelanggan" style="background:#e5e7eb; border:1px solid #9ca3af;">
+                                </div>
+                            </div>
+                            <div class="form-group row mb-0 align-items-center">
+                                <label for="modalNomorJurnal" class="col-sm-3 col-form-label text-right" style="font-size:13px; color:#374151; font-weight:400;">Nomor Jurnal :</label>
+                                <div class="col-sm-6">
+                                    <input type="text" id="modalNomorJurnal" class="form-control form-control-sm" placeholder="Contoh: D25000001 / SD000001" style="background:#e5e7eb; border:1px solid #9ca3af;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4" style="gap:8px;">
+                        <button type="button" class="btn btn-sm text-white px-4" id="btnCancelFilterModal" style="background:#0275a8; border-radius:2px;"><u>B</u>atal</button>
+                        <button type="button" class="btn btn-sm text-white px-4" id="btnOkFilterModal" style="background:#0275a8; border-radius:2px;"><u>O</u>K</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 <?php $this->load->view('partial/main/footergdg.php') ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var endpoint = '<?= base_url('jurnal/sales-report-data') ?>';
+    var endpoint = '<?= $report_endpoint ?? base_url('jurnal/sales-report-data') ?>';
+    var emptyMessage = '<?= htmlspecialchars($empty_message ?? 'Data jurnal penjualan tidak ditemukan pada periode ini.', ENT_QUOTES) ?>';
     
     function formatMoney(num) {
         var p = parseFloat(num);
@@ -207,11 +269,24 @@ document.addEventListener('DOMContentLoaded', function() {
         return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
     }
 
+    function formatDatePeriod(str) {
+        if (!str) return '-';
+        var parts = str.split('-');
+        if (parts.length !== 3) return str;
+        var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        var mIdx = parseInt(parts[1], 10) - 1;
+        return parts[2] + ' ' + (months[mIdx] || parts[1]) + ' ' + parts[0];
+    }
+
+    var hasLoadedReportOnce = false;
+
     function loadReport() {
         var startDate = $('#filterStartDate').val();
         var endDate = $('#filterEndDate').val();
+        var keteranganJurnal = $.trim($('#modalKeteranganJurnal').val() || '');
+        var nomorJurnal = $.trim($('#modalNomorJurnal').val() || '');
         
-        $('#lblPeriode').text(formatDate(startDate) + ' s/d ' + formatDate(endDate));
+        $('#lblPeriode').text(formatDatePeriod(startDate) + ' - ' + formatDatePeriod(endDate));
         $('#reportTbody').html('<tr><td colspan="6" class="text-center py-4 text-muted">Memuat data...</td></tr>');
         updatePrintTime();
 
@@ -219,7 +294,12 @@ document.addEventListener('DOMContentLoaded', function() {
             url: endpoint,
             type: 'POST',
             dataType: 'json',
-            data: { start_date: startDate, end_date: endDate },
+            data: {
+                start_date: startDate,
+                end_date: endDate,
+                keterangan_jurnal: keteranganJurnal,
+                nomor_jurnal: nomorJurnal
+            },
             success: function(resp) {
                 if (!resp.success) {
                     $('#reportTbody').html('<tr><td colspan="6" class="text-center text-danger py-4">' + escapeHtml(resp.message) + '</td></tr>');
@@ -228,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 var data = (resp.data && resp.data.data) ? resp.data.data : [];
                 if (!data.length) {
-                    $('#reportTbody').html('<tr><td colspan="6" class="text-center text-muted py-4">Data jurnal penjualan tidak ditemukan pada periode ini.</td></tr>');
+                    $('#reportTbody').html('<tr><td colspan="6" class="text-center text-muted py-4">' + escapeHtml(emptyMessage) + '</td></tr>');
                     return;
                 }
                 
@@ -236,7 +316,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 data.forEach(function(h) {
                     // Transaction Header Row
                     var ket = escapeHtml(h.keterangan || 'Penjualan');
-                    if (h.pelanggan) ket += ', ' + escapeHtml(h.pelanggan);
+                    if (h.pelanggan && ket.toLowerCase().indexOf(h.pelanggan.toLowerCase()) === -1) {
+                        ket += ', ' + escapeHtml(h.pelanggan);
+                    }
+                    var refNo = h.no_faktur || h.referensi || h.nomor_jurnal || '';
                     
                     html += '<tr class="trx-header">';
                     html += '<td>' + escapeHtml(formatDate(h.tanggal_transaksi)) + '</td>';
@@ -249,7 +332,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             var isDebit = parseFloat(d.debit || 0) > 0;
                             var dept = d.cost_center || '';
                             var proyek = d.project_no || '';
-                            var accDesc = escapeHtml(d.kode_rekening_display) + ' &nbsp;&nbsp; ' + escapeHtml(d.nama_akun);
+                            var accDesc = (refNo ? '<span style="display:inline-block;min-width:110px;padding-right:12px;">' + escapeHtml(refNo) + '</span>' : '') +
+                                '<span style="display:inline-block;min-width:65px;padding-right:10px;">' + escapeHtml(d.kode_rekening_display || d.kode_akun || '') + '</span>' +
+                                escapeHtml(d.nama_akun || '');
                             
                             html += '<tr class="trx-detail">';
                             html += '<td></td>';
@@ -275,10 +360,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     $('#btnFilter').on('click', function() {
+        hasLoadedReportOnce = true;
+        $('#modalStartDate').val($('#filterStartDate').val());
+        $('#modalEndDate').val($('#filterEndDate').val());
         loadReport();
     });
-    
-    // Auto load on init
-    loadReport();
+
+    $('#btnOpenFilterModal').on('click', function() {
+        $('#modalStartDate').val($('#filterStartDate').val());
+        $('#modalEndDate').val($('#filterEndDate').val());
+        $('#modalFilterData').modal({ backdrop: 'static', keyboard: false, show: true });
+    });
+
+    $('#btnOkFilterModal').on('click', function() {
+        var sDate = $('#modalStartDate').val();
+        var eDate = $('#modalEndDate').val();
+        if (sDate) $('#filterStartDate').val(sDate);
+        if (eDate) $('#filterEndDate').val(eDate);
+        hasLoadedReportOnce = true;
+        $('#modalFilterData').modal('hide');
+        loadReport();
+    });
+
+    $('#btnCancelFilterModal').on('click', function() {
+        if (!hasLoadedReportOnce) {
+            window.location.href = '<?= base_url('laporan/penjualan') ?>';
+            return;
+        }
+        $('#modalFilterData').modal('hide');
+    });
+
+    // Tampilkan modal Filter Data terlebih dahulu sebelum laporan dimuat
+    $('#modalFilterData').modal({ backdrop: 'static', keyboard: false, show: true });
 });
 </script>

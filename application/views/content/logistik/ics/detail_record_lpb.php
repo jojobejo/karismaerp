@@ -497,6 +497,11 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleTanpaFakturPajak" title="Tandai jika supplier tidak menerbitkan faktur pajak">
                                             <i class="fas fa-ban mr-1"></i> Tandai Tanpa Faktur Pajak
                                         </button>
+                                        <?php if (!empty($is_admin_po)) : ?>
+                                        <button type="button" class="btn btn-warning btn-sm" id="btnOpenSplitLpbTax" title="Pecah 1 LPB menjadi 2 LPB dengan Nomor LPB yang sama">
+                                            <i class="fas fa-code-branch mr-1"></i> Pecah LPB
+                                        </button>
+                                        <?php endif; ?>
                                         <div class="text-muted small d-none" id="selectedLpbText">Belum ada LPB dipilih</div>
                                     </div>
                                 </div>
@@ -512,6 +517,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                     </div>
 
                                     <div id="lpbDetailWrap" style="display:none;">
+                                        <div id="lpbSameNumberTabsWrap" class="mb-3" style="display:none;"></div>
                                         <div class="lpb-detail-grid" id="lpbDetailHeaderGrid"></div>
 
                                         <div class="table-responsive">
@@ -574,6 +580,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                                                 <i class="fas fa-save mr-1"></i> Posting Data
                                             </button>
                                         </div>
+                                        <div id="lpbSiblingDetailsWrap" class="mt-4" style="display:none;"></div>
                                         <div class="lpb-activity-log" id="lpbActivityLogWrap" style="display:none;">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <h6 class="font-weight-bold mb-0">Log Aktivitas Detail PO</h6>
@@ -819,6 +826,67 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-warning" id="btnSubmitSplitDetail">
                         <i class="fas fa-code-branch mr-1"></i> Simpan Split
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalSplitLpbTax" tabindex="-1" role="dialog" aria-labelledby="modalSplitLpbTaxLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <form id="formSplitLpbTax" class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="modalSplitLpbTaxLabel">
+                        <i class="fas fa-code-branch mr-1"></i> Pecah LPB
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="splitLpbTaxIdLpb">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Pemecahan ini akan membagi LPB <strong id="splitLpbTaxNomorText">-</strong> menjadi beberapa record LPB dengan <strong>Nomor LPB yang sama</strong> tanpa mengubah stok fisik di gudang. Gunakan tombol <strong>+ Tambah Baris LPB</strong> jika ingin memecah menjadi lebih dari 2 LPB.
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="font-weight-bold mb-1">Catatan Pemecahan (Opsional)</label>
+                            <input type="text" class="form-control form-control-sm" id="splitLpbTaxKeterangan" placeholder="Contoh: Pecah LPB untuk penentuan faktur pajak / FOC">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="small font-weight-bold text-muted mb-1">Ringkasan Qty Barang LPB Awal vs Total Alokasi Pecahan</div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm lpb-table mb-0" id="splitLpbSummaryTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Barang</th>
+                                        <th>No Lot / Expired</th>
+                                        <th class="text-right" style="width:120px;">Qty Awal</th>
+                                        <th class="text-right" style="width:130px;">Total Alokasi</th>
+                                        <th class="text-right" style="width:120px;">Sisa</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="splitLpbSummaryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="font-weight-bold text-dark">Daftar Pecahan LPB (<span id="splitLpbGroupCountLabel">2</span> LPB)</span>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSplitLpbGroup">
+                            <i class="fas fa-plus mr-1"></i> Tambah Baris LPB
+                        </button>
+                    </div>
+
+                    <div id="splitLpbGroupsContainer"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btnSubmitSplitLpbTax">
+                        <i class="fas fa-code-branch mr-1"></i> Simpan Pecah LPB
                     </button>
                 </div>
             </form>
@@ -1446,12 +1514,28 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     return;
                 }
 
+                var nomorCountMap = {};
+                $.each(rows, function(_, row) {
+                    var nLpb = $.trim(row.nomor_lpb || '');
+                    if (nLpb !== '') {
+                        nomorCountMap[nLpb] = (nomorCountMap[nLpb] || 0) + 1;
+                    }
+                });
+
                 $.each(rows, function(_, row) {
                     var invoice = hasInvoice(row.no_invoice) ? row.no_invoice : '-';
                     var faktur = row.kode_faktur_pajak ? row.kode_faktur_pajak : '-';
+                    var nLpb = $.trim(row.nomor_lpb || '');
+                    var jenisBadge = '';
+                    if (nLpb !== '' && (nomorCountMap[nLpb] || 0) > 1) {
+                        var isTanpaPajak = parseInt(row.is_tanpa_faktur_pajak || 0, 10) === 1;
+                        var badgeLabel = isTanpaPajak ? 'Tanpa Faktur Pajak' : (row.jenis_lpb || 'Ada Faktur Pajak');
+                        var badgeCls = isTanpaPajak ? 'badge-secondary' : 'badge-info';
+                        jenisBadge = ' <span class="badge ' + badgeCls + ' ml-1">' + escHtml(badgeLabel) + '</span>';
+                    }
                     tbody.append(
                         '<tr class="js-lpb-invoice-row" data-id="' + escAttr(row.id_lpb) + '">' +
-                        '<td>' + escHtml(row.nomor_lpb || '-') + '</td>' +
+                        '<td>' + escHtml(row.nomor_lpb || '-') + jenisBadge + '</td>' +
                         '<td>' + escHtml(invoice) + '</td>' +
                         '<td class="text-center">' + escHtml(formatDateId(row.tanggal_invoice)) + '</td>' +
                         '<td class="text-center">' + escHtml(faktur) + '</td>' +
@@ -1498,6 +1582,8 @@ $isAdmlpbUser = !empty($is_admlpb_user);
             function resetDetailState() {
                 selectedIdLpb = 0;
                 selectedHeader = null;
+                $('#lpbSameNumberTabsWrap').hide().empty();
+                $('#lpbSiblingDetailsWrap').hide().empty();
                 selectedDetailRows = [];
                 selectedSplitInvoices = [];
                 selectedActivityLogs = [];
@@ -1576,7 +1662,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 $('#lpbDetailTable thead').html(html);
             }
 
-            function renderDetailHeader(header) {
+            function buildDetailHeaderGridHtml(header) {
                 var html = '';
                 var nomorJenisLpb = (header.nomor_lpb || 'Nomor LPB belum dibuat') + ' / ' + (header.jenis_lpb || 'Jenis LPB belum ditentukan');
                 var stInfo = lpbStatusInfo(header.status_lpb);
@@ -1649,7 +1735,11 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         '</div>';
                 });
 
-                $('#lpbDetailHeaderGrid').html(html);
+                return html;
+            }
+
+            function renderDetailHeader(header) {
+                $('#lpbDetailHeaderGrid').html(buildDetailHeaderGridHtml(header));
                 syncFakturPajakSederhanaButton(header);
                 syncTanpaFakturPajakButton(header);
             }
@@ -1714,7 +1804,8 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         if (res && res.status === 'success') {
                             selectedHeader[fieldName] = nextVal;
                             renderDetailHeader(selectedHeader);
-                            loadList();
+                            loadList({ preserveSelection: true });
+                            loadDetail(activeIdLpb);
                             Swal.fire('Berhasil', res.message || defaultSuccessMsg, 'success');
                         } else {
                             Swal.fire('Gagal', (res && res.message) || 'Gagal memperbarui status.', 'error');
@@ -1947,6 +2038,338 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                 renderPurchasingTable(selectedPurchasingRows);
             }
 
+            var siblingDetailSeq = 0;
+            var siblingDetailCache = {};
+
+            function buildSiblingDetailCardHtml(header, rows, siblingIndex) {
+                var idLpb = parseInt(header.id_lpb || 0, 10);
+                var isUnpost = parseInt(header.status_lpb, 10) === 0;
+                var canEditPrice = isUnpost && canViewLpbNominal;
+                var isTanpaPajak = parseInt(header.is_tanpa_faktur_pajak || 0, 10) === 1;
+                var isSederhana = parseInt(header.is_faktur_pajak_sederhana || 0, 10) === 1;
+
+                var sederhanaBtnCls = isSederhana ? 'btn-success' : 'btn-outline-secondary';
+                var sederhanaBtnHtml = isSederhana
+                    ? '<i class="fas fa-check-circle mr-1"></i> Faktur Pajak Sederhana'
+                    : '<i class="fas fa-receipt mr-1"></i> Tandai Faktur Pajak Sederhana';
+                var tanpaBtnCls = isTanpaPajak ? 'btn-success' : 'btn-outline-secondary';
+                var tanpaBtnHtml = isTanpaPajak
+                    ? '<i class="fas fa-check-circle mr-1"></i> Tanpa Faktur Pajak'
+                    : '<i class="fas fa-ban mr-1"></i> Tandai Tanpa Faktur Pajak';
+
+                var headerGridHtml = buildDetailHeaderGridHtml(header);
+                var totalDpp = 0;
+                var totalGrand = 0;
+                var bodyRowsHtml = '';
+                var colCount = 12 + (canEditPrice ? 1 : 0);
+
+                if (!rows || !rows.length) {
+                    bodyRowsHtml = '<tr><td colspan="' + colCount + '" class="text-center text-muted">Detail LPB kosong.</td></tr>';
+                } else {
+                    $.each(rows, function(_, row) {
+                        var qtyIn = row.qty_in || row.qty_diterima || 0;
+                        var hargaSatuan = row.harga_satuan_exclude || row.harga_satuan || 0;
+                        var dpp = row.dpp || row.total_harga_exclude || row.total_harga || 0;
+                        var dppNilaiLain = row.dpp_nilai_lain || (dpp * (11 / 12));
+                        var ppn = row.ppn || (dppNilaiLain * (12 / 100));
+                        var totalHargaEdit = row.total_harga_exclude || row.total_harga || 0;
+                        var totalHarga = row.total_harga_display || row.total_harga_exclude || row.total_harga || 0;
+
+                        totalDpp += parseFloat(dpp) || 0;
+                        totalGrand += parseFloat(totalHarga) || 0;
+
+                        var nominalCells = canViewLpbNominal
+                            ? '<td class="text-right">' + escHtml(formatRupiah(hargaSatuan)) + '</td>' +
+                              '<td class="text-right">' + escHtml(formatRupiah(dpp)) + '</td>' +
+                              '<td class="text-right">' + escHtml(formatRupiah(dppNilaiLain)) + '</td>' +
+                              '<td class="text-right">' + escHtml(formatRupiah(ppn)) + '</td>' +
+                              '<td class="text-right">' + escHtml(formatRupiah(totalHarga)) + '</td>'
+                            : '<td class="text-center" colspan="5">' + formatNominalStatus(row) + '</td>';
+
+                        var actionColumn = canEditPrice ? (
+                            '<td class="text-center">' +
+                            '<div class="btn-group btn-group-sm" role="group">' +
+                            '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga dan Qty LPB" ' +
+                            'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                            'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                            'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                            'data-qty="' + escAttr(row.qty_lpb || row.qty_diterima || 0) + '" ' +
+                            'data-qty-order="' + escAttr(row.qty_order || 0) + '" ' +
+                            'data-qty-sisa="' + escAttr(row.qty_sisa || 0) + '" ' +
+                            'data-qty-total="' + escAttr(row.qty_lpb_total || 0) + '" ' +
+                            'data-harga-satuan="' + escAttr(hargaSatuan) + '" ' +
+                            'data-total-harga="' + escAttr(totalHargaEdit) + '">' +
+                            '<i class="fas fa-pencil-alt"></i>' +
+                            '</button>' +
+                            '<button type="button" class="btn btn-outline-warning btn-sm js-open-lpb-detail-split" title="Split detail LPB" ' +
+                            'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                            'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                            'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                            'data-qty="' + escAttr(qtyIn) + '" ' +
+                            'data-harga-satuan="' + escAttr(hargaSatuan) + '" ' +
+                            'data-total-harga="' + escAttr(totalHargaEdit) + '">' +
+                            '<i class="fas fa-code-branch"></i>' +
+                            '</button>' +
+                            '</div>' +
+                            '</td>'
+                        ) : '';
+
+                        bodyRowsHtml +=
+                            '<tr>' +
+                            '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
+                            '<td>' + escHtml(row.nama_barang || '-') + splitDetailBadge(row) + '</td>' +
+                            '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
+                            '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(qtyIn)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
+                            nominalCells +
+                            actionColumn +
+                            '</tr>';
+                    });
+                }
+
+                var footerHtml = canViewLpbNominal
+                    ? '<div class="lpb-grand-total-harga">' +
+                      '<span class="label">Total DPP</span>' +
+                      '<span class="value">' + escHtml(formatRupiah(totalDpp)) + '</span>' +
+                      '<span class="label">Grand Total Harga</span>' +
+                      '<span class="value">' + escHtml(formatRupiah(totalGrand)) + '</span>' +
+                      '</div>'
+                    : '';
+
+                var splitBtnHtml = isAdminPo
+                    ? '<button type="button" class="btn btn-warning btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="split-lpb" title="Pecah 1 LPB menjadi 2 LPB dengan Nomor LPB yang sama">' +
+                      '<i class="fas fa-code-branch mr-1"></i> Pecah LPB' +
+                      '</button>'
+                    : '';
+
+                var postActionHtml = '';
+                if (canManagePoInvoice || isAdminPo) {
+                    if (isUnpost) {
+                        postActionHtml = '<div class="lpb-table-actions">' +
+                            '<button type="button" class="btn btn-success btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="post">' +
+                            '<i class="fas fa-save mr-1"></i> Posting Data' +
+                            '</button>' +
+                            '</div>';
+                    } else {
+                        postActionHtml = '<div class="lpb-table-actions">' +
+                            '<button type="button" class="btn btn-danger btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="unpost">' +
+                            '<i class="fas fa-undo mr-1"></i> UNPOST' +
+                            '</button>' +
+                            '</div>';
+                    }
+                }
+
+                var actionHeadHtml = canEditPrice ? '<th class="text-center" rowspan="2">#</th>' : '';
+
+                return '' +
+                    '<div class="lpb-panel mb-4 js-sibling-panel" data-id-lpb="' + escAttr(idLpb) + '">' +
+                    '<div class="lpb-panel-header">' +
+                    '<div class="lpb-panel-title">' +
+                    '<h3 class="card-title mb-0 font-weight-bold">Detail LPB #' + (siblingIndex + 2) + '</h3>' +
+                    '</div>' +
+                    '<div class="d-flex align-items-center flex-wrap lpb-workflow-actions" style="gap:8px;">' +
+                    '<button type="button" class="btn btn-primary btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="update-invoice">' +
+                    '<i class="fas fa-file-invoice mr-1"></i> Update Invoice &amp; Faktur Pajak' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-info btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="toggle-log" title="Tampilkan log aktivitas">' +
+                    '<i class="fas fa-eye"></i>' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-outline-success btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="print">' +
+                    '<i class="fas fa-print mr-1"></i> Cetak Faktur LPB' +
+                    '</button>' +
+                    '<button type="button" class="btn ' + sederhanaBtnCls + ' btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="toggle-sederhana" title="Tandai jika supplier tidak menerbitkan faktur pajak dan invoice">' +
+                    sederhanaBtnHtml +
+                    '</button>' +
+                    '<button type="button" class="btn ' + tanpaBtnCls + ' btn-sm js-sibling-action" data-id="' + escAttr(idLpb) + '" data-action="toggle-tanpa-pajak" title="Tandai jika supplier tidak menerbitkan faktur pajak">' +
+                    tanpaBtnHtml +
+                    '</button>' +
+                    splitBtnHtml +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="lpb-panel-body">' +
+                    '<div class="lpb-detail-grid">' + headerGridHtml + '</div>' +
+                    '<div class="table-responsive">' +
+                    '<table class="table table-bordered table-hover lpb-table">' +
+                    '<thead>' +
+                    '<tr>' +
+                    '<th rowspan="2">Kode Barang</th>' +
+                    '<th rowspan="2">Nama Barang</th>' +
+                    '<th class="text-center" rowspan="2">No Lot</th>' +
+                    '<th class="text-center" rowspan="2">Expired Date</th>' +
+                    '<th class="text-center" rowspan="2">Qty In</th>' +
+                    '<th class="text-center" colspan="2">Qty Satuan</th>' +
+                    '<th class="text-right" rowspan="2">Harga Satuan</th>' +
+                    '<th class="text-right" rowspan="2">DPP</th>' +
+                    '<th class="text-right" rowspan="2">DPP Nilai Lain</th>' +
+                    '<th class="text-right" rowspan="2">PPN</th>' +
+                    '<th class="text-right" rowspan="2">Total Harga</th>' +
+                    actionHeadHtml +
+                    '</tr>' +
+                    '<tr>' +
+                    '<th class="text-center">BOX</th>' +
+                    '<th class="text-center">Kg/Ltr</th>' +
+                    '</tr>' +
+                    '</thead>' +
+                    '<tbody>' + bodyRowsHtml + '</tbody>' +
+                    '</table>' +
+                    '</div>' +
+                    footerHtml +
+                    postActionHtml +
+                    '</div>' +
+                    '</div>';
+            }
+
+            function renderSameNumberSiblingDetails(activeHeader) {
+                var $tabsWrap = $('#lpbSameNumberTabsWrap');
+                var $siblingWrap = $('#lpbSiblingDetailsWrap');
+
+                if (showLpbListPanel || !activeHeader) {
+                    $tabsWrap.hide().empty();
+                    $siblingWrap.hide().empty();
+                    return;
+                }
+
+                var activeNomor = $.trim(activeHeader.nomor_lpb || '');
+                var activeId = parseInt(activeHeader.id_lpb || selectedIdLpb || 0, 10);
+                if (!activeNomor || !activeId) {
+                    $tabsWrap.hide().empty();
+                    $siblingWrap.hide().empty();
+                    return;
+                }
+
+                var sameNumberRows = $.grep(allRows || [], function(r) {
+                    return $.trim(r.nomor_lpb || '') === activeNomor;
+                });
+
+                if (sameNumberRows.length <= 1) {
+                    $tabsWrap.hide().empty();
+                    $siblingWrap.hide().empty();
+                    return;
+                }
+
+                // Render strip switcher antar bagian LPB dengan Nomor LPB yang sama
+                var tabsHtml = '<div class="alert alert-light border py-2 px-3 mb-0 d-flex align-items-center flex-wrap" style="gap:8px;">' +
+                    '<span class="small font-weight-bold text-muted mr-1"><i class="fas fa-layer-group mr-1"></i> Nomor LPB ' + escHtml(activeNomor) + ' memiliki ' + sameNumberRows.length + ' bagian:</span>';
+
+                var siblings = [];
+                $.each(sameNumberRows, function(idx, r) {
+                    var rId = parseInt(r.id_lpb || 0, 10);
+                    var isCurrent = (rId === activeId);
+                    var isTanpaPajak = parseInt(r.is_tanpa_faktur_pajak || 0, 10) === 1;
+                    var isSederhana = parseInt(r.is_faktur_pajak_sederhana || 0, 10) === 1;
+                    var hasFp = $.trim(r.kode_faktur_pajak || '') !== '' && $.trim(r.kode_faktur_pajak || '') !== '-';
+                    var tag = isTanpaPajak
+                        ? 'Tanpa Faktur Pajak'
+                        : (isSederhana ? 'FP Sederhana' : (hasFp ? ('FP: ' + r.kode_faktur_pajak) : (r.jenis_lpb || 'LPB')));
+                    var btnCls = isCurrent ? 'btn-primary' : 'btn-outline-primary';
+
+                    tabsHtml += '<button type="button" class="btn btn-xs btn-sm ' + btnCls + ' js-switch-sibling-lpb" data-id="' + escAttr(rId) + '">' +
+                        'Bagian ' + (idx + 1) + ': ' + escHtml(tag) + ' (Qty ' + escHtml(formatNumber(r.total_qty || 0)) + ')' +
+                        '</button>';
+
+                    if (!isCurrent && rId > 0) {
+                        siblings.push(rId);
+                    }
+                });
+                tabsHtml += '</div>';
+                $tabsWrap.html(tabsHtml).show();
+
+                if (!siblings.length) {
+                    $siblingWrap.hide().empty();
+                    return;
+                }
+
+                var reqSeq = ++siblingDetailSeq;
+                $siblingWrap.html('<div class="text-muted small py-2"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat tabel detail LPB pecahan lainnya...</div>').show();
+
+                var requests = $.map(siblings, function(sibId) {
+                    return $.ajax({
+                        url: '<?= base_url('ics/ajax_get_lpb_record_detail') ?>',
+                        type: 'GET',
+                        dataType: 'json',
+                        data: { id_lpb: sibId }
+                    });
+                });
+
+                $.when.apply($, requests).done(function() {
+                    if (reqSeq !== siblingDetailSeq) {
+                        return;
+                    }
+
+                    var results = requests.length === 1 ? [arguments] : Array.prototype.slice.call(arguments);
+                    var cardsHtml = '';
+                    siblingDetailCache = {};
+                    $.each(results, function(idx, resTuple) {
+                        var res = resTuple[0];
+                        if (res && res.status === 'success' && res.header) {
+                            var sibId = parseInt(res.header.id_lpb || 0, 10);
+                            if (sibId > 0) {
+                                siblingDetailCache[sibId] = res;
+                            }
+                            cardsHtml += buildSiblingDetailCardHtml(res.header, res.rows || [], idx);
+                        }
+                    });
+
+                    if (cardsHtml) {
+                        $siblingWrap.html(cardsHtml).show();
+                    } else {
+                        $siblingWrap.hide().empty();
+                    }
+                }).fail(function() {
+                    if (reqSeq === siblingDetailSeq) {
+                        $siblingWrap.hide().empty();
+                    }
+                });
+            }
+
+            $(document).on('click', '.js-switch-sibling-lpb', function() {
+                var targetId = parseInt($(this).data('id'), 10) || 0;
+                if (!targetId || targetId === selectedIdLpb) {
+                    return;
+                }
+                selectedIdLpb = targetId;
+                selectListItem(targetId);
+                loadDetail(targetId);
+            });
+
+            $(document).on('click', '.js-sibling-action', function() {
+                var targetId = parseInt($(this).data('id'), 10) || 0;
+                var action = $(this).data('action') || '';
+                var cached = siblingDetailCache[targetId];
+                if (!targetId || !cached || !cached.header) {
+                    Swal.fire('Info', 'Data LPB pecahan belum siap.', 'info');
+                    return;
+                }
+
+                // Aktifkan konteks LPB pecahan ke state global agar seluruh modal/aksi berjalan pada LPB ini
+                selectedIdLpb = targetId;
+                selectedHeader = cached.header;
+                selectedDetailRows = cached.rows || [];
+                selectedSplitInvoices = cached.split_invoices || [];
+                selectedActivityLogs = cached.logs || [];
+
+                if (action === 'update-invoice') {
+                    $('#btnUpdateInvoice').trigger('click');
+                } else if (action === 'print') {
+                    printSelectedLpb();
+                } else if (action === 'toggle-sederhana') {
+                    $('#btnToggleFakturPajakSederhana').trigger('click');
+                } else if (action === 'toggle-tanpa-pajak') {
+                    $('#btnToggleTanpaFakturPajak').trigger('click');
+                } else if (action === 'split-lpb') {
+                    $('#btnOpenSplitLpbTax').trigger('click');
+                } else if (action === 'unpost') {
+                    $('#btnPurchasingUnpostLpb').trigger('click');
+                } else if (action === 'post') {
+                    $('#btnPurchasingPostLpb').trigger('click');
+                } else if (action === 'toggle-log') {
+                    renderActivityLogs(selectedActivityLogs);
+                    $('#lpbActivityLogWrap').toggle();
+                }
+            });
+
             function loadDetail(idLpb) {
                 if (!idLpb) {
                     resetDetailState();
@@ -1982,6 +2405,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         $('#lpbDetailLoading').hide();
                         $('#lpbDetailEmpty').hide();
                         $('#lpbDetailWrap').show();
+                        renderSameNumberSiblingDetails(selectedHeader);
                     },
                     error: function() {
                         resetDetailState();
@@ -2083,6 +2507,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                         $('#lpbDetailLoading').hide();
                         $('#lpbDetailEmpty').hide();
                         $('#lpbDetailWrap').show();
+                        renderSameNumberSiblingDetails(selectedHeader);
                     },
                     error: function() {
                         $('#lpbDetailLoading').hide();
@@ -2710,9 +3135,15 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     }
                 });
                 var allLockedAndComplete = hasSaved && !hasRemainingQty;
-                $('#btnAddSplitInvoice').toggle(!allLockedAndComplete);
+                var isPengakuanSaatTerjual = $.trim((selectedHeader || {}).pengakuan_konsinyasi || '').toUpperCase() === 'SAAT_TERJUAL';
+                $('#btnAddSplitInvoice').toggle(!allLockedAndComplete && !isPengakuanSaatTerjual);
                 $('#btnSubmitSplitInvoice').toggle(!allLockedAndComplete);
-                if (allLockedAndComplete) {
+                if (isPengakuanSaatTerjual) {
+                    $('#splitInvoiceValidationInfo')
+                        .removeClass('text-danger text-muted')
+                        .addClass('text-warning')
+                        .text('Supplier menggunakan pengakuan konsinyasi SAAT TERJUAL. Penambahan invoice & faktur pajak dilakukan melalui halaman Riwayat Barang Lunas.');
+                } else if (allLockedAndComplete) {
                     $('#splitInvoiceValidationInfo')
                         .removeClass('text-danger text-warning')
                         .addClass('text-muted')
@@ -3214,6 +3645,10 @@ $isAdmlpbUser = !empty($is_admlpb_user);
             });
 
             $('#btnAddSplitInvoice').on('click', function() {
+                if ($.trim((selectedHeader || {}).pengakuan_konsinyasi || '').toUpperCase() === 'SAAT_TERJUAL') {
+                    Swal.fire('Info', 'Untuk supplier dengan pengakuan konsinyasi SAAT TERJUAL, update invoice & faktur pajak dilakukan melalui halaman Riwayat Barang Lunas.', 'info');
+                    return;
+                }
                 addSplitInvoiceRow();
             });
 
@@ -3603,6 +4038,288 @@ $isAdmlpbUser = !empty($is_admlpb_user);
                     complete: function() {
                         isSubmittingLpbPrice = false;
                         $('#btnSubmitLpbPrice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Harga & Qty');
+                    }
+                });
+            });
+
+            var isSubmittingSplitLpbTax = false;
+            var splitLpbSourceDetails = [];
+
+            function buildSplitGroupCardHtml(groupIdx, details, initialQtyMap, isFoc) {
+                var rowsHtml = '';
+                $.each(details || [], function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb, 10) || 0;
+                    var qtyAwal = parseFloat(row.qty_diterima) || 0;
+                    var rawVal = (initialQtyMap && typeof initialQtyMap[idDetail] !== 'undefined') ? initialQtyMap[idDetail] : '';
+                    var inputVal = (rawVal !== '' && rawVal !== null && parseFloat(rawVal) > 0) ? rawVal : '';
+
+                    rowsHtml +=
+                        '<tr data-id-detail="' + escAttr(idDetail) + '">' +
+                        '<td>' +
+                        '<span class="font-weight-bold">' + escHtml(row.kd_barang || '-') + '</span> - ' +
+                        '<span class="text-muted small">' + escHtml(row.nama_barang || '-') + '</span>' +
+                        '</td>' +
+                        '<td class="text-center small">' + escHtml(row.no_lot || '-') + '</td>' +
+                        '<td class="text-right">' + formatNumber(qtyAwal) + '</td>' +
+                        '<td>' +
+                        '<input type="number" step="any" min="0" max="' + qtyAwal + '" class="form-control form-control-sm text-right js-split-group-qty" data-id-detail="' + escAttr(idDetail) + '" placeholder="0" value="' + escAttr(inputVal) + '">' +
+                        '</td>' +
+                        '</tr>';
+                });
+
+                var removeBtnHtml = groupIdx >= 2
+                    ? '<button type="button" class="btn btn-outline-danger btn-xs btn-sm js-remove-split-group" title="Hapus baris LPB ini"><i class="fas fa-times"></i></button>'
+                    : '';
+
+                return '' +
+                    '<div class="card border mb-2 js-split-lpb-group-card">' +
+                    '<div class="card-header py-2 px-3 bg-light d-flex justify-content-between align-items-center">' +
+                    '<div>' +
+                    '<strong class="js-split-group-title">LPB #' + (groupIdx + 1) + '</strong>' +
+                    '<span class="badge badge-info ml-2 js-split-group-total-badge">Total Qty: 0</span>' +
+                    '</div>' +
+                    '<div class="d-flex align-items-center" style="gap:12px;">' +
+                    '<label class="mb-0 small font-weight-normal"><input type="checkbox" class="js-split-group-foc mr-1" ' + (isFoc ? 'checked' : '') + '> FOC (Rp 0)</label>' +
+                    removeBtnHtml +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="card-body p-2">' +
+                    '<div class="table-responsive">' +
+                    '<table class="table table-bordered table-sm mb-0">' +
+                    '<thead class="thead-light">' +
+                    '<tr>' +
+                    '<th>Barang</th>' +
+                    '<th class="text-center" style="width:120px;">No Lot</th>' +
+                    '<th class="text-right" style="width:110px;">Qty Awal</th>' +
+                    '<th class="text-right" style="width:160px;">Qty Dialokasikan</th>' +
+                    '</tr>' +
+                    '</thead>' +
+                    '<tbody>' + rowsHtml + '</tbody>' +
+                    '</table>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            }
+
+            function reindexSplitLpbGroups() {
+                var $cards = $('#splitLpbGroupsContainer .js-split-lpb-group-card');
+                $('#splitLpbGroupCountLabel').text($cards.length);
+                $cards.each(function(idx) {
+                    $(this).find('.js-split-group-title').text('LPB #' + (idx + 1));
+                });
+            }
+
+            function updateSplitLpbTaxTotals() {
+                var allocatedByDetail = {};
+
+                $('#splitLpbGroupsContainer .js-split-lpb-group-card').each(function() {
+                    var groupTotal = 0;
+                    $(this).find('.js-split-group-qty').each(function() {
+                        var idDetail = parseInt($(this).data('id-detail'), 10) || 0;
+                        var q = parseFloat($(this).val()) || 0;
+                        if (q < 0) {
+                            q = 0;
+                        }
+                        groupTotal += q;
+                        allocatedByDetail[idDetail] = (allocatedByDetail[idDetail] || 0) + q;
+                    });
+                    $(this).find('.js-split-group-total-badge').text('Total Qty: ' + formatNumber(groupTotal));
+                });
+
+                var $summaryBody = $('#splitLpbSummaryBody');
+                $summaryBody.empty();
+
+                $.each(splitLpbSourceDetails || [], function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb, 10) || 0;
+                    var qtyAwal = parseFloat(row.qty_diterima) || 0;
+                    var totalAlloc = allocatedByDetail[idDetail] || 0;
+                    var sisa = parseFloat((qtyAwal - totalAlloc).toFixed(4));
+                    var sisaCls = Math.abs(sisa) <= 0.0001 ? 'text-success font-weight-bold' : 'text-danger font-weight-bold';
+
+                    $summaryBody.append(
+                        '<tr>' +
+                        '<td><span class="font-weight-bold">' + escHtml(row.kd_barang || '-') + '</span> <span class="text-muted small">(' + escHtml(row.nama_barang || '-') + ')</span></td>' +
+                        '<td>Lot: <strong>' + escHtml(row.no_lot || '-') + '</strong> <span class="text-muted small">| Exp: ' + escHtml(row.expired_date || '-') + '</span></td>' +
+                        '<td class="text-right font-weight-bold">' + formatNumber(qtyAwal) + '</td>' +
+                        '<td class="text-right">' + formatNumber(totalAlloc) + '</td>' +
+                        '<td class="text-right ' + sisaCls + '">' + formatNumber(sisa) + '</td>' +
+                        '</tr>'
+                    );
+                });
+            }
+
+            $('#btnOpenSplitLpbTax').on('click', function() {
+                var activeIdLpb = selectedIdLpb || (selectedHeader && selectedHeader.id_lpb ? parseInt(selectedHeader.id_lpb, 10) : 0);
+                if (!selectedHeader || !activeIdLpb) {
+                    Swal.fire('Info', 'Silakan pilih LPB terlebih dahulu.', 'info');
+                    return;
+                }
+
+                if (!isSelectedLpbUnpost()) {
+                    Swal.fire('Perlu UNPOST', 'Pecah LPB hanya dapat dilakukan saat LPB berstatus UNPOST agar jurnal akuntansi dapat diperbarui dengan aman. Silakan klik UNPOST terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                if (!selectedDetailRows || !selectedDetailRows.length) {
+                    Swal.fire('Info', 'Detail barang LPB kosong.', 'info');
+                    return;
+                }
+
+                splitLpbSourceDetails = selectedDetailRows.slice();
+                $('#splitLpbTaxIdLpb').val(activeIdLpb);
+                $('#splitLpbTaxNomorText').text(selectedHeader.nomor_lpb || ('#' + activeIdLpb));
+                $('#splitLpbTaxKeterangan').val('');
+
+                var firstMap = {};
+                var zeroMap = {};
+                $.each(splitLpbSourceDetails, function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb, 10) || 0;
+                    firstMap[idDetail] = parseFloat(row.qty_diterima) || 0;
+                    zeroMap[idDetail] = 0;
+                });
+
+                var $container = $('#splitLpbGroupsContainer');
+                $container.empty();
+                $container.append(buildSplitGroupCardHtml(0, splitLpbSourceDetails, firstMap, false));
+                $container.append(buildSplitGroupCardHtml(1, splitLpbSourceDetails, zeroMap, false));
+
+                reindexSplitLpbGroups();
+                updateSplitLpbTaxTotals();
+                $('#modalSplitLpbTax').modal('show');
+            });
+
+            $('#btnAddSplitLpbGroup').on('click', function() {
+                var $container = $('#splitLpbGroupsContainer');
+                var nextIdx = $container.find('.js-split-lpb-group-card').length;
+                var zeroMap = {};
+                $.each(splitLpbSourceDetails, function(_, row) {
+                    zeroMap[parseInt(row.id_detail_lpb, 10) || 0] = 0;
+                });
+                $container.append(buildSplitGroupCardHtml(nextIdx, splitLpbSourceDetails, zeroMap, false));
+                reindexSplitLpbGroups();
+                updateSplitLpbTaxTotals();
+            });
+
+            $(document).on('click', '.js-remove-split-group', function() {
+                var $cards = $('#splitLpbGroupsContainer .js-split-lpb-group-card');
+                if ($cards.length <= 2) {
+                    Swal.fire('Info', 'Minimal harus ada 2 baris LPB.', 'info');
+                    return;
+                }
+                $(this).closest('.js-split-lpb-group-card').remove();
+                reindexSplitLpbGroups();
+                updateSplitLpbTaxTotals();
+            });
+
+            $(document).on('input change', '.js-split-group-qty', function() {
+                var raw = $.trim($(this).val());
+                if (raw !== '') {
+                    var val = parseFloat(raw);
+                    if (isNaN(val) || val < 0) {
+                        $(this).val('');
+                    }
+                }
+                updateSplitLpbTaxTotals();
+            });
+
+            $('#formSplitLpbTax').on('submit', function(e) {
+                e.preventDefault();
+                if (isSubmittingSplitLpbTax) {
+                    return;
+                }
+
+                var groups = [];
+                var sumByDetail = {};
+                var validationErr = '';
+
+                $('#splitLpbGroupsContainer .js-split-lpb-group-card').each(function(gIdx) {
+                    var groupDetails = [];
+                    var groupTotal = 0;
+                    var isFoc = $(this).find('.js-split-group-foc').is(':checked') ? 1 : 0;
+
+                    $(this).find('.js-split-group-qty').each(function() {
+                        var idDetail = parseInt($(this).data('id-detail'), 10) || 0;
+                        var qty = parseFloat($(this).val()) || 0;
+                        if (qty < 0) {
+                            validationErr = 'Qty pada LPB #' + (gIdx + 1) + ' tidak boleh minus.';
+                            return false;
+                        }
+                        groupTotal += qty;
+                        sumByDetail[idDetail] = (sumByDetail[idDetail] || 0) + qty;
+                        groupDetails.push({
+                            id_detail_lpb: idDetail,
+                            qty: qty
+                        });
+                    });
+
+                    if (validationErr) {
+                        return false;
+                    }
+
+                    if (groupTotal <= 0) {
+                        validationErr = 'LPB #' + (gIdx + 1) + ' harus memiliki total qty lebih dari 0.';
+                        return false;
+                    }
+
+                    groups.push({
+                        is_foc: isFoc,
+                        details: groupDetails
+                    });
+                });
+
+                if (validationErr) {
+                    Swal.fire('Validasi Pecah LPB', validationErr, 'warning');
+                    return;
+                }
+
+                if (groups.length < 2) {
+                    Swal.fire('Validasi Pecah LPB', 'Minimal harus ada 2 baris LPB.', 'warning');
+                    return;
+                }
+
+                for (var i = 0; i < splitLpbSourceDetails.length; i++) {
+                    var src = splitLpbSourceDetails[i];
+                    var did = parseInt(src.id_detail_lpb, 10) || 0;
+                    var qtyAwal = parseFloat(src.qty_diterima) || 0;
+                    var totalAlloc = sumByDetail[did] || 0;
+                    if (Math.abs(totalAlloc - qtyAwal) > 0.0001) {
+                        Swal.fire('Validasi Pecah LPB', 'Total alokasi barang ' + (src.kd_barang || '') + ' (' + formatNumber(totalAlloc) + ') harus sama dengan Qty Awal (' + formatNumber(qtyAwal) + ').', 'warning');
+                        return;
+                    }
+                }
+
+                isSubmittingSplitLpbTax = true;
+                $('#btnSubmitSplitLpbTax').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_split_lpb_by_tax') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: $('#splitLpbTaxIdLpb').val(),
+                        non_tax_jenis_lpb: '',
+                        keterangan: $('#splitLpbTaxKeterangan').val(),
+                        groups: JSON.stringify(groups)
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Pecah LPB gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalSplitLpbTax').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'LPB berhasil dipecah menjadi 2 LPB.', 'success');
+                        loadList({ preserveSelection: true });
+                        if (selectedIdLpb) {
+                            loadDetail(selectedIdLpb);
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan pecah LPB.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingSplitLpbTax = false;
+                        $('#btnSubmitSplitLpbTax').prop('disabled', false).html('<i class="fas fa-code-branch mr-1"></i> Simpan Pecah LPB');
                     }
                 });
             });

@@ -82,7 +82,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.', 'faktur_penjualan'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.', 'katalog_sales'),
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.', 'sales_report'),
-                    $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.', 'stok_online'),
+                    $this->menu('Stock Gudang', 'stock', 'fas fa-box-open', 'teal', 'Cek stock gudang yang dipakai kanal sales.', 'stok_online'),
                     $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.', 'pengajuan_od'),
                 ),
             ),
@@ -812,7 +812,7 @@ class M_Dashboard extends CI_Model
                 'controller_prefixes' => array('sales/c_sales/'),
             ),
             'stok_online' => array(
-                'title' => 'Stok Online',
+                'title' => 'Stock Gudang',
                 'uri_prefixes' => array('stock'),
                 'controller_prefixes' => array('stock/c_stock/'),
             ),

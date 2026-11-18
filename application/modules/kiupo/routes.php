@@ -303,6 +303,7 @@ $route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_histo
 $route['ics/ajax_history_diskon']                   = 'logistik/C_Ics/ajax_history_diskon';
 $route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
 $route['ics/ajax_split_lpb_detail']                 = 'logistik/C_Ics/ajax_split_lpb_detail';
+$route['ics/ajax_split_lpb_by_tax']                 = 'logistik/C_Ics/ajax_split_lpb_by_tax';
 $route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
 $route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';
 $route['ics/ajax_save_tmp_po_received']             = 'logistik/C_Ics/ajax_save_tmp_po_received';

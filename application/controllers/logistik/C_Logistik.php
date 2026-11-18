@@ -1341,6 +1341,11 @@ class C_Logistik extends CI_Controller
             redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));
             return;
         }
+        if (!$is_additional_loading && $plan['tgl_pengiriman'] < date('Y-m-d')) {
+            $this->session->set_flashdata('msg', 'Tanggal pengiriman tidak boleh mundur dari tanggal hari ini.');
+            redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));
+            return;
+        }
         $this->M_Logistik->save_so_siap_loading_plan_by_rute($kd_rute, $plan);
 
         $result = $this->M_Logistik->mark_so_siap_loading_route_ready_for_faktur(

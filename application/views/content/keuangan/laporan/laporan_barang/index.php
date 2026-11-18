@@ -17,6 +17,12 @@ $menus = [
         'icon'  => 'fas fa-file-invoice-dollar',
         'url'   => base_url('laporan/barang/kartu-stock-pajak'),
         'desc'  => 'Laporan mutasi kartu stok barang pajak (BKP/BKPS): penjualan reguler, test market lunas, dan faktur pecahan H.',
+    ],
+    [
+        'title' => 'Kartu Stok A',
+        'icon'  => 'fas fa-box-open',
+        'url'   => base_url('laporan/barang/kartu-stock-a'),
+        'desc'  => 'Laporan mutasi kartu stok barang dengan kode barang A, Z, X (selain kode Q dan C).',
     ]
 ];
 $back_url   = base_url('laporan');

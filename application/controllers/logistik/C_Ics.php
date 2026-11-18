@@ -2890,6 +2890,61 @@ class C_Ics extends CI_Controller
         ]);
     }
 
+    /**
+     * Endpoint untuk memecah 1 LPB yang sudah tersimpan (status UNPOST) menjadi 2 atau lebih LPB
+     * dengan nomor LPB yang sama sesuai alokasi baris pecahan dari user.
+     */
+    public function ajax_split_lpb_by_tax()
+    {
+        if ($this->reject_non_admin_po_ajax()) {
+            return;
+        }
+
+        $idLpb = (int) $this->input->post('id_lpb', TRUE);
+        $rawGroups = (string) $this->input->post('groups', FALSE);
+        $groups = $rawGroups !== '' ? json_decode($rawGroups, TRUE) : [];
+        $rawAllocations = (string) $this->input->post('allocations', FALSE);
+        $allocations = $rawAllocations !== '' ? json_decode($rawAllocations, TRUE) : [];
+        $nonTaxJenisLpb = trim((string) $this->input->post('non_tax_jenis_lpb', TRUE));
+        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+
+        if ($idLpb <= 0 || ((!is_array($groups) || count($groups) < 2) && (!is_array($allocations) || empty($allocations)))) {
+            $this->json_response(['status' => 'error', 'message' => 'Data pemecahan LPB belum lengkap (minimal 2 LPB).', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->split_lpb_by_tax([
+            'id_lpb'            => $idLpb,
+            'groups'            => $groups,
+            'allocations'       => $allocations,
+            'non_tax_jenis_lpb' => $nonTaxJenisLpb,
+            'keterangan'        => $keterangan,
+            'dilakukan_oleh'    => $this->active_user_name()
+        ]);
+
+        if (empty($saved['status']) || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $message = is_array($saved) && !empty($saved['message'])
+                ? $saved['message']
+                : 'Pecah LPB gagal disimpan.';
+            $this->json_response(['status' => 'error', 'message' => $message, 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $totalLpb = (int) ($saved['total_lpb'] ?? 2);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'LPB berhasil dipecah menjadi ' . $totalLpb . ' LPB dengan Nomor LPB yang sama (' . ($saved['nomor_lpb'] ?? '-') . '). Silakan tentukan faktur pajak dan Posting Data masing-masing LPB.',
+            'data'    => $saved,
+            'html'    => ''
+        ]);
+    }
+
     public function ajax_update_faktur_pajak()
     {
         if ($this->reject_non_admin_po_ajax()) {
@@ -3818,7 +3873,120 @@ class C_Ics extends CI_Controller
                 return;
             }
 
+            $splitTaxMode = (int) $this->input->post('split_tax_mode', TRUE);
+            $splitNonTaxJenisLpb = trim((string) $this->input->post('split_non_tax_jenis_lpb', TRUE));
+            $rawSplitAllocations = (string) $this->input->post('split_allocations', FALSE);
+
             $this->M_Logistik->ensure_lpb_workflow_columns();
+
+            if ($splitTaxMode === 1) {
+                // Validasi dan bangun baris pecahan untuk 2 LPB dengan nomor LPB yang sama
+                $splitAllocations = json_decode($rawSplitAllocations, TRUE);
+                $splitBuild = $this->_build_split_tax_lpb_rows($tmpRows, $splitAllocations);
+                if (empty($splitBuild['status'])) {
+                    echo json_encode([
+                        'status'  => 'error',
+                        'step'    => 'validate_split',
+                        'message' => $splitBuild['message'] ?? 'Data pemecahan LPB tidak valid.'
+                    ]);
+                    return;
+                }
+
+                $taxRows = $splitBuild['tax_rows'];
+                $nonTaxRows = $splitBuild['non_tax_rows'];
+                $sharedNomorLpb = $this->M_Logistik->generate_lpb_number($payload['jenis_lpb']);
+                $baseKeterangan = trim((string) ($payload['keterangan'] ?? ''));
+
+                $taxPayload = $payload;
+                $taxPayload['nomor_lpb_override'] = $sharedNomorLpb;
+                $taxPayload['keterangan'] = $baseKeterangan !== ''
+                    ? $baseKeterangan . ' [Ada Faktur Pajak]'
+                    : '[Ada Faktur Pajak]';
+
+                $nonTaxPayload = $payload;
+                $nonTaxPayload['nomor_lpb_override'] = $sharedNomorLpb;
+                if ($splitNonTaxJenisLpb !== '') {
+                    $nonTaxPayload['jenis_lpb'] = $splitNonTaxJenisLpb;
+                }
+                $nonTaxPayload['keterangan'] = $baseKeterangan !== ''
+                    ? $baseKeterangan . ' [Tanpa Faktur Pajak]'
+                    : '[Tanpa Faktur Pajak]';
+
+                $this->db->trans_begin();
+
+                // Simpan LPB 1 (Ada Faktur Pajak) tanpa menghapus draft dulu
+                $idLpbTax = $this->M_Logistik->create_lpb_from_tmp($taxPayload, $taxRows, FALSE);
+                if (!$idLpbTax || $this->db->trans_status() === FALSE) {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => 'error',
+                        'step'    => 'save_final_tax',
+                        'message' => 'Gagal menyimpan LPB (Ada Faktur Pajak).'
+                    ]);
+                    return;
+                }
+
+                // Simpan LPB 2 (Tanpa Faktur Pajak) dan hapus semua baris draft terkait
+                $idLpbNonTax = $this->M_Logistik->create_lpb_from_tmp($nonTaxPayload, $nonTaxRows, FALSE);
+                if (!$idLpbNonTax || $this->db->trans_status() === FALSE) {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => 'error',
+                        'step'    => 'save_final_non_tax',
+                        'message' => 'Gagal menyimpan LPB (Tanpa Faktur Pajak).'
+                    ]);
+                    return;
+                }
+
+                // Bersihkan seluruh baris draft temporary yang sudah diproses menjadi 2 LPB
+                $allTmpIds = array_values(array_filter(array_column($tmpRows, 'id_tmp_recieved')));
+                if (!empty($allTmpIds)) {
+                    $this->db->where('kd_suplier', $payload['kd_suplier']);
+                    $this->db->where_in('id_tmp_recieved', $allTmpIds);
+                    $this->db->delete('tb_tmp_po_received');
+                }
+
+                $updatedPrePoStatus = $this->M_Logistik->update_pre_po_status_by_kd_po($payload['kd_po'], 2);
+                if (!$updatedPrePoStatus || $this->db->trans_status() === FALSE) {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => 'error',
+                        'step'    => 'update_pre_po_status',
+                        'message' => 'LPB berhasil dipecah, tetapi status PO gagal diperbarui.'
+                    ]);
+                    return;
+                }
+
+                $this->db->trans_commit();
+
+                // Posting akuntansi untuk masing-masing LPB secara terpisah
+                $accountingResult = [];
+                try {
+                    $this->load->library('Accounting_source_service');
+                    $userId = (int)$this->session->userdata('id') ?: null;
+                    $accountingResult['tax'] = $this->accounting_source_service->post_goods_receipt($idLpbTax, $userId);
+                    $accountingResult['non_tax'] = $this->accounting_source_service->post_goods_receipt($idLpbNonTax, $userId);
+                } catch (Throwable $eAcc) {
+                    $accountingResult = ['status' => 'error', 'message' => $eAcc->getMessage()];
+                }
+
+                echo json_encode([
+                    'status'  => 'success',
+                    'step'    => 'save_final_split',
+                    'message' => 'Draft berhasil dipecah dan disimpan menjadi 2 LPB (Ada Faktur Pajak & Tanpa Faktur Pajak) dengan Nomor LPB: ' . $sharedNomorLpb,
+                    'accounting' => $accountingResult,
+                    'debug'   => [
+                        'nomor_lpb'      => $sharedNomorLpb,
+                        'id_lpb_tax'     => $idLpbTax,
+                        'id_lpb_non_tax' => $idLpbNonTax,
+                        'no_po'          => $payload['no_po'],
+                        'kd_po'          => $payload['kd_po'],
+                        'total_detail'   => count($tmpRows)
+                    ]
+                ]);
+                return;
+            }
+
             $this->db->trans_begin();
             $idLpb = $this->M_Logistik->create_lpb_from_tmp($payload, $tmpRows);
 
@@ -3879,6 +4047,104 @@ class C_Ics extends CI_Controller
                 'message' => 'Terjadi kesalahan sistem saat menyimpan LPB final: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Memecah baris draft temporary penerimaan menjadi dua kelompok LPB:
+     * kelompok ada faktur pajak dan kelompok tanpa faktur pajak (opsional FOC).
+     */
+    private function _build_split_tax_lpb_rows(array $tmpRows, $splitAllocations)
+    {
+        if (!is_array($splitAllocations) || empty($splitAllocations)) {
+            return ['status' => FALSE, 'message' => 'Data alokasi pemecahan LPB belum diisi.'];
+        }
+
+        $allocationMap = [];
+        foreach ($splitAllocations as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $idTmp = (int) ($item['id_tmp_recieved'] ?? $item['id_tmp_received'] ?? 0);
+            if ($idTmp > 0) {
+                $allocationMap[$idTmp] = $item;
+            }
+        }
+
+        $tolerance = 0.0001;
+        $taxRows = [];
+        $nonTaxRows = [];
+
+        foreach ($tmpRows as $row) {
+            $idTmp = (int) ($row['id_tmp_recieved'] ?? 0);
+            $qtyDraft = (float) ($row['qty_diterima'] ?? 0);
+
+            if (!isset($allocationMap[$idTmp])) {
+                return [
+                    'status'  => FALSE,
+                    'message' => 'Semua baris draft wajib memiliki alokasi pemecahan LPB (Pajak & Non-Pajak).'
+                ];
+            }
+
+            $alloc = $allocationMap[$idTmp];
+            $qtyTax = (float) ($alloc['qty_tax'] ?? 0);
+            $qtyNonTax = (float) ($alloc['qty_non_tax'] ?? 0);
+            $isFoc = !empty($alloc['is_foc']);
+
+            if ($qtyTax < 0 || $qtyNonTax < 0) {
+                return [
+                    'status'  => FALSE,
+                    'message' => 'Qty pecahan LPB tidak boleh bernilai negatif.'
+                ];
+            }
+
+            if (abs(($qtyTax + $qtyNonTax) - $qtyDraft) > $tolerance) {
+                return [
+                    'status'  => FALSE,
+                    'message' => 'Jumlah Qty Ada Faktur Pajak + Qty Tanpa Faktur Pajak untuk barang ' . ($row['kd_barang'] ?? '') . ' harus sama dengan Qty Draft (' . $qtyDraft . ').'
+                ];
+            }
+
+            $hargaSatuanKecil = (float) ($row['harga_satuan_kecil'] ?? 0);
+            $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
+            if ($hargaSatuanKecil <= 0 && $qtyDraft > 0 && !empty($row['total_harga'])) {
+                $hargaSatuanKecil = (float) $row['total_harga'] / $qtyDraft;
+            }
+
+            if ($qtyTax > $tolerance) {
+                $taxRow = $row;
+                $taxRow['qty_diterima'] = $qtyTax;
+                $taxRow['total_harga'] = $hargaSatuanKecil > 0 ? ($qtyTax * $hargaSatuanKecil) : 0;
+                $taxRows[] = $taxRow;
+            }
+
+            if ($qtyNonTax > $tolerance) {
+                $nonTaxRow = $row;
+                $nonTaxRow['qty_diterima'] = $qtyNonTax;
+                if ($isFoc) {
+                    $nonTaxRow['harga_satuan'] = 0;
+                    $nonTaxRow['harga_satuan_kecil'] = 0;
+                    $nonTaxRow['total_harga'] = 0;
+                } else {
+                    $nonTaxRow['harga_satuan'] = $hargaSatuan;
+                    $nonTaxRow['harga_satuan_kecil'] = $hargaSatuanKecil;
+                    $nonTaxRow['total_harga'] = $hargaSatuanKecil > 0 ? ($qtyNonTax * $hargaSatuanKecil) : 0;
+                }
+                $nonTaxRows[] = $nonTaxRow;
+            }
+        }
+
+        if (empty($taxRows) || empty($nonTaxRows)) {
+            return [
+                'status'  => FALSE,
+                'message' => 'Untuk memecah menjadi 2 LPB, masing-masing kelompok (Ada Faktur Pajak dan Tanpa Faktur Pajak) harus memiliki minimal 1 barang dengan qty lebih dari 0.'
+            ];
+        }
+
+        return [
+            'status'       => TRUE,
+            'tax_rows'     => $taxRows,
+            'non_tax_rows' => $nonTaxRows
+        ];
     }
 
     public function simpan_opname()

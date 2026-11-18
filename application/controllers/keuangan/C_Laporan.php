@@ -100,6 +100,25 @@ class C_Laporan extends CI_Controller
     public function jurnal_penjualan_report()
     {
         $data['page_title'] = 'KARISMA - LAPORAN JURNAL PENJUALAN';
+        $data['page_heading'] = 'Jurnal - Penjualan';
+        $data['report_title'] = 'Jurnal Penjualan';
+        $data['report_endpoint'] = base_url('jurnal/sales-report-data');
+        $data['empty_message'] = 'Data jurnal penjualan tidak ditemukan pada periode ini.';
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/jurnal_penjualan_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Halaman Laporan Jurnal - Potongan Penjualan.
+     */
+    public function jurnal_potongan_report()
+    {
+        $data['page_title'] = 'KARISMA - LAPORAN JURNAL POTONGAN PENJUALAN';
+        $data['page_heading'] = 'Jurnal - Potongan Penjualan';
+        $data['report_title'] = 'Jurnal Potongan Penjualan';
+        $data['report_endpoint'] = base_url('jurnal/sales-discount-report-data');
+        $data['empty_message'] = 'Data jurnal potongan penjualan tidak ditemukan pada periode ini.';
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/jurnal_penjualan_report.php', $data);
         $this->load->view('partial/main/footergdg.php');
@@ -119,6 +138,34 @@ class C_Laporan extends CI_Controller
         $data['products'] = $this->db->select('kode_barang, nama_barang')
                                      ->from('tbpo_barang')
                                      ->where('is_active', 'T')
+                                     ->get()->result_array();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_barang/kartu_stock_gudang.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Halaman Laporan Kartu Stok A (khusus barang dengan awalan kode selain Q dan C, seperti A, Z, X).
+     */
+    public function kartu_stock_a_report()
+    {
+        $data['page_title'] = 'KARISMA - KARTU STOK A';
+        $data['report_title'] = 'Kartu Stok A';
+        $data['report_data_url'] = base_url('laporan/barang/kartu-stock-a-data');
+
+        $data['warehouses'] = $this->db->get_where('tb_gudang', ['is_active' => 1])->result_array();
+
+        $data['groups'] = $this->db->select('NOINDEX as id, DESKRIPSI as kelompok')
+                                   ->from('tbkeu_kelompok_dagang')
+                                   ->where('NOINDEX >', 0)
+                                   ->get()->result_array();
+
+        $data['products'] = $this->db->select('kode_barang, nama_barang')
+                                     ->from('tbpo_barang')
+                                     ->where('is_active', 'T')
+                                     ->where("UPPER(LEFT(TRIM(kode_barang), 1)) NOT IN ('Q', 'C')", null, false)
+                                     ->order_by('kode_barang', 'ASC')
                                      ->get()->result_array();
 
         $this->load->view('partial/main/header.php', $data);
@@ -493,6 +540,19 @@ class C_Laporan extends CI_Controller
 
     public function kartu_stock_gudang_data()
     {
+        return $this->_render_kartu_stock_gudang_data('');
+    }
+
+    /**
+     * Endpoint data Kartu Stok A: hanya barang dengan awalan kode selain Q dan C (A, Z, X, dll).
+     */
+    public function kartu_stock_a_data()
+    {
+        return $this->_render_kartu_stock_gudang_data(" AND UPPER(LEFT(TRIM(b.kode_barang), 1)) NOT IN ('Q', 'C')");
+    }
+
+    private function _render_kartu_stock_gudang_data($extraProdFilter = '')
+    {
         $kd_barang = $this->input->post('kd_barang', true);
         $kelompok_barang = $this->input->post('kelompok_barang', true);
         $id_gudang = $this->input->post('id_gudang', true);
@@ -512,7 +572,7 @@ class C_Laporan extends CI_Controller
         $wh_target_id = ($id_gudang && $id_gudang !== 'all') ? (int)$id_gudang : null;
 
         // Filter produk dan kelompok untuk klausul WHERE
-        $prod_filter_clause = "";
+        $prod_filter_clause = (string) $extraProdFilter;
         if ($kd_barang && $kd_barang !== 'all') {
             $prod_filter_clause .= " AND b.kode_barang = " . $this->db->escape($kd_barang);
         }

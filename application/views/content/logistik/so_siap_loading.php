@@ -500,7 +500,7 @@
                                                     <div class="col-md-3">
                                                         <div class="form-group">
                                                             <label for="tgl_isi">Tanggal Pengiriman</label>
-                                                            <input type="date" class="form-control form-control-sm" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>" <?= $is_additional_loading ? 'readonly' : '' ?>>
+                                                            <input type="date" class="form-control form-control-sm" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>" <?= $is_additional_loading ? 'readonly' : 'min="' . date('Y-m-d') . '"' ?>>
                                                         </div>
                                                     </div>
                                                     <div class="col-md-3">
@@ -791,9 +791,15 @@ $(document).ready(function () {
         var luar = isExpedisiLuar();
 
         resetFieldBorder();
-        if (!$("#tgl_isi").val()) {
+        var tglVal = $("#tgl_isi").val();
+        var minDateToday = "<?= date('Y-m-d') ?>";
+        if (!tglVal) {
             $("#tgl_isi").css("border", "2px solid red");
             valid = false;
+        } else if (!$("#tgl_isi").prop("readonly") && tglVal < minDateToday) {
+            $("#tgl_isi").css("border", "2px solid red");
+            alert("Tanggal pengiriman tidak boleh mundur dari tanggal hari ini.");
+            return false;
         }
         if (!getDriverValue()) {
             $(luar ? "#driver_luar_isi" : "#driver_isi").css("border", "2px solid red");

@@ -725,7 +725,7 @@ class M_Journal extends CI_Model
             j.nomor_jurnal,
             j.tanggal_transaksi,
             j.source_no AS referensi,
-            COALESCE(NULLIF(j.source_id, ''), j.source_no) AS no_faktur,
+            COALESCE(NULLIF(j.source_no, ''), NULLIF(j.source_id, ''), j.nomor_jurnal) AS no_faktur,
             j.keterangan,
             j.total_debit AS nilai,
             j.status,
@@ -1446,37 +1446,74 @@ class M_Journal extends CI_Model
         return true;
     }
 
-    public function accounting_sales_journal_report($start_date = '', $end_date = '')
+    public function accounting_sales_journal_report($start_date = '', $end_date = '', $keteranganJurnal = '', $nomorJurnal = '')
     {
         if (!$this->accounting_journal_schema_ready()) {
             return [];
         }
 
-        // Fetch headers
+        // Fetch headers (faktur reguler/Z induk & realisasi konsinyasi yang akan digabung ke faktur induk)
         $this->db->select("
             j.id_jurnal,
             j.nomor_jurnal,
             j.tanggal_transaksi,
+            j.source_type,
+            j.posting_event,
             j.source_no AS referensi,
-            COALESCE(NULLIF(j.source_id, ''), j.source_no) AS no_faktur,
+            COALESCE(NULLIF(j.source_no, ''), NULLIF(j.source_id, ''), j.nomor_jurnal) AS no_faktur,
             j.keterangan,
             j.total_debit AS nilai,
             j.status,
             COALESCE(f.no_so, '') AS no_so,
             COALESCE(f.customer_name, '') AS pelanggan,
+            COALESCE(f.tanggal_faktur, j.tanggal_transaksi) AS tanggal_faktur_induk,
             'IDR' AS kurs
         ", false);
         $this->db->from('tbkeu_jurnal j');
-        $this->db->join('tbso_faktur_penjualan f', 'j.source_module = "SALES" AND (f.no_faktur = j.source_id OR f.no_faktur = j.source_no)', 'left');
+        $this->db->join(
+            'tbso_faktur_penjualan f',
+            "j.source_module = 'SALES' AND f.no_faktur = REGEXP_REPLACE(COALESCE(NULLIF(j.source_no, ''), j.source_id), '-[0-9]+$', '')",
+            'left',
+            false
+        );
         $this->db->where('j.source_module', 'SALES');
+        // Kecualikan faktur pecahan H dan faktur dibatalkan
+        $this->db->where("UPPER(LEFT(TRIM(COALESCE(j.source_no, '')), 1)) !=", 'H');
         $this->db->group_start();
-        $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
-        $this->db->or_where('j.source_type', 'FAKTUR_PENJUALAN_KONSINYASI');
+            // Faktur induk reguler/Z (termasuk Z yang berstatus VOID karena dipecah ke faktur H)
+            $this->db->group_start();
+                $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
+                $this->db->where("COALESCE(j.source_no, '') NOT REGEXP '-[0-9]+$'", null, false);
+                $this->db->where("COALESCE(f.status, '') NOT IN ('cancelled', 'batal', 'draft')", null, false);
+            $this->db->group_end();
+            // Faktur konsinyasi/test market aktif (digabung ke nomor faktur induknya)
+            $this->db->or_group_start();
+                $this->db->where('j.source_type', 'FAKTUR_PENJUALAN_KONSINYASI');
+                $this->db->where('j.status', 'POSTED');
+                $this->db->where('j.reversed_at IS NULL', null, false);
+            $this->db->group_end();
         $this->db->group_end();
         
         if ($start_date !== '' && $end_date !== '') {
             $this->db->where('j.tanggal_transaksi >=', $start_date);
             $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+
+        $keteranganJurnal = trim((string) $keteranganJurnal);
+        if ($keteranganJurnal !== '') {
+            $this->db->group_start();
+            $this->db->like('j.keterangan', $keteranganJurnal);
+            $this->db->or_like('f.customer_name', $keteranganJurnal);
+            $this->db->group_end();
+        }
+
+        $nomorJurnal = trim((string) $nomorJurnal);
+        if ($nomorJurnal !== '') {
+            $this->db->group_start();
+            $this->db->like('j.nomor_jurnal', $nomorJurnal);
+            $this->db->or_like('j.source_no', $nomorJurnal);
+            $this->db->or_like('j.source_id', $nomorJurnal);
+            $this->db->group_end();
         }
 
         $this->db->order_by('j.tanggal_transaksi', 'ASC');
@@ -1495,13 +1532,13 @@ class M_Journal extends CI_Model
             d.id_jurnal,
             d.nomor_baris,
             a.kode_akun,
-            COALESCE(a.kode_akun_display, a.kode_akun) AS kode_rekening_display,
+            a.kode_akun AS kode_rekening_display,
             a.nama_akun,
             d.keterangan,
             d.debit,
             d.kredit,
-            d.cost_center,
-            d.project_no
+            COALESCE(NULLIF(d.id_departemen, 0), '') AS cost_center,
+            '' AS project_no
         ", false);
         $this->db->from('tbkeu_jurnal_detail d');
         $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun');
@@ -1516,12 +1553,193 @@ class M_Journal extends CI_Model
             $details_grouped[$d['id_jurnal']][] = $d;
         }
 
-        // Merge headers with details
-        foreach ($headers as &$h) {
-            $h['details'] = isset($details_grouped[$h['id_jurnal']]) ? $details_grouped[$h['id_jurnal']] : [];
+        // Gabungkan jurnal konsinyasi/test market (-1, -2, dst.) ke nomor faktur induknya
+        $finalHeaders = [];
+        $groupedParentMap = [];
+
+        foreach ($headers as $h) {
+            $rowDetails = isset($details_grouped[$h['id_jurnal']]) ? $details_grouped[$h['id_jurnal']] : [];
+            if (($h['source_type'] ?? '') !== 'FAKTUR_PENJUALAN_KONSINYASI') {
+                $h['details'] = $rowDetails;
+                $finalHeaders[] = $h;
+                continue;
+            }
+
+            $parentNo = preg_replace('/-[0-9]+$/', '', trim((string) ($h['no_faktur'] ?? '')));
+            $eventKey = strtoupper(trim((string) ($h['posting_event'] ?? 'SALES_INVOICE')));
+            $groupKey = $parentNo . '||' . $eventKey;
+
+            if (!isset($groupedParentMap[$groupKey])) {
+                $pelanggan = trim((string) ($h['pelanggan'] ?? ''));
+                $ket = ($eventKey === 'GOODS_ISSUE')
+                    ? 'Penyesuaian persediaan, untuk ' . $parentNo
+                    : ('Penjualan, ' . ($pelanggan !== '' ? $pelanggan : $parentNo));
+
+                $groupedParentMap[$groupKey] = [
+                    'id_jurnal'         => $h['id_jurnal'],
+                    'nomor_jurnal'      => $h['nomor_jurnal'],
+                    'tanggal_transaksi' => $h['tanggal_faktur_induk'] ?: $h['tanggal_transaksi'],
+                    'referensi'         => $parentNo,
+                    'no_faktur'         => $parentNo,
+                    'keterangan'        => $ket,
+                    'nilai'             => 0,
+                    'status'            => $h['status'],
+                    'no_so'             => $h['no_so'],
+                    'pelanggan'         => '',
+                    'kurs'              => 'IDR',
+                    '_acc_map'          => [],
+                    'details'           => []
+                ];
+            }
+
+            foreach ($rowDetails as $d) {
+                $accKey = ($d['kode_akun'] ?? '') . '||' . ((float) ($d['debit'] ?? 0) > 0 ? 'D' : 'K');
+                if (!isset($groupedParentMap[$groupKey]['_acc_map'][$accKey])) {
+                    $groupedParentMap[$groupKey]['_acc_map'][$accKey] = [
+                        'kode_akun'             => $d['kode_akun'],
+                        'kode_rekening_display' => $d['kode_rekening_display'],
+                        'nama_akun'             => $d['nama_akun'],
+                        'keterangan'            => $d['keterangan'],
+                        'debit'                 => 0,
+                        'kredit'                => 0,
+                        'cost_center'           => $d['cost_center'],
+                        'project_no'            => $d['project_no'],
+                    ];
+                }
+                $groupedParentMap[$groupKey]['_acc_map'][$accKey]['debit'] += (float) ($d['debit'] ?? 0);
+                $groupedParentMap[$groupKey]['_acc_map'][$accKey]['kredit'] += (float) ($d['kredit'] ?? 0);
+            }
         }
 
-        return $headers;
+        foreach ($groupedParentMap as $item) {
+            $item['details'] = array_values($item['_acc_map']);
+            unset($item['_acc_map']);
+            $finalHeaders[] = $item;
+        }
+
+        usort($finalHeaders, function ($a, $b) {
+            $cmpDate = strcmp((string) ($a['tanggal_transaksi'] ?? ''), (string) ($b['tanggal_transaksi'] ?? ''));
+            if ($cmpDate !== 0) {
+                return $cmpDate;
+            }
+            return ((int) ($a['id_jurnal'] ?? 0)) <=> ((int) ($b['id_jurnal'] ?? 0));
+        });
+
+        return $finalHeaders;
+    }
+
+    /**
+     * Laporan Jurnal Potongan Penjualan berdasarkan jurnal aktif yang memiliki akun potongan penjualan.
+     */
+    public function accounting_sales_discount_journal_report($start_date = '', $end_date = '', $keteranganJurnal = '', $nomorJurnal = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            j.source_no AS referensi,
+            COALESCE(NULLIF(j.source_no, ''), NULLIF(j.source_id, ''), j.nomor_jurnal) AS no_faktur,
+            j.keterangan,
+            j.status,
+            COALESCE(f.customer_name, '') AS pelanggan,
+            d.nomor_baris,
+            a.kode_akun,
+            a.kode_akun AS kode_rekening_display,
+            a.nama_akun,
+            d.debit,
+            d.kredit,
+            COALESCE(NULLIF(d.id_departemen, 0), '') AS cost_center,
+            '' AS project_no
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbkeu_jurnal_detail d', 'd.id_jurnal = j.id_jurnal', 'inner');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner');
+        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id OR f.no_faktur = j.source_no', 'left');
+        $this->db->where('j.status', 'POSTED');
+        $this->db->where('j.reversed_at IS NULL', null, false);
+        $this->db->where('d.debit >', 0);
+        $this->db->group_start();
+        $this->db->where_in('a.kode_akun', ['41040', '41097', '410-97']);
+        $this->db->or_like('a.nama_akun', 'Potongan Penjualan');
+        $this->db->group_end();
+
+        if ($start_date !== '' && $end_date !== '') {
+            $this->db->where('j.tanggal_transaksi >=', $start_date);
+            $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+
+        $keteranganJurnal = trim((string) $keteranganJurnal);
+        if ($keteranganJurnal !== '') {
+            $this->db->group_start();
+            $this->db->like('j.keterangan', $keteranganJurnal);
+            $this->db->or_like('f.customer_name', $keteranganJurnal);
+            $this->db->group_end();
+        }
+
+        $nomorJurnal = trim((string) $nomorJurnal);
+        if ($nomorJurnal !== '') {
+            $this->db->group_start();
+            $this->db->like('j.nomor_jurnal', $nomorJurnal);
+            $this->db->or_like('j.source_no', $nomorJurnal);
+            $this->db->or_like('j.source_id', $nomorJurnal);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('j.tanggal_transaksi', 'ASC');
+        $this->db->order_by('j.id_jurnal', 'ASC');
+        $rows = $this->db->get()->result_array();
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            $amount = (float) ($row['debit'] ?? 0);
+            $pelanggan = trim((string) ($row['pelanggan'] ?? ''));
+            $ket = 'Potongan Penjualan';
+            if ($pelanggan !== '') {
+                $ket .= ', ' . $pelanggan;
+            } elseif (!empty($row['keterangan'])) {
+                $ket = $row['keterangan'];
+            }
+
+            $result[] = [
+                'id_jurnal'         => $row['id_jurnal'],
+                'nomor_jurnal'      => $row['nomor_jurnal'],
+                'tanggal_transaksi' => $row['tanggal_transaksi'],
+                'referensi'         => $row['referensi'],
+                'no_faktur'         => $row['no_faktur'],
+                'keterangan'        => $ket,
+                'pelanggan'         => '',
+                'details'           => [
+                    [
+                        'kode_akun'             => $row['kode_akun'],
+                        'kode_rekening_display' => $row['kode_rekening_display'],
+                        'nama_akun'             => $row['nama_akun'],
+                        'debit'                 => $amount,
+                        'kredit'                => 0,
+                        'cost_center'           => $row['cost_center'] ?? '',
+                        'project_no'            => $row['project_no'] ?? '',
+                    ],
+                    [
+                        'kode_akun'             => '13099',
+                        'kode_rekening_display' => '130-99',
+                        'nama_akun'             => 'Piutang Usaha',
+                        'debit'                 => 0,
+                        'kredit'                => $amount,
+                        'cost_center'           => $row['cost_center'] ?? '',
+                        'project_no'            => $row['project_no'] ?? '',
+                    ],
+                ],
+            ];
+        }
+
+        return $result;
     }
 
     /**

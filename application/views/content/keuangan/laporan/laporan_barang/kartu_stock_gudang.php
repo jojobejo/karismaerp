@@ -136,7 +136,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="d-flex align-items-center gap-2">
                             <a href="<?= base_url('laporan/barang') ?>" class="btn btn-sm btn-outline-secondary" title="Kembali"><i class="fas fa-arrow-left"></i> Kembali</a>
-                            <h4 class="m-0 ml-2 font-weight-bold text-dark">Kartu Stok Per Gudang</h4>
+                            <h4 class="m-0 ml-2 font-weight-bold text-dark"><?= htmlspecialchars($report_title ?? 'Kartu Stok Per Gudang') ?></h4>
                         </div>
                     </div>
                 </div>
@@ -195,7 +195,7 @@
                     <div class="report-container">
                         <div class="report-header">
                             <div class="report-company">KARISMA <?= date('Y') ?></div>
-                            <div class="report-title">Kartu Stok Per Gudang</div>
+                            <div class="report-title"><?= htmlspecialchars($report_title ?? 'Kartu Stok Per Gudang') ?></div>
                             <div class="report-subtitle">Periode: <span id="lblPeriode">-</span></div>
                             <div class="report-warehouse" id="lblWarehouse">-- Semua Gudang --</div>
                         </div>
@@ -383,7 +383,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var endpoint = '<?= base_url('laporan/barang/kartu-stock-gudang-data') ?>';
+    var endpoint = '<?= $report_data_url ?? base_url('laporan/barang/kartu-stock-gudang-data') ?>';
 
     function formatNumber(num) {
         var p = parseFloat(num);
