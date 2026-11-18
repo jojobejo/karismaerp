@@ -8,8 +8,8 @@
         /* =========================================================================
          * FORMAT CETAK PERSIS FASTREPORT: TTB_2022_Q_LOT_PAJAK_1.11.fr3
          * Ukuran Kertas : Custom 210 mm x 140 mm (21 cm x 14 cm)
-         * Margin        : Top 7 mm (0.7 cm), Right 1 mm (0.1 cm), Bottom 0, Left 0
-         * Area Cetak    : 209 mm x 133 mm (789.92 px x 502.68 px @ 96 DPI)
+         * Margin        : Top 12 mm (1.2 cm), Right 1 mm (0.1 cm), Bottom 0, Left 0
+         * Area Cetak    : 209 mm x 128 mm (789.92 px x 483.78 px @ 96 DPI)
          * Konversi      : 1 mm = 3.779527559 px
          * ========================================================================= */
         * {
@@ -84,7 +84,7 @@
             height: 140mm;
             margin: 0 auto 20px auto;
             background: #ffffff;
-            padding: 7mm 1mm 0mm 0mm; /* TopMargin=7mm, RightMargin=1mm, BottomMargin=0, LeftMargin=0 */
+            padding: 12mm 1mm 0mm 0mm; /* TopMargin=12mm (7mm + 5mm), RightMargin=1mm, BottomMargin=0, LeftMargin=0 */
             border: 1px dashed #94a3b8;
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
             position: relative;
@@ -99,12 +99,106 @@
             break-after: avoid;
         }
 
-        /* Area Printable Dalam Margin (209mm x 133mm) */
+        /* Area Printable Dalam Margin (209mm x 128mm) */
         .printable-canvas {
             position: relative;
             width: 209mm;
-            height: 133mm;
+            height: 128mm;
             overflow: hidden;
+        }
+
+        /* Panduan Garis & Keterangan Margin (Hanya Tampil di Layar, Tidak Ikut Ter-print) */
+        .no-print-margin-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+            font-family: Arial, sans-serif;
+        }
+
+        .margin-guide-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 12mm;
+            background: rgba(2, 132, 199, 0.08);
+            border-bottom: 1px dashed #0284c7;
+        }
+
+        .margin-guide-right {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 1mm;
+            background: rgba(234, 88, 12, 0.22);
+            border-left: 1px dashed #ea580c;
+        }
+
+        .margin-guide-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 0;
+            border-top: 1px dashed #16a34a;
+        }
+
+        .margin-guide-left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 0;
+            border-right: 1px dashed #9333ea;
+        }
+
+        .margin-badge {
+            position: absolute;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 1px 6px;
+            border-radius: 3px;
+            line-height: 1.3;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .margin-badge-top {
+            top: 2mm;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+        }
+
+        .margin-badge-bottom {
+            bottom: 1.5mm;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+
+        .margin-badge-left {
+            top: 50%;
+            left: 1.5mm;
+            transform: translateY(-50%);
+            background: #f3e8ff;
+            color: #7e22ce;
+            border: 1px solid #d8b4fe;
+        }
+
+        .margin-badge-right {
+            top: 50%;
+            right: 2mm;
+            transform: translateY(-50%);
+            background: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fdba74;
         }
 
         /* -------------------------------------------------------------------------
@@ -123,7 +217,7 @@
         .frx-memo32-nofaktur {
             position: absolute;
             left: 161.66mm;
-            top: 5.56mm;
+            top: 4.56mm; /* Disesuaikan naik 1mm dari posisi awal 5.56mm */
             width: 43.75mm;
             height: 7.14mm;
             font-family: "Trebuchet MS", Arial, sans-serif;
@@ -141,6 +235,7 @@
             position: relative;
             width: 209mm;
             height: 21.17mm;
+            margin-top: 2.00mm; /* Digeser turun total 2mm */
             font-family: "Arial Unicode MS", Arial, sans-serif;
             font-size: 11.25pt;
             font-weight: normal;
@@ -358,14 +453,14 @@
         }
 
         /* -------------------------------------------------------------------------
-         * 4. PageFooter1 (Height="157.91342" px = 41.78mm, di bagian bawah halaman)
+         * 4. PageFooter1 (Height disesuaikan menjadi 36.78mm agar seluruh layout bergeser +5mm ke bawah tanpa memotong isi footer)
          * ------------------------------------------------------------------------- */
         .band-page-footer {
             position: absolute;
             left: 0;
             bottom: 0;
             width: 209mm;
-            height: 41.78mm;
+            height: 34.78mm; /* Diturunkan total 2mm dari 36.78mm agar sejajar dengan pergeseran konten di atasnya */
             font-family: "Arial Unicode MS", Arial, sans-serif;
             font-size: 11.25pt;
             font-weight: normal;
@@ -528,7 +623,8 @@
                 padding: 0 !important;
             }
 
-            .no-print-bar {
+            .no-print-bar,
+            .no-print-margin-overlay {
                 display: none !important;
             }
 
@@ -542,7 +638,8 @@
                 border: none !important;
                 box-shadow: none !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                /* Tambahan 5mm diletakkan di padding-top konten agar tetap tercetak oleh driver LX-310 (total 7mm + 5mm = 12mm) */
+                padding: 5mm 0 0 0 !important;
                 width: 209mm !important;
                 height: 133mm !important;
                 max-height: 133mm !important;
@@ -737,6 +834,18 @@
 
             <!-- LEMBAR FAKTUR #<?= $idx_sheet + 1 ?> -->
             <div class="print-sheet">
+                <!-- Garis & Keterangan Margin (Tidak Ikut Ter-print) -->
+                <div class="no-print-margin-overlay" aria-hidden="true">
+                    <div class="margin-guide-top"></div>
+                    <div class="margin-guide-right"></div>
+                    <div class="margin-guide-bottom"></div>
+                    <div class="margin-guide-left"></div>
+                    <span class="margin-badge margin-badge-top">Margin Atas: 12 mm (1,2 cm)</span>
+                    <span class="margin-badge margin-badge-bottom">Margin Bawah: 0 mm (0 cm)</span>
+                    <span class="margin-badge margin-badge-left">Margin Kiri: 0 mm (0 cm)</span>
+                    <span class="margin-badge margin-badge-right">Margin Kanan: 1 mm (0,1 cm)</span>
+                </div>
+
                 <div class="printable-canvas">
 
                     <!-- 1. PageHeader1 -->

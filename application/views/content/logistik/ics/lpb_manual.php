@@ -139,7 +139,13 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-12">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>Checker</label>
+                                            <input type="text" class="form-control" name="checker_name" placeholder="Nama checker (opsional)">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
                                         <div class="form-group">
                                             <label>Keterangan</label>
                                             <input type="text" class="form-control" name="keterangan" placeholder="Catatan input manual">

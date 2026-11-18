@@ -406,6 +406,22 @@ class M_SalesOrder extends CI_Model
         return array_values(array_unique(array_filter($names)));
     }
 
+    public function get_salesman_list()
+    {
+        if (!$this->db->field_exists('nama_sales', 'tb_customer')) {
+            return [];
+        }
+
+        $rows = $this->db->query("
+            SELECT DISTINCT TRIM(nama_sales) AS nama_sales
+            FROM tb_customer
+            WHERE nama_sales IS NOT NULL AND TRIM(nama_sales) != ''
+            ORDER BY TRIM(nama_sales) ASC
+        ")->result_array();
+
+        return array_values(array_filter(array_column($rows, 'nama_sales')));
+    }
+
     public function get_customers($nama_sales = null)
     {
         $nama_sales = trim((string)$nama_sales);

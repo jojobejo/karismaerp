@@ -1065,6 +1065,8 @@ $route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPen
 $route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
 $route['retur_penjualan/activity_log']                       = 'sales/C_ReturPenjualan/activity_log';
 $route['retur_penjualan/get_pending_notifications']          = 'sales/C_ReturPenjualan/get_pending_notifications';
+$route['retur_penjualan/setting_approval']                   = 'sales/C_ReturPenjualan/setting_approval';
+$route['retur_penjualan/setting_approval/save']              = 'sales/C_ReturPenjualan/setting_approval_save';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';

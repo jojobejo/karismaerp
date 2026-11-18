@@ -472,6 +472,14 @@ class C_SalesOrder extends CI_Controller
         return false;
     }
 
+    private function _isSuperSales()
+    {
+        $jobdesk  = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        return in_array($jobdesk, ['SUPER SALES', 'SUPERSALES'], true)
+            || $username === 'supersales';
+    }
+
     private function _isRestrictedSalesUser()
     {
         return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['SC', 'SALES COUNTER', 'MT SALES COUNTER'], true);
@@ -482,6 +490,7 @@ class C_SalesOrder extends CI_Controller
         return in_array(strtoupper((string)$this->session->userdata('jobdesk')), [
             'ADMINSC', 'ADMSC', 'ADMIN SALES COUNTER', 'MT ADMIN SALES COUNTER',
             'SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER',
+            'SUPER SALES', 'SUPERSALES',
             'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER',
             'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES'
         ], true);
@@ -527,6 +536,7 @@ class C_SalesOrder extends CI_Controller
         $lv      = (int)$this->session->userdata('lv');
         return in_array($jobdesk, [
             'MNGSC', 'MANAGER SC', 'MANAGERSC', 'MANAGER SALES COUNTER',
+            'SUPER SALES', 'SUPERSALES',
             'ADMIN', 'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
             'KADEPUB', 'KEPALA UNIT BISNIS',
             'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'MT DIREKTUR OPERASIONAL'
@@ -1213,32 +1223,64 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $print_items = [];
+        $list_faktur     = [];
+        $total_all_grand = 0;
         foreach ($fakturs as $faktur) {
             $so = $this->M_SalesOrder->get_so($faktur['id_so']);
             if (!$this->_canAccessSo($so)) {
                 continue;
             }
-            $print_items[] = [
-                'faktur'  => $faktur,
-                'so'      => $so,
-                'details' => $this->M_SalesOrder->get_faktur_detail($faktur['id_faktur']),
+            $details = $this->M_SalesOrder->get_faktur_detail($faktur['id_faktur']);
+
+            // Lengkapi data customer (alamat, kota, rute, salesman) untuk layout cetak LX-310
+            $cust = !empty($faktur['kd_customer'])
+                ? $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array()
+                : null;
+
+            $fakturData = $faktur;
+            if (empty($fakturData['ca_alamat'])) {
+                $fakturData['ca_alamat'] = $cust['alamat'] ?? ($cust['alamat_kios'] ?? ($faktur['alamat_kios'] ?? ''));
+            }
+            if (empty($fakturData['ca_kota'])) {
+                $fakturData['ca_kota'] = $cust['kota'] ?? ($cust['regional'] ?? ($faktur['regional'] ?? ''));
+            }
+            if (empty($fakturData['customer_kd_rute'])) {
+                $fakturData['customer_kd_rute'] = ($faktur['so_kd_rute'] ?? '') ?: ($cust['kd_rute'] ?? $selected_rute);
+            }
+            if (empty($fakturData['salesman'])) {
+                $fakturData['salesman'] = ($so['create_by'] ?? '') ?: ($cust['nama_sales'] ?? ($faktur['create_by'] ?? 'SALES'));
+            }
+            if (empty($fakturData['catatan']) && !empty($so['catatan'])) {
+                $fakturData['catatan'] = $so['catatan'];
+            }
+
+            $grand_total = 0;
+            foreach ($details as $d) {
+                $grand_total += (float)($d['total_harga'] ?? 0);
+            }
+            $total_all_grand += $grand_total;
+
+            $list_faktur[] = [
+                'faktur'        => $fakturData,
+                'details'       => $details,
+                'parent_faktur' => null,
+                'grand_total'   => $grand_total,
             ];
         }
 
-        if (empty($print_items)) {
+        if (empty($list_faktur)) {
             $this->session->set_flashdata('error', 'Tidak ada faktur yang dapat dicetak.');
             redirect('sales_order/admin_sc/faktur?rute=' . rawurlencode($selected_rute));
             return;
         }
 
-        $data['page_title']    = 'KARISMA - Cetak Faktur Rute ' . $selected_rute;
-        $data['selected_rute'] = $selected_rute;
-        $data['print_items']   = $print_items;
+        $data['page_title']      = 'Cetak ' . count($list_faktur) . ' Faktur Rute ' . $selected_rute . ' (LX-310)';
+        $data['selected_rute']   = $selected_rute;
+        $data['list_faktur']     = $list_faktur;
+        $data['total_all_grand'] = $total_all_grand;
+        $data['is_batch_print']  = true;
 
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/admin_sc_faktur_print_all.php', $data);
-        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/sales/faktur_pecah_print_lx310.php', $data);
     }
 
     public function admin_sc_pilih_barang($id_so)
@@ -1385,6 +1427,8 @@ class C_SalesOrder extends CI_Controller
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
         $data['is_atasan']              = $this->_isAtasanSc();
+        $data['is_super_sales']         = $this->_isSuperSales();
+        $data['salesman_list']          = $data['is_super_sales'] ? $this->M_SalesOrder->get_salesman_list() : [];
         $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
@@ -1406,7 +1450,21 @@ class C_SalesOrder extends CI_Controller
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
 
-        if (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/create')) {
+        $isSuperSales     = $this->_isSuperSales();
+        $selectedSalesman = $isSuperSales ? trim((string)($post['salesman'] ?? '')) : '';
+
+        if ($isSuperSales) {
+            if ($selectedSalesman === '') {
+                $this->session->set_flashdata('error', 'Salesman wajib dipilih.');
+                redirect('sales_order/create');
+                return;
+            }
+            if (!empty($post['customer_id']) && !$this->M_SalesOrder->is_customer_for_sales($post['customer_id'], $selectedSalesman)) {
+                $this->session->set_flashdata('error', 'Customer tidak sesuai dengan salesman yang dipilih (' . $selectedSalesman . ').');
+                redirect('sales_order/create');
+                return;
+            }
+        } elseif (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/create')) {
             return;
         }
 
@@ -1500,7 +1558,7 @@ class C_SalesOrder extends CI_Controller
             'cara_pembayaran'   => $cara_pembayaran_so,
             'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
             'is_test_market'    => !empty($post['is_test_market']) ? 1 : 0,
-            'create_by'         => $this->_getUsername(),
+            'create_by'         => ($isSuperSales && $selectedSalesman !== '') ? $selectedSalesman : $this->_getUsername(),
         ];
 
         $id_so = $this->M_SalesOrder->simpan_so($header, $details);
@@ -1681,6 +1739,8 @@ class C_SalesOrder extends CI_Controller
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
         $data['is_atasan']              = $this->_isAtasanSc();
+        $data['is_super_sales']         = $this->_isSuperSales();
+        $data['salesman_list']          = $data['is_super_sales'] ? $this->M_SalesOrder->get_salesman_list() : [];
         $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
@@ -1708,7 +1768,21 @@ class C_SalesOrder extends CI_Controller
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
 
-        if (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/edit/' . $id_so)) {
+        $isSuperSales     = $this->_isSuperSales();
+        $selectedSalesman = $isSuperSales ? trim((string)($post['salesman'] ?? '')) : '';
+
+        if ($isSuperSales) {
+            if ($selectedSalesman === '') {
+                $this->session->set_flashdata('error', 'Salesman wajib dipilih.');
+                redirect('sales_order/edit/' . $id_so);
+                return;
+            }
+            if (!empty($post['customer_id']) && !$this->M_SalesOrder->is_customer_for_sales($post['customer_id'], $selectedSalesman)) {
+                $this->session->set_flashdata('error', 'Customer tidak sesuai dengan salesman yang dipilih (' . $selectedSalesman . ').');
+                redirect('sales_order/edit/' . $id_so);
+                return;
+            }
+        } elseif (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/edit/' . $id_so)) {
             return;
         }
 
@@ -1800,6 +1874,9 @@ class C_SalesOrder extends CI_Controller
             'is_test_market'    => !empty($post['is_test_market']) ? 1 : 0,
             'update_by'         => $this->_getUsername(),
         ];
+        if ($isSuperSales && $selectedSalesman !== '') {
+            $header['create_by'] = $selectedSalesman;
+        }
 
         // Calculate old total for plafon refund
         $old_total = 0;
@@ -2540,10 +2617,46 @@ class C_SalesOrder extends CI_Controller
         $data['all_customers'] = (!empty($so['is_faktur_z'])) ? $this->M_SalesOrder->get_customer_induk_faktur_z() : $this->M_SalesOrder->get_customers();
 
         if ($this->input->get('print') == '1') {
-            $this->load->model('M_pembayaran');
-            $grandTotal = (float)($faktur['total_tagihan'] ?? ($faktur['total_setelah_pajak'] ?? 0));
-            $data['terbilang'] = $this->M_pembayaran->terbilang($grandTotal);
-            $this->load->view('content/sales/faktur_print_zahir.php', $data);
+            // Lengkapi data customer (alamat, kota, rute, salesman) untuk layout cetak LX-310
+            $cust = !empty($faktur['kd_customer'])
+                ? $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array()
+                : null;
+
+            $fakturData = $faktur;
+            if (empty($fakturData['ca_alamat'])) {
+                $fakturData['ca_alamat'] = $cust['alamat'] ?? ($cust['alamat_kios'] ?? ($faktur['alamat_kios'] ?? ''));
+            }
+            if (empty($fakturData['ca_kota'])) {
+                $fakturData['ca_kota'] = $cust['kota'] ?? ($cust['regional'] ?? ($faktur['regional'] ?? ''));
+            }
+            if (empty($fakturData['customer_kd_rute'])) {
+                $fakturData['customer_kd_rute'] = ($faktur['so_kd_rute'] ?? '') ?: ($cust['kd_rute'] ?? ($so['kd_rute'] ?? ''));
+            }
+            if (empty($fakturData['salesman'])) {
+                $fakturData['salesman'] = ($so['create_by'] ?? '') ?: ($cust['nama_sales'] ?? ($faktur['create_by'] ?? 'SALES'));
+            }
+            if (empty($fakturData['catatan']) && !empty($so['catatan'])) {
+                $fakturData['catatan'] = $so['catatan'];
+            }
+
+            $grand_total = 0;
+            foreach ($details as $d) {
+                $grand_total += (float)($d['total_harga'] ?? 0);
+            }
+
+            $printData = [
+                'page_title'      => 'Cetak Faktur ' . ($faktur['no_faktur'] ?? '') . ' (LX-310)',
+                'list_faktur'     => [[
+                    'faktur'        => $fakturData,
+                    'details'       => $details,
+                    'parent_faktur' => $parent_faktur,
+                    'grand_total'   => $grand_total,
+                ]],
+                'total_all_grand' => $grand_total,
+                'is_batch_print'  => false,
+            ];
+
+            $this->load->view('content/sales/faktur_pecah_print_lx310.php', $printData);
             return;
         }
 

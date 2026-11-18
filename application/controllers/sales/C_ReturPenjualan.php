@@ -50,9 +50,14 @@ class C_ReturPenjualan extends CI_Controller
             'MANAGERSE', 'MANAGER SALES EXECUTIVE',
             'DIREKTUROP', 'MT DIREKTUR OPERASIONAL',
             'DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA',
-            'KIUKEU', 'KEUANGAN', 'ADMIN JURNAL PAJAK', 'ADMIN KEUANGAN'
+            'KIUKEU', 'KEUANGAN', 'ADMIN JURNAL PAJAK', 'ADMIN KEUANGAN',
+            'SUPER SALES', 'SUPERSALES'
         ];
-        if (!in_array($jobdesk, $allowed_jobdesks) && (int)$this->session->userdata('lv') < 99) {
+        $hasDynamicApproval = $this->M_ReturPenjualan->user_has_any_approval_setting(
+            $this->session->userdata('id') ?? $this->session->userdata('id_karyawan') ?? 0,
+            $this->session->userdata('username') ?? ''
+        );
+        if (!in_array($jobdesk, $allowed_jobdesks) && (int)$this->session->userdata('lv') < 99 && !$hasDynamicApproval) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
     }
@@ -88,50 +93,113 @@ class C_ReturPenjualan extends CI_Controller
         return in_array($jobdesk, $allowed, true);
     }
 
+    private function _isAdminUser()
+    {
+        $jobdesk  = strtoupper(trim((string)($this->session->userdata('jobdesk') ?? '')));
+        $username = strtolower(trim((string)($this->session->userdata('username') ?? '')));
+        $lv       = (int)$this->session->userdata('lv');
+        return $lv >= 99 || $username === 'admin' || in_array($jobdesk, ['ADMIN', 'SUPER ADMIN', 'SUPERADMIN'], true);
+    }
+
+    /** Siapa saja yang berhak mengubah Setting Approval Retur Penjualan */
+    private function _canManageApprovalSetting()
+    {
+        if ($this->_isAdminUser()) {
+            return true;
+        }
+        $jobdesk = strtoupper(trim((string)($this->session->userdata('jobdesk') ?? '')));
+        return in_array($jobdesk, [
+            'SUPER SALES', 'SUPERSALES',
+            'KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES',
+            'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'MT DIREKTUR OPERASIONAL'
+        ], true);
+    }
+
+    /**
+     * Cek peran approval secara dinamis:
+     * 1. Admin selalu memiliki akses.
+     * 2. Jika role_key sudah di-setting di tb_retur_approval_setting, HANYA user yang terdaftar di sana yang berhak.
+     * 3. Jika role_key belum di-setting (kosong), otomatis fallback ke jobdesk/username default.
+     */
+    private function _hasApprovalRole($roleKey, array $fallbackJobdesks, array $fallbackUsernames = [])
+    {
+        if ($this->_isAdminUser()) {
+            return true;
+        }
+
+        $settingsMap = $this->M_ReturPenjualan->get_approval_settings_map();
+        $roleKey = strtolower(trim((string)$roleKey));
+
+        if (!empty($settingsMap[$roleKey])) {
+            $currentId = (int)($this->session->userdata('id') ?? $this->session->userdata('id_karyawan') ?? 0);
+            $currentUsername = strtolower(trim((string)($this->session->userdata('username') ?? '')));
+
+            foreach ($settingsMap[$roleKey] as $entry) {
+                if ($currentId > 0 && (int)($entry['user_id'] ?? 0) === $currentId) {
+                    return true;
+                }
+                if ($currentUsername !== '' && strtolower(trim((string)($entry['username'] ?? ''))) === $currentUsername) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Fallback default jika belum ada settingan khusus untuk tahap ini
+        if (!empty($fallbackUsernames)) {
+            $currentUsername = strtolower(trim((string)($this->session->userdata('username') ?? '')));
+            if ($currentUsername !== '' && in_array($currentUsername, array_map('strtolower', $fallbackUsernames), true)) {
+                return true;
+            }
+        }
+        return $this->_isJobdesk($fallbackJobdesks);
+    }
+
     /** SC / Sales Counter — pembuat SPR */
     private function _isSC()
     {
-        return $this->_isJobdesk(['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMIN']);
+        return $this->_hasApprovalRole('sc', ['SC', 'SALESCOUNTER', 'SALES COUNTER', 'MT SALES COUNTER', 'ADMIN']);
     }
 
     /** Koordinator / Manager SC */
     private function _isKoorSC()
     {
-        return $this->_isJobdesk(['MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER', 'ADMIN']);
+        return $this->_hasApprovalRole('koor_sc', ['MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER', 'ADMIN']);
     }
 
-    /** Admin Retur */
-    /** Admin Retur (Dewi) — Verifikasi Retur setelah Admin LPB */
+    /** Admin Retur (Verifikasi Retur setelah Admin LPB) */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMRETUR', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
+        return $this->_hasApprovalRole('admretur', ['ADMRETUR', 'ADMIN PRICELIST & RETUR PENJUALAN', 'ADMIN']);
     }
 
-    /** Admin Stock (Nila / Arfenila) — Cek SPR setelah Manager SC */
+    /** Admin Stock (Cek SPR setelah Manager SC) */
     private function _isAdmstock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN STOCK', 'ADMIN']);
+        return $this->_hasApprovalRole('admstock', ['ADMSTOCK', 'ADMIN STOCK', 'ADMIN']);
     }
 
     /** Kepala Departemen SC / Keuangan & Sales */
     private function _isKadepSC()
     {
-        return $this->_isJobdesk(['KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES', 'KADEPUB', 'KEPALA UNIT BISNIS', 'ADMIN']);
+        return $this->_hasApprovalRole('kadep_sc', ['KADEPSC', 'KADEPKS', 'MT KADEP KEUANGAN & SALES', 'KADEPUB', 'KEPALA UNIT BISNIS', 'ADMIN']);
     }
 
     /** Kadep Unit Bisnis */
     private function _isKadepub()
     {
-        return $this->_isJobdesk(['KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR', 'ADMIN']);
+        return $this->_hasApprovalRole('kadepub', ['KADEPUB', 'KEPALA UNIT BISNIS', 'MT ABM SEED JATIM TIMUR', 'ADMIN']);
     }
 
     /** Logistik */
     private function _isLogistik()
     {
-        $username = strtolower((string)($this->session->userdata('username') ?? ''));
+        $settingsMap = $this->M_ReturPenjualan->get_approval_settings_map();
+        if (!empty($settingsMap['logistik'])) {
+            return $this->_hasApprovalRole('logistik', []);
+        }
         return $this->_isAdmlpb()
-            || in_array($username, ['sprlog', 'kurniawan'], true)
-            || $this->_isJobdesk(['LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'ADMIN']);
+            || $this->_hasApprovalRole('logistik', ['LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'ADMIN'], ['sprlog', 'kurniawan']);
     }
 
     /** Cek apakah boleh lihat semua SPR (bukan SC biasa) */
@@ -237,6 +305,24 @@ class C_ReturPenjualan extends CI_Controller
         $data['customers']   = $this->M_ReturPenjualan->get_customers();
         $data['filter']      = $filter;
         $data['user']        = $user;
+        $data['role_flags']  = [
+            'is_admin'                => $this->_isAdminUser(),
+            'can_manage_setting'      => $this->_canManageApprovalSetting(),
+            'is_sc'                   => $this->_isSC(),
+            'is_koor'                 => $this->_isKoorSC(),
+            'is_admstock'             => $this->_isAdmstock(),
+            'is_admretur'             => $this->_isAdminStock(),
+            'is_kadep'                => $this->_isKadepSC(),
+            'is_kadepub'              => $this->_isKadepub(),
+            'is_logistik'             => $this->_isLogistik(),
+            'is_admlpb'               => $this->_isAdmlpb(),
+            'is_collection'           => $this->_isCollection(),
+            'is_kasir'                => $this->_isKasir(),
+            'is_mngacc'               => $this->_isMngacc(),
+            'is_mngse'                => $this->_isMngse(),
+            'is_dirop'                => $this->_isDirop(),
+            'is_dirut'                => $this->_isDirut(),
+        ];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/spr_list.php', $data);
@@ -1180,39 +1266,37 @@ class C_ReturPenjualan extends CI_Controller
 
     private function _isAdmlpb()
     {
-        $username = strtolower((string)($this->session->userdata('username') ?? ''));
-        return in_array($username, ['admlpb', 'yunika'], true)
-            || $this->_isJobdesk(['ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH', 'ADMIN']);
+        return $this->_hasApprovalRole('admlpb', ['ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH', 'ADMIN'], ['admlpb', 'yunika']);
     }
 
     private function _isCollection()
     {
-        return $this->_isJobdesk(['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION', 'ADMIN']);
+        return $this->_hasApprovalRole('collection', ['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION', 'ADMIN']);
     }
 
     private function _isKasir()
     {
-        return $this->_isJobdesk(['KASIR', 'ADMIN']);
+        return $this->_hasApprovalRole('kasir', ['KASIR', 'ADMIN']);
     }
 
     private function _isMngacc()
     {
-        return $this->_isJobdesk(['MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC', 'ADMIN']);
+        return $this->_hasApprovalRole('mngacc', ['MANAGERACC', 'MT MANAGER ACCOUNTING & TAX', 'MT MANAGER KEUANGAN', 'MANAGERTC', 'MNGTC', 'ADMIN']);
     }
 
     private function _isMngse()
     {
-        return $this->_isJobdesk(['MANAGERSE', 'MANAGER SALES EXECUTIVE', 'ADMIN']);
+        return $this->_hasApprovalRole('mngse', ['MANAGERSE', 'MANAGER SALES EXECUTIVE', 'ADMIN']);
     }
 
     private function _isDirop()
     {
-        return $this->_isJobdesk(['DIREKTUROP', 'MT DIREKTUR OPERASIONAL', 'ADMIN']);
+        return $this->_hasApprovalRole('dirop', ['DIREKTUROP', 'MT DIREKTUR OPERASIONAL', 'ADMIN']);
     }
 
     private function _isDirut()
     {
-        return $this->_isJobdesk(['DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'ADMIN']);
+        return $this->_hasApprovalRole('dirut', ['DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA', 'ADMIN']);
     }
 
     /** ADMLPB: daftar SPR disetujui Kadep yang siap dibuat retur. */
@@ -2414,6 +2498,69 @@ class C_ReturPenjualan extends CI_Controller
 
         $this->session->set_flashdata('success', $msg);
         redirect('retur_penjualan/retur/detail/' . $id_retur);
+    }
+
+    // ================================================================
+    // SETTING APPROVAL DINAMIS RETUR PENJUALAN
+    // ================================================================
+
+    public function setting_approval()
+    {
+        if (!$this->_canManageApprovalSetting()) {
+            $this->_denyAccess('Hanya Admin, Kadep Keuangan & Sales, atau Super Sales yang dapat mengubah Setting Approval.');
+            return;
+        }
+
+        $data['page_title']       = 'KARISMA — Setting Approval Retur Penjualan';
+        $data['role_definitions'] = $this->M_ReturPenjualan->get_approval_role_definitions();
+        $data['settings_map']     = $this->M_ReturPenjualan->get_approval_settings_map(true);
+        $data['active_users']     = $this->M_ReturPenjualan->get_active_users_for_approval();
+        $data['user']             = $this->_getUser();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/setting_approval.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function setting_approval_save()
+    {
+        if ($this->input->method() !== 'post') {
+            show_404();
+            return;
+        }
+        if (!$this->_canManageApprovalSetting()) {
+            $this->_denyAccess('Akses ditolak.');
+            return;
+        }
+
+        $user     = $this->_getUser();
+        $rolesRaw = $this->input->post('roles');
+        if (!is_array($rolesRaw)) {
+            $rolesRaw = [];
+        }
+
+        $ok = $this->M_ReturPenjualan->save_approval_settings($rolesRaw, $user['nama']);
+        if ($ok) {
+            $this->M_ReturPenjualan->record_log(
+                'SETTING-APPROVAL',
+                'setting',
+                'UPDATE_APPROVAL_SETTING',
+                '',
+                'updated',
+                'Pengaturan approver Retur Penjualan diperbarui oleh ' . $user['nama'],
+                $user['nama']
+            );
+            $this->session->set_flashdata('success', 'Pengaturan approval Retur Penjualan berhasil disimpan dan langsung berlaku.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menyimpan pengaturan approval Retur Penjualan.');
+        }
+
+        $redirectTo = trim((string)$this->input->post('redirect_to', true));
+        if ($redirectTo !== '' && strpos($redirectTo, 'master/user-management') === 0) {
+            redirect($redirectTo);
+            return;
+        }
+        redirect('retur_penjualan/setting_approval');
     }
 }
 

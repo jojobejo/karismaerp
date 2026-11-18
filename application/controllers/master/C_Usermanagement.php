@@ -55,6 +55,11 @@ class C_Usermanagement extends CI_Controller
             $this->userFacility->ensure_schema();
         }
 
+        $this->load->model('M_ReturPenjualan');
+        $data['retur_role_definitions'] = $this->M_ReturPenjualan->get_approval_role_definitions();
+        $data['retur_settings_map']     = $this->M_ReturPenjualan->get_approval_settings_map(true);
+        $data['retur_active_users']     = $this->M_ReturPenjualan->get_active_users_for_approval();
+
         $data['page_title'] = 'KARISMA ERP - User Management';
         $data['can_dashboard_access'] = $canDashboardAccess;
         $data['can_user_facility'] = $canUserFacility;

@@ -59,16 +59,21 @@
                 <div class="row mb-3">
                     <?php
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','SALES COUNTER','MT SALES COUNTER','ADMIN']);
-                    $is_koor = in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
-                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
-                    $is_kadep = in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
-                    $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','MT KADEP LOGISTIK','MT ADMIN LOGISTIK','ADMIN']);
-                    $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','TEAM COLLECTION','ADMIN']);
-                    $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                    $is_admlpb      = in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','ADMIN LPB & GUDANG BENIH','LOGISTIK','MT KADEP LOGISTIK','ADMIN'], true) || in_array(strtolower((string)($user['username'] ?? '')), ['admlpb', 'yunika'], true);
-                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
-                    $is_kadepub     = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
+                    $rf = $role_flags ?? [];
+                    $is_admin       = !empty($rf['is_admin']) || $jobdesk === 'ADMIN';
+                    $can_manage_set = !empty($rf['can_manage_setting']);
+                    $is_sc          = array_key_exists('is_sc', $rf) ? !empty($rf['is_sc']) : in_array($jobdesk, ['SC','SALESCOUNTER','SALES COUNTER','MT SALES COUNTER','ADMIN']);
+                    $is_koor        = array_key_exists('is_koor', $rf) ? !empty($rf['is_koor']) : in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
+                    $is_admstock    = array_key_exists('is_admstock', $rf) ? !empty($rf['is_admstock']) : in_array($jobdesk, ['ADMSTOCK','ADMIN STOCK','ADMIN']);
+                    $is_admretur    = array_key_exists('is_admretur', $rf) ? !empty($rf['is_admretur']) : in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                    $is_kadep       = array_key_exists('is_kadep', $rf) ? !empty($rf['is_kadep']) : in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
+                    $is_logistik    = array_key_exists('is_logistik', $rf) ? !empty($rf['is_logistik']) : in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','MT KADEP LOGISTIK','MT ADMIN LOGISTIK','ADMIN']);
+                    $is_collection  = array_key_exists('is_collection', $rf) ? !empty($rf['is_collection']) : in_array($jobdesk, ['COLLECTION','KOLEKTOR','TEAM COLLECTION','ADMIN']);
+                    $is_kasir       = array_key_exists('is_kasir', $rf) ? !empty($rf['is_kasir']) : in_array($jobdesk, ['KASIR','ADMIN']);
+                    $is_admlpb      = array_key_exists('is_admlpb', $rf) ? !empty($rf['is_admlpb']) : (in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','ADMIN LPB & GUDANG BENIH','LOGISTIK','MT KADEP LOGISTIK','ADMIN'], true) || in_array(strtolower((string)($user['username'] ?? '')), ['admlpb', 'yunika'], true));
+                    $is_admpnj      = $is_admstock || in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
+                    $is_kadepub     = array_key_exists('is_kadepub', $rf) ? !empty($rf['is_kadepub']) : in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
+                    $is_retur_approver = !empty($rf['is_mngacc']) || !empty($rf['is_mngse']) || !empty($rf['is_dirop']) || !empty($rf['is_dirut']);
                     $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
                     ?>
                     <div class="col-auto">
@@ -78,21 +83,27 @@
                             </a>
                         <?php endif; ?>
                         
-                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep): ?>
+                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep || $is_kadepub): ?>
                             <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active mr-1">
                                 <i class="fas fa-file-invoice"></i> Daftar SPR
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','MANAGERSE','MANAGER SALES EXECUTIVE','DIREKTUROP','MT DIREKTUR OPERASIONAL','DIREKTURUTAMA','DIREKSI'])): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb || $is_koor || $is_kadep || $is_kadepub || $is_retur_approver || in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','MANAGERSE','MANAGER SALES EXECUTIVE','DIREKTUROP','MT DIREKTUR OPERASIONAL','DIREKTURUTAMA','DIREKSI'])): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
                         <?php endif; ?>
 
-                        <a href="<?= base_url('retur_penjualan/activity_log') ?>" class="btn btn-outline-success">
+                        <a href="<?= base_url('retur_penjualan/activity_log') ?>" class="btn btn-outline-success mr-1">
                             <i class="fas fa-history"></i> Log Aktivitas
                         </a>
+
+                        <?php if ($can_manage_set): ?>
+                            <a href="<?= base_url('retur_penjualan/setting_approval') ?>" class="btn btn-outline-dark">
+                                <i class="fas fa-user-cog"></i> Setting Approval
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -274,12 +285,12 @@
                                                     $tindak_label = 'Verifikasi Jagung';
                                                     $tindak_icon = 'clipboard-check';
                                                     $tindak_class = 'success';
-                                                } elseif ($st === 'diverifikasi_koor' && $is_admpnj) {
+                                                } elseif ($st === 'diverifikasi_koor' && $is_admstock) {
                                                     $tindak_url = base_url('retur_penjualan/admretur/cek/' . $row['id_spr']);
                                                     $tindak_label = 'Cek SPR';
                                                     $tindak_icon = 'boxes';
                                                     $tindak_class = 'info';
-                                                } elseif ($st === 'dicek_admretur' && $is_kadep) {
+                                                } elseif ($st === 'dicek_admretur' && ($is_kadep || $is_kadepub)) {
                                                     $tindak_url = base_url('retur_penjualan/kadep_sc/approve/' . $row['id_spr']);
                                                     $tindak_label = 'Approve';
                                                     $tindak_icon = 'user-tie';

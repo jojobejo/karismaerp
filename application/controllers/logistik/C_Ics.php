@@ -1109,6 +1109,7 @@ class C_Ics extends CI_Controller
             }
         }
 
+        $checkerName = trim((string) $this->input->post('checker_name', TRUE));
         $payload = [
             'manual_ref_no' => trim((string) $this->input->post('manual_ref_no', TRUE)),
             'tgl_lpb' => trim((string) $this->input->post('tgl_lpb', TRUE)),
@@ -1120,7 +1121,7 @@ class C_Ics extends CI_Controller
             'no_invoice' => trim((string) $this->input->post('no_invoice', TRUE)),
             'keterangan' => trim((string) $this->input->post('keterangan', TRUE)),
             'dilakukan_oleh' => $this->active_user_name(),
-            'checker_name' => $this->active_user_name(),
+            'checker_name' => $checkerName !== '' ? $checkerName : $this->active_user_name(),
             'checker_by' => $this->active_user_code()
         ];
 

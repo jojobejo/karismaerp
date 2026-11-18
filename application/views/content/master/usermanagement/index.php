@@ -141,6 +141,11 @@
                         </a>
                     </li>
                     <?php endif; ?>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" id="tabBtnApprovalRetur" data-toggle="pill" href="#paneApprovalRetur" data-tab-key="approval-retur" role="tab">
+                            <i class="fas fa-user-check"></i> Approval Retur Penjualan
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="tab-content" id="umMainTabContent">
@@ -419,6 +424,123 @@
                         </div>
                     </div>
                     <?php endif; ?>
+
+                    <!-- TAB 6: APPROVAL RETUR PENJUALAN -->
+                    <div class="tab-pane fade" id="paneApprovalRetur" role="tabpanel">
+                        <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $fk => $fcls): ?>
+                            <?php if ($fmsg = $this->session->flashdata($fk)): ?>
+                                <div class="alert alert-<?= $fcls ?> alert-dismissible fade show">
+                                    <i class="fas fa-<?= $fk === 'success' ? 'check-circle' : 'exclamation-circle' ?> mr-1"></i>
+                                    <?= $fmsg ?>
+                                    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Setting Approval Dinamis Retur Penjualan:</strong>
+                            Pilih satu atau beberapa karyawan untuk tiap tahap approval. Jika suatu tahap diisi user, maka <strong>hanya user tersebut</strong> (ditambah Admin) yang berhak approve pada tahap itu. Jika dikosongkan, sistem menggunakan aturan default berdasarkan <em>Jobdesk/Bagian</em>.
+                        </div>
+
+                        <form action="<?= base_url('retur_penjualan/setting_approval/save') ?>" method="post" id="formUmApprovalRetur">
+                            <input type="hidden" name="redirect_to" value="master/user-management?tab=approval-retur">
+                            <div class="erp-panel">
+                                <div class="erp-panel-header d-flex flex-wrap justify-content-between align-items-center" style="gap:10px;">
+                                    <div>
+                                        <h5 class="mb-0 font-weight-bold"><i class="fas fa-sitemap text-primary mr-2"></i>Konfigurasi PIC / Approver Retur Penjualan</h5>
+                                        <small class="text-muted">Ubah penanggung jawab approval kapan saja jika ada karyawan resign atau mutasi.</small>
+                                    </div>
+                                    <div class="d-flex flex-wrap" style="gap:8px;">
+                                        <a href="<?= base_url('retur_penjualan/setting_approval') ?>" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-external-link-alt mr-1"></i> Buka Halaman Penuh
+                                        </a>
+                                        <button type="submit" class="btn btn-erp btn-sm font-weight-bold">
+                                            <i class="fas fa-save mr-1"></i> Simpan Pengaturan
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th style="width: 70px;" class="text-center">Tahap</th>
+                                                <th style="width: 30%;">Peran / Tahap Approval</th>
+                                                <th style="width: 48%;">Karyawan / User yang Bertugas</th>
+                                                <th style="width: 15%;" class="text-center">Status Mode</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php
+                                            $umLastGroup = '';
+                                            foreach (($retur_role_definitions ?? []) as $roleKey => $def):
+                                                $currentEntries = $retur_settings_map[$roleKey] ?? [];
+                                                $selectedIds    = array_map('intval', array_column($currentEntries, 'user_id'));
+                                                $isCustom       = !empty($selectedIds);
+
+                                                if ($def['group'] !== $umLastGroup):
+                                                    $umLastGroup = $def['group'];
+                                            ?>
+                                                <tr style="background:#f1f5f9;">
+                                                    <td colspan="4" class="font-weight-bold text-uppercase small text-dark py-2">
+                                                        <i class="fas fa-layer-group mr-1 text-primary"></i> <?= htmlspecialchars($umLastGroup) ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endif; ?>
+                                                <tr>
+                                                    <td class="text-center align-middle">
+                                                        <span class="badge badge-light border px-2 py-1 font-weight-bold"><?= htmlspecialchars($def['step']) ?></span>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <div class="font-weight-bold text-dark"><?= htmlspecialchars($def['label']) ?></div>
+                                                        <div class="text-muted small"><?= htmlspecialchars($def['description']) ?></div>
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <select name="roles[<?= htmlspecialchars($roleKey) ?>][]"
+                                                                class="form-control um-select2-approver"
+                                                                multiple="multiple"
+                                                                data-placeholder="-- Kosongkan untuk gunakan default jobdesk --"
+                                                                style="width: 100%;">
+                                                            <?php foreach (($retur_active_users ?? []) as $u):
+                                                                $uid   = (int)$u['id'];
+                                                                $label = trim((string)($u['nama_lngkp'] ?: $u['username']))
+                                                                       . ' (' . $u['username'] . ')'
+                                                                       . (!empty($u['bagian']) ? ' — ' . $u['bagian'] : '');
+                                                            ?>
+                                                                <option value="<?= $uid ?>" <?= in_array($uid, $selectedIds, true) ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($label) ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <div class="text-muted mt-1" style="font-size:11px;">
+                                                            <i class="fas fa-shield-alt mr-1"></i> Default jika kosong: <?= htmlspecialchars($def['default']) ?>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <?php if ($isCustom): ?>
+                                                            <span class="badge badge-primary px-2 py-1">
+                                                                <i class="fas fa-user-check mr-1"></i> Custom (<?= count($selectedIds) ?> user)
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-secondary px-2 py-1">
+                                                                <i class="fas fa-cog mr-1"></i> Default Jobdesk
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center">
+                                    <small class="text-muted"><i class="fas fa-lock mr-1"></i> User dengan level Admin selalu memiliki akses penuh pada seluruh tahap.</small>
+                                    <button type="submit" class="btn btn-erp font-weight-bold">
+                                        <i class="fas fa-save mr-1"></i> Simpan Semua Pengaturan
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1478,6 +1600,8 @@ $(function(){
                     smLoadDetail(list[0].section_key);
                 }
             });
+        } else if (tabKey === 'approval-retur') {
+            initApprovalReturSelect2();
         }
 
         // Perbarui query string di URL tanpa reload halaman
@@ -1500,12 +1624,28 @@ $(function(){
         activateTab('fasilitas', $(this).data('id'));
     });
 
+    let approvalReturSelect2Init = false;
+    function initApprovalReturSelect2() {
+        if (approvalReturSelect2Init) return;
+        if (window.jQuery && jQuery.fn.select2) {
+            jQuery('.um-select2-approver').select2({
+                width: '100%',
+                allowClear: true,
+                closeOnSelect: false
+            });
+            approvalReturSelect2Init = true;
+        }
+    }
+
     // Buka tab otomatis jika ada parameter ?tab= di URL (mis. hasil redirect)
     const initParams = new URLSearchParams(window.location.search);
     const initTab = initParams.get('tab');
     const initUserId = parseInt(initParams.get('user_id') || '0', 10);
-    if (initTab === 'akses-dashboard' || initTab === 'fasilitas' || initTab === 'akses-level' || initTab === 'menu-departemen') {
+    if (initTab === 'akses-dashboard' || initTab === 'fasilitas' || initTab === 'akses-level' || initTab === 'menu-departemen' || initTab === 'approval-retur') {
         activateTab(initTab, initUserId || 0);
+        if (initTab === 'approval-retur') {
+            initApprovalReturSelect2();
+        }
     }
 });
 </script>

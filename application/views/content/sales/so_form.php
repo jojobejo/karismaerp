@@ -131,6 +131,26 @@ input[type=number] {
                                         </div>
                                     </div>
 
+                                    <?php if (!empty($is_super_sales)): ?>
+                                    <div class="form-group so-form-row">
+                                        <label class="so-form-label">Salesman <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
+                                            <?php
+                                            $selected_salesman = $is_edit ? trim((string)($so['create_by'] ?? '')) : '';
+                                            ?>
+                                            <select class="form-control" name="salesman" id="salesman_select" required>
+                                                <option value="">-- Pilih Salesman --</option>
+                                                <?php foreach (($salesman_list ?? []) as $sm): ?>
+                                                    <option value="<?= escAttr($sm) ?>" <?= (strcasecmp($selected_salesman, $sm) === 0) ? 'selected' : '' ?>>
+                                                        <?= escAttr($sm) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small class="text-muted">Daftar customer otomatis difilter sesuai salesman yang dipilih.</small>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+
                                     <div class="form-group so-form-row">
                                         <label class="so-form-label">Customer <span class="text-danger">*</span></label>
                                         <div class="so-form-control">
@@ -478,6 +498,7 @@ input[type=number] {
 var BASE_URL       = '<?= base_url() ?>';
 var BATAS_TONASE   = <?= (float)$batas_ton ?>;
 var BATAS_KUBIKASI = <?= (float)$batas_kub ?>;
+var IS_SUPER_SALES = <?= !empty($is_super_sales) ? 'true' : 'false' ?>;
 
 <?php
 $edit_details_safe = [];
@@ -1099,12 +1120,23 @@ function applyBarangKeBaris(i, btn) {
 ================================================================ */
 function renderCustomers(q) {
     q = (q||'').toLowerCase();
-    var list = q ? CUSTOMERS.filter(function(c){
+    var selectedSalesman = '';
+    if (IS_SUPER_SALES) {
+        var elSalesman = document.getElementById('salesman_select');
+        selectedSalesman = elSalesman ? String(elSalesman.value || '').trim().toLowerCase() : '';
+    }
+    var baseList = CUSTOMERS;
+    if (IS_SUPER_SALES && selectedSalesman !== '') {
+        baseList = CUSTOMERS.filter(function(c){
+            return String(c.nama_sales || '').trim().toLowerCase() === selectedSalesman;
+        });
+    }
+    var list = q ? baseList.filter(function(c){
         return String(c.nama_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.nama_kios||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.kd_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.kd_rute||'').toLowerCase().indexOf(q) >= 0;
-    }) : CUSTOMERS;
+    }) : baseList;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
             '<tr><td colspan="5" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
@@ -1400,7 +1432,21 @@ document.getElementById('btn-add-row').addEventListener('click', function() {
 /* Customer */
 var elCustDisp = document.getElementById('customer_display');
 var btnRefreshPlafon = document.getElementById('btn-refresh-plafon');
+var elSalesmanSelect = document.getElementById('salesman_select');
+if (elSalesmanSelect) {
+    elSalesmanSelect.addEventListener('change', function() {
+        document.getElementById('customer_id').value      = '';
+        document.getElementById('customer_name').value    = '';
+        document.getElementById('customer_display').value = '';
+        document.getElementById('customer_plafon').value  = '';
+    });
+}
 function bukaMdlCustomer() {
+    if (IS_SUPER_SALES && elSalesmanSelect && !String(elSalesmanSelect.value || '').trim()) {
+        salesToast('warning', 'Silakan pilih Salesman terlebih dahulu.');
+        elSalesmanSelect.focus();
+        return;
+    }
     document.getElementById('customer-search').value = '';
     renderCustomers('');
     $('#modal-customer').modal('show');

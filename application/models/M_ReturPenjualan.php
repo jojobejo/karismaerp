@@ -15,6 +15,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  */
 class M_ReturPenjualan extends CI_Model
 {
+    private $approvalSettingsCache = null;
+
     public function __construct()
     {
         parent::__construct();
@@ -31,6 +33,7 @@ class M_ReturPenjualan extends CI_Model
         $this->_ensureDetailTable();
         $this->ensure_retur_penjualan_tables();
         $this->_ensureActivityLogTable();
+        $this->ensure_approval_setting_table();
         $this->_alterTablesIfNeeded();
     }
 
@@ -1112,5 +1115,267 @@ class M_ReturPenjualan extends CI_Model
         $this->db->order_by('r.id_retur',  'DESC');
 
         return $this->db->get()->result_array();
+    }
+
+    // ================================================================
+    // SETTING APPROVAL DINAMIS RETUR PENJUALAN
+    // ================================================================
+
+    public function ensure_approval_setting_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_retur_approval_setting` (
+                `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `role_key`   VARCHAR(50)  NOT NULL,
+                `user_id`    INT UNSIGNED NOT NULL,
+                `username`   VARCHAR(100) NOT NULL,
+                `nama_user`  VARCHAR(150) NOT NULL,
+                `created_by` VARCHAR(100) DEFAULT NULL,
+                `created_at` DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `uniq_role_user` (`role_key`, `user_id`),
+                KEY `idx_role_key` (`role_key`),
+                KEY `idx_user_id` (`user_id`),
+                KEY `idx_username` (`username`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    /**
+     * Daftar seluruh tahap/peran approval Retur Penjualan yang dapat dikonfigurasi.
+     */
+    public function get_approval_role_definitions()
+    {
+        return [
+            // Tahap 1: Alur SPR (Surat Perintah Retur)
+            'sc' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '1',
+                'label'       => 'SC / Sales Counter (Pembuat SPR)',
+                'description' => 'Membuat dan mengajukan SPR baru.',
+                'default'     => 'Jobdesk: SC, SALES COUNTER, MT SALES COUNTER',
+            ],
+            'koor_sc' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '2',
+                'label'       => 'Manager / Koordinator SC',
+                'description' => 'Verifikasi awal SPR yang diajukan oleh SC.',
+                'default'     => 'Jobdesk: MANAGERSC, MNGSC, MANAGER SC, MANAGER SALES COUNTER',
+            ],
+            'kadepub' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '2B',
+                'label'       => 'Kadep Unit Bisnis (Benih / Jagung)',
+                'description' => 'Verifikasi khusus SPR produk unit bisnis (jagung/benih).',
+                'default'     => 'Jobdesk: KADEPUB, KEPALA UNIT BISNIS, MT ABM SEED JATIM TIMUR',
+            ],
+            'admstock' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '3',
+                'label'       => 'Admin Stock',
+                'description' => 'Pengecekan stok / SPR setelah diverifikasi Manager SC.',
+                'default'     => 'Jobdesk: ADMSTOCK, ADMIN STOCK',
+            ],
+            'kadep_sc' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '4',
+                'label'       => 'Kadep Keuangan & Sales / Kadep SC',
+                'description' => 'Approval final SPR sebelum diteruskan ke Logistik / Admin LPB.',
+                'default'     => 'Jobdesk: KADEPSC, KADEPKS, MT KADEP KEUANGAN & SALES, KADEPUB',
+            ],
+            'logistik' => [
+                'group'       => 'Alur SPR (Surat Perintah Retur)',
+                'step'        => '5',
+                'label'       => 'Logistik / Gudang',
+                'description' => 'Cetak & proses SPR yang sudah disetujui Kadep.',
+                'default'     => 'Jobdesk: LOGISTIC, LOGISTIK, MT KADEP LOGISTIK, ADMIN GUDANG / Username: sprlog, kurniawan',
+            ],
+
+            // Tahap 2: Alur Dokumen Retur Fisik & Keuangan
+            'admlpb' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '6',
+                'label'       => 'Admin LPB (Pembuat Dokumen Retur)',
+                'description' => 'Membuat dan submit dokumen retur barang masuk fisik dari SPR.',
+                'default'     => 'Jobdesk: ADMLPB, ADMINLOGLPB, ADMIN LPB & GUDANG BENIH / Username: admlpb, yunika',
+            ],
+            'admretur' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '7',
+                'label'       => 'Admin Retur (Verifikasi Retur)',
+                'description' => 'Verifikasi dokumen retur yang disubmit oleh Admin LPB.',
+                'default'     => 'Jobdesk: ADMRETUR, ADMIN PRICELIST & RETUR PENJUALAN',
+            ],
+            'mngacc' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '8',
+                'label'       => 'Manager Accounting & Tax / Keuangan',
+                'description' => 'Approval dokumen retur di tahap keuangan/accounting.',
+                'default'     => 'Jobdesk: MANAGERACC, MT MANAGER ACCOUNTING & TAX, MT MANAGER KEUANGAN, MANAGERTC',
+            ],
+            'mngse' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '9',
+                'label'       => 'Manager Sales Executive',
+                'description' => 'Approval dokumen retur di tahap Manager SE.',
+                'default'     => 'Jobdesk: MANAGERSE, MANAGER SALES EXECUTIVE',
+            ],
+            'dirop' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '10',
+                'label'       => 'Direktur Operasional',
+                'description' => 'Approval dokumen retur di tahap Direktur Operasional.',
+                'default'     => 'Jobdesk: DIREKTUROP, MT DIREKTUR OPERASIONAL',
+            ],
+            'dirut' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '11',
+                'label'       => 'Direktur Utama',
+                'description' => 'Approval dokumen retur di tahap Direktur Utama.',
+                'default'     => 'Jobdesk: DIREKTURUTAMA, DIREKSI, DIREKTUR, DIREKTUR UTAMA',
+            ],
+            'collection' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '12',
+                'label'       => 'Team Collection',
+                'description' => 'Proses potong piutang / penanganan collection atas retur.',
+                'default'     => 'Jobdesk: COLLECTION, KOLEKTOR, TEAM COLLECTION, MT TEAM COLLECTION',
+            ],
+            'kasir' => [
+                'group'       => 'Alur Dokumen Retur & Keuangan',
+                'step'        => '13',
+                'label'       => 'Kasir',
+                'description' => 'Proses pembayaran / penyelesaian kasir atas retur.',
+                'default'     => 'Jobdesk: KASIR',
+            ],
+        ];
+    }
+
+    /**
+     * Ambil seluruh setting approval per role_key (di-cache per request).
+     * Return: ['koor_sc' => [ ['user_id' => 1, 'username' => '...', 'nama_user' => '...'], ... ], ...]
+     */
+    public function get_approval_settings_map($forceRefresh = false)
+    {
+        if (!$forceRefresh && $this->approvalSettingsCache !== null) {
+            return $this->approvalSettingsCache;
+        }
+
+        $this->ensure_approval_setting_table();
+        $rows = $this->db->order_by('id', 'ASC')->get('tb_retur_approval_setting')->result_array();
+        $map  = [];
+        foreach ($rows as $row) {
+            $key = strtolower(trim((string)($row['role_key'] ?? '')));
+            if ($key === '') continue;
+            $map[$key][] = $row;
+        }
+
+        $this->approvalSettingsCache = $map;
+        return $map;
+    }
+
+    /**
+     * Cek apakah user terdaftar pada salah satu role approval dinamis.
+     */
+    public function user_has_any_approval_setting($userId, $username)
+    {
+        $map = $this->get_approval_settings_map();
+        $userId = (int)$userId;
+        $username = strtolower(trim((string)$username));
+
+        foreach ($map as $entries) {
+            foreach ($entries as $entry) {
+                if ($userId > 0 && (int)$entry['user_id'] === $userId) {
+                    return true;
+                }
+                if ($username !== '' && strtolower(trim((string)$entry['username'])) === $username) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ambil daftar seluruh user aktif di tb_users untuk dropdown setting approval.
+     */
+    public function get_active_users_for_approval()
+    {
+        if (!$this->db->table_exists('tb_users')) {
+            return [];
+        }
+        return $this->db
+            ->select('id, username, nama_lngkp, departement, bagian, level')
+            ->where('status', 1)
+            ->order_by('nama_lngkp', 'ASC')
+            ->get('tb_users')
+            ->result_array();
+    }
+
+    /**
+     * Simpan konfigurasi approval dinamis (transaksional).
+     * $roleUsersMap: ['koor_sc' => [12, 15], 'admstock' => [40], ...]
+     */
+    public function save_approval_settings(array $roleUsersMap, $savedBy = 'ADMIN')
+    {
+        $this->ensure_approval_setting_table();
+        $validRoles = array_keys($this->get_approval_role_definitions());
+
+        // Kumpulkan semua user_id yang dipilih
+        $allUserIds = [];
+        foreach ($roleUsersMap as $roleKey => $ids) {
+            if (!in_array($roleKey, $validRoles, true) || !is_array($ids)) {
+                continue;
+            }
+            foreach ($ids as $uid) {
+                $uid = (int)$uid;
+                if ($uid > 0) {
+                    $allUserIds[$uid] = $uid;
+                }
+            }
+        }
+
+        $userMap = [];
+        if (!empty($allUserIds)) {
+            $users = $this->db
+                ->select('id, username, nama_lngkp')
+                ->where_in('id', array_values($allUserIds))
+                ->get('tb_users')
+                ->result_array();
+            foreach ($users as $u) {
+                $userMap[(int)$u['id']] = $u;
+            }
+        }
+
+        $this->db->trans_start();
+        $this->db->empty_table('tb_retur_approval_setting');
+
+        $now = date('Y-m-d H:i:s');
+        foreach ($validRoles as $roleKey) {
+            $ids = $roleUsersMap[$roleKey] ?? [];
+            if (!is_array($ids)) continue;
+            $seen = [];
+            foreach ($ids as $uid) {
+                $uid = (int)$uid;
+                if ($uid <= 0 || isset($seen[$uid]) || !isset($userMap[$uid])) {
+                    continue;
+                }
+                $seen[$uid] = true;
+                $u = $userMap[$uid];
+                $this->db->insert('tb_retur_approval_setting', [
+                    'role_key'   => $roleKey,
+                    'user_id'    => $uid,
+                    'username'   => $u['username'],
+                    'nama_user'  => $u['nama_lngkp'] ?: $u['username'],
+                    'created_by' => $savedBy,
+                    'created_at' => $now,
+                ]);
+            }
+        }
+
+        $this->db->trans_complete();
+        $this->approvalSettingsCache = null;
+
+        return $this->db->trans_status();
     }
 }
