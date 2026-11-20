@@ -1021,7 +1021,7 @@
                     <div class="modal-body">
                         <div class="alert alert-info py-2 px-3 small mb-3">
                             <strong>Cara Kerja:</strong> Pelunasan diinput per <strong>Nomor Faktur Z (Induk)</strong>. Nominal yang dibayarkan akan dialokasikan ke Faktur Pecahan H di bawah Faktur Z tersebut secara berurutan.<br>
-                            <span class="text-muted">Mendukung <strong>2 metode pembayaran sekaligus</strong> dalam 1 baris dengan mengisi kolom <code>metode_pembayaran_2</code> &amp; <code>jumlah_pembayaran_2</code> (opsional, misal bayar sebagian via Q Mandiri dan sisanya via Q BRI).</span>
+                            <span class="text-muted">Mendukung hingga <strong>7 metode/termin pembayaran sekaligus</strong> dalam 1 baris (<code>metode_pembayaran1</code> &amp; <code>jumlah_pembayaran1</code> s.d. <code>metode_pembayaran_7</code> &amp; <code>jumlah_pembayaran_7</code>), dan mendukung hingga 20 termin bila kolom tambahan ditambahkan.</span>
                         </div>
                         <div class="form-group mb-0">
                             <label for="filePelunasanZ" class="font-weight-bold text-dark">Pilih File Pelunasan Faktur Z (.xlsx / .xls / .csv)</label>

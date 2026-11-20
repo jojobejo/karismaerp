@@ -12,7 +12,12 @@
         <div class="content-wrapper">
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
-            <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+            <?php 
+            $userJobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+            $userName = strtolower(trim((string)$this->session->userdata('username')));
+            $isAllowedLogistik = ($userJobdesk === 'LOGISTIK' || $userJobdesk === 'ADMINKEU' || $userName === 'admkeu' || $userName === 'admin' || $this->session->userdata('lv') == '1');
+            ?>
+            <?php if ($isAllowedLogistik) : ?>
 
                 <div class="content-header">
                     <div class="container-fluid">

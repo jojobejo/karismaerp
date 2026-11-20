@@ -3835,6 +3835,7 @@ class M_SalesOrder extends CI_Model
 
         if ($this->db->table_exists('tbso_faktur_z_pecah')) {
             $cols = [
+                'skema_potongan'    => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `skema_potongan` INT DEFAULT 20 AFTER `parent_no_faktur`",
                 'total_bayar'       => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `total_bayar` DECIMAL(18,2) DEFAULT 0 AFTER `status`",
                 'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) DEFAULT 0 AFTER `total_bayar`",
                 'status_bayar'      => "ALTER TABLE `tbso_faktur_z_pecah` ADD COLUMN `status_bayar` VARCHAR(20) DEFAULT 'belum_lunas' AFTER `sisa_tagihan`",
@@ -4549,7 +4550,7 @@ class M_SalesOrder extends CI_Model
                 CREATE TABLE IF NOT EXISTS `tbso_faktur_h_import` (
                     `id_import_h` INT AUTO_INCREMENT PRIMARY KEY,
                     `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Nomor Faktur H',
-                    `parent_no_faktur` VARCHAR(50) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
+                    `parent_no_faktur` VARCHAR(255) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
                     `no_so` VARCHAR(50) DEFAULT NULL COMMENT 'Nomor SO jika ada',
                     `kd_customer` VARCHAR(50) DEFAULT NULL COMMENT 'Kode Customer',
                     `customer_name` VARCHAR(255) NOT NULL COMMENT 'Nama Customer / Toko',
@@ -4568,6 +4569,18 @@ class M_SalesOrder extends CI_Model
                     `total_tonase` DECIMAL(12,4) DEFAULT 0,
                     `total_kubikasi` DECIMAL(12,6) DEFAULT 0,
                     `grand_total` DECIMAL(18,2) DEFAULT 0,
+                    `total_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    `sisa_tagihan` DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    `status_bayar` VARCHAR(20) NOT NULL DEFAULT 'belum_lunas' COMMENT 'belum_lunas, sebagian, lunas',
+                    `tanggal_bayar` DATE DEFAULT NULL,
+                    `metode_pembayaran` VARCHAR(100) DEFAULT NULL,
+                    `skema_potongan` INT NOT NULL DEFAULT 20 COMMENT '0, 20, 40',
+                    `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    `nominal_potongan` DECIMAL(18,2) NOT NULL DEFAULT 0,
+                    `id_jurnal_q` INT DEFAULT NULL,
+                    `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL,
+                    `id_jurnal_a` INT DEFAULT NULL,
+                    `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL,
                     `status` VARCHAR(20) NOT NULL DEFAULT 'imported',
                     `import_batch` VARCHAR(50) DEFAULT NULL,
                     `create_by` VARCHAR(100) NOT NULL,
@@ -4615,23 +4628,25 @@ class M_SalesOrder extends CI_Model
         }
 
         // Pastikan kolom-kolom status pelunasan dan jurnal tersedia di tbso_faktur_h_import
-        $paymentCols = [
-            'total_bayar'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `total_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `grand_total`",
-            'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `total_bayar`",
-            'status_bayar'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `status_bayar` VARCHAR(20) NOT NULL DEFAULT 'belum_lunas' COMMENT 'belum_lunas, sebagian, lunas' AFTER `sisa_tagihan`",
-            'tanggal_bayar'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `tanggal_bayar` DATE DEFAULT NULL AFTER `status_bayar`",
-            'metode_pembayaran' => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `metode_pembayaran` VARCHAR(100) DEFAULT NULL AFTER `tanggal_bayar`",
-            'skema_potongan'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `skema_potongan` INT NOT NULL DEFAULT 20 COMMENT '0, 20, 40' AFTER `metode_pembayaran`",
-            'nominal_bruto'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `skema_potongan`",
-            'nominal_potongan'  => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_potongan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `nominal_bruto`",
-            'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
-            'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
-            'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
-            'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
-        ];
-        foreach ($paymentCols as $col => $sql) {
-            if (!$this->db->field_exists($col, 'tbso_faktur_h_import')) {
-                $this->db->query($sql);
+        if ($this->db->table_exists('tbso_faktur_h_import')) {
+            $paymentCols = [
+                'total_bayar'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `total_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `grand_total`",
+                'sisa_tagihan'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `sisa_tagihan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `total_bayar`",
+                'status_bayar'      => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `status_bayar` VARCHAR(20) NOT NULL DEFAULT 'belum_lunas' COMMENT 'belum_lunas, sebagian, lunas' AFTER `sisa_tagihan`",
+                'tanggal_bayar'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `tanggal_bayar` DATE DEFAULT NULL AFTER `status_bayar`",
+                'metode_pembayaran' => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `metode_pembayaran` VARCHAR(100) DEFAULT NULL AFTER `tanggal_bayar`",
+                'skema_potongan'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `skema_potongan` INT NOT NULL DEFAULT 20 COMMENT '0, 20, 40' AFTER `metode_pembayaran`",
+                'nominal_bruto'     => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `skema_potongan`",
+                'nominal_potongan'  => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nominal_potongan` DECIMAL(18,2) NOT NULL DEFAULT 0 AFTER `nominal_bruto`",
+                'id_jurnal_q'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_q` INT DEFAULT NULL AFTER `nominal_potongan`",
+                'nomor_jurnal_q'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_q` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_q`",
+                'id_jurnal_a'       => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `id_jurnal_a` INT DEFAULT NULL AFTER `nomor_jurnal_q`",
+                'nomor_jurnal_a'    => "ALTER TABLE `tbso_faktur_h_import` ADD COLUMN `nomor_jurnal_a` VARCHAR(50) DEFAULT NULL AFTER `id_jurnal_a`",
+            ];
+            foreach ($paymentCols as $col => $sql) {
+                if (!$this->db->field_exists($col, 'tbso_faktur_h_import')) {
+                    $this->db->query($sql);
+                }
             }
         }
 
@@ -4642,7 +4657,7 @@ class M_SalesOrder extends CI_Model
                     `id_pembayaran_h` INT AUTO_INCREMENT PRIMARY KEY,
                     `id_import_h` INT NOT NULL COMMENT 'Relasi ke tbso_faktur_h_import.id_import_h',
                     `no_faktur` VARCHAR(50) NOT NULL COMMENT 'Nomor Faktur H',
-                    `parent_no_faktur` VARCHAR(50) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
+                    `parent_no_faktur` VARCHAR(255) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada',
                     `tanggal_pembayaran` DATE NOT NULL COMMENT 'Tanggal Pelunasan',
                     `jumlah_bayar` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT 'Nominal Netto Faktur H yang dilunasi',
                     `nominal_bruto` DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT 'Nominal Bruto sebelum potongan',
@@ -5246,40 +5261,42 @@ class M_SalesOrder extends CI_Model
         $groupedZ = [];
 
         foreach ($childRows as $row) {
-            $noZ = trim((string)($row['no_faktur_z'] ?? ''));
-            if ($noZ === '') {
+            $rawNoZ = trim((string)($row['no_faktur_z'] ?? ''));
+            if ($rawNoZ === '') {
                 continue;
             }
-
-            if (!isset($groupedZ[$noZ])) {
-                $custLabel = trim((string)($row['customer_name'] ?? ''));
-                $kontak = trim((string)($row['kontak_person'] ?? ''));
-                if ($kontak !== '' && $kontak !== '-' && stripos($custLabel, $kontak) === false) {
-                    $custLabel .= ' (' . $kontak . ')';
+            $zList = array_unique(array_filter(array_map('trim', preg_split('/[,;]+/', $rawNoZ))));
+            foreach ($zList as $noZ) {
+                if (!isset($groupedZ[$noZ])) {
+                    $custLabel = trim((string)($row['customer_name'] ?? ''));
+                    $kontak = trim((string)($row['kontak_person'] ?? ''));
+                    if ($kontak !== '' && $kontak !== '-' && stripos($custLabel, $kontak) === false) {
+                        $custLabel .= ' (' . $kontak . ')';
+                    }
+                    $groupedZ[$noZ] = [
+                        'no_faktur_z'       => $noZ,
+                        'tanggal_faktur'    => $row['tanggal_faktur'] ?: date('Y-m-d'),
+                        'customer_name'     => $custLabel !== '' ? $custLabel : '-',
+                        'metode_pembayaran' => $row['metode_pembayaran'] ?: '',
+                        'skema_potongan'    => ($row['skema_potongan'] !== null && $row['skema_potongan'] !== '') ? (int)$row['skema_potongan'] : null,
+                        'total_h'           => 0,
+                        'belum_lunas_h'     => 0,
+                        'total_tagihan_z'   => 0.0,
+                        'sisa_belum_lunas'  => 0.0,
+                    ];
                 }
-                $groupedZ[$noZ] = [
-                    'no_faktur_z'       => $noZ,
-                    'tanggal_faktur'    => $row['tanggal_faktur'] ?: date('Y-m-d'),
-                    'customer_name'     => $custLabel !== '' ? $custLabel : '-',
-                    'metode_pembayaran' => $row['metode_pembayaran'] ?: '',
-                    'skema_potongan'    => ($row['skema_potongan'] !== null && $row['skema_potongan'] !== '') ? (int)$row['skema_potongan'] : null,
-                    'total_h'           => 0,
-                    'belum_lunas_h'     => 0,
-                    'total_tagihan_z'   => 0.0,
-                    'sisa_belum_lunas'  => 0.0,
-                ];
-            }
 
-            $tagihanH    = (float)$row['grand_total'];
-            $sudahBayarH = max(0.0, (float)($row['total_bayar'] ?? 0));
-            $isLunasH    = strtolower(trim((string)($row['status_bayar'] ?? ''))) === 'lunas';
-            $sisaH       = $isLunasH ? 0.0 : max(0.0, round($tagihanH - $sudahBayarH, 2));
+                $tagihanH    = (float)$row['grand_total'];
+                $sudahBayarH = max(0.0, (float)($row['total_bayar'] ?? 0));
+                $isLunasH    = strtolower(trim((string)($row['status_bayar'] ?? ''))) === 'lunas';
+                $sisaH       = $isLunasH ? 0.0 : max(0.0, round($tagihanH - $sudahBayarH, 2));
 
-            $groupedZ[$noZ]['total_h']++;
-            $groupedZ[$noZ]['total_tagihan_z'] += $tagihanH;
-            if (!$isLunasH && $sisaH > 0.01) {
-                $groupedZ[$noZ]['belum_lunas_h']++;
-                $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
+                $groupedZ[$noZ]['total_h']++;
+                $groupedZ[$noZ]['total_tagihan_z'] += $tagihanH;
+                if (!$isLunasH && $sisaH > 0.01) {
+                    $groupedZ[$noZ]['belum_lunas_h']++;
+                    $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
+                }
             }
         }
 
@@ -5311,7 +5328,8 @@ class M_SalesOrder extends CI_Model
             'd.id_import_h = h.id_import_h',
             'left'
         );
-        $this->db->where("TRIM(COALESCE(h.parent_no_faktur, '')) =", $noFakturZ);
+        // Mendukung pencarian Faktur Z tunggal maupun gabungan beberapa Faktur Z yang dipisah koma
+        $this->db->where("FIND_IN_SET(" . $this->db->escape(strtoupper($noFakturZ)) . ", REPLACE(REPLACE(UPPER(COALESCE(h.parent_no_faktur, '')), ' ', ''), ';', ',')) >", 0, false);
         $this->db->where("COALESCE(h.status, 'imported') !=", 'cancelled');
         if ($createBy !== '') {
             $this->db->where('h.create_by', $createBy);

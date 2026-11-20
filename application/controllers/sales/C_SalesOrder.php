@@ -4136,10 +4136,18 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        // Ambil skema potongan yang dipilih (0, 20, atau 40)
+        $raw_pot = $this->input->post('pakai_potongan_20');
+        if ($raw_pot === null || $raw_pot === '') {
+            $raw_pot = $this->input->get('pakai_potongan_20');
+        }
+        $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
+        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
+
         // Hitung estimasi total nilai netto pool untuk menentukan rekomendasi jumlah pecahan (plafon 25jt)
         $total_pool_netto = 0.0;
         foreach ($pool_items as $pit) {
-            $p_hrg = round((float)$pit['hrg_satuan'] * 0.8, 2);
+            $p_hrg = round((float)$pit['hrg_satuan'] * $disc_factor, 2);
             $p_disc = (float)($pit['disc'] ?? 0);
             if ($p_disc < 100) {
                 $p_disc_rate = ($p_disc > 1) ? ($p_disc / 100) : $p_disc;
@@ -4184,10 +4192,6 @@ class C_SalesOrder extends CI_Controller
         $is_auto_prefilled = false;
         $max_plafon = (float)($this->input->post('max_nominal') ?: $this->input->get('max_nominal') ?: 25000000);
         if ($max_plafon <= 0) $max_plafon = 25000000;
-
-        $raw_pot = $this->input->post('pakai_potongan_20') ?: $this->input->get('pakai_potongan_20');
-        $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
-        $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
 
         if ($should_auto_prefill) {
             $contact_idx = 0;
@@ -4574,6 +4578,9 @@ class C_SalesOrder extends CI_Controller
         }
 
         $raw_pot = $this->input->post('pakai_potongan_20');
+        if ($raw_pot === null || $raw_pot === '') {
+            $raw_pot = $this->input->get('pakai_potongan_20');
+        }
         $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
         $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
 
@@ -4637,7 +4644,7 @@ class C_SalesOrder extends CI_Controller
 
         if (!empty($validation_errors)) {
             $this->session->set_flashdata('error', 'Validasi gagal:<br>&bull; ' . implode('<br>&bull; ', $validation_errors));
-            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));
+            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits) . '&pakai_potongan_20=' . $skema_potongan);
             return;
         }
 
@@ -4646,7 +4653,7 @@ class C_SalesOrder extends CI_Controller
             $result = $this->M_SalesOrder->proses_split_faktur_batch($parent_fakturs, $parent_details, $splits, $username, $skema_potongan);
         } catch (\Throwable $e) {
             $this->session->set_flashdata('error', 'Terjadi kesalahan saat memproses pemecahan faktur: ' . htmlspecialchars($e->getMessage()));
-            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));
+            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits) . '&pakai_potongan_20=' . $skema_potongan);
             return;
         }
 
@@ -4655,7 +4662,7 @@ class C_SalesOrder extends CI_Controller
             redirect('sales_order/pecah_faktur');
         } else {
             $this->session->set_flashdata('error', 'Gagal memproses pemecahan massal. Pastikan minimal 1 pecahan memiliki alokasi barang dan customer.');
-            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits));
+            redirect('sales_order/split_faktur_batch?id_faktur=' . implode(',', array_keys($parent_fakturs)) . '&jumlah_pecah=' . count($splits) . '&pakai_potongan_20=' . $skema_potongan);
         }
     }
 
@@ -8205,6 +8212,10 @@ class C_SalesOrder extends CI_Controller
 
         try {
             @set_time_limit(0);
+            // Naikkan batas memori dan matikan save_queries sementara agar import ribuan baris tidak kehabisan memori (OOM)
+            @ini_set('memory_limit', '1024M');
+            $prevSaveQueries = $this->db->save_queries ?? true;
+            $this->db->save_queries = false;
             $this->_loadPhpSpreadsheetForFakturZ();
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
             $reader->setReadDataOnly(true);
@@ -8555,7 +8566,7 @@ class C_SalesOrder extends CI_Controller
                 $salesman = $getVal('salesman') ?: 'SALES';
                 $kdRute = strtoupper(trim($getVal('kd_rute') ?: ($custMaster['kd_rute'] ?? '') ?: 'SBY')) ?: 'SBY';
 
-                $parentNoFaktur = $getVal('parent_no_faktur');
+                $parentNoFaktur = strtoupper(trim($getVal('parent_no_faktur')));
                 $noSo = $getVal('no_so');
                 $catatan = $getVal('catatan');
                 $satuan = strtoupper($getVal('satuan') ?: ($itemMaster['satuan'] ?? '') ?: 'PCS') ?: 'PCS';
@@ -8610,6 +8621,21 @@ class C_SalesOrder extends CI_Controller
                         'items'      => []
                     ];
                 } else {
+                    // Gabungkan semua No Faktur Z unik jika 1 Faktur H memuat beberapa Faktur Z (misal Z26000012, B26000715)
+                    if ($parentNoFaktur !== '') {
+                        $existingZ = (string)$groupedFakturs[$noFaktur]['header']['parent_no_faktur'];
+                        if ($existingZ === '') {
+                            $groupedFakturs[$noFaktur]['header']['parent_no_faktur'] = $parentNoFaktur;
+                        } else {
+                            $zParts = array_map('trim', explode(',', $existingZ));
+                            if (!in_array($parentNoFaktur, $zParts, true)) {
+                                $combinedZ = $existingZ . ', ' . $parentNoFaktur;
+                                if (strlen($combinedZ) <= 255) {
+                                    $groupedFakturs[$noFaktur]['header']['parent_no_faktur'] = $combinedZ;
+                                }
+                            }
+                        }
+                    }
                     // Jika baris sebelumnya kosong informasi customernya, perbarui jika baris ini ada isinya
                     if (empty($groupedFakturs[$noFaktur]['header']['alamat']) && !empty($alamat)) {
                         $groupedFakturs[$noFaktur]['header']['alamat'] = $alamat;
@@ -8665,12 +8691,20 @@ class C_SalesOrder extends CI_Controller
                 ];
             }
 
+            // Bebaskan memori array mentah Excel dan lookup master sebelum masuk ke transaksi database
+            unset($rows, $itemMap, $custAcakMap, $custMasterMap);
+
             if (empty($groupedFakturs)) {
                 throw new \RuntimeException('Tidak ada data faktur yang valid untuk diimpor.');
             }
 
             // Pastikan kolom-kolom status pelunasan dan jurnal tersedia di tbso_faktur_h_import
             $this->M_SalesOrder->ensure_faktur_h_import_tables();
+            // Perlebar kolom parent_no_faktur agar muat menampung beberapa No Faktur Z sekaligus
+            $colParentZ = $this->db->query("SHOW COLUMNS FROM `tbso_faktur_h_import` LIKE 'parent_no_faktur'")->row_array();
+            if ($colParentZ && stripos((string)($colParentZ['Type'] ?? ''), 'varchar(50)') !== false) {
+                $this->db->query("ALTER TABLE `tbso_faktur_h_import` MODIFY COLUMN `parent_no_faktur` VARCHAR(255) DEFAULT NULL COMMENT 'No Faktur Z Induk jika ada'");
+            }
             $this->db->trans_start();
 
             $fakturNumbers = array_keys($groupedFakturs);
@@ -8681,6 +8715,7 @@ class C_SalesOrder extends CI_Controller
                     $this->db->where_in('no_faktur', $delChunk)->delete('tbso_faktur_h_import');
                 }
             }
+            unset($fakturNumbers);
 
             $headerBatch = [];
             foreach ($groupedFakturs as $fakData) {
@@ -8689,6 +8724,7 @@ class C_SalesOrder extends CI_Controller
             foreach (array_chunk($headerBatch, 500) as $hChunk) {
                 $this->db->insert_batch('tbso_faktur_h_import', $hChunk);
             }
+            unset($headerBatch);
 
             // Ambil pemetaan id_import_h untuk seluruh faktur pada batch ini
             $insertedHeaders = $this->db->select('id_import_h, no_faktur')
@@ -8699,24 +8735,38 @@ class C_SalesOrder extends CI_Controller
             foreach ($insertedHeaders as $ih) {
                 $idImportMap[$ih['no_faktur']] = (int)$ih['id_import_h'];
             }
+            unset($insertedHeaders);
 
-            $allDetailBatch = [];
             $totalImportedFaktur = count($idImportMap);
-            foreach ($groupedFakturs as $noFak => $fakData) {
+            $totalImportedItems = 0;
+            $detailChunk = [];
+            $autoLunasFakturs = [];
+            // Sisipkan detail secara bertahap per 500 baris untuk menghemat memori
+            foreach ($groupedFakturs as $noFak => &$fakData) {
+                if (!empty($fakData['auto_lunas'])) {
+                    $autoLunasFakturs[$noFak] = $fakData['header'];
+                }
                 $idImportH = $idImportMap[$noFak] ?? 0;
-                if ($idImportH <= 0 || empty($fakData['items'])) continue;
-                foreach ($fakData['items'] as $item) {
-                    $item['id_import_h'] = $idImportH;
-                    $allDetailBatch[] = $item;
+                if ($idImportH > 0 && !empty($fakData['items'])) {
+                    foreach ($fakData['items'] as $item) {
+                        $item['id_import_h'] = $idImportH;
+                        $detailChunk[] = $item;
+                        $totalImportedItems++;
+                        if (count($detailChunk) >= 500) {
+                            $this->db->insert_batch('tbso_faktur_h_import_detail', $detailChunk);
+                            $detailChunk = [];
+                        }
+                    }
                 }
+                // Kosongkan item yang sudah diproses agar memori segera dilepas
+                unset($fakData['items']);
             }
-
-            $totalImportedItems = count($allDetailBatch);
-            if (!empty($allDetailBatch)) {
-                foreach (array_chunk($allDetailBatch, 500) as $dChunk) {
-                    $this->db->insert_batch('tbso_faktur_h_import_detail', $dChunk);
-                }
+            unset($fakData, $groupedFakturs, $idImportMap);
+            if (!empty($detailChunk)) {
+                $this->db->insert_batch('tbso_faktur_h_import_detail', $detailChunk);
+                $detailChunk = [];
             }
+            unset($detailChunk);
 
             // Auto-lookup berat barang dari Faktur Z Induk atau Master Barang jika kolom berat di Excel tidak terisi
             $this->db->query("
@@ -8761,27 +8811,25 @@ class C_SalesOrder extends CI_Controller
             // proses pelunasan otomatis & buat Jurnal Acak (Q) dan Jurnal (A)
             $autoLunasCount = 0;
             $autoLunasFail  = [];
-            foreach ($groupedFakturs as $noFak => $fakData) {
-                if (!empty($fakData['auto_lunas'])) {
-                    try {
-                        $resLunas = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFak, [
-                            'tanggal_pembayaran' => $fakData['header']['tanggal_bayar'] ?: $fakData['header']['tanggal_faktur'],
-                            'jumlah_bayar'       => (float)$fakData['header']['grand_total'],
-                            'metode_pembayaran'  => $fakData['header']['metode_pembayaran'] ?: 'Q Mandiri',
-                            'skema_potongan'     => (int)($fakData['header']['skema_potongan'] ?? 20),
-                            'parent_no_faktur'   => $fakData['header']['parent_no_faktur'],
-                            'keterangan'         => 'Pelunasan Faktur H ' . $noFak . ' (dari Import Excel)',
-                            'import_batch'       => $importBatchId,
-                            'create_by'          => $currentUsername,
-                        ]);
-                        if (!empty($resLunas['success'])) {
-                            $autoLunasCount++;
-                        } else {
-                            $autoLunasFail[] = $noFak . ': ' . ($resLunas['message'] ?? 'gagal');
-                        }
-                    } catch (\Throwable $ePay) {
-                        $autoLunasFail[] = $noFak . ': ' . $ePay->getMessage();
+            foreach ($autoLunasFakturs as $noFak => $fakHeader) {
+                try {
+                    $resLunas = $this->M_SalesOrder->proses_pelunasan_faktur_h_import($noFak, [
+                        'tanggal_pembayaran' => $fakHeader['tanggal_bayar'] ?: $fakHeader['tanggal_faktur'],
+                        'jumlah_bayar'       => (float)$fakHeader['grand_total'],
+                        'metode_pembayaran'  => $fakHeader['metode_pembayaran'] ?: 'Q Mandiri',
+                        'skema_potongan'     => (int)($fakHeader['skema_potongan'] ?? 20),
+                        'parent_no_faktur'   => $fakHeader['parent_no_faktur'],
+                        'keterangan'         => 'Pelunasan Faktur H ' . $noFak . ' (dari Import Excel)',
+                        'import_batch'       => $importBatchId,
+                        'create_by'          => $currentUsername,
+                    ]);
+                    if (!empty($resLunas['success'])) {
+                        $autoLunasCount++;
+                    } else {
+                        $autoLunasFail[] = $noFak . ': ' . ($resLunas['message'] ?? 'gagal');
                     }
+                } catch (\Throwable $ePay) {
+                    $autoLunasFail[] = $noFak . ': ' . $ePay->getMessage();
                 }
             }
 
@@ -8796,6 +8844,10 @@ class C_SalesOrder extends CI_Controller
         } catch (\Throwable $e) {
             log_message('error', 'Import Faktur H Error: ' . $e->getMessage());
             $this->session->set_flashdata('error', 'Gagal memproses import Faktur H: ' . $e->getMessage());
+        } finally {
+            if (isset($prevSaveQueries)) {
+                $this->db->save_queries = $prevSaveQueries;
+            }
         }
 
         $redirectTo = $this->input->post('redirect_to') ?: ($this->input->server('HTTP_REFERER') ?: 'sales_order/faktur_h_import');
@@ -9091,19 +9143,24 @@ class C_SalesOrder extends CI_Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Pelunasan Faktur Z');
 
+        $maxMetodeSlots = 7;
         $headers = [
             'no_faktur_z',
             'tanggal_pembayaran',
             'metode_pembayaran1',
             'jumlah_pembayaran1',
-            'metode_pembayaran_2',
-            'jumlah_pembayaran_2',
+        ];
+        for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
+            $headers[] = 'metode_pembayaran_' . $slot;
+            $headers[] = 'jumlah_pembayaran_' . $slot;
+        }
+        $headers = array_merge($headers, [
             'skema_potongan',
             'customer_name',
             'jumlah_pecahan_h',
             'total_tagihan_z',
             'sisa_belum_lunas',
-        ];
+        ]);
         $sheet->fromArray($headers, null, 'A1');
 
         $filter = [];
@@ -9124,58 +9181,40 @@ class C_SalesOrder extends CI_Controller
                 }
 
                 $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
-                $sheet->fromArray([
+                $rowValues = [
                     $z['no_faktur_z'],
                     $z['tanggal_faktur'] ?: date('Y-m-d'),
                     !empty($z['metode_pembayaran']) ? $z['metode_pembayaran'] : $defaultMetode,
                     '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
-                    '', // Opsional: isi Metode Pembayaran 2 (mis. Q BRI) bila bayar pakai 2 bank/kas
-                    '', // Opsional: isi Nominal Pembayaran 2
+                ];
+                for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
+                    $rowValues[] = ''; // Opsional: isi Metode Pembayaran N
+                    $rowValues[] = ''; // Opsional: isi Nominal Pembayaran N
+                }
+                $rowValues = array_merge($rowValues, [
                     $z['skema_potongan'] !== null ? (int)$z['skema_potongan'] : $defaultSkema,
                     $z['customer_name'],
                     $infoPecahan,
                     round($z['total_tagihan_z'], 2),
                     round($z['sisa_belum_lunas'], 2),
-                ], null, 'A' . $rowIdx);
+                ]);
+                $sheet->fromArray($rowValues, null, 'A' . $rowIdx);
 
                 $rowIdx++;
                 $written++;
             }
         } else {
             // Mode contoh manual (?mode=sample)
+            $extraEmptyCols = array_fill(0, ($maxMetodeSlots - 2) * 2, '');
             $sampleRows = [
-                ['ZINV2601001', date('Y-m-d'), 'Q Mandiri', 1500000, 'Q BRI', 500000, 20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000],
-                ['ZINV2601002', date('Y-m-d'), 'Q Kas Ayat Silang', 1500000, '', '', 20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000],
+                array_merge(['ZINV2601001', date('Y-m-d'), 'Q Mandiri', 1500000, 'Q BRI', 500000], $extraEmptyCols, [20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000]),
+                array_merge(['ZINV2601002', date('Y-m-d'), 'Q Kas Ayat Silang', 1500000, '', ''], $extraEmptyCols, [20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000]),
             ];
             $sheet->fromArray($sampleRows, null, 'A2');
             $rowIdx = 4;
         }
 
-        $headerStyle = [
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '1E7E34']
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-            ]
-        ];
-        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
-        $sheet->getRowDimension(1)->setRowHeight(24);
-        $sheet->freezePane('A2');
-
-        foreach (range('A', 'K') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        $lastRow = max(2, $rowIdx - 1);
-        $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()->setFormatCode('@');
-        $sheet->getStyle("B2:B{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-        $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("F2:F{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("J2:K{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $this->_applyPelunasanTemplateStyling($sheet, $rowIdx, $maxMetodeSlots);
 
         $spreadsheet->setActiveSheetIndex(0);
         $filename = 'template_pelunasan_faktur_z_import_' . date('Ymd_His') . '.xlsx';
@@ -9274,66 +9313,7 @@ class C_SalesOrder extends CI_Controller
             }
 
             // Prioritaskan kolom no_faktur_z eksplisit agar tetap akurat walau file memiliki kolom tambahan
-            $headerAliases = [
-                'no_faktur_z'          => 'no_faktur_z',
-                'nomor_faktur_z'       => 'no_faktur_z',
-                'faktur_z'             => 'no_faktur_z',
-                'parent_no_faktur'     => 'parent_no_faktur',
-                'faktur_induk'         => 'parent_no_faktur',
-                'no_faktur'            => 'no_faktur_fallback',
-                'nomor_faktur'         => 'no_faktur_fallback',
-                'faktur'               => 'no_faktur_fallback',
-                'no_nota'              => 'no_faktur_fallback',
-                'tanggal_pembayaran'   => 'tanggal_pembayaran',
-                'tgl_pembayaran'       => 'tanggal_pembayaran',
-                'tanggal_bayar'        => 'tanggal_pembayaran',
-                'tgl_bayar'            => 'tanggal_pembayaran',
-                'tanggal_pelunasan'    => 'tanggal_pembayaran',
-                'tgl_pelunasan'        => 'tanggal_pembayaran',
-                'tanggal'              => 'tanggal_pembayaran',
-                'jumlah_pembayaran'    => 'jumlah_pembayaran',
-                'jumlah_pembayaran1'   => 'jumlah_pembayaran',
-                'jumlah_pembayaran_1'  => 'jumlah_pembayaran',
-                'jumlah_bayar'         => 'jumlah_pembayaran',
-                'jumlah_bayar1'        => 'jumlah_pembayaran',
-                'jumlah_bayar_1'       => 'jumlah_pembayaran',
-                'nominal_bayar'        => 'jumlah_pembayaran',
-                'nominal_pelunasan'    => 'jumlah_pembayaran',
-                'nominal'              => 'jumlah_pembayaran',
-                'total_bayar'          => 'jumlah_pembayaran',
-                'grand_total'          => 'jumlah_pembayaran',
-                'metode_pembayaran'    => 'metode_pembayaran',
-                'metode_pembayaran1'   => 'metode_pembayaran',
-                'metode_pembayaran_1'  => 'metode_pembayaran',
-                'metode_bayar'         => 'metode_pembayaran',
-                'metode_bayar1'        => 'metode_pembayaran',
-                'metode_bayar_1'       => 'metode_pembayaran',
-                'metode'               => 'metode_pembayaran',
-                'akun_kas'             => 'metode_pembayaran',
-                'kas_bank'             => 'metode_pembayaran',
-                'bank'                 => 'metode_pembayaran',
-                'metode_pembayaran_2'  => 'metode_pembayaran_2',
-                'metode_pembayaran2'   => 'metode_pembayaran_2',
-                'metode_bayar_2'       => 'metode_pembayaran_2',
-                'metode_bayar2'        => 'metode_pembayaran_2',
-                'metode_2'             => 'metode_pembayaran_2',
-                'akun_kas_2'           => 'metode_pembayaran_2',
-                'kas_bank_2'           => 'metode_pembayaran_2',
-                'bank_2'               => 'metode_pembayaran_2',
-                'jumlah_pembayaran_2'  => 'jumlah_pembayaran_2',
-                'jumlah_pembayaran2'   => 'jumlah_pembayaran_2',
-                'jumlah_bayar_2'       => 'jumlah_pembayaran_2',
-                'jumlah_bayar2'        => 'jumlah_pembayaran_2',
-                'nominal_bayar_2'      => 'jumlah_pembayaran_2',
-                'nominal_pembayaran_2' => 'jumlah_pembayaran_2',
-                'nominal_2'            => 'jumlah_pembayaran_2',
-                'jumlah_2'             => 'jumlah_pembayaran_2',
-                'skema_potongan'       => 'skema_potongan',
-                'skema'                => 'skema_potongan',
-                'potongan_persen'      => 'skema_potongan',
-                'keterangan'           => 'keterangan',
-                'catatan'              => 'keterangan',
-            ];
+            $headerAliases = $this->_buildPelunasanImportHeaderAliases(20, true);
 
             $headerMap = [];
             $headerRowIndex = 0;
@@ -9401,32 +9381,18 @@ class C_SalesOrder extends CI_Controller
                     return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
                 };
 
-                // Periksa jumlah pembayaran (mendukung hingga 2 metode pembayaran per baris Faktur Z)
-                $rawJmlBayar  = $getVal('jumlah_pembayaran', '');
-                $rawJmlBayar2 = $getVal('jumlah_pembayaran_2', '');
-                $jmlBayar1    = $rawJmlBayar !== '' ? $this->_parseImportNumber($rawJmlBayar) : 0.0;
-                $jmlBayar2    = $rawJmlBayar2 !== '' ? $this->_parseImportNumber($rawJmlBayar2) : 0.0;
+                $rawTgl = $getVal('tanggal_pembayaran', '');
+                $tglBayar = $rawTgl !== ''
+                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
+                    : ($defaultTanggal ?: date('Y-m-d'));
 
-                $metode1 = $getVal('metode_pembayaran', $defaultMetode);
-                $metode2 = $getVal('metode_pembayaran_2', '');
-
-                $paymentSplits = [];
-                if ($jmlBayar1 > 0) {
-                    $paymentSplits[] = ['metode' => $metode1, 'jumlah' => $jmlBayar1];
-                }
-                if ($jmlBayar2 > 0) {
-                    $paymentSplits[] = ['metode' => ($metode2 !== '' ? $metode2 : $metode1), 'jumlah' => $jmlBayar2];
-                }
+                // Periksa seluruh termin/metode pembayaran (mendukung hingga 20 metode pembayaran per baris Faktur Z)
+                $paymentSplits = $this->_extractPelunasanPaymentSplits($getVal, $defaultMetode, $tglBayar, 20);
 
                 if (empty($paymentSplits)) {
                     $skippedCount++;
                     continue;
                 }
-
-                $rawTgl = $getVal('tanggal_pembayaran', '');
-                $tglBayar = $rawTgl !== ''
-                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
-                    : ($defaultTanggal ?: date('Y-m-d'));
 
                 $skemaRaw = $getVal('skema_potongan', '');
                 if ($skemaRaw !== '') {
@@ -9444,8 +9410,9 @@ class C_SalesOrder extends CI_Controller
 
                 // Proses setiap metode pembayaran secara berurutan (FIFO)
                 foreach ($paymentSplits as $splitItem) {
-                    $metode   = $splitItem['metode'];
-                    $jmlBayar = $splitItem['jumlah'];
+                    $metode         = $splitItem['metode'];
+                    $jmlBayar       = $splitItem['jumlah'];
+                    $tglBayarTermin = !empty($splitItem['tanggal']) ? $splitItem['tanggal'] : $tglBayar;
 
                     // Ambil seluruh child Faktur H Import di bawah Faktur Z Induk secara FIFO
                     $childFakturs = $this->M_SalesOrder->get_child_faktur_h_import_by_z($noFakturZ, $restrictedCreate);
@@ -9501,7 +9468,7 @@ class C_SalesOrder extends CI_Controller
 
                         $res = $this->M_SalesOrder->proses_pelunasan_faktur_h_import((int)$child['id_import_h'], [
                             'incremental'        => true,
-                            'tanggal_pembayaran' => $tglBayar,
+                            'tanggal_pembayaran' => $tglBayarTermin,
                             'jumlah_bayar'       => $bayarChild,
                             'metode_pembayaran'  => $metode,
                             'skema_potongan'     => $skema,
@@ -10070,6 +10037,22 @@ class C_SalesOrder extends CI_Controller
             $rowIdx++;
         }
 
+        if (empty($journalRows)) {
+            $sheet->setCellValue('A' . $rowIdx, 'Tidak ada data Jurnal Pelunasan (Q / A) berstatus POSTED yang terhubung ke Faktur Pecahan H Lunas.');
+            $sheet->mergeCells('A' . $rowIdx . ':L' . $rowIdx);
+            $sheet->getStyle('A' . $rowIdx)->getFont()->setItalic(true)->getColor()->setRGB('7F8C8D');
+            $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $rowIdx++;
+        }
+
+        if (empty($journalRows)) {
+            $sheet->setCellValue('A' . $rowIdx, 'Tidak ada data Jurnal Pelunasan (Q / A) berstatus POSTED yang terhubung ke Faktur Pecahan H Lunas.');
+            $sheet->mergeCells('A' . $rowIdx . ':L' . $rowIdx);
+            $sheet->getStyle('A' . $rowIdx)->getFont()->setItalic(true)->getColor()->setRGB('7F8C8D');
+            $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $rowIdx++;
+        }
+
         // Baris Total
         $sheet->setCellValue('A' . $rowIdx, 'TOTAL KESELURUHAN');
         $sheet->mergeCells('A' . $rowIdx . ':J' . $rowIdx);
@@ -10242,20 +10225,28 @@ class C_SalesOrder extends CI_Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Pelunasan Faktur Z');
 
+        $maxMetodeSlots = 7;
         $headers = [
             'no_faktur_z',
             'tanggal_pembayaran',
             'metode_pembayaran1',
             'jumlah_pembayaran1',
-            'metode_pembayaran_2',
-            'jumlah_pembayaran_2',
+        ];
+        for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
+            $headers[] = 'metode_pembayaran_' . $slot;
+            $headers[] = 'jumlah_pembayaran_' . $slot;
+        }
+        $headers = array_merge($headers, [
             'skema_potongan',
             'customer_name',
             'jumlah_pecahan_h',
             'total_tagihan_z',
             'sisa_belum_lunas',
-        ];
+        ]);
         $sheet->fromArray($headers, null, 'A1');
+
+        $hasSkemaCol = $this->db->field_exists('skema_potongan', 'tbso_faktur_z_pecah');
+        $skemaSelect = $hasSkemaCol ? 'p.skema_potongan' : ($defaultSkema . ' AS skema_potongan');
 
         // Ambil seluruh child Faktur Pecahan H beserta nominalnya untuk dikelompokkan per Faktur Z
         $childRows = $this->db->select('
@@ -10267,7 +10258,7 @@ class C_SalesOrder extends CI_Controller
                 p.status_bayar,
                 p.total_bayar,
                 p.metode_pembayaran,
-                p.skema_potongan,
+                ' . $skemaSelect . ',
                 COALESCE(d.grand_total, 0) AS grand_total
             ', false)
             ->from('tbso_faktur_z_pecah p')
@@ -10323,49 +10314,30 @@ class C_SalesOrder extends CI_Controller
             }
 
             $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
-            $sheet->fromArray([
+            $rowValues = [
                 $z['no_faktur_z'],
                 $z['tanggal_faktur'],
                 $z['metode_pembayaran'],
                 '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
-                '', // Opsional: isi Metode Pembayaran 2 (mis. Q BRI) bila bayar pakai 2 bank/kas
-                '', // Opsional: isi Nominal Pembayaran 2
+            ];
+            for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
+                $rowValues[] = ''; // Opsional: isi Metode Pembayaran N
+                $rowValues[] = ''; // Opsional: isi Nominal Pembayaran N
+            }
+            $rowValues = array_merge($rowValues, [
                 $z['skema_potongan'],
                 $z['customer_name'],
                 $infoPecahan,
                 round($z['total_tagihan_z'], 2),
                 round($z['sisa_belum_lunas'], 2),
-            ], null, 'A' . $rowIdx);
+            ]);
+            $sheet->fromArray($rowValues, null, 'A' . $rowIdx);
 
             $rowIdx++;
             $written++;
         }
 
-        $headerStyle = [
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '1E7E34']
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-            ]
-        ];
-        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
-        $sheet->getRowDimension(1)->setRowHeight(24);
-        $sheet->freezePane('A2');
-
-        foreach (range('A', 'K') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        $lastRow = max(2, $rowIdx - 1);
-        $sheet->getStyle("A2:A{$lastRow}")->getNumberFormat()->setFormatCode('@');
-        $sheet->getStyle("B2:B{$lastRow}")->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-        $sheet->getStyle("D2:D{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("F2:F{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
-        $sheet->getStyle("J2:K{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $this->_applyPelunasanTemplateStyling($sheet, $rowIdx, $maxMetodeSlots);
 
         $spreadsheet->setActiveSheetIndex(0);
         $filename = 'template_pelunasan_faktur_z_' . date('Ymd_His') . '.xlsx';
@@ -10463,64 +10435,7 @@ class C_SalesOrder extends CI_Controller
                 throw new \RuntimeException('File tidak memiliki baris data pelunasan Faktur Z.');
             }
 
-            $headerAliases = [
-                'no_faktur_z'          => 'no_faktur_z',
-                'nomor_faktur_z'       => 'no_faktur_z',
-                'faktur_z'             => 'no_faktur_z',
-                'parent_no_faktur'     => 'no_faktur_z',
-                'faktur_induk'         => 'no_faktur_z',
-                'no_faktur'            => 'no_faktur_z',
-                'nomor_faktur'         => 'no_faktur_z',
-                'faktur'               => 'no_faktur_z',
-                'no_nota'              => 'no_faktur_z',
-                'tanggal_pembayaran'   => 'tanggal_pembayaran',
-                'tgl_pembayaran'       => 'tanggal_pembayaran',
-                'tanggal_bayar'        => 'tanggal_pembayaran',
-                'tgl_bayar'            => 'tanggal_pembayaran',
-                'tanggal_pelunasan'    => 'tanggal_pembayaran',
-                'tgl_pelunasan'        => 'tanggal_pembayaran',
-                'tanggal'              => 'tanggal_pembayaran',
-                'jumlah_pembayaran'    => 'jumlah_pembayaran',
-                'jumlah_pembayaran1'   => 'jumlah_pembayaran',
-                'jumlah_pembayaran_1'  => 'jumlah_pembayaran',
-                'jumlah_bayar'         => 'jumlah_pembayaran',
-                'jumlah_bayar1'        => 'jumlah_pembayaran',
-                'jumlah_bayar_1'       => 'jumlah_pembayaran',
-                'nominal_bayar'        => 'jumlah_pembayaran',
-                'nominal_pelunasan'    => 'jumlah_pembayaran',
-                'nominal'              => 'jumlah_pembayaran',
-                'total_bayar'          => 'jumlah_pembayaran',
-                'grand_total'          => 'jumlah_pembayaran',
-                'metode_pembayaran'    => 'metode_pembayaran',
-                'metode_pembayaran1'   => 'metode_pembayaran',
-                'metode_pembayaran_1'  => 'metode_pembayaran',
-                'metode_bayar'         => 'metode_pembayaran',
-                'metode_bayar1'        => 'metode_pembayaran',
-                'metode_bayar_1'       => 'metode_pembayaran',
-                'metode'               => 'metode_pembayaran',
-                'akun_kas'             => 'metode_pembayaran',
-                'kas_bank'             => 'metode_pembayaran',
-                'bank'                 => 'metode_pembayaran',
-                'metode_pembayaran_2'  => 'metode_pembayaran_2',
-                'metode_pembayaran2'   => 'metode_pembayaran_2',
-                'metode_bayar_2'       => 'metode_pembayaran_2',
-                'metode_bayar2'        => 'metode_pembayaran_2',
-                'metode_2'             => 'metode_pembayaran_2',
-                'akun_kas_2'           => 'metode_pembayaran_2',
-                'kas_bank_2'           => 'metode_pembayaran_2',
-                'bank_2'               => 'metode_pembayaran_2',
-                'jumlah_pembayaran_2'  => 'jumlah_pembayaran_2',
-                'jumlah_pembayaran2'   => 'jumlah_pembayaran_2',
-                'jumlah_bayar_2'       => 'jumlah_pembayaran_2',
-                'jumlah_bayar2'        => 'jumlah_pembayaran_2',
-                'nominal_bayar_2'      => 'jumlah_pembayaran_2',
-                'nominal_pembayaran_2' => 'jumlah_pembayaran_2',
-                'nominal_2'            => 'jumlah_pembayaran_2',
-                'jumlah_2'             => 'jumlah_pembayaran_2',
-                'skema_potongan'       => 'skema_potongan',
-                'skema'                => 'skema_potongan',
-                'potongan_persen'      => 'skema_potongan',
-            ];
+            $headerAliases = $this->_buildPelunasanImportHeaderAliases(20, false);
 
             $headerMap = [];
             $headerRowIndex = 0;
@@ -10579,32 +10494,18 @@ class C_SalesOrder extends CI_Controller
                     return ($v !== null && trim((string)$v) !== '') ? trim((string)$v) : $default;
                 };
 
-                // Periksa jumlah pembayaran (mendukung hingga 2 metode pembayaran per baris Faktur Z)
-                $rawJmlBayar  = $getVal('jumlah_pembayaran', '');
-                $rawJmlBayar2 = $getVal('jumlah_pembayaran_2', '');
-                $jmlBayar1    = $rawJmlBayar !== '' ? $this->_parseImportNumber($rawJmlBayar) : 0.0;
-                $jmlBayar2    = $rawJmlBayar2 !== '' ? $this->_parseImportNumber($rawJmlBayar2) : 0.0;
+                $rawTgl = $getVal('tanggal_pembayaran', '');
+                $tglBayar = $rawTgl !== ''
+                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
+                    : ($defaultTanggal ?: date('Y-m-d'));
 
-                $metode1 = $getVal('metode_pembayaran', $defaultMetode);
-                $metode2 = $getVal('metode_pembayaran_2', '');
-
-                $paymentSplits = [];
-                if ($jmlBayar1 > 0) {
-                    $paymentSplits[] = ['metode' => $metode1, 'jumlah' => $jmlBayar1];
-                }
-                if ($jmlBayar2 > 0) {
-                    $paymentSplits[] = ['metode' => ($metode2 !== '' ? $metode2 : $metode1), 'jumlah' => $jmlBayar2];
-                }
+                // Periksa seluruh termin/metode pembayaran (mendukung hingga 20 metode pembayaran per baris Faktur Z)
+                $paymentSplits = $this->_extractPelunasanPaymentSplits($getVal, $defaultMetode, $tglBayar, 20);
 
                 if (empty($paymentSplits)) {
                     $skippedCount++;
                     continue;
                 }
-
-                $rawTgl = $getVal('tanggal_pembayaran', '');
-                $tglBayar = $rawTgl !== ''
-                    ? $this->_parseImportExcelDate($rawTgl, $defaultTanggal ?: date('Y-m-d'))
-                    : ($defaultTanggal ?: date('Y-m-d'));
 
                 $skemaRaw = $getVal('skema_potongan', '');
                 if ($skemaRaw !== '') {
@@ -10628,10 +10529,11 @@ class C_SalesOrder extends CI_Controller
                 $zHasUnpaid        = false;
                 $sisaDanaTotalZ    = 0.0;
 
-                // Proses setiap metode pembayaran secara berurutan (agar pembayaran ke-2 otomatis melanjutkan sisa tagihan setelah pembayaran ke-1)
+                // Proses setiap metode pembayaran secara berurutan (agar pembayaran ke-2 dan seterusnya otomatis melanjutkan sisa tagihan)
                 foreach ($paymentSplits as $splitItem) {
-                    $metode   = $splitItem['metode'];
-                    $jmlBayar = $splitItem['jumlah'];
+                    $metode         = $splitItem['metode'];
+                    $jmlBayar       = $splitItem['jumlah'];
+                    $tglBayarTermin = !empty($splitItem['tanggal']) ? $splitItem['tanggal'] : $tglBayar;
 
                     // Ambil seluruh child Faktur Pecahan H di bawah Faktur Z ini berurutan dari yang terawal
                     $this->db->select('
@@ -10722,7 +10624,7 @@ class C_SalesOrder extends CI_Controller
                         $prevPot   = round((float)($child['nominal_potongan'] ?? 0), 2);
 
                         $paymentData = [
-                            'tanggal_pembayaran' => $tglBayar,
+                            'tanggal_pembayaran' => $tglBayarTermin,
                             'metode_pembayaran'  => $metode,
                             'jumlah_bayar'       => $bayarChild,
                             'skema_potongan'     => $skema,
@@ -10754,7 +10656,7 @@ class C_SalesOrder extends CI_Controller
                             'status_bayar'      => $statusBayarBaru,
                             'total_bayar'       => $totalBayarBaru,
                             'sisa_tagihan'      => $sisaTagihanBaru,
-                            'tanggal_bayar'     => $tglBayar,
+                            'tanggal_bayar'     => $tglBayarTermin,
                             'metode_pembayaran' => $mergedMetode,
                             'skema_potongan'    => $skema,
                             'nominal_bruto'     => round($prevBruto + $brutoChild, 2),
