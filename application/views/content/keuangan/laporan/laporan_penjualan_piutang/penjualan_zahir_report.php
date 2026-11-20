@@ -509,6 +509,418 @@ $title = $meta['title'];
         return html;
     }
 
+    function renderSederhana(rows, withCurrencyHeading) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data penjualan pada periode/filter ini.</div>';
+        }
+
+        var html = '';
+        if (withCurrencyHeading) {
+            html += '<div style="text-align:center; font-weight:700; color:#b91c1c; font-size:14px; margin-bottom:8px;">IDR</div>';
+        }
+        html += '<table class="pz-table"><thead><tr>';
+        html += '<th style="width:90px;">Tanggal</th>';
+        html += '<th style="width:125px;">No. Ref.</th>';
+        html += '<th style="width:120px;">Order No.</th>';
+        html += '<th>Nama Pelanggan</th>';
+        html += '<th style="width:75px;">Mata Uang</th>';
+        html += '<th class="num" style="width:130px;">Jumlah</th>';
+        html += '<th class="num" style="width:140px;">Jumlah IDR</th>';
+        html += '</tr></thead><tbody>';
+
+        var total = 0;
+        rows.forEach(function(r) {
+            var jml = parseFloat(r.jumlah || 0);
+            var jmlIdr = parseFloat(r.jumlah_idr || 0);
+            total += jmlIdr;
+            var custLabel = esc(r.pelanggan_nama) + (r.kd_customer ? ' (' + esc(r.kd_customer) + ')' : '');
+
+            html += '<tr>';
+            html += '<td>' + fmtDateDMY(r.tanggal_faktur) + '</td>';
+            html += '<td>' + esc(r.no_faktur) + '</td>';
+            html += '<td>' + esc(r.order_no) + '</td>';
+            html += '<td>' + custLabel + '</td>';
+            html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+            html += '<td class="num">' + fmtNum(jml) + '</td>';
+            html += '<td class="num">' + fmtNum(jmlIdr) + ' &#10003;</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody><tfoot><tr>';
+        html += '<td colspan="4" style="text-align:right;">Total :</td>';
+        html += '<td>IDR</td>';
+        html += '<td class="num">' + fmtNum(total) + '</td>';
+        html += '<td class="num">' + fmtNum(total) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderPerSalesmanFaktur(rows) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data penjualan pada periode/filter ini.</div>';
+        }
+
+        var groups = {};
+        rows.forEach(function(r) {
+            var key = r.salesman || 'Umum';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(r);
+        });
+
+        var html = '';
+        var grandTotal = 0;
+        Object.keys(groups).forEach(function(salesman) {
+            var items = groups[salesman];
+            var subTotal = 0;
+
+            html += '<div style="margin-bottom:18px;">';
+            html += '<div style="font-size:14px; font-weight:700; color:#0284c7; margin-bottom:2px;">' + esc(salesman) + '</div>';
+            html += '<div style="font-size:12px; font-weight:700; color:#111827; margin-bottom:6px; padding-left:14px;">Salesman : ' + esc(salesman) + '</div>';
+            html += '<table class="pz-table"><thead><tr>';
+            html += '<th style="width:90px;">Tanggal</th>';
+            html += '<th style="width:125px;">No. Ref.</th>';
+            html += '<th style="width:120px;">Order No.</th>';
+            html += '<th>Nama Pelanggan</th>';
+            html += '<th style="width:75px;">Mata Uang</th>';
+            html += '<th class="num" style="width:130px;">Jumlah</th>';
+            html += '<th class="num" style="width:140px;">Jumlah IDR</th>';
+            html += '</tr></thead><tbody>';
+
+            items.forEach(function(r) {
+                var jml = parseFloat(r.jumlah || 0);
+                var jmlIdr = parseFloat(r.jumlah_idr || 0);
+                subTotal += jmlIdr;
+                grandTotal += jmlIdr;
+                var custLabel = esc(r.pelanggan_nama) + (r.kd_customer ? ' (' + esc(r.kd_customer) + ')' : '');
+
+                html += '<tr>';
+                html += '<td>' + fmtDateDMY(r.tanggal_faktur) + '</td>';
+                html += '<td>' + esc(r.no_faktur) + '</td>';
+                html += '<td>' + esc(r.order_no) + '</td>';
+                html += '<td>' + custLabel + '</td>';
+                html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+                html += '<td class="num">' + fmtNum(jml) + '</td>';
+                html += '<td class="num">' + fmtNum(jmlIdr) + ' &#10003;</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody><tfoot><tr>';
+            html += '<td colspan="4" style="text-align:right;">Total ' + esc(salesman) + '</td>';
+            html += '<td>IDR</td>';
+            html += '<td class="num">' + fmtNum(subTotal) + '</td>';
+            html += '<td class="num">' + fmtNum(subTotal) + '</td>';
+            html += '</tr></tfoot></table></div>';
+        });
+
+        html += '<table class="pz-table"><tfoot><tr>';
+        html += '<td style="text-align:right;">Grand Total :</td>';
+        html += '<td style="width:75px;">IDR</td>';
+        html += '<td class="num" style="width:140px;">' + fmtNum(grandTotal) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderPerKelompokPelangganFaktur(rows) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data penjualan pada periode/filter ini.</div>';
+        }
+
+        var groups = {};
+        rows.forEach(function(r) {
+            var grp = r.kelompok_pelanggan || 'Umum';
+            var cust = r.pelanggan_nama || '-';
+            if (!groups[grp]) groups[grp] = {};
+            if (!groups[grp][cust]) groups[grp][cust] = [];
+            groups[grp][cust].push(r);
+        });
+
+        var html = '';
+        var grandTotal = 0;
+
+        Object.keys(groups).forEach(function(grp) {
+            html += '<div style="font-size:14px; font-weight:700; color:#0284c7; margin:10px 0 6px;">' + esc(grp) + '</div>';
+            var custMap = groups[grp];
+
+            Object.keys(custMap).forEach(function(custName) {
+                var items = custMap[custName];
+                var subTotal = 0;
+
+                html += '<div style="font-size:12px; font-weight:700; color:#111827; margin:8px 0 4px;">Nama Pelanggan : ' + esc(custName) + '</div>';
+                html += '<table class="pz-table" style="margin-bottom:10px;"><thead><tr>';
+                html += '<th style="width:90px;">Tanggal</th>';
+                html += '<th style="width:125px;">No. Ref</th>';
+                html += '<th style="width:120px;">Order No.</th>';
+                html += '<th>Salesman</th>';
+                html += '<th style="width:75px;">Mata Uang</th>';
+                html += '<th class="num" style="width:130px;">Jumlah</th>';
+                html += '<th class="num" style="width:140px;">Jumlah IDR</th>';
+                html += '</tr></thead><tbody>';
+
+                items.forEach(function(r) {
+                    var jml = parseFloat(r.jumlah || 0);
+                    var jmlIdr = parseFloat(r.jumlah_idr || 0);
+                    subTotal += jmlIdr;
+                    grandTotal += jmlIdr;
+
+                    html += '<tr>';
+                    html += '<td>' + fmtDateDMY(r.tanggal_faktur) + '</td>';
+                    html += '<td>' + esc(r.no_faktur) + '</td>';
+                    html += '<td>' + esc(r.order_no) + '</td>';
+                    html += '<td>' + esc(r.salesman) + '</td>';
+                    html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+                    html += '<td class="num">' + fmtNum(jml) + '</td>';
+                    html += '<td class="num">' + fmtNum(jmlIdr) + ' &#10003;</td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody><tfoot><tr>';
+                html += '<td colspan="4" style="text-align:right;">Total ' + esc(custName) + '</td>';
+                html += '<td>IDR</td>';
+                html += '<td class="num">' + fmtNum(subTotal) + '</td>';
+                html += '<td class="num">' + fmtNum(subTotal) + '</td>';
+                html += '</tr></tfoot></table>';
+            });
+        });
+
+        html += '<table class="pz-table"><tfoot><tr>';
+        html += '<td style="text-align:right;">Grand Total :</td>';
+        html += '<td style="width:75px;">IDR</td>';
+        html += '<td class="num" style="width:140px;">' + fmtNum(grandTotal) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderPerKelompokSalesman(rows) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data penjualan pada periode/filter ini.</div>';
+        }
+
+        var groups = {};
+        rows.forEach(function(r) {
+            var grp = r.kelompok_salesman || 'general';
+            if (!groups[grp]) groups[grp] = [];
+            groups[grp].push(r);
+        });
+
+        var html = '';
+        var grandNilai = 0, grandBayar = 0, grandSaldo = 0;
+
+        Object.keys(groups).forEach(function(grp) {
+            var items = groups[grp];
+            var subNilai = 0, subBayar = 0, subSaldo = 0;
+
+            html += '<div style="margin-bottom:16px;">';
+            html += '<div style="font-size:14px; font-weight:700; color:#0284c7; margin-bottom:4px;">' + esc(grp) + '</div>';
+            html += '<table class="pz-table"><thead><tr>';
+            html += '<th>Nama Salesman</th>';
+            html += '<th style="width:85px;">Mata Uang</th>';
+            html += '<th class="num" style="width:160px;">Nilai</th>';
+            html += '<th class="num" style="width:160px;">Pembayaran</th>';
+            html += '<th class="num" style="width:150px;">Saldo</th>';
+            html += '</tr></thead><tbody>';
+
+            items.forEach(function(r) {
+                var n = parseFloat(r.nilai || 0);
+                var p = parseFloat(r.pembayaran || 0);
+                var s = parseFloat(r.saldo || 0);
+                subNilai += n; subBayar += p; subSaldo += s;
+                grandNilai += n; grandBayar += p; grandSaldo += s;
+
+                html += '<tr>';
+                html += '<td>' + esc(r.nama_salesman) + '</td>';
+                html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+                html += '<td class="num">' + fmtNum(n) + '</td>';
+                html += '<td class="num">' + fmtNum(p) + '</td>';
+                html += '<td class="num">' + fmtNum(s) + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody><tfoot><tr>';
+            html += '<td>Total ' + esc(grp) + '</td>';
+            html += '<td>IDR</td>';
+            html += '<td class="num">' + fmtNum(subNilai) + '</td>';
+            html += '<td class="num">' + fmtNum(subBayar) + '</td>';
+            html += '<td class="num">' + fmtNum(subSaldo) + '</td>';
+            html += '</tr></tfoot></table></div>';
+        });
+
+        html += '<table class="pz-table"><tfoot><tr>';
+        html += '<td>Total :</td>';
+        html += '<td style="width:85px;">IDR</td>';
+        html += '<td class="num" style="width:160px;">' + fmtNum(grandNilai) + '</td>';
+        html += '<td class="num" style="width:160px;">' + fmtNum(grandBayar) + '</td>';
+        html += '<td class="num" style="width:150px;">' + fmtNum(grandSaldo) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderReturRangkuman(rows) {
+        var html = '<table class="pz-table"><thead><tr>';
+        html += '<th style="width:90px;">Tanggal</th>';
+        html += '<th style="width:125px;">Reference</th>';
+        html += '<th style="width:125px;">No. Pesanan</th>';
+        html += '<th>Pelanggan</th>';
+        html += '<th style="width:75px;">Mata Uang</th>';
+        html += '<th class="num" style="width:110px;">Sub Total</th>';
+        html += '<th class="num" style="width:85px;">Diskon</th>';
+        html += '<th class="num" style="width:95px;">Pajak</th>';
+        html += '<th class="num" style="width:120px;">Total Retur</th>';
+        html += '<th class="num" style="width:110px;">Pembayaran</th>';
+        html += '<th class="num" style="width:105px;">Saldo</th>';
+        html += '</tr></thead><tbody>';
+
+        var sSub = 0, sDisc = 0, sTax = 0, sTot = 0, sPay = 0, sBal = 0;
+        (rows || []).forEach(function(r) {
+            sSub += parseFloat(r.sub_total || 0);
+            sDisc += parseFloat(r.diskon || 0);
+            sTax += parseFloat(r.pajak || 0);
+            sTot += parseFloat(r.total_retur || 0);
+            sPay += parseFloat(r.pembayaran || 0);
+            sBal += parseFloat(r.saldo || 0);
+
+            html += '<tr>';
+            html += '<td>' + fmtDateDMY(r.tanggal) + '</td>';
+            html += '<td>' + esc(r.reference) + '</td>';
+            html += '<td>' + esc(r.no_pesanan) + '</td>';
+            html += '<td>' + esc(r.pelanggan) + '</td>';
+            html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+            html += '<td class="num">' + fmtNum(r.sub_total) + '</td>';
+            html += '<td class="num">' + fmtNum(r.diskon) + '</td>';
+            html += '<td class="num">' + fmtNum(r.pajak) + '</td>';
+            html += '<td class="num">' + fmtNum(r.total_retur) + '</td>';
+            html += '<td class="num">' + fmtNum(r.pembayaran) + '</td>';
+            html += '<td class="num">' + fmtNum(r.saldo) + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody><tfoot><tr>';
+        html += '<td colspan="4" style="text-align:right;">Total :</td>';
+        html += '<td>IDR</td>';
+        html += '<td class="num">' + fmtNum(sSub) + '</td>';
+        html += '<td class="num">' + fmtNum(sDisc) + '</td>';
+        html += '<td class="num">' + fmtNum(sTax) + '</td>';
+        html += '<td class="num">' + fmtNum(sTot) + '</td>';
+        html += '<td class="num">' + fmtNum(sPay) + '</td>';
+        html += '<td class="num">' + fmtNum(sBal) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderReturSederhana(rows) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data retur penjualan pada periode/filter ini.</div>';
+        }
+
+        var html = '<table class="pz-table"><thead><tr>';
+        html += '<th style="width:90px;">Tanggal</th>';
+        html += '<th style="width:125px;">No.Ref.</th>';
+        html += '<th style="width:120px;">No. Pesanan</th>';
+        html += '<th>Nama Pelanggan</th>';
+        html += '<th style="width:75px;">Mata Uang</th>';
+        html += '<th class="num" style="width:130px;">Jumlah</th>';
+        html += '<th class="num" style="width:140px;">Jumlah IDR</th>';
+        html += '</tr></thead><tbody>';
+
+        var total = 0;
+        rows.forEach(function(r) {
+            var amt = parseFloat(r.total_retur || 0);
+            total += amt;
+            var custLabel = esc(r.pelanggan) + (r.kd_customer ? ' (' + esc(r.kd_customer) + ')' : '');
+
+            html += '<tr>';
+            html += '<td>' + fmtDateDMY(r.tanggal) + '</td>';
+            html += '<td>' + esc(r.reference) + '</td>';
+            html += '<td>' + esc(r.no_pesanan) + '</td>';
+            html += '<td>' + custLabel + '</td>';
+            html += '<td>' + esc(r.mata_uang || 'IDR') + '</td>';
+            html += '<td class="num">' + fmtNum(amt) + '</td>';
+            html += '<td class="num">' + fmtNum(amt) + ' &#10003;</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody><tfoot><tr>';
+        html += '<td colspan="4" style="text-align:center;">Total :</td>';
+        html += '<td>IDR</td>';
+        html += '<td class="num">' + fmtNum(total) + '</td>';
+        html += '<td class="num">' + fmtNum(total) + '</td>';
+        html += '</tr></tfoot></table>';
+        return html;
+    }
+
+    function renderReturRincian(rows) {
+        if (!rows || !rows.length) {
+            return '<div class="text-center text-muted py-4">Tidak ada data retur penjualan pada periode/filter ini.</div>';
+        }
+
+        var html = '';
+        rows.forEach(function(h) {
+            html += '<div class="pz-rincian-card">';
+            html += '<table class="pz-rincian-hdr">';
+            html += '<tr>';
+            html += '<td class="pz-rincian-lbl">Tanggal :</td><td>' + fmtDateDMY(h.tanggal_retur) + '</td>';
+            html += '<td class="pz-rincian-lbl">Pelanggan :</td><td><strong>' + esc(h.pelanggan) + ' (' + esc(h.kd_customer) + ')</strong></td>';
+            html += '<td class="pz-rincian-lbl">Mata Uang :</td><td>IDR &nbsp;&nbsp; 1.00</td>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<td class="pz-rincian-lbl">No. Reference :</td><td>' + esc(h.no_retur) + '</td>';
+            html += '<td class="pz-rincian-lbl">Gudang :</td><td>' + esc(h.nama_gudang) + '</td>';
+            html += '<td class="pz-rincian-lbl">Status :</td><td>' + esc(h.status_retur) + '</td>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<td class="pz-rincian-lbl">No. SPR :</td><td>' + esc(h.no_spr || '-') + '</td>';
+            html += '<td class="pz-rincian-lbl">Catatan :</td><td colspan="3">' + esc(h.catatan) + '</td>';
+            html += '</tr>';
+            html += '</table>';
+
+            html += '<table class="pz-table"><thead><tr>';
+            html += '<th style="width:110px;">Kode</th>';
+            html += '<th>Keterangan</th>';
+            html += '<th class="num" style="width:75px;">Kembali</th>';
+            html += '<th class="num" style="width:85px;">Telah Dipesan</th>';
+            html += '<th style="width:65px;">Satuan</th>';
+            html += '<th class="num" style="width:110px;">Harga Satuan</th>';
+            html += '<th class="num" style="width:65px;">Diskon</th>';
+            html += '<th class="num" style="width:115px;">Sub Total</th>';
+            html += '<th class="num" style="width:55px;">Pajak</th>';
+            html += '</tr></thead><tbody>';
+
+            (h.items || []).forEach(function(it) {
+                html += '<tr>';
+                html += '<td>' + esc(it.kd_barang) + '</td>';
+                html += '<td>' + esc(it.nama_barang) + '</td>';
+                html += '<td class="num">' + fmtNum(it.kembali) + '</td>';
+                html += '<td class="num">' + fmtNum(it.telah_dipesan) + '</td>';
+                html += '<td>' + esc(it.satuan) + '</td>';
+                html += '<td class="num">' + fmtNum(it.harga_satuan) + '</td>';
+                html += '<td class="num">' + parseFloat(it.diskon || 0) + '%</td>';
+                html += '<td class="num">' + fmtNum(it.sub_total) + '</td>';
+                html += '<td class="num">' + parseFloat(it.pajak_pct || 0) + '%</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            html += '<table class="pz-rincian-ftr">';
+            html += '<tr>';
+            html += '<td style="width:110px;">Salesman :</td><td style="width:240px;">' + esc(h.salesman) + '</td>';
+            html += '<td style="width:120px;">Biaya Pengiriman :</td><td class="num" style="width:90px;">0.00</td>';
+            html += '<td style="text-align:right; font-weight:700; width:120px;">Total :</td><td class="num" style="font-weight:700; width:120px;">' + fmtNum(h.total) + '</td>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<td>Diinput Oleh :</td><td>' + esc(h.create_by) + '</td>';
+            html += '<td>Diskon Akhir :</td><td class="num">0.00</td>';
+            html += '<td style="text-align:right; font-weight:700;">Pembayaran :</td><td class="num" style="font-weight:700;">' + fmtNum(h.pembayaran) + '</td>';
+            html += '</tr>';
+            html += '<tr>';
+            html += '<td colspan="4"></td>';
+            html += '<td style="text-align:right; font-weight:700;">Saldo :</td><td class="num" style="font-weight:700;">' + fmtNum(h.saldo) + '</td>';
+            html += '</tr>';
+            html += '</table>';
+            html += '</div>';
+        });
+
+        return html;
+    }
+
     function loadReport() {
         var params = {
             jenis: reportMeta.slug,
@@ -535,6 +947,22 @@ $title = $meta['title'];
                     html = renderNegatifRangkuman(res.rows);
                 } else if (reportMeta.slug === 'negatif-sederhana') {
                     html = renderNegatifSederhana(res.rows);
+                } else if (reportMeta.slug === 'per-salesman-faktur') {
+                    html = renderPerSalesmanFaktur(res.rows);
+                } else if (reportMeta.slug === 'per-kelompok-pelanggan-faktur') {
+                    html = renderPerKelompokPelangganFaktur(res.rows);
+                } else if (reportMeta.slug === 'sederhana') {
+                    html = renderSederhana(res.rows, false);
+                } else if (reportMeta.slug === 'per-mata-uang-sederhana') {
+                    html = renderSederhana(res.rows, true);
+                } else if (reportMeta.slug === 'per-kelompok-salesman') {
+                    html = renderPerKelompokSalesman(res.rows);
+                } else if (reportMeta.slug === 'retur-rangkuman') {
+                    html = renderReturRangkuman(res.rows);
+                } else if (reportMeta.slug === 'retur-sederhana') {
+                    html = renderReturSederhana(res.rows);
+                } else if (reportMeta.slug === 'retur-rincian') {
+                    html = renderReturRincian(res.rows);
                 } else {
                     html = renderMataUangRangkuman(res.rows);
                 }

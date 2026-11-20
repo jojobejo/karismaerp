@@ -1995,6 +1995,284 @@ class M_Journal extends CI_Model
             return $result;
         }
 
+        // per-salesman-faktur, per-kelompok-pelanggan-faktur, sederhana, per-mata-uang-sederhana
+        if (in_array($type, ['per-salesman-faktur', 'per-kelompok-pelanggan-faktur', 'sederhana', 'per-mata-uang-sederhana'], true)) {
+            $whereParts = ['1=1'];
+            $params     = [];
+
+            if ($start_date !== '' && $end_date !== '') {
+                $whereParts[] = 't.tanggal_faktur >= ?';
+                $whereParts[] = 't.tanggal_faktur <= ?';
+                $params[]     = $start_date;
+                $params[]     = $end_date;
+            }
+            if ($no_ref !== '') {
+                $whereParts[] = 't.no_faktur LIKE ?';
+                $params[]     = '%' . $no_ref . '%';
+            }
+            if ($pelanggan !== '') {
+                $whereParts[] = '(t.pelanggan_nama LIKE ? OR t.kd_customer LIKE ? OR t.salesman LIKE ?)';
+                $like = '%' . $pelanggan . '%';
+                array_push($params, $like, $like, $like);
+            }
+
+            $whereSql = implode(' AND ', $whereParts);
+            $orderBy  = 't.tanggal_faktur ASC, t.no_faktur ASC';
+            if ($type === 'per-salesman-faktur') {
+                $orderBy = 't.salesman ASC, t.tanggal_faktur ASC, t.no_faktur ASC';
+            } elseif ($type === 'per-kelompok-pelanggan-faktur') {
+                $orderBy = 't.kelompok_pelanggan ASC, t.pelanggan_nama ASC, t.tanggal_faktur ASC, t.no_faktur ASC';
+            }
+
+            $sql = "
+                SELECT * FROM (
+                    SELECT
+                        f.tanggal_faktur,
+                        f.no_faktur,
+                        COALESCE(f.no_so, '') AS order_no,
+                        COALESCE(f.kd_customer, '') AS kd_customer,
+                        COALESCE(NULLIF(TRIM(c.nama_kios), ''), NULLIF(TRIM(c.nama_customer), ''), f.customer_name, '-') AS pelanggan_nama,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), 'Umum') AS kelompok_pelanggan,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Umum') AS salesman,
+                        'IDR' AS mata_uang,
+                        COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS jumlah,
+                        COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS jumlah_idr
+                    FROM tbso_faktur_penjualan f
+                    LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+                    WHERE f.status <> 'cancelled'
+                      AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+
+                    UNION ALL
+
+                    SELECT
+                        fh.tanggal_faktur,
+                        fh.no_faktur,
+                        COALESCE(fh.no_so, '') AS order_no,
+                        COALESCE(fh.kd_customer, '') AS kd_customer,
+                        COALESCE(NULLIF(TRIM(fh.nama_toko), ''), NULLIF(TRIM(fh.customer_name), ''), '-') AS pelanggan_nama,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), 'Umum') AS kelompok_pelanggan,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), 'Umum') AS salesman,
+                        'IDR' AS mata_uang,
+                        COALESCE(fh.grand_total, 0) AS jumlah,
+                        COALESCE(fh.grand_total, 0) AS jumlah_idr
+                    FROM tbso_faktur_h_import fh
+                    WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
+                      AND COALESCE(fh.status, '') <> 'cancelled'
+                ) t
+                WHERE {$whereSql}
+                ORDER BY {$orderBy}
+            ";
+
+            return $this->db->query($sql, $params)->result_array();
+        }
+
+        if ($type === 'per-kelompok-salesman') {
+            $whereParts = ['1=1'];
+            $params     = [];
+
+            if ($start_date !== '' && $end_date !== '') {
+                $whereParts[] = 't.tanggal_faktur >= ?';
+                $whereParts[] = 't.tanggal_faktur <= ?';
+                $params[]     = $start_date;
+                $params[]     = $end_date;
+            }
+            if ($pelanggan !== '') {
+                $whereParts[] = '(t.nama_salesman LIKE ? OR t.kelompok_salesman LIKE ?)';
+                $like = '%' . $pelanggan . '%';
+                array_push($params, $like, $like);
+            }
+            $whereSql = implode(' AND ', $whereParts);
+
+            $sql = "
+                SELECT
+                    t.kelompok_salesman,
+                    t.nama_salesman,
+                    'IDR' AS mata_uang,
+                    COALESCE(SUM(t.nilai), 0) AS nilai,
+                    COALESCE(SUM(t.pembayaran), 0) AS pembayaran,
+                    COALESCE(SUM(t.nilai - t.pembayaran), 0) AS saldo
+                FROM (
+                    SELECT
+                        f.tanggal_faktur,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), 'general') AS kelompok_salesman,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Others') AS nama_salesman,
+                        COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS nilai,
+                        COALESCE((SELECT SUM(pf.jumlah_pembayaran) FROM tbkeu_pembayaran_faktur pf WHERE pf.id_faktur = f.id_faktur AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted')), 0) AS pembayaran
+                    FROM tbso_faktur_penjualan f
+                    LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+                    WHERE f.status <> 'cancelled'
+                      AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+
+                    UNION ALL
+
+                    SELECT
+                        fh.tanggal_faktur,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), 'general') AS kelompok_salesman,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), 'Others') AS nama_salesman,
+                        COALESCE(fh.grand_total, 0) AS nilai,
+                        COALESCE(fh.total_bayar, 0) AS pembayaran
+                    FROM tbso_faktur_h_import fh
+                    WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
+                      AND COALESCE(fh.status, '') <> 'cancelled'
+                ) t
+                WHERE {$whereSql}
+                GROUP BY t.kelompok_salesman, t.nama_salesman
+                ORDER BY t.kelompok_salesman ASC, t.nama_salesman ASC
+            ";
+
+            return $this->db->query($sql, $params)->result_array();
+        }
+
+        if ($type === 'retur-rangkuman' || $type === 'retur-sederhana') {
+            $this->db->select("
+                r.tanggal_retur AS tanggal,
+                r.no_retur AS reference,
+                COALESCE(NULLIF(r.no_faktur_potong, ''), r.no_spr, '') AS no_pesanan,
+                r.kd_customer,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), r.nama_customer, '-') AS pelanggan,
+                'IDR' AS mata_uang,
+                r.total_nilai_retur,
+                r.sisa_saldo_retur
+            ", false);
+            $this->db->from('tbrp_retur_penjualan_header r');
+            $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+            $this->db->where_not_in('r.status_retur', ['draft', 'ditolak']);
+
+            if ($start_date !== '' && $end_date !== '') {
+                $this->db->where('r.tanggal_retur >=', $start_date);
+                $this->db->where('r.tanggal_retur <=', $end_date);
+            }
+            if ($no_ref !== '') {
+                $this->db->group_start();
+                $this->db->like('r.no_retur', $no_ref);
+                $this->db->or_like('r.no_spr', $no_ref);
+                $this->db->group_end();
+            }
+            if ($pelanggan !== '') {
+                $this->db->group_start();
+                $this->db->like('r.nama_customer', $pelanggan);
+                $this->db->or_like('c.nama_kios', $pelanggan);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('r.tanggal_retur', 'ASC');
+            $this->db->order_by('r.id_retur', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $result = [];
+            foreach ($rows as $row) {
+                $bruto = (float) ($row['total_nilai_retur'] ?? 0);
+                $dpp   = round($bruto / 1.11, 2);
+                $ppn   = round($bruto - $dpp, 2);
+                $sisa  = (float) ($row['sisa_saldo_retur'] ?? 0);
+                $bayar = max(0, $bruto - $sisa);
+
+                $result[] = [
+                    'tanggal'     => $row['tanggal'],
+                    'reference'   => $row['reference'],
+                    'no_pesanan'  => $row['no_pesanan'],
+                    'kd_customer' => $row['kd_customer'],
+                    'pelanggan'   => $row['pelanggan'],
+                    'mata_uang'   => 'IDR',
+                    'sub_total'   => $dpp,
+                    'diskon'      => 0.0,
+                    'pajak'       => $ppn,
+                    'total_retur' => $bruto,
+                    'pembayaran'  => $bayar,
+                    'saldo'       => $sisa,
+                ];
+            }
+            return $result;
+        }
+
+        if ($type === 'retur-rincian') {
+            $this->db->select("
+                r.id_retur,
+                r.no_retur,
+                r.no_spr,
+                r.tanggal_retur,
+                r.kd_customer,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), r.nama_customer, '-') AS pelanggan,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), '(B) Gdg. Induk') AS nama_gudang,
+                COALESCE(r.nama_sales, '-') AS salesman,
+                COALESCE(r.create_by_retur, '-') AS create_by,
+                r.status_retur,
+                r.total_nilai_retur,
+                r.sisa_saldo_retur
+            ", false);
+            $this->db->from('tbrp_retur_penjualan_header r');
+            $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = r.gudang_id', 'left');
+            $this->db->where_not_in('r.status_retur', ['draft', 'ditolak']);
+
+            if ($start_date !== '' && $end_date !== '') {
+                $this->db->where('r.tanggal_retur >=', $start_date);
+                $this->db->where('r.tanggal_retur <=', $end_date);
+            }
+            if ($no_ref !== '') {
+                $this->db->group_start();
+                $this->db->like('r.no_retur', $no_ref);
+                $this->db->or_like('r.no_spr', $no_ref);
+                $this->db->group_end();
+            }
+            if ($pelanggan !== '') {
+                $this->db->group_start();
+                $this->db->like('r.nama_customer', $pelanggan);
+                $this->db->or_like('c.nama_kios', $pelanggan);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('r.tanggal_retur', 'ASC');
+            $this->db->order_by('r.id_retur', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $returIds = array_column($headers, 'id_retur');
+            $detailRows = $this->db
+                ->select("id_retur, kd_barang, nama_barang, satuan, qty_retur, harga_satuan")
+                ->from('tbrp_retur_penjualan_detail')
+                ->where_in('id_retur', $returIds)
+                ->order_by('no_urut', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByRetur = [];
+            foreach ($detailRows as $d) {
+                $qty   = (float) ($d['qty_retur'] ?? 0);
+                $harga = (float) ($d['harga_satuan'] ?? 0);
+                $bruto = $qty * $harga;
+                $subDpp = round($bruto / 1.11, 2);
+
+                $detailsByRetur[$d['id_retur']][] = [
+                    'kd_barang'    => $d['kd_barang'],
+                    'nama_barang'  => $d['nama_barang'],
+                    'kembali'      => $qty,
+                    'telah_dipesan'=> 0.0,
+                    'satuan'       => $d['satuan'] ?? 'Pcs',
+                    'harga_satuan' => $harga,
+                    'diskon'       => 0,
+                    'sub_total'    => $subDpp,
+                    'pajak_pct'    => 11,
+                ];
+            }
+
+            foreach ($headers as &$h) {
+                $tot  = (float) ($h['total_nilai_retur'] ?? 0);
+                $sisa = (float) ($h['sisa_saldo_retur'] ?? 0);
+                $h['items']      = $detailsByRetur[$h['id_retur']] ?? [];
+                $h['catatan']    = 'Retur Penjualan, ' . $h['pelanggan'];
+                $h['total']      = $tot;
+                $h['pembayaran'] = max(0, $tot - $sisa);
+                $h['saldo']      = $sisa;
+            }
+            unset($h);
+
+            return $headers;
+        }
+
         // per-mata-uang-rangkuman
         $whereDate = '';
         $params    = [];
@@ -2019,6 +2297,291 @@ class M_Journal extends CI_Model
         ";
 
         return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Laporan Piutang Usaha format Zahir Accounting (6 varian).
+     */
+    public function accounting_receivable_zahir_report($type, $start_date = '', $end_date = '', $search = '')
+    {
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $search     = trim((string) $search);
+
+        if ($type === 'pembayaran-pelanggan') {
+            $this->db->select("
+                pf.id_pembayaran,
+                pf.tanggal_pembayaran,
+                COALESCE(NULLIF(pf.no_bg, ''), CONCAT('PAY-', pf.id_pembayaran)) AS no_ref,
+                pf.no_faktur,
+                f.tanggal_faktur,
+                f.kd_customer,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), f.customer_name, '-') AS nama_pelanggan,
+                COALESCE(pf.jumlah_diskon, 0) AS diskon,
+                COALESCE(pf.jumlah_pembayaran, 0) AS pembayaran
+            ", false);
+            $this->db->from('tbkeu_pembayaran_faktur pf');
+            $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = pf.id_faktur', 'left');
+            $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+            $this->db->where("COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted')", null, false);
+
+            if ($start_date !== '' && $end_date !== '') {
+                $this->db->where('pf.tanggal_pembayaran >=', $start_date);
+                $this->db->where('pf.tanggal_pembayaran <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('pf.no_faktur', $search);
+                $this->db->or_like('f.customer_name', $search);
+                $this->db->or_like('c.nama_kios', $search);
+                $this->db->or_like('pf.no_bg', $search);
+                $this->db->group_end();
+            }
+            $this->db->order_by('pf.tanggal_pembayaran', 'ASC');
+            $this->db->order_by('pf.id_pembayaran', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        if ($type === 'mutasi-piutang') {
+            $whereCust = '';
+            $params    = [$start_date, $start_date, $start_date, $end_date, $start_date, $end_date];
+            if ($search !== '') {
+                $whereCust = ' AND (c.nama_kios LIKE ? OR c.nama_customer LIKE ? OR c.kd_customer LIKE ? OR c.nama_sales LIKE ?)';
+                $like      = '%' . $search . '%';
+                array_push($params, $like, $like, $like, $like);
+            }
+
+            $sql = "
+                SELECT
+                    COALESCE(NULLIF(TRIM(c.nama_sales), ''), 'Umum') AS kelompok,
+                    c.kd_customer,
+                    COALESCE(NULLIF(TRIM(c.nama_kios), ''), c.nama_customer, '-') AS nama_pelanggan,
+                    'IDR' AS mata_uang,
+                    (
+                        COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_penjualan f INNER JOIN tbso_faktur_detail d ON d.id_faktur = f.id_faktur WHERE f.kd_customer = c.kd_customer AND f.status <> 'cancelled' AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0) AND f.tanggal_faktur < ?), 0)
+                        -
+                        COALESCE((SELECT SUM(pf.jumlah_pembayaran + COALESCE(pf.jumlah_diskon, 0)) FROM tbkeu_pembayaran_faktur pf INNER JOIN tbso_faktur_penjualan f ON f.id_faktur = pf.id_faktur WHERE f.kd_customer = c.kd_customer AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted') AND pf.tanggal_pembayaran < ?), 0)
+                    ) AS saldo_awal,
+                    COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_penjualan f INNER JOIN tbso_faktur_detail d ON d.id_faktur = f.id_faktur WHERE f.kd_customer = c.kd_customer AND f.status <> 'cancelled' AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0) AND f.tanggal_faktur >= ? AND f.tanggal_faktur <= ?), 0) AS debet,
+                    COALESCE((SELECT SUM(pf.jumlah_pembayaran + COALESCE(pf.jumlah_diskon, 0)) FROM tbkeu_pembayaran_faktur pf INNER JOIN tbso_faktur_penjualan f ON f.id_faktur = pf.id_faktur WHERE f.kd_customer = c.kd_customer AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted') AND pf.tanggal_pembayaran >= ? AND pf.tanggal_pembayaran <= ?), 0) AS kredit
+                FROM tb_customer c
+                WHERE 1=1 {$whereCust}
+                HAVING ABS(saldo_awal) > 0.001 OR debet > 0 OR kredit > 0
+                ORDER BY kelompok ASC, nama_pelanggan ASC
+            ";
+
+            $rows = $this->db->query($sql, $params)->result_array();
+            foreach ($rows as &$r) {
+                $r['saldo_awal']  = (float) $r['saldo_awal'];
+                $r['debet']       = (float) $r['debet'];
+                $r['kredit']      = (float) $r['kredit'];
+                $r['saldo_akhir'] = $r['saldo_awal'] + $r['debet'] - $r['kredit'];
+            }
+            unset($r);
+            return $rows;
+        }
+
+        if ($type === 'piutang-per-mata-uang-rangkuman') {
+            $asOf = $end_date !== '' ? $end_date : date('Y-m-d');
+            $whereSearch = '';
+            $params = [$asOf, $asOf, $asOf];
+            if ($search !== '') {
+                $whereSearch = ' AND (t.nama_pelanggan LIKE ? OR t.kd_customer LIKE ?)';
+                $like = '%' . $search . '%';
+                array_push($params, $like, $like);
+            }
+
+            $sql = "
+                SELECT
+                    t.kd_customer,
+                    t.nama_pelanggan,
+                    'IDR' AS mata_uang,
+                    SUM(CASE WHEN t.umur_hari <= 30 THEN t.sisa ELSE 0 END) AS bucket_0_30,
+                    SUM(CASE WHEN t.umur_hari > 30 AND t.umur_hari <= 60 THEN t.sisa ELSE 0 END) AS bucket_30_60,
+                    SUM(CASE WHEN t.umur_hari > 60 AND t.umur_hari <= 90 THEN t.sisa ELSE 0 END) AS bucket_60_90,
+                    SUM(CASE WHEN t.umur_hari > 90 THEN t.sisa ELSE 0 END) AS bucket_gt_90
+                FROM (
+                    SELECT
+                        f.kd_customer,
+                        COALESCE(NULLIF(TRIM(c.nama_kios), ''), f.customer_name, '-') AS nama_pelanggan,
+                        DATEDIFF(?, COALESCE(f.tanggal_jatuh_tempo, f.tanggal_faktur)) AS umur_hari,
+                        (
+                            COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0)
+                            -
+                            COALESCE((SELECT SUM(pf.jumlah_pembayaran + COALESCE(pf.jumlah_diskon, 0)) FROM tbkeu_pembayaran_faktur pf WHERE pf.id_faktur = f.id_faktur AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted') AND pf.tanggal_pembayaran <= ?), 0)
+                        ) AS sisa
+                    FROM tbso_faktur_penjualan f
+                    LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+                    WHERE f.status <> 'cancelled'
+                      AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+                      AND f.tanggal_faktur <= ?
+                ) t
+                WHERE ABS(t.sisa) > 0.001 {$whereSearch}
+                GROUP BY t.kd_customer, t.nama_pelanggan
+                ORDER BY t.nama_pelanggan ASC
+            ";
+
+            return $this->db->query($sql, $params)->result_array();
+        }
+
+        if (in_array($type, [
+            'piutang-per-pelanggan-rincian',
+            'piutang-per-salesman-rangkuman',
+            'piutang-per-salesman-rincian',
+            'piutang-per-mata-uang-rincian',
+            'surat-tagihan-pelanggan',
+        ], true)) {
+            $asOf = $end_date !== '' ? $end_date : date('Y-m-d');
+            $whereParts = ['1=1'];
+            $params     = [$asOf, $asOf, $asOf];
+
+            if ($type === 'surat-tagihan-pelanggan') {
+                $whereParts[] = 't.sisa > 0.001';
+            } else {
+                $whereParts[] = 'ABS(t.sisa) > 0.001';
+            }
+
+            if ($search !== '') {
+                $whereParts[] = '(t.nama_pelanggan LIKE ? OR t.kd_customer LIKE ? OR t.salesman LIKE ? OR t.no_faktur LIKE ?)';
+                $like = '%' . $search . '%';
+                array_push($params, $like, $like, $like, $like);
+            }
+
+            $whereSql = implode(' AND ', $whereParts);
+            $orderBy  = ($type === 'piutang-per-salesman-rangkuman' || $type === 'piutang-per-salesman-rincian')
+                ? 't.salesman ASC, t.nama_pelanggan ASC, t.tanggal_faktur ASC'
+                : 't.nama_pelanggan ASC, t.tanggal_faktur ASC';
+
+            $sql = "
+                SELECT
+                    t.*,
+                    CASE WHEN t.umur_hari <= 30 THEN t.sisa ELSE 0 END AS bucket_0_30,
+                    CASE WHEN t.umur_hari > 30 AND t.umur_hari <= 60 THEN t.sisa ELSE 0 END AS bucket_30_60,
+                    CASE WHEN t.umur_hari > 60 AND t.umur_hari <= 90 THEN t.sisa ELSE 0 END AS bucket_60_90,
+                    CASE WHEN t.umur_hari > 90 THEN t.sisa ELSE 0 END AS bucket_gt_90
+                FROM (
+                    SELECT
+                        f.id_faktur,
+                        f.no_faktur,
+                        f.tanggal_faktur,
+                        COALESCE(f.tanggal_jatuh_tempo, f.tanggal_faktur) AS jatuh_tempo,
+                        f.kd_customer,
+                        COALESCE(NULLIF(TRIM(c.nama_kios), ''), f.customer_name, '-') AS nama_pelanggan,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Umum') AS salesman,
+                        'IDR' AS mata_uang,
+                        DATEDIFF(?, COALESCE(f.tanggal_jatuh_tempo, f.tanggal_faktur)) AS umur_hari,
+                        (
+                            COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0)
+                            -
+                            COALESCE((SELECT SUM(pf.jumlah_pembayaran + COALESCE(pf.jumlah_diskon, 0)) FROM tbkeu_pembayaran_faktur pf WHERE pf.id_faktur = f.id_faktur AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted') AND pf.tanggal_pembayaran <= ?), 0)
+                        ) AS sisa
+                    FROM tbso_faktur_penjualan f
+                    LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+                    WHERE f.status <> 'cancelled'
+                      AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+                      AND f.tanggal_faktur <= ?
+                ) t
+                WHERE {$whereSql}
+                ORDER BY {$orderBy}
+            ";
+
+            return $this->db->query($sql, $params)->result_array();
+        }
+
+        // kartu-piutang-salesman, kartu-piutang-mata-uang-dasar, kartu-piutang-salesman-rangkuman
+        $asOf = $end_date !== '' ? $end_date : date('Y-m-d');
+        $this->db->select("
+            f.id_faktur,
+            f.no_faktur,
+            f.tanggal_faktur,
+            COALESCE(f.tanggal_jatuh_tempo, f.tanggal_faktur) AS jatuh_tempo,
+            f.kd_customer,
+            COALESCE(NULLIF(TRIM(c.nama_kios), ''), f.customer_name, '-') AS nama_pelanggan,
+            COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Umum') AS salesman,
+            COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS nilai_faktur
+        ", false);
+        $this->db->from('tbso_faktur_penjualan f');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->where('f.status <>', 'cancelled');
+        $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+        if ($start_date !== '' && $end_date !== '') {
+            $this->db->where('f.tanggal_faktur >=', $start_date);
+            $this->db->where('f.tanggal_faktur <=', $end_date);
+        } else {
+            $this->db->where('f.tanggal_faktur <=', $asOf);
+        }
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('f.no_faktur', $search);
+            $this->db->or_like('f.customer_name', $search);
+            $this->db->or_like('c.nama_kios', $search);
+            $this->db->or_like('f.kd_customer', $search);
+            $this->db->or_like('f.salesman', $search);
+            $this->db->group_end();
+        }
+        if ($type === 'kartu-piutang-mata-uang-dasar') {
+            $this->db->order_by('nama_pelanggan', 'ASC');
+        } else {
+            $this->db->order_by('salesman', 'ASC');
+            $this->db->order_by('nama_pelanggan', 'ASC');
+        }
+        $this->db->order_by('f.tanggal_faktur', 'ASC');
+        $fakturs = $this->db->get()->result_array();
+
+        if (empty($fakturs)) {
+            return [];
+        }
+
+        $fakturIds = array_column($fakturs, 'id_faktur');
+        $payRows = $this->db
+            ->select("id_faktur, id_pembayaran, tanggal_pembayaran, COALESCE(NULLIF(no_bg, ''), CONCAT('PAY-', id_pembayaran)) AS no_ref, jumlah_pembayaran, COALESCE(jumlah_diskon, 0) AS jumlah_diskon", false)
+            ->from('tbkeu_pembayaran_faktur')
+            ->where_in('id_faktur', $fakturIds)
+            ->where("COALESCE(status, '') NOT IN ('cancelled', 'unposted')", null, false)
+            ->order_by('tanggal_pembayaran', 'ASC')
+            ->order_by('id_pembayaran', 'ASC')
+            ->get()
+            ->result_array();
+
+        $payByFaktur = [];
+        foreach ($payRows as $pr) {
+            $payByFaktur[$pr['id_faktur']][] = $pr;
+        }
+
+        foreach ($fakturs as &$f) {
+            $payments = $payByFaktur[$f['id_faktur']] ?? [];
+            $totBayar = 0.0;
+            $payList  = [];
+            foreach ($payments as $p) {
+                $amt  = (float) ($p['jumlah_pembayaran'] ?? 0);
+                $disc = (float) ($p['jumlah_diskon'] ?? 0);
+                $totBayar += $amt + $disc;
+                if ($amt > 0) {
+                    $payList[] = [
+                        'tanggal' => $p['tanggal_pembayaran'],
+                        'tp'      => 'CR',
+                        'no_ref'  => $p['no_ref'],
+                        'kredit'  => $amt,
+                    ];
+                }
+                if ($disc > 0) {
+                    $payList[] = [
+                        'tanggal' => $p['tanggal_pembayaran'],
+                        'tp'      => 'SD',
+                        'no_ref'  => 'DISC-' . $p['id_pembayaran'],
+                        'kredit'  => $disc,
+                    ];
+                }
+            }
+            $nilai = (float) ($f['nilai_faktur'] ?? 0);
+            $f['debet']       = $nilai;
+            $f['kredit']      = $totBayar;
+            $f['saldo']       = $nilai - $totBayar;
+            $f['pembayaran']  = $payList;
+        }
+        unset($f);
+
+        return $fakturs;
     }
 
     /**
@@ -4464,5 +5027,2016 @@ class M_Journal extends CI_Model
         $this->db->order_by('urutan', 'ASC');
         $this->db->order_by('a.kode_akun', 'ASC');
         return $this->db->get()->result_array();
+    }
+
+    /**
+     * Data Laporan Pembelian format Zahir Accounting.
+     * Mendukung: jurnal-pembelian, jurnal-diskon, penerimaan-barang-harian, rincian, efaktur.
+     */
+    public function accounting_purchase_zahir_report($type, $start_date, $end_date, $search = '')
+    {
+        $type       = trim((string) $type);
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $search     = trim((string) $search);
+
+        // 1. Jurnal Pembelian & Jurnal Diskon Pembelian
+        if ($type === 'jurnal-pembelian' || $type === 'jurnal-diskon') {
+            if (!$this->accounting_journal_schema_ready()) {
+                return [];
+            }
+
+            $this->db->select("
+                j.id_jurnal,
+                j.nomor_jurnal,
+                j.tanggal_transaksi,
+                j.keterangan,
+                j.source_no,
+                j.total_debit,
+                j.total_kredit,
+                jj.kode_jenis_jurnal
+            ", false);
+            $this->db->from('tbkeu_jurnal j');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->where('j.status', 'POSTED');
+
+            if ($type === 'jurnal-pembelian') {
+                $this->db->where('jj.kode_jenis_jurnal', 'PJ');
+            } else {
+                $this->db->group_start();
+                $this->db->where('jj.kode_jenis_jurnal', 'PD');
+                $this->db->or_like('j.keterangan', 'Potongan Pembelian');
+                $this->db->or_where("EXISTS (SELECT 1 FROM tbkeu_jurnal_detail jd2 JOIN tbkeu_akun a2 ON a2.id_akun = jd2.id_akun WHERE jd2.id_jurnal = j.id_jurnal AND (a2.kode_akun = '51097' OR a2.nama_akun LIKE '%Potongan Pembelian%'))", null, false);
+                $this->db->group_end();
+            }
+
+            if ($start_date !== '') {
+                $this->db->where('j.tanggal_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('j.tanggal_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('j.nomor_jurnal', $search);
+                $this->db->or_like('j.source_no', $search);
+                $this->db->or_like('j.keterangan', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('j.tanggal_transaksi', 'ASC');
+            $this->db->order_by('j.id_jurnal', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $journalIds = array_column($headers, 'id_jurnal');
+            $detailRows = $this->db
+                ->select("
+                    d.id_jurnal,
+                    d.nomor_baris,
+                    a.kode_akun,
+                    a.nama_akun,
+                    d.keterangan,
+                    d.debit,
+                    d.kredit,
+                    COALESCE(NULLIF(TRIM(d.nomor_dokumen), ''), '') AS nomor_dokumen,
+                    '-' AS departemen,
+                    '-' AS proyek
+                ", false)
+                ->from('tbkeu_jurnal_detail d')
+                ->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left')
+                ->where_in('d.id_jurnal', $journalIds)
+                ->order_by('d.id_jurnal', 'ASC')
+                ->order_by('d.nomor_baris', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByJournal = [];
+            foreach ($detailRows as $drow) {
+                $detailsByJournal[$drow['id_jurnal']][] = $drow;
+            }
+
+            foreach ($headers as &$hdr) {
+                $hdr['details'] = $detailsByJournal[$hdr['id_jurnal']] ?? [];
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        // 2. Penerimaan Barang (Harian) - Format Laporan Pak Supri
+        if ($type === 'penerimaan-barang-harian') {
+            $this->db->select("
+                l.id_lpb,
+                DATE(COALESCE(l.tgl_sj, l.input_at)) AS tanggal_lpb,
+                l.nomor_lpb,
+                p.tgl_transaksi AS tanggal_po,
+                COALESCE(NULLIF(TRIM(l.no_po), ''), NULLIF(TRIM(p.no_po), ''), '-') AS no_po,
+                COALESCE(NULLIF(TRIM(l.nosj), ''), '-') AS nosj,
+                COALESCE(NULLIF(TRIM(l.kd_suplier), ''), NULLIF(TRIM(p.kd_suplier), ''), '-') AS kd_suplier,
+                COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), '-') AS nama_gudang,
+                ld.id_detail_lpb,
+                ld.kd_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), ld.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(lb.no_lot), ''), NULLIF(TRIM(ld.no_lot), ''), '-') AS no_lot,
+                COALESCE(lb.expired_date, ld.expired_date) AS expired_date,
+                COALESCE(lb.qty, ld.qty_diterima, 0) AS qty,
+                COALESCE(ld.harga_satuan, 0) AS harga_satuan
+            ", false);
+            $this->db->from('tb_lpb l');
+            $this->db->join('tb_lpb_detail ld', 'ld.id_lpb = l.id_lpb', 'inner');
+            $this->db->join('tb_lpb_batch lb', 'lb.id_detail_lpb = ld.id_detail_lpb', 'left');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = ld.kd_barang', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.nomor_lpb', $search);
+                $this->db->or_like('l.no_po', $search);
+                $this->db->or_like('p.no_po', $search);
+                $this->db->or_like('l.nosj', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->or_like('ld.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('lb.no_lot', $search);
+                $this->db->or_like('ld.no_lot', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('tanggal_lpb', 'ASC');
+            $this->db->order_by('l.id_lpb', 'ASC');
+            $this->db->order_by('ld.id_detail_lpb', 'ASC');
+            $this->db->order_by('lb.id_batch', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            if (empty($rows)) {
+                return [];
+            }
+
+            // Ambil data penyesuaian harga jika ada untuk LPB terkait
+            $lpbIds = array_values(array_unique(array_column($rows, 'id_lpb')));
+            $adjByLpb = [];
+            if (!empty($lpbIds)) {
+                $adjRows = $this->db
+                    ->select("
+                        pa.id_lpb_salah,
+                        pa.no_adjustment,
+                        pa.tanggal_adjustment,
+                        pad.kd_barang,
+                        COALESCE(NULLIF(TRIM(pad.nama_barang), ''), pad.kd_barang) AS nama_barang,
+                        pad.no_lot_adjustment,
+                        pad.expired_date_adjustment,
+                        pad.qty,
+                        pad.harga_benar
+                    ", false)
+                    ->from('tb_lpb_price_adjustment pa')
+                    ->join('tb_lpb_price_adjustment_detail pad', 'pad.id_adjustment = pa.id_adjustment', 'inner')
+                    ->where_in('pa.id_lpb_salah', $lpbIds)
+                    ->order_by('pa.tanggal_adjustment', 'ASC')
+                    ->get()
+                    ->result_array();
+
+                foreach ($adjRows as $ar) {
+                    $adjByLpb[$ar['id_lpb_salah']][] = $ar;
+                }
+            }
+
+            // Kelompokkan berdasarkan id_lpb agar di view bisa dirender dengan baris Total --> per LPB
+            $grouped = [];
+            foreach ($rows as $r) {
+                $idLpb = $r['id_lpb'];
+                if (!isset($grouped[$idLpb])) {
+                    $grouped[$idLpb] = [
+                        'id_lpb'       => $idLpb,
+                        'tanggal_lpb'  => $r['tanggal_lpb'],
+                        'nomor_lpb'    => $r['nomor_lpb'],
+                        'tanggal_po'   => $r['tanggal_po'],
+                        'no_po'        => $r['no_po'],
+                        'nosj'         => $r['nosj'],
+                        'kd_suplier'   => $r['kd_suplier'],
+                        'nama_suplier' => $r['nama_suplier'],
+                        'nama_gudang'  => $r['nama_gudang'],
+                        'items'        => [],
+                        'adjustments'  => $adjByLpb[$idLpb] ?? [],
+                    ];
+                }
+                $grouped[$idLpb]['items'][] = [
+                    'kd_barang'    => $r['kd_barang'],
+                    'nama_barang'  => $r['nama_barang'],
+                    'no_lot'       => $r['no_lot'],
+                    'expired_date' => $r['expired_date'],
+                    'qty'          => (float) $r['qty'],
+                    'harga_satuan' => (float) $r['harga_satuan'],
+                ];
+            }
+
+            return array_values($grouped);
+        }
+
+        // 3. Pembelian - Rincian
+        if ($type === 'rincian') {
+            $this->db->select("
+                l.id_lpb,
+                DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) AS tanggal,
+                l.nomor_lpb AS no_referensi,
+                COALESCE(NULLIF(TRIM(l.kd_suplier), ''), NULLIF(TRIM(p.kd_suplier), ''), '-') AS kd_suplier,
+                COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), 'Head Quarter') AS nama_gudang,
+                IF(l.status_lpb = 1, 'Posting', 'Draft') AS status_dokumen,
+                COALESCE(NULLIF(TRIM(l.keterangan), ''), '') AS catatan,
+                COALESCE(NULLIF(TRIM(p.kd_user), ''), '-') AS bag_pembelian,
+                COALESCE(NULLIF(TRIM(l.checker_name), ''), '-') AS input_oleh,
+                l.kd_po
+            ", false);
+            $this->db->from('tb_lpb l');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.nomor_lpb', $search);
+                $this->db->or_like('l.no_invoice', $search);
+                $this->db->or_like('l.no_po', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->or_like('l.keterangan', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('tanggal', 'ASC');
+            $this->db->order_by('l.id_lpb', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $lpbIds = array_column($headers, 'id_lpb');
+            $detailRows = $this->db
+                ->select("
+                    ld.id_lpb,
+                    ld.kd_barang,
+                    COALESCE(NULLIF(TRIM(b.nama_barang), ''), ld.kd_barang) AS nama_barang,
+                    COALESCE(ld.qty_diterima, 0) AS diterima,
+                    COALESCE(MAX(dp.qty), ld.qty_diterima, 0) AS dipesan,
+                    COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS satuan,
+                    COALESCE(ld.harga_satuan, 0) AS harga_satuan,
+                    COALESCE(ld.sales_disc, 0) AS diskon,
+                    COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0) AS subtotal,
+                    (COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)) AS nilai_ppn
+                ", false)
+                ->from('tb_lpb_detail ld')
+                ->join('tb_lpb l2', 'l2.id_lpb = ld.id_lpb', 'inner')
+                ->join('tbpo_barang b', 'b.kode_barang = ld.kd_barang', 'left')
+                ->join('tbpo_detail_po dp', 'dp.kd_po = l2.kd_po AND dp.kd_barang = ld.kd_barang', 'left')
+                ->where_in('ld.id_lpb', $lpbIds)
+                ->group_by('ld.id_detail_lpb')
+                ->order_by('ld.id_lpb', 'ASC')
+                ->order_by('ld.id_detail_lpb', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByLpb = [];
+            foreach ($detailRows as $dr) {
+                $sub = (float) $dr['subtotal'];
+                $ppn = (float) $dr['nilai_ppn'];
+                $dr['pajak_persen'] = ($sub > 0 && $ppn > 0) ? round(($ppn / $sub) * 100, 1) : 0;
+                $detailsByLpb[$dr['id_lpb']][] = $dr;
+            }
+
+            foreach ($headers as &$hdr) {
+                $items        = $detailsByLpb[$hdr['id_lpb']] ?? [];
+                $totalDpp     = 0.0;
+                $totalPpn     = 0.0;
+                $totalDiskon  = 0.0;
+                foreach ($items as $it) {
+                    $totalDpp    += (float) $it['subtotal'];
+                    $totalPpn    += (float) $it['nilai_ppn'];
+                    $totalDiskon += (float) $it['diskon'];
+                }
+                $grandTotal          = $totalDpp + $totalPpn;
+                $hdr['items']        = $items;
+                $hdr['biaya_kirim']  = 0.0;
+                $hdr['diskon_akhir'] = $totalDiskon;
+                $hdr['total']        = $grandTotal;
+                $hdr['pembayaran']   = 0.0;
+                $hdr['saldo']        = $grandTotal;
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        // 4. Pembelian - eFaktur
+        if ($type === 'efaktur') {
+            $this->db->select("
+                l.id_lpb,
+                COALESCE(fp.tgl_fp, l.tanggal_faktur_pajak, l.tanggal_invoice, l.tgl_sj, DATE(l.input_at)) AS tanggal,
+                l.nomor_lpb AS no_ref,
+                COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-') AS suplier,
+                COALESCE(NULLIF(TRIM(fp.no_seri_fp), ''), NULLIF(TRIM(l.kode_faktur_pajak), ''), '') AS nomor_seri_faktur,
+                '-' AS npwp,
+                COALESCE(SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0)), 0) AS jumlah_dpp,
+                COALESCE(SUM(COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)), 0) AS jumlah_ppn,
+                IF(COALESCE(fp.lapor_spt_masa, '') <> '' OR l.status_lpb = 1, 'Ya', 'Tidak') AS sudah
+            ", false);
+            $this->db->from('tb_lpb l');
+            $this->db->join('tblpb_faktur_pajak fp', 'fp.id_lpb = l.id_lpb', 'left');
+            $this->db->join('tb_lpb_detail ld', 'ld.id_lpb = l.id_lpb', 'left');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+            $this->db->where("COALESCE(NULLIF(TRIM(fp.no_seri_fp), ''), NULLIF(TRIM(l.kode_faktur_pajak), '')) IS NOT NULL", null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('COALESCE(fp.tgl_fp, l.tanggal_faktur_pajak, l.tanggal_invoice, l.tgl_sj, DATE(l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('COALESCE(fp.tgl_fp, l.tanggal_faktur_pajak, l.tanggal_invoice, l.tgl_sj, DATE(l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.nomor_lpb', $search);
+                $this->db->or_like('fp.no_seri_fp', $search);
+                $this->db->or_like('l.kode_faktur_pajak', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by('l.id_lpb');
+            $this->db->order_by('tanggal', 'ASC');
+            $this->db->order_by('l.id_lpb', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 5. Pesanan Pembelian - Rincian
+        if ($type === 'pesanan-rincian') {
+            $this->db->select("
+                p.id_po,
+                p.kd_po,
+                p.no_po AS no_referensi,
+                p.tgl_transaksi AS tanggal,
+                p.kd_suplier,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(p.gdg_pengiriman), ''), 'Head Quarter') AS nama_gudang,
+                COALESCE(NULLIF(TRIM(p.status), ''), 'Open') AS status_dokumen,
+                COALESCE(p.total_harga_diskon, p.total_harga, 0) AS total_po,
+                COALESCE(p.tax, 0) AS tax_persen,
+                COALESCE(p.hrg_pajak, 0) AS hrg_pajak
+            ", false);
+            $this->db->from('tbpo_po p');
+            $this->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('p.tgl_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('p.tgl_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('p.no_po', $search);
+                $this->db->or_like('p.kd_po', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('p.kd_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('p.tgl_transaksi', 'ASC');
+            $this->db->order_by('p.id_po', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $kdPos = array_column($headers, 'kd_po');
+            $detailRows = $this->db
+                ->select("
+                    dp.kd_po,
+                    dp.kd_barang,
+                    COALESCE(NULLIF(TRIM(dp.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), dp.kd_barang) AS nama_barang,
+                    COALESCE(dp.qty, 0) AS dipesan,
+                    COALESCE((
+                        SELECT SUM(ld.qty_diterima)
+                        FROM tb_lpb_detail ld
+                        INNER JOIN tb_lpb l ON l.id_lpb = ld.id_lpb
+                        WHERE l.kd_po = dp.kd_po AND ld.kd_barang = dp.kd_barang
+                    ), 0) AS diterima,
+                    COALESCE(NULLIF(TRIM(dp.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS satuan,
+                    COALESCE(dp.harga_satuan_exclude, dp.hrg_satuan, 0) AS harga_satuan,
+                    COALESCE(dp.nominal_diskon, 0) AS diskon_persen,
+                    COALESCE(dp.total_harga_setelah_diskon, dp.hrg_total_diskon, dp.hrg_total, 0) AS subtotal,
+                    dp.keterangan_harga_ppn,
+                    dp.kd_user
+                ", false)
+                ->from('tbpo_detail_po dp')
+                ->join('tbpo_barang b', 'b.kode_barang = dp.kd_barang', 'left')
+                ->where_in('dp.kd_po', $kdPos)
+                ->order_by('dp.id_det_po', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByPo = [];
+            $userByPo    = [];
+            foreach ($detailRows as $dr) {
+                $detailsByPo[$dr['kd_po']][] = $dr;
+                if (!isset($userByPo[$dr['kd_po']]) && !empty($dr['kd_user'])) {
+                    $userByPo[$dr['kd_po']] = $dr['kd_user'];
+                }
+            }
+
+            foreach ($headers as &$hdr) {
+                $items = $detailsByPo[$hdr['kd_po']] ?? [];
+                $taxP  = (float) $hdr['tax_persen'];
+                $sumSub = 0.0;
+                foreach ($items as &$it) {
+                    $sumSub += (float) $it['subtotal'];
+                    $ketPpn = strtoupper(trim((string) ($it['keterangan_harga_ppn'] ?? '')));
+                    $it['pajak_persen'] = ($ketPpn !== 'NON PPN' && $ketPpn !== 'NON-PPN' && $taxP > 0) ? $taxP : ($ketPpn === 'PPN' ? 11 : 0);
+                }
+                unset($it);
+
+                $hdr['catatan']       = 'Pembelian, ' . $hdr['nama_suplier'];
+                $hdr['bag_pembelian'] = $userByPo[$hdr['kd_po']] ?? '-';
+                $hdr['input_oleh']    = $userByPo[$hdr['kd_po']] ?? '-';
+                $hdr['biaya_kirim']   = 0.0;
+                $hdr['diskon_akhir']  = 0.0;
+                $hdr['total']         = ((float) $hdr['total_po'] > 0) ? (float) $hdr['total_po'] : $sumSub;
+                $hdr['items']         = $items;
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        // 6. Pembelian - Sederhana
+        if ($type === 'sederhana') {
+            $this->db->select("
+                DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) AS tanggal,
+                l.nomor_lpb AS no_ref,
+                COALESCE(NULLIF(TRIM(l.no_po), ''), NULLIF(TRIM(p.no_po), ''), '') AS no_pesanan,
+                CONCAT(
+                    COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-'),
+                    ' (',
+                    COALESCE(NULLIF(TRIM(l.kd_suplier), ''), NULLIF(TRIM(p.kd_suplier), ''), '-'),
+                    ')'
+                ) AS nama_pemasok,
+                'IDR' AS mata_uang,
+                COALESCE(SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0) + COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)), 0) AS jumlah
+            ", false);
+            $this->db->from('tb_lpb l');
+            $this->db->join('tb_lpb_detail ld', 'ld.id_lpb = l.id_lpb', 'left');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.nomor_lpb', $search);
+                $this->db->or_like('l.no_po', $search);
+                $this->db->or_like('p.no_po', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by('l.id_lpb');
+            $this->db->order_by('tanggal', 'ASC');
+            $this->db->order_by('l.id_lpb', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 7. Pembelian Bernilai Negatif - Rangkuman & 8. Pengiriman Pembelian - Rangkuman
+        if ($type === 'negatif-rangkuman' || $type === 'pengiriman-rangkuman') {
+            $this->db->select("
+                DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) AS tanggal,
+                l.nomor_lpb AS no_referensi,
+                COALESCE(NULLIF(TRIM(l.no_po), ''), NULLIF(TRIM(p.no_po), ''), '') AS no_pesanan,
+                COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-') AS pemasok,
+                'IDR' AS mata_uang,
+                COALESCE(SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0)), 0) AS sub_total,
+                COALESCE(SUM(COALESCE(ld.sales_disc, 0)), 0) AS diskon,
+                COALESCE(SUM(COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)), 0) AS pajak,
+                COALESCE(SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0) + COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)), 0) AS total_pembelian,
+                0 AS pembayaran,
+                COALESCE(SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0) + COALESCE(ld.ppn_11, 0) + COALESCE(ld.ppn_12, 0)), 0) AS saldo
+            ", false);
+            $this->db->from('tb_lpb l');
+            $this->db->join('tb_lpb_detail ld', 'ld.id_lpb = l.id_lpb', 'left');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+
+            if ($type === 'pengiriman-rangkuman') {
+                // Pengiriman Pembelian = penerimaan barang yang belum difakturkan (draft/belum ada nomor invoice)
+                $this->db->where("COALESCE(NULLIF(TRIM(l.no_invoice), ''), '-') =", '-');
+            }
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.nomor_lpb', $search);
+                $this->db->or_like('l.no_po', $search);
+                $this->db->or_like('p.no_po', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by('l.id_lpb');
+            if ($type === 'negatif-rangkuman') {
+                $this->db->having('total_pembelian <', 0);
+            }
+            $this->db->order_by('tanggal', 'ASC');
+            $this->db->order_by('l.id_lpb', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 9. Purchase Return & 10. Retur Pembelian - Rincian
+        if ($type === 'purchase-return' || $type === 'retur-rincian') {
+            $this->db->select("
+                r.id_retur_pembelian,
+                r.tanggal_retur AS tanggal,
+                r.no_retur_pembelian AS no_faktur,
+                COALESCE(NULLIF(TRIM(r.no_po), ''), '') AS no_po,
+                r.kd_supplier AS kd_suplier,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), r.kd_supplier, '-') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), 'Head Quarter') AS nama_gudang,
+                COALESCE(NULLIF(TRIM(r.status), ''), 'POSTED') AS status_dokumen,
+                COALESCE(NULLIF(TRIM(r.alasan_retur), ''), '') AS alasan_retur,
+                COALESCE(NULLIF(TRIM(r.purchasing_verified_by), ''), NULLIF(TRIM(r.created_by), ''), '-') AS bag_pembelian,
+                COALESCE(NULLIF(TRIM(r.created_by), ''), '-') AS input_oleh,
+                COALESCE(r.total_dpp, 0) AS total_dpp,
+                COALESCE(r.total_ppn, 0) AS total_ppn,
+                COALESCE(r.grand_total, 0) AS grand_total
+            ", false);
+            $this->db->from('tb_retur_pembelian r');
+            $this->db->join('tbpo_suplier s', 's.kd_suplier = r.kd_supplier', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = r.gudang_id', 'left');
+            $this->db->where("COALESCE(r.status, '') NOT IN ('CANCELLED', 'VOID', 'REJECTED')", null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('r.tanggal_retur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('r.tanggal_retur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('r.no_retur_pembelian', $search);
+                $this->db->or_like('r.no_po', $search);
+                $this->db->or_like('r.kd_supplier', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('r.tanggal_retur', 'ASC');
+            $this->db->order_by('r.id_retur_pembelian', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $retIds = array_column($headers, 'id_retur_pembelian');
+            $detailRows = $this->db
+                ->select("
+                    rd.id_retur_pembelian,
+                    rd.kd_barang,
+                    COALESCE(NULLIF(TRIM(b.nama_barang), ''), rd.kd_barang) AS nama_barang,
+                    COALESCE(rd.qty_retur, 0) AS qty,
+                    0 AS on_order,
+                    COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                    COALESCE(rd.harga_satuan, 0) AS harga,
+                    COALESCE(rd.dpp, 0) AS dpp,
+                    COALESCE(rd.ppn, 0) AS ppn,
+                    COALESCE(rd.total, 0) AS total
+                ", false)
+                ->from('tb_retur_pembelian_detail rd')
+                ->join('tbpo_barang b', 'b.kode_barang = rd.kd_barang', 'left')
+                ->where_in('rd.id_retur_pembelian', $retIds)
+                ->order_by('rd.id_detail_retur_pembelian', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByRet = [];
+            foreach ($detailRows as $dr) {
+                $dpp = (float) $dr['dpp'];
+                $ppn = (float) $dr['ppn'];
+                $dr['vat_persen'] = ($dpp > 0 && $ppn > 0) ? round(($ppn / $dpp) * 100, 0) : 0;
+                $detailsByRet[$dr['id_retur_pembelian']][] = $dr;
+            }
+
+            foreach ($headers as &$hdr) {
+                $items = $detailsByRet[$hdr['id_retur_pembelian']] ?? [];
+                $sumTot = 0.0;
+                foreach ($items as $it) {
+                    $sumTot += (float) $it['total'];
+                }
+                $gt = ((float) $hdr['grand_total'] > 0) ? (float) $hdr['grand_total'] : $sumTot;
+                $hdr['catatan']      = 'Retur Pembelian, ' . $hdr['nama_suplier'];
+                $hdr['biaya_kirim']  = 0.0;
+                $hdr['diskon_akhir'] = 0.0;
+                $hdr['total']        = $gt;
+                $hdr['pembayaran']   = $gt;
+                $hdr['saldo']        = 0.0;
+                $hdr['items']        = $items;
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        // 11. Retur Pembelian - Sederhana
+        if ($type === 'retur-sederhana') {
+            $this->db->select("
+                r.tanggal_retur AS tanggal,
+                r.no_retur_pembelian AS no_pesanan,
+                COALESCE(NULLIF(TRIM(r.no_po), ''), '') AS no_permintaan,
+                CONCAT(
+                    COALESCE(NULLIF(TRIM(s.nama_suplier), ''), r.kd_supplier, '-'),
+                    ' (',
+                    COALESCE(r.kd_supplier, '-'),
+                    ')'
+                ) AS nama_pemasok,
+                'IDR' AS mata_uang,
+                COALESCE(r.grand_total, 0) AS jumlah
+            ", false);
+            $this->db->from('tb_retur_pembelian r');
+            $this->db->join('tbpo_suplier s', 's.kd_suplier = r.kd_supplier', 'left');
+            $this->db->where("COALESCE(r.status, '') NOT IN ('CANCELLED', 'VOID', 'REJECTED')", null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('r.tanggal_retur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('r.tanggal_retur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('r.no_retur_pembelian', $search);
+                $this->db->or_like('r.no_po', $search);
+                $this->db->or_like('r.kd_supplier', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('r.tanggal_retur', 'ASC');
+            $this->db->order_by('r.id_retur_pembelian', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 12. Pesanan Pembelian - Sederhana
+        if ($type === 'pesanan-sederhana') {
+            $this->db->select("
+                p.tgl_transaksi AS tanggal,
+                p.no_po AS no_pesanan,
+                '' AS no_permintaan,
+                CONCAT(
+                    COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-'),
+                    ' (',
+                    COALESCE(p.kd_suplier, '-'),
+                    ')'
+                ) AS nama_pemasok,
+                'IDR' AS mata_uang,
+                COALESCE(NULLIF(p.total_harga_diskon, 0), p.total_harga, 0) AS jumlah,
+                p.status
+            ", false);
+            $this->db->from('tbpo_po p');
+            $this->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('p.tgl_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('p.tgl_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('p.no_po', $search);
+                $this->db->or_like('p.kd_po', $search);
+                $this->db->or_like('p.kd_suplier', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('p.tgl_transaksi', 'ASC');
+            $this->db->order_by('p.id_po', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 13. Pesanan Pembelian - Status Pengiriman
+        if ($type === 'pesanan-status-pengiriman') {
+            $this->db->select("
+                p.id_po,
+                p.kd_po,
+                p.tgl_transaksi AS tanggal,
+                p.no_po AS no_pesanan,
+                CONCAT(
+                    COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-'),
+                    ' (',
+                    COALESCE(p.kd_suplier, '-'),
+                    ')'
+                ) AS pemasok,
+                COALESCE(NULLIF(TRIM(p.status), ''), 'Open') AS status_po,
+                COALESCE(NULLIF(p.total_harga_diskon, 0), p.total_harga, 0) AS total
+            ", false);
+            $this->db->from('tbpo_po p');
+            $this->db->join('tbpo_suplier s', 's.kd_suplier = p.kd_suplier', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('p.tgl_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('p.tgl_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('p.no_po', $search);
+                $this->db->or_like('p.kd_po', $search);
+                $this->db->or_like('p.kd_suplier', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('p.tgl_transaksi', 'ASC');
+            $this->db->order_by('p.id_po', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $kdPos = array_column($headers, 'kd_po');
+            $detailRows = $this->db
+                ->select("
+                    dp.kd_po,
+                    dp.kd_barang,
+                    COALESCE(NULLIF(TRIM(dp.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), dp.kd_barang) AS nama_barang,
+                    COALESCE(NULLIF(TRIM(dp.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                    COALESCE(dp.qty, 0) AS pesanan,
+                    COALESCE((
+                        SELECT SUM(ld.qty_diterima)
+                        FROM tb_lpb_detail ld
+                        INNER JOIN tb_lpb l ON l.id_lpb = ld.id_lpb
+                        WHERE l.kd_po = dp.kd_po AND ld.kd_barang = dp.kd_barang
+                    ), 0) AS telah_tiba,
+                    dp.kd_user
+                ", false)
+                ->from('tbpo_detail_po dp')
+                ->join('tbpo_barang b', 'b.kode_barang = dp.kd_barang', 'left')
+                ->where_in('dp.kd_po', $kdPos)
+                ->order_by('dp.id_det_po', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByPo = [];
+            $userByPo    = [];
+            foreach ($detailRows as $dr) {
+                $pesanan = (float) $dr['pesanan'];
+                $tiba    = (float) $dr['telah_tiba'];
+                $dr['sisa_pesanan'] = max(0, $pesanan - $tiba);
+                $detailsByPo[$dr['kd_po']][] = $dr;
+                if (!isset($userByPo[$dr['kd_po']]) && !empty($dr['kd_user'])) {
+                    $userByPo[$dr['kd_po']] = $dr['kd_user'];
+                }
+            }
+
+            foreach ($headers as &$hdr) {
+                $hdr['bag_pembelian'] = $userByPo[$hdr['kd_po']] ?? '-';
+                $st = strtoupper(trim((string) $hdr['status_po']));
+                $hdr['status_code'] = (strpos($st, 'CLOSE') !== false || $st === 'C' || $st === 'SELESAI') ? 'C' : '';
+                $hdr['items'] = $detailsByPo[$hdr['kd_po']] ?? [];
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        return [];
+    }
+
+    /**
+     * Data Laporan Hutang Usaha format Zahir Accounting.
+     * Mendukung: rincian-mata-uang-dasar, kartu-hutang-mata-uang-dasar,
+     * mutasi-hutang-mata-uang-dasar, pembayaran-hutang-mata-uang-dasar, rangkuman-hutang-mata-uang-dasar.
+     */
+    public function accounting_payable_zahir_report($type, $start_date, $end_date, $search = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $type       = trim((string) $type);
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $search     = trim((string) $search);
+        $asOf       = ($end_date !== '') ? $end_date : date('Y-m-d');
+
+        // 1. Rincian Hutang & Rangkuman Hutang (Aging Hutang per Faktur / per Pemasok)
+        if ($type === 'rincian-mata-uang-dasar' || $type === 'rangkuman-hutang-mata-uang-dasar') {
+            $this->db->select("
+                COALESCE(d.id_supplier, 0) AS id_supplier,
+                COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_suplier,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(d.nomor_dokumen), ''), NULLIF(TRIM(j.source_no), ''), j.nomor_jurnal) AS no_referensi,
+                MIN(j.tanggal_transaksi) AS tanggal,
+                COALESCE(MAX(d.tanggal_jatuh_tempo), MIN(j.tanggal_transaksi)) AS jatuh_tempo,
+                MAX(COALESCE(jj.kode_jenis_jurnal, 'PJ')) AS tp,
+                SUM(d.kredit - d.debit) AS saldo
+            ", false);
+            $this->db->from('tbkeu_jurnal_detail d');
+            $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner');
+            $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->join('tbpo_suplier s', 's.id_suplier = d.id_supplier', 'left');
+            $this->db->where('a.kode_akun', '21098');
+            $this->db->where('j.status', 'POSTED');
+            $this->db->where('j.tanggal_transaksi <=', $asOf);
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('s.nama_suplier', $search);
+                $this->db->or_like('s.kd_suplier', $search);
+                $this->db->or_like('d.nomor_dokumen', $search);
+                $this->db->or_like('j.source_no', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by([
+                'COALESCE(d.id_supplier, 0)',
+                "COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-')",
+                "COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum')",
+                "COALESCE(NULLIF(TRIM(d.nomor_dokumen), ''), NULLIF(TRIM(j.source_no), ''), j.nomor_jurnal)",
+            ]);
+            $this->db->having('ABS(SUM(d.kredit - d.debit)) >', 0.0001);
+            $this->db->order_by('nama_suplier', 'ASC');
+            $this->db->order_by('tanggal', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $asOfTs = strtotime($asOf);
+            $bySupplier = [];
+
+            foreach ($rows as $r) {
+                $saldo = (float) $r['saldo'];
+                $jtTs  = strtotime($r['jatuh_tempo'] ?: $r['tanggal']);
+                $days  = (int) floor(($asOfTs - $jtTs) / 86400);
+
+                $b0 = 0.0; $b30 = 0.0; $b60 = 0.0; $b90 = 0.0;
+                if ($days <= 30) {
+                    $b0 = $saldo;
+                } elseif ($days <= 60) {
+                    $b30 = $saldo;
+                } elseif ($days <= 90) {
+                    $b60 = $saldo;
+                } else {
+                    $b90 = $saldo;
+                }
+
+                $supKey = $r['id_supplier'] . '|' . $r['kd_suplier'];
+                if (!isset($bySupplier[$supKey])) {
+                    $bySupplier[$supKey] = [
+                        'id_supplier'  => $r['id_supplier'],
+                        'kd_suplier'   => $r['kd_suplier'],
+                        'nama_suplier' => trim($r['nama_suplier']),
+                        'b_0_30'       => 0.0,
+                        'b_30_60'      => 0.0,
+                        'b_60_90'      => 0.0,
+                        'b_gt_90'      => 0.0,
+                        'total_saldo'  => 0.0,
+                        'invoices'     => [],
+                    ];
+                }
+
+                $bySupplier[$supKey]['b_0_30']      += $b0;
+                $bySupplier[$supKey]['b_30_60']     += $b30;
+                $bySupplier[$supKey]['b_60_90']     += $b60;
+                $bySupplier[$supKey]['b_gt_90']     += $b90;
+                $bySupplier[$supKey]['total_saldo'] += $saldo;
+                $bySupplier[$supKey]['invoices'][]   = [
+                    'tanggal'      => $r['tanggal'],
+                    'jatuh_tempo'  => $r['jatuh_tempo'],
+                    'tp'           => $r['tp'],
+                    'no_referensi' => $r['no_referensi'],
+                    'mata_uang'    => 'IDR',
+                    'b_0_30'       => $b0,
+                    'b_30_60'      => $b30,
+                    'b_60_90'      => $b60,
+                    'b_gt_90'      => $b90,
+                    'saldo'        => $saldo,
+                ];
+            }
+
+            return array_values($bySupplier);
+        }
+
+        // 2. Kartu Hutang - Mata Uang Dasar
+        if ($type === 'kartu-hutang-mata-uang-dasar') {
+            $this->db->select("
+                COALESCE(d.id_supplier, 0) AS id_supplier,
+                COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_suplier,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(d.nomor_dokumen), ''), NULLIF(TRIM(j.source_no), ''), j.nomor_jurnal) AS no_faktur,
+                j.tanggal_transaksi AS tanggal,
+                COALESCE(jj.kode_jenis_jurnal, 'PJ') AS tp,
+                COALESCE(NULLIF(TRIM(j.source_no), ''), j.nomor_jurnal) AS no_referensi,
+                COALESCE(d.tanggal_jatuh_tempo, j.tanggal_transaksi) AS jatuh_tempo,
+                d.debit,
+                d.kredit
+            ", false);
+            $this->db->from('tbkeu_jurnal_detail d');
+            $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner');
+            $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->join('tbpo_suplier s', 's.id_suplier = d.id_supplier', 'left');
+            $this->db->where('a.kode_akun', '21098');
+            $this->db->where('j.status', 'POSTED');
+            if ($start_date !== '') {
+                $this->db->where('j.tanggal_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('j.tanggal_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('s.nama_suplier', $search);
+                $this->db->or_like('s.kd_suplier', $search);
+                $this->db->or_like('d.nomor_dokumen', $search);
+                $this->db->or_like('j.source_no', $search);
+                $this->db->group_end();
+            }
+            $this->db->order_by('nama_suplier', 'ASC');
+            $this->db->order_by('no_faktur', 'ASC');
+            $this->db->order_by('j.tanggal_transaksi', 'ASC');
+            $this->db->order_by('j.id_jurnal', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $bySupplier = [];
+            foreach ($rows as $r) {
+                $supKey = $r['id_supplier'] . '|' . $r['kd_suplier'];
+                $fakKey = $r['no_faktur'];
+                if (!isset($bySupplier[$supKey])) {
+                    $bySupplier[$supKey] = [
+                        'id_supplier'  => $r['id_supplier'],
+                        'kd_suplier'   => $r['kd_suplier'],
+                        'nama_suplier' => trim($r['nama_suplier']),
+                        'total_debit'  => 0.0,
+                        'total_kredit' => 0.0,
+                        'total_saldo'  => 0.0,
+                        'invoices'     => [],
+                    ];
+                }
+                if (!isset($bySupplier[$supKey]['invoices'][$fakKey])) {
+                    $bySupplier[$supKey]['invoices'][$fakKey] = [
+                        'no_faktur'    => $fakKey,
+                        'total_debit'  => 0.0,
+                        'total_kredit' => 0.0,
+                        'saldo'        => 0.0,
+                        'lines'        => [],
+                    ];
+                }
+                $deb = (float) $r['debit'];
+                $kre = (float) $r['kredit'];
+                $bySupplier[$supKey]['invoices'][$fakKey]['lines'][] = [
+                    'tanggal'      => $r['tanggal'],
+                    'tp'           => $r['tp'],
+                    'no_referensi' => $r['no_referensi'],
+                    'jatuh_tempo'  => $r['jatuh_tempo'],
+                    'mata_uang'    => 'IDR',
+                    'debit'        => $deb,
+                    'kredit'       => $kre,
+                ];
+                $bySupplier[$supKey]['invoices'][$fakKey]['total_debit']  += $deb;
+                $bySupplier[$supKey]['invoices'][$fakKey]['total_kredit'] += $kre;
+                $bySupplier[$supKey]['invoices'][$fakKey]['saldo']        += ($kre - $deb);
+                $bySupplier[$supKey]['total_debit']  += $deb;
+                $bySupplier[$supKey]['total_kredit'] += $kre;
+                $bySupplier[$supKey]['total_saldo']  += ($kre - $deb);
+            }
+
+            foreach ($bySupplier as &$sup) {
+                $sup['invoices'] = array_values($sup['invoices']);
+            }
+            unset($sup);
+
+            return array_values($bySupplier);
+        }
+
+        // 3. Mutasi Hutang - Mata Uang Dasar
+        if ($type === 'mutasi-hutang-mata-uang-dasar') {
+            $sEsc = $this->db->escape($start_date !== '' ? $start_date : '1900-01-01');
+            $eEsc = $this->db->escape($end_date !== '' ? $end_date : date('Y-m-d'));
+
+            $this->db->select("
+                COALESCE(d.id_supplier, 0) AS id_supplier,
+                COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_suplier,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum') AS nama_suplier,
+                SUM(CASE WHEN j.tanggal_transaksi < $sEsc THEN (d.kredit - d.debit) ELSE 0 END) AS saldo_awal,
+                SUM(CASE WHEN j.tanggal_transaksi BETWEEN $sEsc AND $eEsc THEN d.debit ELSE 0 END) AS debit,
+                SUM(CASE WHEN j.tanggal_transaksi BETWEEN $sEsc AND $eEsc THEN d.kredit ELSE 0 END) AS kredit
+            ", false);
+            $this->db->from('tbkeu_jurnal_detail d');
+            $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner');
+            $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner');
+            $this->db->join('tbpo_suplier s', 's.id_suplier = d.id_supplier', 'left');
+            $this->db->where('a.kode_akun', '21098');
+            $this->db->where('j.status', 'POSTED');
+            $this->db->where('j.tanggal_transaksi <=', ($end_date !== '' ? $end_date : date('Y-m-d')));
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('s.nama_suplier', $search);
+                $this->db->or_like('s.kd_suplier', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by([
+                'COALESCE(d.id_supplier, 0)',
+                "COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-')",
+                "COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum')",
+            ]);
+            $this->db->order_by('nama_suplier', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            foreach ($rows as &$r) {
+                $r['nama_suplier'] = trim($r['nama_suplier']);
+                $r['saldo_awal']   = (float) $r['saldo_awal'];
+                $r['debit']        = (float) $r['debit'];
+                $r['kredit']       = (float) $r['kredit'];
+                $r['saldo_akhir']  = $r['saldo_awal'] - $r['debit'] + $r['kredit'];
+            }
+            unset($r);
+
+            return $rows;
+        }
+
+        // 4. Pembayaran Hutang - Mata Uang Dasar
+        if ($type === 'pembayaran-hutang-mata-uang-dasar') {
+            $this->db->select("
+                p.id_pembayaran,
+                p.tanggal_pembayaran AS tanggal,
+                p.nomor_pembayaran AS no_referensi,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), 'Pemasok Umum') AS nama_pemasok,
+                COALESCE(p.amount, 0) AS total_pembayaran,
+                pa.invoice_no AS no_faktur,
+                p.tanggal_pembayaran AS tanggal_faktur,
+                COALESCE(pa.amount_allocated, p.amount, 0) AS nilai_alokasi
+            ", false);
+            $this->db->from('tbkeu_pembayaran p');
+            $this->db->join('tbpo_suplier s', 's.id_suplier = p.id_supplier', 'left');
+            $this->db->join('tbkeu_pembayaran_alokasi pa', 'pa.id_pembayaran = p.id_pembayaran', 'left');
+            $this->db->where('p.payment_type', 'SUPPLIER_PAYMENT');
+            $this->db->where('p.status', 'POSTED');
+
+            if ($start_date !== '') {
+                $this->db->where('p.tanggal_pembayaran >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('p.tanggal_pembayaran <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('p.nomor_pembayaran', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('pa.invoice_no', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('p.tanggal_pembayaran', 'ASC');
+            $this->db->order_by('p.id_pembayaran', 'ASC');
+            $this->db->order_by('pa.nomor_baris', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $grouped = [];
+            foreach ($rows as $r) {
+                $idPay = $r['id_pembayaran'];
+                if (!isset($grouped[$idPay])) {
+                    $grouped[$idPay] = [
+                        'id_pembayaran'    => $idPay,
+                        'tanggal'          => $r['tanggal'],
+                        'no_referensi'     => $r['no_referensi'],
+                        'nama_pemasok'     => trim($r['nama_pemasok']),
+                        'total_pembayaran' => (float) $r['total_pembayaran'],
+                        'items'            => [],
+                    ];
+                }
+                if (!empty($r['no_faktur'])) {
+                    $grouped[$idPay]['items'][] = [
+                        'no_faktur'      => $r['no_faktur'],
+                        'tanggal_faktur' => $r['tanggal_faktur'],
+                        'diskon'         => 0.0,
+                        'pembayaran'     => (float) $r['nilai_alokasi'],
+                    ];
+                }
+            }
+
+            return array_values($grouped);
+        }
+
+        return [];
+    }
+
+    /**
+     * Data Laporan Persediaan Barang format Zahir Accounting.
+     */
+    public function accounting_inventory_zahir_report($type, $start_date, $end_date, $search = '')
+    {
+        $type       = trim((string) $type);
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $search     = trim((string) $search);
+
+        // 1. Jurnal Persediaan
+        if ($type === 'jurnal-persediaan') {
+            if (!$this->accounting_journal_schema_ready()) {
+                return [];
+            }
+
+            $this->db->select("
+                j.id_jurnal,
+                j.nomor_jurnal,
+                j.tanggal_transaksi,
+                j.keterangan,
+                j.source_no
+            ", false);
+            $this->db->from('tbkeu_jurnal j');
+            $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+            $this->db->where('j.status', 'POSTED');
+            $this->db->group_start();
+            $this->db->where_in('jj.kode_jenis_jurnal', ['IJ', 'MR']);
+            $this->db->or_where("EXISTS (SELECT 1 FROM tbkeu_jurnal_detail jd2 JOIN tbkeu_akun a2 ON a2.id_akun = jd2.id_akun WHERE jd2.id_jurnal = j.id_jurnal AND a2.kode_akun LIKE '140%')", null, false);
+            $this->db->group_end();
+
+            if ($start_date !== '') {
+                $this->db->where('j.tanggal_transaksi >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('j.tanggal_transaksi <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('j.nomor_jurnal', $search);
+                $this->db->or_like('j.source_no', $search);
+                $this->db->or_like('j.keterangan', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('j.tanggal_transaksi', 'ASC');
+            $this->db->order_by('j.id_jurnal', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $journalIds = array_column($headers, 'id_jurnal');
+            $detailRows = $this->db
+                ->select("
+                    d.id_jurnal,
+                    a.kode_akun,
+                    a.nama_akun,
+                    d.debit,
+                    d.kredit,
+                    COALESCE(NULLIF(TRIM(d.nomor_dokumen), ''), '') AS nomor_dokumen,
+                    '-' AS departemen,
+                    '-' AS proyek
+                ", false)
+                ->from('tbkeu_jurnal_detail d')
+                ->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left')
+                ->where_in('d.id_jurnal', $journalIds)
+                ->order_by('d.id_jurnal', 'ASC')
+                ->order_by('d.nomor_baris', 'ASC')
+                ->get()
+                ->result_array();
+
+            $byJ = [];
+            foreach ($detailRows as $dr) {
+                $byJ[$dr['id_jurnal']][] = $dr;
+            }
+            foreach ($headers as &$hdr) {
+                $hdr['details'] = $byJ[$hdr['id_jurnal']] ?? [];
+            }
+            unset($hdr);
+
+            return $headers;
+        }
+
+        // 2. Barang Dibeli
+        if ($type === 'barang-dibeli') {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                ld.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), ld.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                SUM(COALESCE(ld.qty_diterima, 0)) AS jumlah,
+                SUM(COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0)) AS nilai
+            ", false);
+            $this->db->from('tb_lpb_detail ld');
+            $this->db->join('tb_lpb l', 'l.id_lpb = ld.id_lpb', 'inner');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = ld.kd_barang', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('ld.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('b.kelompok_dagang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by(['kelompok', 'ld.kd_barang', 'nama_barang', 'unit']);
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('ld.kd_barang', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 3. Barang Terjual
+        if ($type === 'barang-terjual') {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                fd.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(fd.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), fd.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(fd.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                SUM(COALESCE(fd.qty, 0)) AS jumlah,
+                SUM(COALESCE(fd.total_harga, 0)) AS nilai
+            ", false);
+            $this->db->from('tbso_faktur_detail fd');
+            $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = fd.id_faktur', 'inner');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = fd.kd_barang', 'left');
+            $this->db->where('f.status <>', 'cancelled');
+            $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('f.tanggal_faktur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('f.tanggal_faktur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('fd.kd_barang', $search);
+                $this->db->or_like('fd.nama_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by(['kelompok', 'fd.kd_barang', 'nama_barang', 'unit']);
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('fd.kd_barang', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 4. Daftar Barang - Umum & Daftar Harga Jual Barang
+        if ($type === 'daftar-barang-umum' || $type === 'daftar-harga-jual') {
+            $priceCol = ($type === 'daftar-harga-jual')
+                ? "COALESCE((SELECT fd.harga_satuan FROM tbso_faktur_detail fd WHERE fd.kd_barang = b.kode_barang AND fd.harga_satuan > 0 ORDER BY fd.id_faktur_detail DESC LIMIT 1), 0)"
+                : "COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = b.kode_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0)";
+
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                b.kode_barang,
+                b.nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE((SELECT SUM(sb.qty_on_hand) FROM tberp_stock_batch sb WHERE sb.kd_barang = b.kode_barang), 0) AS tersedia,
+                COALESCE((SELECT SUM(sb.qty_reserved) FROM tberp_stock_batch sb WHERE sb.kd_barang = b.kode_barang), 0) AS dipesan,
+                $priceCol AS harga_satuan
+            ", false);
+            $this->db->from('tbpo_barang b');
+            $this->db->where('b.is_active', 'T');
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('b.kode_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('b.kelompok_dagang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('b.kode_barang', 'ASC');
+            $this->db->limit(1500);
+            $rows = $this->db->get()->result_array();
+
+            foreach ($rows as &$r) {
+                $r['total_nilai'] = (float) $r['tersedia'] * (float) $r['harga_satuan'];
+            }
+            unset($r);
+            return $rows;
+        }
+
+        // 5. Analisa Barang Per Gudang, Daftar Barang Per Gudang, & Formulir Stok Opname
+        if ($type === 'analisa-per-gudang' || $type === 'daftar-barang-per-gudang' || $type === 'formulir-stok-opname') {
+            $this->db->select("
+                COALESCE(g.id_gudang, 0) AS id_gudang,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', sb.gudang_id)) AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                sb.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), sb.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                SUM(COALESCE(sb.qty_on_hand, 0)) AS tersedia,
+                SUM(COALESCE(sb.qty_reserved, 0)) AS pesanan_pelanggan,
+                COALESCE((SELECT SUM(dp.qty) FROM tbpo_detail_po dp INNER JOIN tbpo_po p ON p.kd_po = dp.kd_po WHERE dp.kd_barang = sb.kd_barang AND COALESCE(p.status, '') NOT IN ('Closed','CLOSED','Cancelled','CANCELLED')), 0) AS dipesan_ke_pemasok,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = sb.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS harga_satuan
+            ", false);
+            $this->db->from('tberp_stock_batch sb');
+            $this->db->join('tb_gudang g', 'g.id_gudang = sb.gudang_id', 'left');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = sb.kd_barang', 'left');
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('sb.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by(['id_gudang', 'nama_gudang', 'kelompok', 'sb.kd_barang', 'nama_barang', 'unit']);
+            $this->db->order_by('nama_gudang', 'ASC');
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('sb.kd_barang', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            foreach ($rows as &$r) {
+                $r['total_nilai'] = (float) $r['tersedia'] * (float) $r['harga_satuan'];
+            }
+            unset($r);
+            return $rows;
+        }
+
+        // 6. Kartu Stok - Umum & Kartu Stok Per Pemasok Per Gudang
+        if ($type === 'kartu-stok-umum' || $type === 'kartu-stok-per-pemasok-per-gudang') {
+            $sDate = $start_date !== '' ? $start_date : date('Y-m-01');
+            $eDate = $end_date !== '' ? $end_date : date('Y-m-d');
+
+            $this->db->select("
+                l.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), l.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(l.gudang_id, 0) AS gudang_id,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', l.gudang_id)) AS nama_gudang,
+                DATE(l.created_at) AS tanggal,
+                l.tipe,
+                COALESCE(NULLIF(TRIM(l.ref_no), ''), '-') AS no_referensi,
+                COALESCE(NULLIF(TRIM(l.ref_type), ''), l.tipe) AS ref_type,
+                l.qty,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = l.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS harga_pokok
+            ", false);
+            $this->db->from('tberp_stock_ledger l');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = l.kd_barang', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->where('DATE(l.created_at) <=', $eDate);
+            $this->db->where_not_in('l.tipe', ['RESERVE', 'RELEASE']);
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('l.ref_no', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            if ($type === 'kartu-stok-per-pemasok-per-gudang') {
+                $this->db->order_by('nama_gudang', 'ASC');
+            }
+            $this->db->order_by('l.kd_barang', 'ASC');
+            $this->db->order_by('l.created_at', 'ASC');
+            $this->db->order_by('l.id', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $inTypes  = ['SALDO_AWAL', 'IN', 'RJUAL', 'ADJIN'];
+            $grouped  = [];
+
+            foreach ($rows as $r) {
+                $key = ($type === 'kartu-stok-per-pemasok-per-gudang')
+                    ? ($r['nama_gudang'] . '||' . $r['kode_barang'])
+                    : $r['kode_barang'];
+
+                if (!isset($grouped[$key])) {
+                    $grouped[$key] = [
+                        'nama_gudang'   => $r['nama_gudang'],
+                        'kode_barang'   => $r['kode_barang'],
+                        'nama_barang'   => $r['nama_barang'],
+                        'kelompok'      => $r['kelompok'],
+                        'unit'          => $r['unit'],
+                        'harga_pokok'   => (float) $r['harga_pokok'],
+                        'opening_qty'   => 0.0,
+                        'total_masuk'   => 0.0,
+                        'total_keluar'  => 0.0,
+                        'saldo_qty'     => 0.0,
+                        'lines'         => [],
+                    ];
+                }
+
+                $qty   = abs((float) $r['qty']);
+                $isIn  = in_array($r['tipe'], $inTypes, true) || ($r['tipe'] === 'MUTASI' && (float) $r['qty'] > 0);
+                $delta = $isIn ? $qty : -$qty;
+
+                if ($r['tanggal'] < $sDate) {
+                    $grouped[$key]['opening_qty'] += $delta;
+                    $grouped[$key]['saldo_qty']   += $delta;
+                } else {
+                    $grouped[$key]['saldo_qty'] += $delta;
+                    if ($isIn) {
+                        $grouped[$key]['total_masuk'] += $qty;
+                    } else {
+                        $grouped[$key]['total_keluar'] += $qty;
+                    }
+                    $grouped[$key]['lines'][] = [
+                        'tanggal'      => $r['tanggal'],
+                        'tp'           => $r['ref_type'],
+                        'no_referensi' => $r['no_referensi'],
+                        'masuk'        => $isIn ? $qty : 0.0,
+                        'keluar'       => $isIn ? 0.0 : $qty,
+                        'harga_pokok'  => (float) $r['harga_pokok'],
+                        'nilai'        => $qty * (float) $r['harga_pokok'],
+                        'saldo'        => $grouped[$key]['saldo_qty'],
+                        'saldo_nilai'  => $grouped[$key]['saldo_qty'] * (float) $r['harga_pokok'],
+                    ];
+                }
+            }
+
+            return array_values($grouped);
+        }
+
+        // 7. Transaksi Barang - Semua Transaksi & Transaksi - Pemakaian / Penyesuaian Barang
+        if ($type === 'transaksi-semua' || $type === 'transaksi-pemakaian-penyesuaian') {
+            $sDate = $start_date !== '' ? $start_date : date('Y-m-01');
+            $eDate = $end_date !== '' ? $end_date : date('Y-m-d');
+
+            $this->db->select("
+                DATE(l.created_at) AS tanggal,
+                COALESCE(NULLIF(TRIM(l.ref_no), ''), CONCAT('TRX-', l.id)) AS no_referensi,
+                COALESCE(NULLIF(TRIM(l.ref_type), ''), l.tipe) AS ref_type,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', l.gudang_id)) AS nama_gudang,
+                l.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), l.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                l.tipe,
+                l.qty,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = l.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS harga_satuan
+            ", false);
+            $this->db->from('tberp_stock_ledger l');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = l.kd_barang', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->where('DATE(l.created_at) >=', $sDate);
+            $this->db->where('DATE(l.created_at) <=', $eDate);
+            $this->db->where_not_in('l.tipe', ['RESERVE', 'RELEASE']);
+
+            if ($type === 'transaksi-pemakaian-penyesuaian') {
+                $this->db->where_in('l.tipe', ['SALDO_AWAL', 'ADJIN', 'ADJOUT', 'MUTASI']);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.ref_no', $search);
+                $this->db->or_like('l.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('tanggal', 'ASC');
+            $this->db->order_by('l.id', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $inTypes = ['SALDO_AWAL', 'IN', 'RJUAL', 'ADJIN'];
+            $grouped = [];
+            foreach ($rows as $r) {
+                $key = $r['tanggal'] . '||' . $r['no_referensi'];
+                if (!isset($grouped[$key])) {
+                    $grouped[$key] = [
+                        'tanggal'      => $r['tanggal'],
+                        'no_referensi' => $r['no_referensi'],
+                        'dari_gudang'  => $r['nama_gudang'],
+                        'ke_gudang'    => $r['nama_gudang'],
+                        'catatan'      => $r['ref_type'] . ' (' . $r['tipe'] . ')',
+                        'status'       => 'Posting',
+                        'input_oleh'   => '-',
+                        'total'        => 0.0,
+                        'items'        => [],
+                    ];
+                }
+                $qty   = abs((float) $r['qty']);
+                $isIn  = in_array($r['tipe'], $inTypes, true) || ($r['tipe'] === 'MUTASI' && (float) $r['qty'] > 0);
+                $signedQty = $isIn ? $qty : -$qty;
+                $harga = (float) $r['harga_satuan'];
+                $sub   = $signedQty * $harga;
+
+                $grouped[$key]['total'] += $sub;
+                $grouped[$key]['items'][] = [
+                    'kode_barang'  => $r['kode_barang'],
+                    'nama_barang'  => $r['nama_barang'],
+                    'jumlah'       => $signedQty,
+                    'unit'         => $r['unit'],
+                    'harga_satuan' => $harga,
+                    'sub_total'    => $sub,
+                ];
+            }
+
+            return array_values($grouped);
+        }
+
+        // 8. Mutasi Barang Per Gudang & Mutasi Barang - Umum
+        if ($type === 'mutasi-per-gudang' || $type === 'mutasi-umum') {
+            $sDate = $start_date !== '' ? $start_date : date('Y-m-01');
+            $eDate = $end_date !== '' ? $end_date : date('Y-m-d');
+
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', l.gudang_id)) AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                l.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), l.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                DATE(l.created_at) AS tanggal,
+                l.tipe,
+                l.qty,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = l.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS harga_pokok
+            ", false);
+            $this->db->from('tberp_stock_ledger l');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = l.kd_barang', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->where('DATE(l.created_at) <=', $eDate);
+            $this->db->where_not_in('l.tipe', ['RESERVE', 'RELEASE']);
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            if ($type === 'mutasi-per-gudang') {
+                $this->db->order_by('nama_gudang', 'ASC');
+            }
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('l.kd_barang', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $inTypes = ['SALDO_AWAL', 'IN', 'RJUAL', 'ADJIN'];
+            $grouped = [];
+            foreach ($rows as $r) {
+                $key = ($type === 'mutasi-per-gudang')
+                    ? ($r['nama_gudang'] . '||' . $r['kelompok'] . '||' . $r['kode_barang'])
+                    : ($r['kelompok'] . '||' . $r['kode_barang']);
+
+                if (!isset($grouped[$key])) {
+                    $grouped[$key] = [
+                        'nama_gudang' => $r['nama_gudang'],
+                        'kelompok'    => $r['kelompok'],
+                        'kode_barang' => $r['kode_barang'],
+                        'nama_barang' => $r['nama_barang'],
+                        'unit'        => $r['unit'],
+                        'harga_pokok' => (float) $r['harga_pokok'],
+                        'stok_awal'   => 0.0,
+                        'stok_masuk'  => 0.0,
+                        'stok_keluar' => 0.0,
+                    ];
+                }
+
+                $qty   = abs((float) $r['qty']);
+                $isIn  = in_array($r['tipe'], $inTypes, true) || ($r['tipe'] === 'MUTASI' && (float) $r['qty'] > 0);
+                $delta = $isIn ? $qty : -$qty;
+
+                if ($r['tanggal'] < $sDate) {
+                    $grouped[$key]['stok_awal'] += $delta;
+                } else {
+                    if ($isIn) {
+                        $grouped[$key]['stok_masuk'] += $qty;
+                    } else {
+                        $grouped[$key]['stok_keluar'] += $qty;
+                    }
+                }
+            }
+
+            foreach ($grouped as &$g) {
+                $g['stok_akhir']  = $g['stok_awal'] + $g['stok_masuk'] - $g['stok_keluar'];
+                $g['saldo_awal']  = $g['stok_awal'] * $g['harga_pokok'];
+                $g['nilai_masuk'] = $g['stok_masuk'] * $g['harga_pokok'];
+                $g['nilai_keluar'] = $g['stok_keluar'] * $g['harga_pokok'];
+                $g['saldo_akhir'] = $g['stok_akhir'] * $g['harga_pokok'];
+            }
+            unset($g);
+
+            return array_values($grouped);
+        }
+
+        // 9. Nomor Lot Barang - Mutasi
+        if ($type === 'lot-mutasi') {
+            $sDate = $start_date !== '' ? $start_date : date('Y-m-01');
+            $eDate = $end_date !== '' ? $end_date : date('Y-m-d');
+
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', l.gudang_id)) AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                l.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), l.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(NULLIF(TRIM(l.no_lot), ''), '0') AS no_lot,
+                l.expired_date,
+                DATE(l.created_at) AS tanggal,
+                COALESCE(NULLIF(TRIM(l.ref_no), ''), '-') AS no_ref,
+                l.tipe,
+                l.qty,
+                COALESCE(NULLIF(TRIM(l.ref_type), ''), l.tipe) AS catatan
+            ", false);
+            $this->db->from('tberp_stock_ledger l');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = l.kd_barang', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->where('DATE(l.created_at) >=', $sDate);
+            $this->db->where('DATE(l.created_at) <=', $eDate);
+            $this->db->where_not_in('l.tipe', ['RESERVE', 'RELEASE']);
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('l.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('l.no_lot', $search);
+                $this->db->or_like('l.ref_no', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('nama_gudang', 'ASC');
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('l.kd_barang', 'ASC');
+            $this->db->order_by('no_lot', 'ASC');
+            $this->db->order_by('l.created_at', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $inTypes = ['SALDO_AWAL', 'IN', 'RJUAL', 'ADJIN'];
+            $running = [];
+            foreach ($rows as &$r) {
+                $qty  = abs((float) $r['qty']);
+                $isIn = in_array($r['tipe'], $inTypes, true) || ($r['tipe'] === 'MUTASI' && (float) $r['qty'] > 0);
+                $runKey = $r['nama_gudang'] . '||' . $r['kode_barang'] . '||' . $r['no_lot'];
+                if (!isset($running[$runKey])) {
+                    $running[$runKey] = 0.0;
+                }
+                $running[$runKey] += ($isIn ? $qty : -$qty);
+                $r['masuk']  = $isIn ? $qty : 0.0;
+                $r['keluar'] = $isIn ? 0.0 : $qty;
+                $r['saldo']  = $running[$runKey];
+            }
+            unset($r);
+
+            return $rows;
+        }
+
+        // 10. Nomor Lot Barang - Tersedia
+        if ($type === 'lot-tersedia') {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), CONCAT('Gudang ', sb.gudang_id)) AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                sb.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), sb.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(NULLIF(TRIM(sb.no_lot), ''), '0') AS no_lot,
+                COALESCE(sb.qty_on_hand, 0) AS jumlah,
+                DATE(sb.created_at) AS tgl_produksi,
+                sb.expired_date AS tgl_kadaluarsa
+            ", false);
+            $this->db->from('tberp_stock_batch sb');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = sb.kd_barang', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = sb.gudang_id', 'left');
+
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('sb.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('sb.no_lot', $search);
+                $this->db->or_like('g.nama_gudang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('nama_gudang', 'ASC');
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('sb.kd_barang', 'ASC');
+            $this->db->order_by('no_lot', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 11. Analisa Barang - Umum
+        if ($type === 'analisa-umum') {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                b.kode_barang,
+                b.nama_barang,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE((SELECT SUM(sb.qty_on_hand) FROM tberp_stock_batch sb WHERE sb.kd_barang = b.kode_barang), 0) AS tersedia,
+                COALESCE((SELECT SUM(dp.qty) FROM tbpo_detail_po dp INNER JOIN tbpo_po p ON p.kd_po = dp.kd_po WHERE dp.kd_barang = b.kode_barang AND COALESCE(p.status, '') NOT IN ('Closed','CLOSED','Cancelled','CANCELLED')), 0) AS dipesan_ke_pemasok,
+                COALESCE((SELECT SUM(sb.qty_reserved) FROM tberp_stock_batch sb WHERE sb.kd_barang = b.kode_barang), 0) AS pesanan_pelanggan
+            ", false);
+            $this->db->from('tbpo_barang b');
+            $this->db->where('b.is_active', 'T');
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('b.kode_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('b.kelompok_dagang', $search);
+                $this->db->group_end();
+            }
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('b.kode_barang', 'ASC');
+            $this->db->limit(1500);
+            return $this->db->get()->result_array();
+        }
+
+        // 12. Barang Paling Laris (Top 10 / Per Kelompok / Margin Keuntungan), Perputaran Cepat & Laba/Rugi Barang Total
+        if (in_array($type, [
+            'laris-top10',
+            'laris-per-kelompok',
+            'laris-keuntungan',
+            'laba-rugi-total',
+            'perputaran-cepat-per-kelompok',
+            'perputaran-cepat-semua',
+        ], true)) {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                fd.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(fd.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), fd.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(fd.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                SUM(COALESCE(fd.qty, 0)) AS terjual,
+                SUM(COALESCE(fd.total_harga, 0)) AS nilai_penjualan,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = fd.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS hpp_unit
+            ", false);
+            $this->db->from('tbso_faktur_detail fd');
+            $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = fd.id_faktur', 'inner');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = fd.kd_barang', 'left');
+            $this->db->where('f.status <>', 'cancelled');
+            $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('f.tanggal_faktur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('f.tanggal_faktur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('fd.kd_barang', $search);
+                $this->db->or_like('fd.nama_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by(['kelompok', 'fd.kd_barang', 'nama_barang', 'unit']);
+            if ($type === 'perputaran-cepat-semua') {
+                $this->db->order_by('nilai_penjualan', 'DESC');
+            } elseif ($type === 'perputaran-cepat-per-kelompok') {
+                $this->db->order_by('kelompok', 'ASC');
+                $this->db->order_by('nilai_penjualan', 'DESC');
+            } elseif ($type === 'laba-rugi-total') {
+                $this->db->order_by('kelompok', 'ASC');
+                $this->db->order_by('nama_barang', 'ASC');
+            } else {
+                $this->db->order_by('kelompok', 'ASC');
+                $this->db->order_by('terjual', 'DESC');
+            }
+            $rows = $this->db->get()->result_array();
+
+            foreach ($rows as &$r) {
+                $terjual = (float) $r['terjual'];
+                $penj    = (float) $r['nilai_penjualan'];
+                $hpp     = $terjual * (float) $r['hpp_unit'];
+                $laba    = $penj - $hpp;
+                $r['harga_pokok'] = $hpp;
+                $r['laba_rugi']   = $laba;
+                $r['persen']      = ($penj > 0) ? round(($laba / $penj) * 100, 2) : 0.0;
+            }
+            unset($r);
+
+            if ($type === 'laris-top10') {
+                $byGrp = [];
+                $out   = [];
+                foreach ($rows as $r) {
+                    $g = $r['kelompok'];
+                    if (!isset($byGrp[$g])) $byGrp[$g] = 0;
+                    if ($byGrp[$g] < 10) {
+                        $byGrp[$g]++;
+                        $out[] = $r;
+                    }
+                }
+                return $out;
+            }
+            if ($type === 'laris-keuntungan') {
+                usort($rows, function ($a, $b) {
+                    if ($a['kelompok'] !== $b['kelompok']) {
+                        return strcmp($a['kelompok'], $b['kelompok']);
+                    }
+                    return $b['persen'] <=> $a['persen'];
+                });
+            }
+            return $rows;
+        }
+
+        // 13. Laba / Rugi Barang - Rincian
+        if ($type === 'laba-rugi-rincian') {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                fd.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(fd.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), fd.kd_barang) AS nama_barang,
+                f.tanggal_faktur AS tanggal,
+                'SJ' AS tp,
+                f.no_faktur AS no_referensi,
+                COALESCE(NULLIF(TRIM(fd.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(fd.qty, 0) AS terjual,
+                COALESCE(fd.total_harga, 0) AS nilai_penjualan,
+                COALESCE((SELECT ld.harga_satuan FROM tb_lpb_detail ld WHERE ld.kd_barang = fd.kd_barang AND ld.harga_satuan > 0 ORDER BY ld.id_detail_lpb DESC LIMIT 1), 0) AS hpp_unit
+            ", false);
+            $this->db->from('tbso_faktur_detail fd');
+            $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = fd.id_faktur', 'inner');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = fd.kd_barang', 'left');
+            $this->db->where('f.status <>', 'cancelled');
+            $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+
+            if ($start_date !== '') {
+                $this->db->where('f.tanggal_faktur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('f.tanggal_faktur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('fd.kd_barang', $search);
+                $this->db->or_like('fd.nama_barang', $search);
+                $this->db->or_like('f.no_faktur', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('fd.kd_barang', 'ASC');
+            $this->db->order_by('f.tanggal_faktur', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            foreach ($rows as &$r) {
+                $t = (float) $r['terjual'];
+                $p = (float) $r['nilai_penjualan'];
+                $h = $t * (float) $r['hpp_unit'];
+                $l = $p - $h;
+                $r['harga_pokok'] = $h;
+                $r['laba_rugi']   = $l;
+                $r['persen']      = ($p > 0) ? round(($l / $p) * 100, 2) : 0.0;
+            }
+            unset($r);
+            return $rows;
+        }
+
+        // 14. Penjualan Per Barang / Per Pelanggan / Per Salesman (Faktur & Total)
+        if (in_array($type, [
+            'penjualan-barang-pelanggan-faktur',
+            'penjualan-pelanggan-barang-total',
+            'penjualan-pelanggan-barang-faktur',
+            'penjualan-salesman-barang-total',
+            'penjualan-barang-pelanggan-total',
+            'penjualan-barang-salesman-total',
+            'penjualan-salesman-pelanggan-barang-faktur',
+            'penjualan-salesman-barang-non-retur',
+            'penjualan-salesman-pelanggan',
+        ], true)) {
+            $this->db->select("
+                '(B) Gdg. Induk' AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                fd.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(fd.nama_barang), ''), NULLIF(TRIM(b.nama_barang), ''), fd.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Others') AS salesman,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), f.customer_name, '-') AS pelanggan,
+                f.tanggal_faktur AS tanggal,
+                f.no_faktur AS no_referensi,
+                COALESCE(fd.qty, 0) AS jumlah,
+                COALESCE(NULLIF(TRIM(fd.satuan), ''), NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(fd.hrg_satuan, 0) AS harga_satuan,
+                COALESCE(fd.disc, 0) AS disc_persen,
+                COALESCE(fd.total_harga, 0) AS total
+            ", false);
+            $this->db->from('tbso_faktur_detail fd');
+            $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = fd.id_faktur', 'inner');
+            $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = fd.kd_barang', 'left');
+            $this->db->where('f.status <>', 'cancelled');
+            $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+            if ($type === 'penjualan-salesman-barang-non-retur') {
+                $this->db->where('COALESCE(fd.qty, 0) >', 0, false);
+            }
+
+            if ($start_date !== '') {
+                $this->db->where('f.tanggal_faktur >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('f.tanggal_faktur <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('fd.kd_barang', $search);
+                $this->db->or_like('fd.nama_barang', $search);
+                $this->db->or_like('f.no_faktur', $search);
+                $this->db->or_like('f.customer_name', $search);
+                $this->db->or_like('f.salesman', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('kelompok', 'ASC');
+            $this->db->order_by('nama_barang', 'ASC');
+            $this->db->order_by('salesman', 'ASC');
+            $this->db->order_by('pelanggan', 'ASC');
+            $this->db->order_by('f.tanggal_faktur', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        // 15. Analisa Pembelian Per Barang / Per Pemasok (Faktur & Total)
+        if (in_array($type, [
+            'pembelian-barang-pemasok-faktur',
+            'pembelian-pemasok-barang-invoice',
+            'pembelian-pemasok-barang-total',
+            'pembelian-barang-pemasok-total',
+        ], true)) {
+            $this->db->select("
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), '(B) Gdg. Induk') AS nama_gudang,
+                COALESCE(NULLIF(TRIM(b.kelompok_dagang), ''), 'Barang Dagangan') AS kelompok,
+                ld.kd_barang AS kode_barang,
+                COALESCE(NULLIF(TRIM(b.nama_barang), ''), ld.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(TRIM(l.nama_suplier), ''), NULLIF(TRIM(s.nama_suplier), ''), '-') AS pemasok,
+                DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) AS tanggal,
+                l.nomor_lpb AS no_referensi,
+                COALESCE(ld.qty_diterima, 0) AS jumlah,
+                COALESCE(NULLIF(TRIM(b.satuan), ''), 'Pcs') AS unit,
+                COALESCE(ld.harga_satuan, 0) AS harga_satuan,
+                0 AS disc_persen,
+                COALESCE(NULLIF(ld.dpp, 0), ld.total_harga, 0) AS total
+            ", false);
+            $this->db->from('tb_lpb_detail ld');
+            $this->db->join('tb_lpb l', 'l.id_lpb = ld.id_lpb', 'inner');
+            $this->db->join('tbpo_po p', 'p.kd_po = l.kd_po', 'left');
+            $this->db->join('tbpo_suplier s', "s.kd_suplier = COALESCE(NULLIF(l.kd_suplier, ''), p.kd_suplier)", 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = l.gudang_id', 'left');
+            $this->db->join('tbpo_barang b', 'b.kode_barang = ld.kd_barang', 'left');
+
+            if ($start_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) >=', $start_date);
+            }
+            if ($end_date !== '') {
+                $this->db->where('DATE(COALESCE(l.tanggal_invoice, l.tgl_sj, l.input_at)) <=', $end_date);
+            }
+            if ($search !== '') {
+                $this->db->group_start();
+                $this->db->like('ld.kd_barang', $search);
+                $this->db->or_like('b.nama_barang', $search);
+                $this->db->or_like('l.nomor_lpb', $search);
+                $this->db->or_like('s.nama_suplier', $search);
+                $this->db->or_like('l.nama_suplier', $search);
+                $this->db->group_end();
+            }
+
+            if ($type === 'pembelian-pemasok-barang-invoice' || $type === 'pembelian-pemasok-barang-total') {
+                $this->db->order_by('pemasok', 'ASC');
+                $this->db->order_by('kelompok', 'ASC');
+                $this->db->order_by('nama_barang', 'ASC');
+            } else {
+                $this->db->order_by('nama_gudang', 'ASC');
+                $this->db->order_by('kelompok', 'ASC');
+                $this->db->order_by('nama_barang', 'ASC');
+                $this->db->order_by('pemasok', 'ASC');
+            }
+            $this->db->order_by('tanggal', 'ASC');
+            return $this->db->get()->result_array();
+        }
+
+        return [];
     }
 }

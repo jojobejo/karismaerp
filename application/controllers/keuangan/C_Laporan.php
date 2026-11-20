@@ -187,6 +187,38 @@ class C_Laporan extends CI_Controller
                 'slug'  => 'per-mata-uang-rangkuman',
                 'title' => 'Penjualan Per Mata Uang - Rangkuman',
             ],
+            'per-salesman-faktur' => [
+                'slug'  => 'per-salesman-faktur',
+                'title' => 'Penjualan Per Salesman Per Faktur',
+            ],
+            'per-kelompok-pelanggan-faktur' => [
+                'slug'  => 'per-kelompok-pelanggan-faktur',
+                'title' => 'Penjualan Per Kelompok Pelanggan Per Faktur',
+            ],
+            'sederhana' => [
+                'slug'  => 'sederhana',
+                'title' => 'Penjualan - Sederhana',
+            ],
+            'per-mata-uang-sederhana' => [
+                'slug'  => 'per-mata-uang-sederhana',
+                'title' => 'Penjualan Per Mata Uang - Sederhana',
+            ],
+            'per-kelompok-salesman' => [
+                'slug'  => 'per-kelompok-salesman',
+                'title' => 'Penjualan Per Kelompok Salesman',
+            ],
+            'retur-rangkuman' => [
+                'slug'  => 'retur-rangkuman',
+                'title' => 'Retur Penjualan - Rangkuman',
+            ],
+            'retur-sederhana' => [
+                'slug'  => 'retur-sederhana',
+                'title' => 'Retur Penjualan Sederhana',
+            ],
+            'retur-rincian' => [
+                'slug'  => 'retur-rincian',
+                'title' => 'Retur Penjualan - Rincian',
+            ],
         ];
         return $map[$jenis] ?? $map['rincian'];
     }
@@ -228,6 +260,503 @@ class C_Laporan extends CI_Controller
 
         $meta = $this->_zahir_penjualan_meta($jenis);
         $rows = $this->M_Journal->accounting_sales_zahir_report($meta['slug'], $startDate, $endDate, $noRef, $pelanggan);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
+    private function _zahir_piutang_meta($jenis)
+    {
+        $map = [
+            'kartu-piutang-salesman' => [
+                'slug'  => 'kartu-piutang-salesman',
+                'title' => 'Kartu Piutang Per Salesman',
+            ],
+            'kartu-piutang-mata-uang-dasar' => [
+                'slug'  => 'kartu-piutang-mata-uang-dasar',
+                'title' => 'Kartu Piutang Mata Uang Dasar',
+            ],
+            'kartu-piutang-salesman-rangkuman' => [
+                'slug'  => 'kartu-piutang-salesman-rangkuman',
+                'title' => 'Kartu Piutang Per Salesman - Rangkuman',
+            ],
+            'mutasi-piutang' => [
+                'slug'  => 'mutasi-piutang',
+                'title' => 'Mutasi Piutang - Mata Uang Dasar',
+            ],
+            'pembayaran-pelanggan' => [
+                'slug'  => 'pembayaran-pelanggan',
+                'title' => 'Pembayaran Pelanggan - Mata Uang Dasar',
+            ],
+            'piutang-per-mata-uang-rangkuman' => [
+                'slug'  => 'piutang-per-mata-uang-rangkuman',
+                'title' => 'Piutang Usaha Per Mata Uang - Rangkuman',
+            ],
+            'piutang-per-pelanggan-rincian' => [
+                'slug'  => 'piutang-per-pelanggan-rincian',
+                'title' => 'Piutang Usaha Per Pelanggan - Rincian',
+            ],
+            'piutang-per-salesman-rangkuman' => [
+                'slug'  => 'piutang-per-salesman-rangkuman',
+                'title' => 'Piutang Usaha Per Salesman - Rangkuman',
+            ],
+            'piutang-per-salesman-rincian' => [
+                'slug'  => 'piutang-per-salesman-rincian',
+                'title' => 'Piutang Usaha Per Salesman - Rincian',
+            ],
+            'piutang-per-mata-uang-rincian' => [
+                'slug'  => 'piutang-per-mata-uang-rincian',
+                'title' => 'Piutang Usaha Per Mata Uang - Rincian',
+            ],
+            'surat-tagihan-pelanggan' => [
+                'slug'  => 'surat-tagihan-pelanggan',
+                'title' => 'Surat Tagihan Pelanggan',
+            ],
+        ];
+        return $map[$jenis] ?? $map['kartu-piutang-salesman'];
+    }
+
+    /**
+     * Halaman Laporan Piutang Usaha format Zahir Accounting.
+     */
+    public function piutang_zahir_report($jenis = 'kartu-piutang-salesman')
+    {
+        $meta = $this->_zahir_piutang_meta($jenis);
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/piutang/zahir-data');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/piutang_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data laporan Piutang Usaha format Zahir.
+     */
+    public function piutang_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis     = trim((string) $this->input->get('jenis', true));
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $search    = trim((string) $this->input->get('search', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_piutang_meta($jenis);
+        $rows = $this->M_Journal->accounting_receivable_zahir_report($meta['slug'], $startDate, $endDate, $search);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
+    /**
+     * Metadata laporan Pembelian format Zahir Accounting.
+     */
+    private function _zahir_pembelian_meta($jenis)
+    {
+        $map = [
+            'jurnal-pembelian' => [
+                'slug'  => 'jurnal-pembelian',
+                'title' => 'Jurnal - Pembelian',
+            ],
+            'jurnal-diskon' => [
+                'slug'  => 'jurnal-diskon',
+                'title' => 'Jurnal - Diskon Pembelian',
+            ],
+            'penerimaan-barang-harian' => [
+                'slug'  => 'penerimaan-barang-harian',
+                'title' => 'Penerimaan Barang (Harian)',
+            ],
+            'rincian' => [
+                'slug'  => 'rincian',
+                'title' => 'Pembelian - Rincian',
+            ],
+            'efaktur' => [
+                'slug'  => 'efaktur',
+                'title' => 'Pembelian - eFaktur',
+            ],
+            'pesanan-rincian' => [
+                'slug'  => 'pesanan-rincian',
+                'title' => 'Pesanan Pembelian - Rincian',
+            ],
+            'sederhana' => [
+                'slug'  => 'sederhana',
+                'title' => 'Pembelian - Sederhana',
+            ],
+            'negatif-rangkuman' => [
+                'slug'  => 'negatif-rangkuman',
+                'title' => 'Pembelian Bernilai Negatif - Rangkuman',
+            ],
+            'pengiriman-rangkuman' => [
+                'slug'  => 'pengiriman-rangkuman',
+                'title' => 'Pengiriman Pembelian - Rangkuman',
+            ],
+            'purchase-return' => [
+                'slug'  => 'purchase-return',
+                'title' => 'Purchase Return',
+            ],
+            'retur-rincian' => [
+                'slug'  => 'retur-rincian',
+                'title' => 'Retur Pembelian - Rincian',
+            ],
+            'retur-sederhana' => [
+                'slug'  => 'retur-sederhana',
+                'title' => 'Retur Pembelian - Sederhana',
+            ],
+            'pesanan-sederhana' => [
+                'slug'  => 'pesanan-sederhana',
+                'title' => 'Pesanan Pembelian - Sederhana',
+            ],
+            'pesanan-status-pengiriman' => [
+                'slug'  => 'pesanan-status-pengiriman',
+                'title' => 'Pesanan Pembelian - Status Pengiriman',
+            ],
+        ];
+        return $map[$jenis] ?? $map['jurnal-pembelian'];
+    }
+
+    /**
+     * Halaman Laporan Pembelian format Zahir Accounting.
+     */
+    public function pembelian_zahir_report($jenis = 'jurnal-pembelian')
+    {
+        $meta = $this->_zahir_pembelian_meta($jenis);
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/pembelian/zahir-data');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_pembelian_hutang/pembelian_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data laporan Pembelian format Zahir.
+     */
+    public function pembelian_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis     = trim((string) $this->input->get('jenis', true));
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $search    = trim((string) $this->input->get('search', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_pembelian_meta($jenis);
+        $rows = $this->M_Journal->accounting_purchase_zahir_report($meta['slug'], $startDate, $endDate, $search);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
+    /**
+     * Metadata laporan Hutang Usaha format Zahir Accounting.
+     */
+    private function _zahir_hutang_meta($jenis)
+    {
+        $map = [
+            'rincian-mata-uang-dasar' => [
+                'slug'  => 'rincian-mata-uang-dasar',
+                'title' => 'Rincian Hutang - Mata Uang Dasar',
+            ],
+            'kartu-hutang-mata-uang-dasar' => [
+                'slug'  => 'kartu-hutang-mata-uang-dasar',
+                'title' => 'Kartu Hutang - Mata Uang Dasar',
+            ],
+            'mutasi-hutang-mata-uang-dasar' => [
+                'slug'  => 'mutasi-hutang-mata-uang-dasar',
+                'title' => 'Mutasi Hutang - Mata Uang Dasar',
+            ],
+            'pembayaran-hutang-mata-uang-dasar' => [
+                'slug'  => 'pembayaran-hutang-mata-uang-dasar',
+                'title' => 'Pembayaran Hutang - Mata Uang Dasar',
+            ],
+            'rangkuman-hutang-mata-uang-dasar' => [
+                'slug'  => 'rangkuman-hutang-mata-uang-dasar',
+                'title' => 'Rangkuman Hutang - Mata Uang Dasar',
+            ],
+        ];
+        return $map[$jenis] ?? $map['rincian-mata-uang-dasar'];
+    }
+
+    /**
+     * Halaman Laporan Hutang Usaha format Zahir Accounting.
+     */
+    public function hutang_zahir_report($jenis = 'rincian-mata-uang-dasar')
+    {
+        $meta = $this->_zahir_hutang_meta($jenis);
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/hutang/zahir-data');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_pembelian_hutang/hutang_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data laporan Hutang Usaha format Zahir.
+     */
+    public function hutang_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis     = trim((string) $this->input->get('jenis', true));
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $search    = trim((string) $this->input->get('search', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_hutang_meta($jenis);
+        $rows = $this->M_Journal->accounting_payable_zahir_report($meta['slug'], $startDate, $endDate, $search);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
+    /**
+     * Metadata laporan Persediaan Barang format Zahir Accounting.
+     */
+    private function _zahir_barang_meta($jenis)
+    {
+        $map = [
+            'kartu-stok-umum' => [
+                'slug'  => 'kartu-stok-umum',
+                'title' => 'Kartu Stok - Umum',
+            ],
+            'analisa-per-gudang' => [
+                'slug'  => 'analisa-per-gudang',
+                'title' => 'Analisa Barang Per Gudang',
+            ],
+            'barang-dibeli' => [
+                'slug'  => 'barang-dibeli',
+                'title' => 'Barang Dibeli',
+            ],
+            'barang-terjual' => [
+                'slug'  => 'barang-terjual',
+                'title' => 'Barang Terjual',
+            ],
+            'daftar-barang-umum' => [
+                'slug'  => 'daftar-barang-umum',
+                'title' => 'Daftar Barang - Umum',
+            ],
+            'daftar-barang-per-gudang' => [
+                'slug'  => 'daftar-barang-per-gudang',
+                'title' => 'Daftar Barang Per Gudang',
+            ],
+            'daftar-harga-jual' => [
+                'slug'  => 'daftar-harga-jual',
+                'title' => 'Daftar Harga Jual Barang',
+            ],
+            'jurnal-persediaan' => [
+                'slug'  => 'jurnal-persediaan',
+                'title' => 'Jurnal Persediaan',
+            ],
+            'kartu-stok-per-pemasok-per-gudang' => [
+                'slug'  => 'kartu-stok-per-pemasok-per-gudang',
+                'title' => 'Kartu Stok Per Pemasok Per Gudang',
+            ],
+            'formulir-stok-opname' => [
+                'slug'  => 'formulir-stok-opname',
+                'title' => 'Formulir Stok Opname',
+            ],
+            'transaksi-semua' => [
+                'slug'  => 'transaksi-semua',
+                'title' => 'Transaksi Barang - Semua Transaksi',
+            ],
+            'transaksi-pemakaian-penyesuaian' => [
+                'slug'  => 'transaksi-pemakaian-penyesuaian',
+                'title' => 'Transaksi - Pemakaian / Penyesuaian Barang',
+            ],
+            'mutasi-per-gudang' => [
+                'slug'  => 'mutasi-per-gudang',
+                'title' => 'Mutasi Barang Per Gudang',
+            ],
+            'mutasi-umum' => [
+                'slug'  => 'mutasi-umum',
+                'title' => 'Mutasi Barang - Umum',
+            ],
+            'lot-mutasi' => [
+                'slug'  => 'lot-mutasi',
+                'title' => 'Nomor Lot Barang - Mutasi',
+            ],
+            'lot-tersedia' => [
+                'slug'  => 'lot-tersedia',
+                'title' => 'Nomor Lot Barang - Tersedia',
+            ],
+            'penjualan-barang-pelanggan-faktur' => [
+                'slug'  => 'penjualan-barang-pelanggan-faktur',
+                'title' => 'Penjualan Per Barang Per Pelanggan Per Faktur',
+            ],
+            'analisa-umum' => [
+                'slug'  => 'analisa-umum',
+                'title' => 'Analisa Barang - Umum',
+            ],
+            'laris-top10' => [
+                'slug'  => 'laris-top10',
+                'title' => 'Barang Paling Laris - (10 Teratas) Per Kelompok',
+            ],
+            'laris-per-kelompok' => [
+                'slug'  => 'laris-per-kelompok',
+                'title' => 'Barang Paling Laris - Per Kelompok',
+            ],
+            'laris-keuntungan' => [
+                'slug'  => 'laris-keuntungan',
+                'title' => 'Barang Paling Laris (Keuntungan)',
+            ],
+            'laba-rugi-rincian' => [
+                'slug'  => 'laba-rugi-rincian',
+                'title' => 'Laba / Rugi Barang - Rincian',
+            ],
+            'laba-rugi-total' => [
+                'slug'  => 'laba-rugi-total',
+                'title' => 'Laba / Rugi Barang - Total',
+            ],
+            'pembelian-barang-pemasok-faktur' => [
+                'slug'  => 'pembelian-barang-pemasok-faktur',
+                'title' => 'Pembelian Per Barang Per Pemasok Per Faktur',
+            ],
+            'pembelian-pemasok-barang-invoice' => [
+                'slug'  => 'pembelian-pemasok-barang-invoice',
+                'title' => 'Pembelian Per Pemasok Per Barang Per Invoice',
+            ],
+            'pembelian-pemasok-barang-total' => [
+                'slug'  => 'pembelian-pemasok-barang-total',
+                'title' => 'Pembelian Per Pemasok Per Barang Total',
+            ],
+            'pembelian-barang-pemasok-total' => [
+                'slug'  => 'pembelian-barang-pemasok-total',
+                'title' => 'Pembelian Per Barang Per Pemasok Total',
+            ],
+            'perputaran-cepat-per-kelompok' => [
+                'slug'  => 'perputaran-cepat-per-kelompok',
+                'title' => 'Perputaran Barang Paling Cepat Per Kelompok',
+            ],
+            'perputaran-cepat-semua' => [
+                'slug'  => 'perputaran-cepat-semua',
+                'title' => 'Perputaran Barang Paling Cepat - Semua Kelompok',
+            ],
+            'penjualan-pelanggan-barang-total' => [
+                'slug'  => 'penjualan-pelanggan-barang-total',
+                'title' => 'Penjualan Per Pelanggan Per Barang Total',
+            ],
+            'penjualan-pelanggan-barang-faktur' => [
+                'slug'  => 'penjualan-pelanggan-barang-faktur',
+                'title' => 'Penjualan Per Pelanggan Per Barang Per Faktur',
+            ],
+            'penjualan-salesman-barang-total' => [
+                'slug'  => 'penjualan-salesman-barang-total',
+                'title' => 'Penjualan Per Salesman Per Barang Total',
+            ],
+            'penjualan-barang-pelanggan-total' => [
+                'slug'  => 'penjualan-barang-pelanggan-total',
+                'title' => 'Penjualan Per Barang Per Pelanggan Total',
+            ],
+            'penjualan-barang-salesman-total' => [
+                'slug'  => 'penjualan-barang-salesman-total',
+                'title' => 'Penjualan Per Barang Per Salesman Total',
+            ],
+            'penjualan-salesman-pelanggan-barang-faktur' => [
+                'slug'  => 'penjualan-salesman-pelanggan-barang-faktur',
+                'title' => 'Penjualan Per Salesman Per Pelanggan Per Barang Per Faktur',
+            ],
+            'penjualan-salesman-barang-non-retur' => [
+                'slug'  => 'penjualan-salesman-barang-non-retur',
+                'title' => 'Penjualan Per Salesman Per Barang (Selain Retur)',
+            ],
+            'penjualan-salesman-pelanggan' => [
+                'slug'  => 'penjualan-salesman-pelanggan',
+                'title' => 'Penjualan Per Salesman Per Pelanggan',
+            ],
+        ];
+        return $map[$jenis] ?? $map['kartu-stok-umum'];
+    }
+
+    /**
+     * Halaman Laporan Persediaan Barang format Zahir Accounting.
+     */
+    public function barang_zahir_report($jenis = 'kartu-stok-umum')
+    {
+        $meta = $this->_zahir_barang_meta($jenis);
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/barang/zahir-data');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_barang/barang_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data laporan Persediaan Barang format Zahir.
+     */
+    public function barang_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis     = trim((string) $this->input->get('jenis', true));
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $search    = trim((string) $this->input->get('search', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_barang_meta($jenis);
+        $rows = $this->M_Journal->accounting_inventory_zahir_report($meta['slug'], $startDate, $endDate, $search);
 
         $this->output
             ->set_content_type('application/json')
