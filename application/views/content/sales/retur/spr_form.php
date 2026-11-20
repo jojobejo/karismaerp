@@ -461,7 +461,16 @@
                                 </div>
                                 <input type="hidden" name="kd_barang[]" class="field-kd-barang">
                             </td>
-                            <td><input type="text" class="form-control form-control-sm" name="no_faktur[]" placeholder="No. Faktur"></td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control form-control-sm input-no-faktur" name="no_faktur[]" placeholder="Ketik / Cari No. Faktur">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-danger btn-sm btn-lookup-faktur" type="button" title="Cari Faktur Penjualan">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
                             <td><input type="text" class="form-control form-control-sm" name="no_batch[]" placeholder="No. Batch / Lot"></td>
                             <td><input type="date" class="form-control form-control-sm" name="expired_date[]"></td>
                             <td><input type="text" class="form-control form-control-sm text-right field-harga" name="harga[]" placeholder="0"></td>
@@ -569,6 +578,68 @@
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                         <i class="fas fa-times mr-1"></i> Batal
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOOKUP FAKTUR PENJUALAN -->
+    <div class="modal fade" id="modalFaktur" tabindex="-1" role="dialog" aria-labelledby="modalFakturLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white py-2">
+                    <h5 class="modal-title font-weight-bold" id="modalFakturLabel">
+                        <i class="fas fa-file-invoice mr-1"></i> Cari Faktur Penjualan
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="d-flex flex-wrap align-items-center mb-2" style="gap: 8px;">
+                        <div class="modal-lookup-search flex-grow-1 mb-0">
+                            <input type="text" id="searchFakturInput" placeholder="Ketik No. Faktur, Nama Barang, No. Batch/Lot, atau Customer..." autocomplete="off">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="custom-control custom-checkbox ml-1">
+                            <input type="checkbox" class="custom-control-input" id="chkFilterFakturKonteks" checked>
+                            <label class="custom-control-label small font-weight-bold" for="chkFilterFakturKonteks">Sesuai Customer / Barang Dipilih</label>
+                        </div>
+                    </div>
+                    <div class="modal-lookup-scroll">
+                        <table class="table table-bordered table-sm table-hover modal-lookup-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 135px;">No. Faktur</th>
+                                    <th style="width: 90px;">Tanggal</th>
+                                    <th>Customer</th>
+                                    <th>Barang</th>
+                                    <th style="width: 105px;">No. Batch/Lot</th>
+                                    <th style="width: 95px;">Expired Date</th>
+                                    <th style="width: 110px;" class="text-right">Harga (Rp)</th>
+                                    <th style="width: 75px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listFakturBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data faktur...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 d-flex justify-content-between">
+                    <small class="text-muted">Tidak ketemu? Klik <strong>Gunakan Manual</strong> atau tutup modal lalu ketik langsung di kolom No. Faktur.</small>
+                    <div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnUseManualFaktur">
+                            <i class="fas fa-keyboard mr-1"></i> Gunakan Manual
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                            <i class="fas fa-times mr-1"></i> Batal
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -831,6 +902,114 @@ $(document).ready(function () {
     });
 
     // ================================================================
+    // LOOKUP FAKTUR PENJUALAN MODAL HANDLER
+    // ================================================================
+
+    var fakturSearchTimer = null;
+    var $activeFakturRow = null;
+
+    function openFakturModal($row) {
+        $activeFakturRow = $row;
+        var currentNo = ($row.find('input[name="no_faktur[]"]').val() || '').trim();
+        $('#searchFakturInput').val(currentNo);
+        $('#modalFaktur').modal('show');
+        loadFakturList(currentNo);
+        setTimeout(function() { $('#searchFakturInput').focus(); }, 350);
+    }
+
+    function loadFakturList(query) {
+        var useContext = $('#chkFilterFakturKonteks').is(':checked');
+        var kdCust = useContext ? ($('#kd_customer').val() || '').trim() : '';
+        var kdBrg = (useContext && $activeFakturRow) ? ($activeFakturRow.find('.field-kd-barang').val() || '').trim() : '';
+
+        $('#listFakturBody').html('<tr><td colspan="8" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin mr-1"></i> Mencari faktur penjualan...</td></tr>');
+        $.ajax({
+            url: '<?= site_url("retur_penjualan/ajax/search_faktur") ?>',
+            type: 'GET',
+            dataType: 'json',
+            data: { q: query || '', kd_customer: kdCust, kd_barang: kdBrg },
+            success: function(res) {
+                var rows = (res && res.results) ? res.results : [];
+                if (!rows.length) {
+                    $('#listFakturBody').html('<tr><td colspan="8" class="text-center py-4 text-muted">Faktur tidak ditemukan. Anda dapat mematikan centang filter atau mengisi nomor faktur secara manual.</td></tr>');
+                    return;
+                }
+
+                var html = '';
+                rows.forEach(function(f) {
+                    var dataStr = encodeURIComponent(JSON.stringify(f));
+                    var hrgDisplay = (f.hrg_satuan && parseFloat(f.hrg_satuan) > 0) ? formatRupiahInput(f.hrg_satuan) : '0';
+                    html += '<tr class="faktur-row-select" style="cursor:pointer;" data-info="' + dataStr + '">';
+                    html += '<td><strong>' + escapeHtml(f.no_faktur) + '</strong><br><small class="text-muted">' + escapeHtml(f.sumber || '') + '</small></td>';
+                    html += '<td>' + escapeHtml(f.tanggal_faktur || '-') + '</td>';
+                    html += '<td>' + escapeHtml(f.customer_name || '-') + '</td>';
+                    html += '<td><small class="text-muted">' + escapeHtml(f.kd_barang || '') + '</small><br>' + escapeHtml(f.nama_barang || '-') + '</td>';
+                    html += '<td>' + escapeHtml(f.no_lot || '-') + '</td>';
+                    html += '<td>' + escapeHtml(f.expired_date || '-') + '</td>';
+                    html += '<td class="text-right font-weight-bold">Rp ' + hrgDisplay + '</td>';
+                    html += '<td class="text-center"><button type="button" class="btn btn-xs btn-danger btn-select-faktur" data-info="' + dataStr + '"><i class="fas fa-check"></i> Pilih</button></td>';
+                    html += '</tr>';
+                });
+                $('#listFakturBody').html(html);
+            },
+            error: function() {
+                $('#listFakturBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Gagal mengambil data faktur dari server.</td></tr>');
+            }
+        });
+    }
+
+    $('#searchFakturInput').on('input', function() {
+        var query = $(this).val();
+        clearTimeout(fakturSearchTimer);
+        fakturSearchTimer = setTimeout(function() {
+            loadFakturList(query);
+        }, 250);
+    });
+
+    $('#chkFilterFakturKonteks').on('change', function() {
+        loadFakturList($('#searchFakturInput').val());
+    });
+
+    function applyFaktur(f) {
+        if (!f || !$activeFakturRow) return;
+        $activeFakturRow.find('input[name="no_faktur[]"]').val(f.no_faktur || '');
+        $activeFakturRow.find('input[name="no_batch[]"]').val(f.no_lot || '');
+        $activeFakturRow.find('input[name="expired_date[]"]').val(f.expired_date || '');
+        var hrg = parseFloat(f.hrg_satuan || 0);
+        $activeFakturRow.find('input[name="harga[]"]').val(hrg > 0 ? formatRupiahInput(hrg) : '');
+
+        // Jika nama barang di baris ini masih kosong, sekalian isi dari faktur yang dipilih
+        if (!($activeFakturRow.find('.field-kd-barang').val() || '').trim() && f.kd_barang) {
+            $activeFakturRow.find('.field-kd-barang').val(f.kd_barang);
+            $activeFakturRow.find('.input-nama-barang').val(f.nama_barang || '');
+        }
+
+        $('#modalFaktur').modal('hide');
+        $activeFakturRow.find('input[name="qty[]"]').focus();
+    }
+
+    $(document).on('click', '.btn-select-faktur', function(e) {
+        e.stopPropagation();
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyFaktur(info);
+    });
+
+    $(document).on('click', '.faktur-row-select', function() {
+        var info = JSON.parse(decodeURIComponent($(this).data('info')));
+        applyFaktur(info);
+    });
+
+    $('#btnUseManualFaktur').on('click', function() {
+        if (!$activeFakturRow) return;
+        var manualVal = ($('#searchFakturInput').val() || '').trim();
+        if (manualVal !== '') {
+            $activeFakturRow.find('input[name="no_faktur[]"]').val(manualVal);
+        }
+        $('#modalFaktur').modal('hide');
+        $activeFakturRow.find('input[name="no_faktur[]"]').focus();
+    });
+
+    // ================================================================
     // CHECKLIST TOGGLE & FORM TABLE HANDLERS
     // ================================================================
 
@@ -877,6 +1056,11 @@ $(document).ready(function () {
         $row.find('.input-nama-barang, .btn-lookup-barang').on('click', function(e) {
             e.preventDefault();
             openBarangModal($row);
+        });
+
+        $row.find('.btn-lookup-faktur').on('click', function(e) {
+            e.preventDefault();
+            openFakturModal($row);
         });
 
         $row.find('.field-harga').on('input', function() {

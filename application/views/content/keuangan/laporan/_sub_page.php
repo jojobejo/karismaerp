@@ -129,6 +129,33 @@
         .lpsub-topbar { padding: 16px 18px; }
         .lpsub-topbar h1 { font-size: 20px; }
     }
+
+    .lpsub-tabs-wrap {
+        padding: 0 24px 18px;
+    }
+    .lpsub-tabs {
+        border-bottom: 2px solid #d9e2ec;
+        gap: 6px;
+    }
+    .lpsub-tabs .nav-link {
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #4b5563;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 6px 6px 0 0;
+        background: transparent;
+        transition: all .18s ease;
+    }
+    .lpsub-tabs .nav-link:hover {
+        color: <?= $page_color ?>;
+        background: <?= $page_color ?>10;
+    }
+    .lpsub-tabs .nav-link.active {
+        color: <?= $page_color ?>;
+        border-bottom-color: <?= $page_color ?>;
+        background: #fff;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse lpsub-page">
@@ -152,18 +179,72 @@
                     <h1><i class="<?= $page_icon ?> mr-2"></i> <?= html_escape($page_title) ?></h1>
                 </div>
 
-                <div class="lpsub-menu-grid">
-                    <?php foreach ($menus as $m) : ?>
-                        <a href="<?= $m['url'] ?>" class="lpsub-card" <?= !empty($m['onclick']) ? 'onclick="' . $m['onclick'] . '"' : '' ?>>
-                            <div class="lpsub-card-icon"><i class="<?= $m['icon'] ?>"></i></div>
-                            <div class="lpsub-card-body">
-                                <div class="lpsub-card-title"><?= html_escape($m['title']) ?></div>
-                                <div class="lpsub-card-desc"><?= html_escape($m['desc']) ?></div>
-                                <div class="lpsub-card-action">Buka <i class="fas fa-arrow-right"></i></div>
+                <?php if (!empty($menu_tabs) && is_array($menu_tabs)) : ?>
+                    <div class="lpsub-tabs-wrap">
+                        <ul class="nav nav-tabs lpsub-tabs" id="lpsubTabs" role="tablist">
+                            <?php foreach ($menu_tabs as $tabIdx => $tab) : ?>
+                                <?php $tabId = $tab['id'] ?? ('lpsub-tab-' . $tabIdx); ?>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $tabIdx === 0 ? 'active' : '' ?>"
+                                       id="<?= html_escape($tabId) ?>-link"
+                                       data-toggle="tab"
+                                       href="#<?= html_escape($tabId) ?>"
+                                       role="tab"
+                                       aria-controls="<?= html_escape($tabId) ?>"
+                                       aria-selected="<?= $tabIdx === 0 ? 'true' : 'false' ?>">
+                                        <?php if (!empty($tab['icon'])) : ?>
+                                            <i class="<?= html_escape($tab['icon']) ?> mr-1"></i>
+                                        <?php endif; ?>
+                                        <?= html_escape($tab['title'] ?? 'Tab') ?>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+
+                    <div class="tab-content" id="lpsubTabContent">
+                        <?php foreach ($menu_tabs as $tabIdx => $tab) : ?>
+                            <?php $tabId = $tab['id'] ?? ('lpsub-tab-' . $tabIdx); ?>
+                            <div class="tab-pane fade <?= $tabIdx === 0 ? 'show active' : '' ?>"
+                                 id="<?= html_escape($tabId) ?>"
+                                 role="tabpanel"
+                                 aria-labelledby="<?= html_escape($tabId) ?>-link">
+                                <?php if (!empty($tab['menus'])) : ?>
+                                    <div class="lpsub-menu-grid">
+                                        <?php foreach ($tab['menus'] as $m) : ?>
+                                            <a href="<?= $m['url'] ?>" class="lpsub-card" <?= !empty($m['onclick']) ? 'onclick="' . $m['onclick'] . '"' : '' ?>>
+                                                <div class="lpsub-card-icon"><i class="<?= $m['icon'] ?>"></i></div>
+                                                <div class="lpsub-card-body">
+                                                    <div class="lpsub-card-title"><?= html_escape($m['title']) ?></div>
+                                                    <div class="lpsub-card-desc"><?= html_escape($m['desc']) ?></div>
+                                                    <div class="lpsub-card-action">Buka <i class="fas fa-arrow-right"></i></div>
+                                                </div>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php else : ?>
+                                    <div class="px-4 py-5 text-center text-muted">
+                                        <i class="fas fa-folder-open fa-2x mb-2"></i>
+                                        <div>Belum ada menu pada tab <?= html_escape($tab['title'] ?? '') ?>.</div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else : ?>
+                    <div class="lpsub-menu-grid">
+                        <?php foreach ($menus as $m) : ?>
+                            <a href="<?= $m['url'] ?>" class="lpsub-card" <?= !empty($m['onclick']) ? 'onclick="' . $m['onclick'] . '"' : '' ?>>
+                                <div class="lpsub-card-icon"><i class="<?= $m['icon'] ?>"></i></div>
+                                <div class="lpsub-card-body">
+                                    <div class="lpsub-card-title"><?= html_escape($m['title']) ?></div>
+                                    <div class="lpsub-card-desc"><?= html_escape($m['desc']) ?></div>
+                                    <div class="lpsub-card-action">Buka <i class="fas fa-arrow-right"></i></div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <?php if (isset($extra_modal) && !empty($extra_modal) && file_exists($extra_modal)) : ?>
                     <?php include $extra_modal; ?>

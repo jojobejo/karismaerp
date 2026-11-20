@@ -135,8 +135,8 @@
                                     </div>
                                 </div>
 
-                                <!-- TOOLBAR AKSI DI SISI KANAN: TAMBAH, EDIT, HAPUS, REFRESH -->
-                                <div class="cust-actions d-flex align-items-center" style="gap: 6px;">
+                                <!-- TOOLBAR AKSI DI SISI KANAN: TAMBAH, EDIT, HAPUS, IMPORT/EXPORT SALES & TC, REFRESH -->
+                                <div class="cust-actions d-flex align-items-center flex-wrap" style="gap: 6px;">
                                     <button type="button" class="btn btn-primary btn-sm font-weight-bold" onclick="newCustomer()" title="Tambah data customer baru">
                                         <i class="fas fa-plus mr-1"></i> Tambah
                                     </button>
@@ -145,6 +145,9 @@
                                     </button>
                                     <button type="button" id="btnDeleteHeader" class="btn btn-outline-danger btn-sm font-weight-bold" onclick="deleteCustomer()" disabled title="Hapus customer yang sedang dipilih">
                                         <i class="fas fa-trash-alt mr-1"></i> Hapus
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm font-weight-bold" onclick="openSalesTcBulkModal()" title="Update massal data customer (Sales & TC) via Excel">
+                                        <i class="fas fa-file-excel mr-1"></i> Update Customers
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.reload()" title="Muat ulang halaman">
                                         <i class="fas fa-sync-alt mr-1"></i> Refresh
@@ -809,5 +812,337 @@
             "'": '&#039;'
         };
         return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+</script>
+
+<!-- Modal Export Template & Import Massal Pergantian Sales & TC -->
+<div class="modal fade" id="modalSalesTcBulk" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title font-weight-bold mb-0">
+                    <i class="fas fa-file-excel mr-1"></i> Update Customers (Sales & TC)
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Langkah 1: Download Template -->
+                <div class="card border mb-3">
+                    <div class="card-header bg-light py-2">
+                        <strong class="small text-uppercase text-primary">
+                            <i class="fas fa-download mr-1"></i> Langkah 1: Export Template Excel (.xlsx)
+                        </strong>
+                    </div>
+                    <div class="card-body py-3">
+                        <div class="form-row align-items-start">
+                            <div class="form-group col-md-5 mb-2 mb-md-0">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="small font-weight-bold mb-0">Filter Sales Saat Ini (Bisa Pilih Banyak)</label>
+                                    <div class="custom-control custom-checkbox custom-control-inline mr-0">
+                                        <input type="checkbox" class="custom-control-input" id="chkAllSales" checked onchange="toggleAllSales(this.checked)">
+                                        <label class="custom-control-label small font-weight-bold text-primary" for="chkAllSales">Pilih Semua</label>
+                                    </div>
+                                </div>
+                                <div id="bulkSalesCheckboxList" class="border rounded bg-light p-2" style="max-height: 115px; overflow-y: auto;">
+                                    <div class="text-muted small">Memuat daftar sales...</div>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-4 mb-2 mb-md-0">
+                                <div class="mb-2">
+                                    <label class="small font-weight-bold mb-1">Filter TC Saat Ini</label>
+                                    <select id="bulkFilterCollection" class="form-control form-control-sm" onchange="updateExportTargetCount()">
+                                        <option value="">-- Pilih Semua (Semua TC) --</option>
+                                        <option value="__EMPTY__">-- Belum Ada TC (Kosong) --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="small font-weight-bold mb-1">Filter Rute</label>
+                                    <select id="bulkFilterRute" class="form-control form-control-sm" onchange="updateExportTargetCount()">
+                                        <option value="">-- Pilih Semua (Semua Rute) --</option>
+                                        <option value="__EMPTY__">-- Tanpa Rute (Kosong) --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-3 mb-0 d-flex flex-column justify-content-end" style="min-height: 115px;">
+                                <span class="badge badge-info px-2 py-2 mb-2 text-wrap" id="lblExportTargetCount">Menghitung data...</span>
+                                <button type="button" id="btnDownloadSalesTcTemplate" class="btn btn-success btn-sm btn-block font-weight-bold" onclick="downloadSalesTcTemplate()">
+                                    <i class="fas fa-file-download mr-1"></i> Download Template Excel
+                                </button>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Centang <strong>Pilih Semua</strong> untuk mendownload semua customer, atau hilangkan centangnya lalu pilih satu/beberapa sales yang diinginkan. Isi kolom <strong>Sales Baru</strong> (kolom I) dan/atau <strong>TC Baru</strong> (kolom J) hanya pada baris yang berubah.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Langkah 2: Upload & Preview -->
+                <div class="card border mb-0">
+                    <div class="card-header bg-light py-2">
+                        <strong class="small text-uppercase text-info">
+                            <i class="fas fa-upload mr-1"></i> Langkah 2: Upload File & Preview Perubahan
+                        </strong>
+                    </div>
+                    <div class="card-body py-3">
+                        <div class="form-row align-items-center">
+                            <div class="col-md-8 mb-2 mb-md-0">
+                                <input type="file" id="fileSalesTcImport" class="form-control-file border rounded p-1 bg-light" accept=".xlsx,.xls,.csv">
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" id="btnPreviewSalesTc" class="btn btn-info btn-sm btn-block font-weight-bold" onclick="previewSalesTcImport()">
+                                    <i class="fas fa-search mr-1"></i> Upload & Cek Preview
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="bulkPreviewSection" class="mt-3 d-none">
+                            <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center py-2 mb-2" style="gap: 8px;">
+                                <div class="small">
+                                    <span class="badge badge-secondary mr-1">Total Baris: <span id="lblBulkTotal">0</span></span>
+                                    <span class="badge badge-success mr-1">Akan Diubah: <span id="lblBulkChanged">0</span></span>
+                                    <span class="badge badge-light border mr-1">Tidak Berubah: <span id="lblBulkUnchanged">0</span></span>
+                                    <span class="badge badge-danger">Tidak Ditemukan: <span id="lblBulkNotFound">0</span></span>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive" style="max-height: 290px;">
+                                <table class="table table-sm table-bordered table-hover mb-0 small">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th style="width: 55px;">Baris</th>
+                                            <th style="width: 110px;">Kode Cust</th>
+                                            <th>Nama Kios</th>
+                                            <th>Sales (Lama &rarr; Baru)</th>
+                                            <th>TC (Lama &rarr; Baru)</th>
+                                            <th style="width: 110px;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bulkPreviewTbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Tutup</button>
+                <button type="button" id="btnApplySalesTc" class="btn btn-sm btn-primary font-weight-bold d-none" onclick="applySalesTcImport()">
+                    <i class="fas fa-save mr-1"></i> Simpan Perubahan (<span id="lblApplyCount">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let bulkFilterLoaded = false;
+    let pendingBulkUpdates = [];
+
+    function openSalesTcBulkModal() {
+        $('#modalSalesTcBulk').modal('show');
+        if (!bulkFilterLoaded) {
+            $.getJSON("<?= base_url('data_customers/get_filter_options') ?>", function(res) {
+                if (!res || res.status !== 'success') return;
+                bulkFilterLoaded = true;
+
+                const salesBox = $('#bulkSalesCheckboxList');
+                salesBox.empty();
+
+                const salesList = (res.sales || []).slice();
+                salesList.forEach(function(v, idx) {
+                    const id = 'chkSalesItem_' + idx;
+                    salesBox.append(
+                        '<div class="custom-control custom-checkbox custom-control-inline mb-1" style="min-width: 140px;">' +
+                            '<input type="checkbox" class="custom-control-input chk-bulk-sales" id="' + id + '" value="' + escapeHtml(v) + '" checked onchange="onSalesCheckboxChange()">' +
+                            '<label class="custom-control-label small" for="' + id + '">' + escapeHtml(v) + '</label>' +
+                        '</div>'
+                    );
+                });
+                salesBox.append(
+                    '<div class="custom-control custom-checkbox custom-control-inline mb-1" style="min-width: 140px;">' +
+                        '<input type="checkbox" class="custom-control-input chk-bulk-sales" id="chkSalesItem_empty" value="__EMPTY__" checked onchange="onSalesCheckboxChange()">' +
+                        '<label class="custom-control-label small text-muted" for="chkSalesItem_empty"><em>Belum Ada Sales (Kosong)</em></label>' +
+                    '</div>'
+                );
+
+                (res.collection || []).forEach(function(v) {
+                    $('#bulkFilterCollection').append('<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>');
+                });
+                (res.rute || []).forEach(function(v) {
+                    $('#bulkFilterRute').append('<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>');
+                });
+                updateExportTargetCount();
+            });
+        } else {
+            updateExportTargetCount();
+        }
+    }
+
+    function toggleAllSales(isChecked) {
+        $('.chk-bulk-sales').prop('checked', isChecked);
+        updateExportTargetCount();
+    }
+
+    function onSalesCheckboxChange() {
+        const totalItems = $('.chk-bulk-sales').length;
+        const checkedItems = $('.chk-bulk-sales:checked').length;
+        $('#chkAllSales').prop('checked', totalItems > 0 && checkedItems === totalItems);
+        updateExportTargetCount();
+    }
+
+    function getSelectedSalesParams() {
+        const isAll = $('#chkAllSales').is(':checked');
+        const selected = [];
+        if (!isAll) {
+            $('.chk-bulk-sales:checked').each(function() {
+                selected.push($(this).val());
+            });
+        }
+        return {
+            sales_all: isAll ? '1' : '0',
+            sales: selected,
+            collection: $('#bulkFilterCollection').val() || '',
+            rute: $('#bulkFilterRute').val() || ''
+        };
+    }
+
+    function updateExportTargetCount() {
+        const params = getSelectedSalesParams();
+        $('#lblExportTargetCount').removeClass('badge-danger badge-success').addClass('badge-info').text('Menghitung data...');
+        $.getJSON("<?= base_url('data_customers/count_export_targets') ?>", params, function(res) {
+            const total = (res && res.status === 'success') ? parseInt(res.total || 0, 10) : 0;
+            const badge = $('#lblExportTargetCount');
+            const btn = $('#btnDownloadSalesTcTemplate');
+            if (total > 0) {
+                badge.removeClass('badge-info badge-danger').addClass('badge-success')
+                    .text('Siap download: ' + total.toLocaleString('id-ID') + ' customer');
+                btn.prop('disabled', false);
+            } else {
+                badge.removeClass('badge-info badge-success').addClass('badge-danger')
+                    .text(params.sales_all === '0' && !params.sales.length ? 'Pilih minimal 1 sales' : 'Tidak ada customer (0 data)');
+                btn.prop('disabled', true);
+            }
+        });
+    }
+
+    function downloadSalesTcTemplate() {
+        const params = $.param(getSelectedSalesParams());
+        window.location.href = "<?= base_url('data_customers/export_sales_tc_template') ?>?" + params;
+    }
+
+    function previewSalesTcImport() {
+        const fileInput = document.getElementById('fileSalesTcImport');
+        if (!fileInput || !fileInput.files || !fileInput.files.length) {
+            Swal.fire('Perhatian', 'Silakan pilih file Excel (.xlsx / .xls / .csv) terlebih dahulu.', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file_excel', fileInput.files[0]);
+
+        const btn = $('#btnPreviewSalesTc');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Membaca...');
+
+        $.ajax({
+            url: "<?= base_url('data_customers/import_sales_tc_preview') ?>",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(res) {
+                if (!res || res.status !== 'success') {
+                    Swal.fire('Gagal', (res && res.message) ? res.message : 'Gagal membaca file.', 'error');
+                    return;
+                }
+
+                pendingBulkUpdates = res.updates || [];
+                $('#lblBulkTotal').text(res.total_rows || 0);
+                $('#lblBulkChanged').text(res.changed_count || 0);
+                $('#lblBulkUnchanged').text(res.unchanged_count || 0);
+                $('#lblBulkNotFound').text(res.not_found_count || 0);
+                $('#lblApplyCount').text(pendingBulkUpdates.length);
+
+                const tbody = $('#bulkPreviewTbody');
+                tbody.empty();
+
+                if (!res.preview || !res.preview.length) {
+                    tbody.html('<tr><td colspan="6" class="text-center text-muted py-3">Tidak ada perubahan data yang ditemukan pada file ini.</td></tr>');
+                } else {
+                    res.preview.forEach(function(item) {
+                        const isNotFound = item.status === 'NOT_FOUND';
+                        const salesHtml = item.sales_changed
+                            ? '<span class="text-muted">' + escapeHtml(item.old_sales || '-') + '</span> &rarr; <strong class="text-primary">' + escapeHtml(item.new_sales || '(kosong)') + '</strong>'
+                            : '<span class="text-muted">' + escapeHtml(item.old_sales || '-') + '</span>';
+                        const tcHtml = item.tc_changed
+                            ? '<span class="text-muted">' + escapeHtml(item.old_tc || '-') + '</span> &rarr; <strong class="text-success">' + escapeHtml(item.new_tc || '(kosong)') + '</strong>'
+                            : '<span class="text-muted">' + escapeHtml(item.old_tc || '-') + '</span>';
+                        const badge = isNotFound
+                            ? '<span class="badge badge-danger">Tidak Ditemukan</span>'
+                            : '<span class="badge badge-success">Update (' + escapeHtml(item.note) + ')</span>';
+
+                        tbody.append(
+                            '<tr class="' + (isNotFound ? 'table-danger' : '') + '">' +
+                                '<td>' + item.row_num + '</td>' +
+                                '<td><strong>' + escapeHtml(item.kd_customer) + '</strong></td>' +
+                                '<td>' + escapeHtml(item.nama_kios) + '</td>' +
+                                '<td>' + salesHtml + '</td>' +
+                                '<td>' + tcHtml + '</td>' +
+                                '<td>' + badge + '</td>' +
+                            '</tr>'
+                        );
+                    });
+                }
+
+                $('#bulkPreviewSection').removeClass('d-none');
+                if (pendingBulkUpdates.length > 0) {
+                    $('#btnApplySalesTc').removeClass('d-none');
+                } else {
+                    $('#btnApplySalesTc').addClass('d-none');
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'Gagal mengunggah atau memproses file.', 'error');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('<i class="fas fa-search mr-1"></i> Upload & Cek Preview');
+            }
+        });
+    }
+
+    function applySalesTcImport() {
+        if (!pendingBulkUpdates.length) return;
+
+        Swal.fire({
+            title: 'Simpan Perubahan Massal?',
+            html: 'Sebanyak <strong>' + pendingBulkUpdates.length + '</strong> customer akan diperbarui data Sales / TC-nya.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan Sekarang',
+            cancelButtonText: 'Batal'
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+
+            const btn = $('#btnApplySalesTc');
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+            $.post("<?= base_url('data_customers/import_sales_tc_apply') ?>", {
+                updates: JSON.stringify(pendingBulkUpdates)
+            }, function(res) {
+                if (res && res.status === 'success') {
+                    Swal.fire('Berhasil!', res.message || 'Data Sales & TC berhasil diperbarui.', 'success')
+                        .then(function() { location.reload(); });
+                } else {
+                    Swal.fire('Gagal', (res && res.message) ? res.message : 'Gagal menyimpan perubahan.', 'error');
+                    btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Perubahan (' + pendingBulkUpdates.length + ')');
+                }
+            }, 'json').fail(function() {
+                Swal.fire('Error', 'Gagal terhubung ke server.', 'error');
+                btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Perubahan (' + pendingBulkUpdates.length + ')');
+            });
+        });
     }
 </script>

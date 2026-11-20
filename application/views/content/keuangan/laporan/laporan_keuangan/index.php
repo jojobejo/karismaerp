@@ -101,6 +101,112 @@ $menus = [
         'desc'    => 'Laporan perbandingan komprehensif 4 kolom realisasi dan anggaran 2 periode.',
     ],
 ];
+$menu_tabs = [
+    [
+        'id'    => 'tab-laporan-keuangan',
+        'title' => 'Laporan Keuangan',
+        'icon'  => 'fas fa-chart-pie',
+        'menus' => $menus,
+    ],
+    [
+        'id'    => 'tab-buku-besar',
+        'title' => 'Buku Besar',
+        'icon'  => 'fas fa-book-open',
+        'menus' => [
+            [
+                'title' => 'Buku Besar - Standar',
+                'icon'  => 'fas fa-book-open',
+                'url'   => base_url('laporan/keuangan/buku-besar/buku-besar-standar'),
+                'desc'  => 'Rincian transaksi buku besar per rekening dengan No. Dept & No. Proyek.',
+            ],
+            [
+                'title' => 'Buku Besar - Mutasi',
+                'icon'  => 'fas fa-exchange-alt',
+                'url'   => base_url('laporan/keuangan/buku-besar/buku-besar-mutasi'),
+                'desc'  => 'Mutasi debet, kredit, dan saldo berjalan per rekening buku besar.',
+            ],
+            [
+                'title' => 'Buku Besar - Mata Uang Sebenarnya',
+                'icon'  => 'fas fa-coins',
+                'url'   => base_url('laporan/keuangan/buku-besar/buku-besar-mata-uang'),
+                'desc'  => 'Buku besar standar dengan tampilan mata uang rekening (IDR).',
+            ],
+            [
+                'title' => 'Buku Besar Mutasi - Mata Uang Sebenarnya',
+                'icon'  => 'fas fa-money-bill-wave',
+                'url'   => base_url('laporan/keuangan/buku-besar/buku-besar-mutasi-mata-uang'),
+                'desc'  => 'Buku besar mutasi dan saldo berjalan dengan mata uang rekening (IDR).',
+            ],
+            [
+                'title' => 'Daftar Jurnal - Semua Transaksi',
+                'icon'  => 'fas fa-list-alt',
+                'url'   => base_url('laporan/keuangan/buku-besar/daftar-jurnal'),
+                'desc'  => 'Daftar seluruh jurnal transaksi aktif beserta rincian akun debet/kredit.',
+            ],
+            [
+                'title' => 'Jurnal Umum',
+                'icon'  => 'fas fa-pen-square',
+                'url'   => base_url('laporan/keuangan/buku-besar/jurnal-umum'),
+                'desc'  => 'Daftar transaksi General Journal / Jurnal Umum akuntansi.',
+            ],
+            [
+                'title' => 'Daftar Rekening',
+                'icon'  => 'fas fa-sitemap',
+                'url'   => base_url('laporan/keuangan/buku-besar/daftar-rekening'),
+                'desc'  => 'Daftar Chart of Accounts (COA) dikelompokkan berdasarkan klasifikasi.',
+            ],
+            [
+                'title' => 'Jejak Audit - Rangkuman',
+                'icon'  => 'fas fa-user-shield',
+                'url'   => base_url('laporan/keuangan/buku-besar/jejak-audit-rangkuman'),
+                'desc'  => 'Ringkasan riwayat input, edit, dan reversal transaksi jurnal oleh pengguna.',
+            ],
+            [
+                'title' => 'Jejak Audit - Semua Transaksi',
+                'icon'  => 'fas fa-history',
+                'url'   => base_url('laporan/keuangan/buku-besar/jejak-audit-semua'),
+                'desc'  => 'Jejak audit lengkap beserta rincian akun dan catatan pengguna.',
+            ],
+            [
+                'title' => 'Rincian Jejak Audit - Semua Transaksi',
+                'icon'  => 'fas fa-clipboard-list',
+                'url'   => base_url('laporan/keuangan/buku-besar/jejak-audit-rincian'),
+                'desc'  => 'Rincian detail transaksi dan histori input/perubahan jurnal per baris.',
+            ],
+        ],
+    ],
+    [
+        'id'    => 'tab-kas-bank',
+        'title' => 'Kas dan Bank',
+        'icon'  => 'fas fa-university',
+        'menus' => [
+            [
+                'title' => 'Kas Masuk',
+                'icon'  => 'fas fa-arrow-circle-down',
+                'url'   => base_url('keuangan/kas_masuk'),
+                'desc'  => 'Daftar dan pencatatan transaksi penerimaan kas dan bank.',
+            ],
+            [
+                'title' => 'Kas Keluar',
+                'icon'  => 'fas fa-arrow-circle-up',
+                'url'   => base_url('keuangan/kas_keluar'),
+                'desc'  => 'Daftar dan pencatatan transaksi pengeluaran kas dan bank.',
+            ],
+            [
+                'title' => 'Kas Harian / Kasir',
+                'icon'  => 'fas fa-cash-register',
+                'url'   => base_url('keuangan/kasir'),
+                'desc'  => 'Pengelolaan transaksi kas harian kasir.',
+            ],
+            [
+                'title' => 'Laporan Mutasi Kas',
+                'icon'  => 'fas fa-exchange-alt',
+                'url'   => base_url('keuangan/kasir/report_mutasi'),
+                'desc'  => 'Laporan mutasi penerimaan dan pengeluaran kas harian.',
+            ],
+        ],
+    ],
+];
 $back_url    = base_url('laporan');
 $page_title  = 'Laporan Keuangan';
 $page_icon   = 'fas fa-chart-pie';

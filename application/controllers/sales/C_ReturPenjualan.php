@@ -766,6 +766,118 @@ class C_ReturPenjualan extends CI_Controller
     }
 
     // ================================================================
+    // AJAX — Search Faktur Penjualan untuk Modal Lookup
+    // ================================================================
+
+    public function ajax_search_faktur()
+    {
+        header('Content-Type: application/json');
+        $q          = trim((string) $this->input->get('q', true));
+        $kdCustomer = trim((string) $this->input->get('kd_customer', true));
+        $kdBarang   = trim((string) $this->input->get('kd_barang', true));
+
+        $whereParts = ['1=1'];
+        $params     = [];
+
+        if ($kdCustomer !== '') {
+            $whereParts[] = 'u.kd_customer = ?';
+            $params[]     = $kdCustomer;
+        }
+        if ($kdBarang !== '') {
+            $whereParts[] = 'u.kd_barang = ?';
+            $params[]     = $kdBarang;
+        }
+        if ($q !== '') {
+            $whereParts[] = '(u.no_faktur LIKE ? OR u.customer_name LIKE ? OR u.kd_barang LIKE ? OR u.nama_barang LIKE ? OR u.no_lot LIKE ?)';
+            $like = '%' . $q . '%';
+            array_push($params, $like, $like, $like, $like, $like);
+        }
+
+        $whereSql = implode(' AND ', $whereParts);
+
+        $sql = "
+            SELECT * FROM (
+                SELECT
+                    f.no_faktur,
+                    f.tanggal_faktur,
+                    COALESCE(f.kd_customer, '') AS kd_customer,
+                    COALESCE(f.customer_name, '') AS customer_name,
+                    COALESCE(d.kd_barang, '') AS kd_barang,
+                    COALESCE(d.nama_barang, '') AS nama_barang,
+                    COALESCE(d.no_lot, '') AS no_lot,
+                    COALESCE(d.expired_date, '') AS expired_date,
+                    COALESCE(d.hrg_satuan, 0) AS hrg_satuan,
+                    COALESCE(d.qty, 0) AS qty,
+                    'Reguler' AS sumber
+                FROM tbso_faktur_penjualan f
+                INNER JOIN tbso_faktur_detail d ON d.id_faktur = f.id_faktur
+                WHERE f.status <> 'cancelled'
+
+                UNION ALL
+
+                SELECT
+                    fh.no_faktur,
+                    fh.tanggal_faktur,
+                    COALESCE(fh.kd_customer, '') AS kd_customer,
+                    COALESCE(fh.customer_name, '') AS customer_name,
+                    COALESCE(dh.kd_barang, '') AS kd_barang,
+                    COALESCE(dh.nama_barang, '') AS nama_barang,
+                    COALESCE(dh.no_lot, '') AS no_lot,
+                    COALESCE(dh.expired_date, '') AS expired_date,
+                    COALESCE(dh.hrg_satuan, 0) AS hrg_satuan,
+                    COALESCE(dh.qty, 0) AS qty,
+                    'Faktur H' AS sumber
+                FROM tbso_faktur_h_import fh
+                INNER JOIN tbso_faktur_h_import_detail dh ON dh.id_import_h = fh.id_import_h
+
+                UNION ALL
+
+                SELECT
+                    fz.no_faktur,
+                    fz.tanggal_faktur,
+                    COALESCE(fz.kd_customer, '') AS kd_customer,
+                    COALESCE(fz.customer_name, '') AS customer_name,
+                    COALESCE(dz.kd_barang, '') AS kd_barang,
+                    COALESCE(dz.nama_barang, '') AS nama_barang,
+                    COALESCE(dz.no_lot, '') AS no_lot,
+                    COALESCE(dz.expired_date, '') AS expired_date,
+                    COALESCE(dz.hrg_satuan, 0) AS hrg_satuan,
+                    COALESCE(dz.qty, 0) AS qty,
+                    'Faktur Z' AS sumber
+                FROM tbso_faktur_z_pecah fz
+                INNER JOIN tbso_faktur_z_pecah_detail dz ON dz.id_pecah = fz.id_pecah
+            ) u
+            WHERE {$whereSql}
+            ORDER BY u.tanggal_faktur DESC, u.no_faktur DESC
+            LIMIT 60
+        ";
+
+        $rows = $this->db->query($sql, $params)->result_array();
+        $results = [];
+        foreach ($rows as $r) {
+            $exp = trim((string) ($r['expired_date'] ?? ''));
+            if ($exp === '0000-00-00') {
+                $exp = '';
+            }
+            $results[] = [
+                'no_faktur'      => (string) ($r['no_faktur'] ?? ''),
+                'tanggal_faktur' => (string) ($r['tanggal_faktur'] ?? ''),
+                'kd_customer'    => (string) ($r['kd_customer'] ?? ''),
+                'customer_name'  => is_string($r['customer_name'] ?? null) ? mb_convert_encoding($r['customer_name'], 'UTF-8', 'UTF-8') : '',
+                'kd_barang'      => (string) ($r['kd_barang'] ?? ''),
+                'nama_barang'    => is_string($r['nama_barang'] ?? null) ? mb_convert_encoding($r['nama_barang'], 'UTF-8', 'UTF-8') : '',
+                'no_lot'         => (string) ($r['no_lot'] ?? ''),
+                'expired_date'   => $exp,
+                'hrg_satuan'     => (float) ($r['hrg_satuan'] ?? 0),
+                'qty'            => (float) ($r['qty'] ?? 0),
+                'sumber'         => (string) ($r['sumber'] ?? ''),
+            ];
+        }
+
+        echo json_encode(['results' => $results]);
+    }
+
+    // ================================================================
     // DETAIL — Lihat detail SPR
     // ================================================================
 

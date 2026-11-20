@@ -215,7 +215,7 @@
                                             Rp <?= number_format($hppPerInnerbox, 2, ',', '.') ?> / <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
                                         </span>
                                     </div>
-                                    <small class="text-muted d-block mt-1">HPP per 1 Kardus Kecil (Bahan + Printilan)</small>
+                                    <small class="text-muted d-block mt-1">HPP per 1 Innerbox (Bahan + Printilan)</small>
                                 <?php else: ?>
                                     <small class="text-muted d-block mt-1">HPP Bahan Baku + Biaya Kemasan Lengkap</small>
                                 <?php endif; ?>
@@ -341,11 +341,11 @@
                                 </div>
                                 <div>
                                     <h5 class="font-weight-bold text-dark mb-0">Skema & Hierarki Kemasan: Paket Innerbox Multi-Item</h5>
-                                    <small class="text-muted">Struktur perakitan fisik kemasan bertingkat (Master Box $\rightarrow$ Innerbox $\rightarrow$ Komponen Campuran)</small>
+                                    <small class="text-muted">Struktur perakitan fisik kemasan bertingkat (Box $\rightarrow$ Innerbox $\rightarrow$ Komponen Campuran)</small>
                                 </div>
                             </div>
                             <span class="badge badge-primary px-3 py-2 font-weight-bold mt-2 mt-sm-0" style="font-size: 0.88rem; border-radius: 8px;">
-                                <i class="fas fa-layer-group mr-1"></i> 1 <?= htmlspecialchars($request['satuan']) ?> Master Box = <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
+                                <i class="fas fa-layer-group mr-1"></i> 1 <?= htmlspecialchars($request['satuan'] ?: 'Box') ?> = <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <?= htmlspecialchars($request['satuan_innerbox'] ?: 'Innerbox') ?>
                             </span>
                         </div>
 
@@ -355,14 +355,14 @@
                                 <div class="p-3 bg-white rounded shadow-sm h-100 border position-relative">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="badge badge-warning text-dark px-2 py-1 font-weight-bold">
-                                            <i class="fas fa-box-open mr-1"></i> Kardus Kecil (1 Innerbox)
+                                            <i class="fas fa-box-open mr-1"></i> Innerbox
                                         </span>
-                                        <button type="button" class="btn btn-xs btn-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost" title="Tambah Kardus / Stiker / Printilan">
+                                        <button type="button" class="btn btn-xs btn-primary font-weight-bold shadow-sm" data-toggle="modal" data-target="#modalEditPackagingCost" title="Tambah Kemasan / Stiker / Printilan">
                                             <i class="fas fa-plus mr-1"></i> Tambah
                                         </button>
                                     </div>
                                     <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
-                                        Isi Campuran dalam 1 Kardus Kecil:
+                                        Isi Campuran dalam 1 Innerbox:
                                     </div>
                                     <ul class="mb-0 pl-3 mt-2 small font-weight-bold text-secondary">
                                         <?php foreach ($stock_status as $itemInbox): ?>
@@ -397,17 +397,17 @@
                             <div class="col-md-4 mb-2 mb-md-0">
                                 <div class="p-3 bg-white rounded shadow-sm h-100 border">
                                     <span class="badge badge-info px-2 py-1 font-weight-bold mb-2">
-                                        <i class="fas fa-box mr-1"></i> Kardus Luar (Master Box)
+                                        <i class="fas fa-box mr-1"></i> Box
                                     </span>
                                     <div class="font-weight-bold text-dark" style="font-size: 0.95rem;">
-                                        1 Kardus Luar (Master Box) Memuat:
+                                        1 Box Memuat:
                                     </div>
                                     <div class="mt-2">
                                         <h4 class="text-info font-weight-bold mb-0">
-                                            <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <small style="font-size: 0.9rem;">Kardus Kecil (Innerbox)</small>
+                                            <?= number_format((float)$request['jumlah_innerbox'], 0) ?> <small style="font-size: 0.9rem;">Innerbox</small>
                                         </h4>
                                         <small class="text-muted d-block mt-1">
-                                            Total bahan di dalam 1 kardus luar:
+                                            Total bahan di dalam 1 Box:
                                             <?php 
                                                 $compSum = [];
                                                 foreach ($stock_status as $it) {
@@ -439,10 +439,10 @@
                                     </div>
                                     <div class="mt-2">
                                         <h4 class="text-success font-weight-bold mb-0">
-                                            <?= number_format((float)$request['qty_request'], 0, ',', '.') ?> <?= htmlspecialchars($request['satuan']) ?> <small class="text-muted" style="font-size: 0.85rem;">Master Box</small>
+                                            <?= number_format((float)$request['qty_request'], 0, ',', '.') ?> <?= htmlspecialchars($request['satuan'] ?: 'Box') ?> <small class="text-muted" style="font-size: 0.85rem;">Box</small>
                                         </h4>
                                         <div class="small text-muted mt-1 font-weight-bold">
-                                            Setara total: <span class="text-dark"><?= number_format((float)($request['total_innerbox'] ?: ((float)$request['qty_request'] * (float)$request['jumlah_innerbox'])), 0, ',', '.') ?> Kardus Kecil (Innerbox)</span>
+                                            Setara total: <span class="text-dark"><?= number_format((float)($request['total_innerbox'] ?: ((float)$request['qty_request'] * (float)$request['jumlah_innerbox'])), 0, ',', '.') ?> Innerbox</span>
                                         </div>
                                     </div>
                                 </div>
@@ -556,12 +556,12 @@
                                     <th class="py-3 px-3">Komponen Barang</th>
                                     <?php if (!empty($request['is_innerbox'])): ?>
                                         <th class="py-3 text-center bg-white text-dark font-weight-bold" style="border-left: 2px solid #e2e8f0; border-right: 2px solid #e2e8f0;">
-                                            <span class="badge badge-warning text-dark d-block mb-1" style="font-size: 0.72rem;">KARDUS KECIL</span>
+                                            <span class="badge badge-warning text-dark d-block mb-1" style="font-size: 0.72rem;">INNERBOX</span>
                                             Isi / 1 Innerbox
                                         </th>
                                         <th class="py-3 text-center">
-                                            <span class="badge badge-info d-block mb-1" style="font-size: 0.72rem;">KARDUS LUAR</span>
-                                            Isi / 1 Master Box
+                                            <span class="badge badge-info d-block mb-1" style="font-size: 0.72rem;">BOX</span>
+                                            Isi / 1 Box
                                         </th>
                                     <?php else: ?>
                                         <th class="py-3 text-center">Isi / 1 Paket</th>
@@ -867,11 +867,11 @@
                     <div class="card bg-light border p-3 mt-3 mb-0" style="border-radius: 8px;">
                         <?php if (!empty($request['is_innerbox']) && (float)$request['jumlah_innerbox'] > 1): ?>
                             <div class="d-flex justify-content-between mb-1 small">
-                                <span class="text-muted">Biaya Kemasan per 1 Kardus Kecil (Innerbox):</span>
+                                <span class="text-muted">Biaya Kemasan per 1 Innerbox:</span>
                                 <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan_inbox">Rp 0,00</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-1 small">
-                                <span class="text-muted">Biaya Kemasan per 1 Master Box (<?= (int)$request['jumlah_innerbox'] ?> Innerbox):</span>
+                                <span class="text-muted">Biaya Kemasan per 1 Box (<?= (int)$request['jumlah_innerbox'] ?> Innerbox):</span>
                                 <strong class="text-purple" style="color: #6d28d9;" id="lbl_preview_kemasan">Rp <?= number_format($totalKemasanPerPaket, 2, ',', '.') ?></strong>
                             </div>
                         <?php else: ?>
@@ -886,12 +886,12 @@
                         </div>
                         <hr class="my-1">
                         <div class="d-flex justify-content-between font-weight-bold">
-                            <span class="text-success">Estimasi Total Modal / HPP per 1 Paket (Master Box):</span>
+                            <span class="text-success">Estimasi Total Modal / HPP per 1 Paket (Box):</span>
                             <span class="text-success font-weight-bold" id="lbl_preview_total_hpp" style="font-size: 1.1rem;">Rp <?= number_format($totalHpp1Paket, 2, ',', '.') ?></span>
                         </div>
                         <?php if (!empty($request['is_innerbox']) && (float)$request['jumlah_innerbox'] > 1): ?>
                             <div class="d-flex justify-content-between small text-muted">
-                                <span>Setara HPP per 1 Kardus Kecil (Innerbox):</span>
+                                <span>Setara HPP per 1 Innerbox:</span>
                                 <strong class="text-success" id="lbl_preview_hpp_inbox">Rp <?= number_format($hppPerInnerbox, 2, ',', '.') ?></strong>
                             </div>
                         <?php endif; ?>

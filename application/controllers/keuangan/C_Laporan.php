@@ -124,6 +124,122 @@ class C_Laporan extends CI_Controller
         $this->load->view('partial/main/footergdg.php');
     }
 
+    /**
+     * Halaman Laporan Penjualan - eFaktur.
+     */
+    public function efaktur_penjualan_report()
+    {
+        $data['page_title']      = 'KARISMA - PENJUALAN EFAKTUR';
+        $data['report_endpoint'] = base_url('laporan/penjualan/efaktur-data');
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/efaktur_penjualan_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data untuk Laporan Penjualan - eFaktur.
+     */
+    public function efaktur_penjualan_data()
+    {
+        $this->load->model('M_Journal');
+
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $noRef     = trim((string) $this->input->get('no_ref', true));
+        $pelanggan = trim((string) $this->input->get('pelanggan', true));
+        $npwp      = trim((string) $this->input->get('npwp', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $rows = $this->M_Journal->accounting_sales_efaktur_report($startDate, $endDate, $noRef, $pelanggan, $npwp);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
+    private function _zahir_penjualan_meta($jenis)
+    {
+        $map = [
+            'rincian' => [
+                'slug'  => 'rincian',
+                'title' => 'Penjualan - Rincian',
+            ],
+            'negatif-rangkuman' => [
+                'slug'  => 'negatif-rangkuman',
+                'title' => 'Penjualan Bernilai Negatif - Rangkuman',
+            ],
+            'negatif-sederhana' => [
+                'slug'  => 'negatif-sederhana',
+                'title' => 'Penjualan Bernilai Negatif - Sederhana',
+            ],
+            'per-mata-uang-rangkuman' => [
+                'slug'  => 'per-mata-uang-rangkuman',
+                'title' => 'Penjualan Per Mata Uang - Rangkuman',
+            ],
+        ];
+        return $map[$jenis] ?? $map['rincian'];
+    }
+
+    /**
+     * Halaman Laporan Penjualan format Zahir (Rincian, Negatif Rangkuman/Sederhana, Per Mata Uang Rangkuman).
+     */
+    public function penjualan_zahir_report($jenis = 'rincian')
+    {
+        $meta = $this->_zahir_penjualan_meta($jenis);
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/penjualan/zahir-data');
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/penjualan_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data untuk laporan penjualan format Zahir.
+     */
+    public function penjualan_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis     = trim((string) $this->input->get('jenis', true));
+        $startDate = trim((string) $this->input->get('start_date', true));
+        $endDate   = trim((string) $this->input->get('end_date', true));
+        $noRef     = trim((string) $this->input->get('no_ref', true));
+        $pelanggan = trim((string) $this->input->get('pelanggan', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_penjualan_meta($jenis);
+        $rows = $this->M_Journal->accounting_sales_zahir_report($meta['slug'], $startDate, $endDate, $noRef, $pelanggan);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
+    }
+
     public function kartu_stock_gudang_report()
     {
         $data['page_title'] = 'KARISMA - KARTU STOK PER GUDANG';
@@ -2925,5 +3041,148 @@ class C_Laporan extends CI_Controller
         ];
 
         $this->load->view('content/keuangan/laporan/laporan_lainnya/tagpd_excel.php', $data);
+    }
+
+    /**
+     * Metadata konfigurasi 10 laporan Buku Besar & Jurnal format Zahir Accounting.
+     */
+    private function _zahir_buku_besar_meta($jenis)
+    {
+        $map = [
+            'buku-besar-standar' => [
+                'slug'     => 'buku-besar-standar',
+                'title'    => 'Buku Besar - Standar',
+                'subtitle' => '',
+                'category' => 'ledger',
+                'variant'  => 'standar',
+            ],
+            'buku-besar-mutasi' => [
+                'slug'     => 'buku-besar-mutasi',
+                'title'    => 'Buku Besar - Mutasi',
+                'subtitle' => '',
+                'category' => 'ledger',
+                'variant'  => 'mutasi',
+            ],
+            'buku-besar-mata-uang' => [
+                'slug'     => 'buku-besar-mata-uang',
+                'title'    => 'Buku Besar - Mata Uang Sebenarnya',
+                'subtitle' => '',
+                'category' => 'ledger',
+                'variant'  => 'mata_uang',
+            ],
+            'buku-besar-mutasi-mata-uang' => [
+                'slug'     => 'buku-besar-mutasi-mata-uang',
+                'title'    => 'Buku Besar Mutasi - Mata Uang Sebenarnya',
+                'subtitle' => '',
+                'category' => 'ledger',
+                'variant'  => 'mutasi_mata_uang',
+            ],
+            'daftar-jurnal' => [
+                'slug'     => 'daftar-jurnal',
+                'title'    => 'Daftar Jurnal',
+                'subtitle' => 'Semua Transaksi',
+                'category' => 'journal',
+                'mode'     => 'all',
+            ],
+            'jurnal-umum' => [
+                'slug'     => 'jurnal-umum',
+                'title'    => 'Daftar Jurnal',
+                'subtitle' => 'General Journal',
+                'category' => 'journal',
+                'mode'     => 'general',
+            ],
+            'daftar-rekening' => [
+                'slug'     => 'daftar-rekening',
+                'title'    => 'Daftar Rekening',
+                'subtitle' => '',
+                'category' => 'coa',
+                'mode'     => 'coa',
+            ],
+            'jejak-audit-rangkuman' => [
+                'slug'     => 'jejak-audit-rangkuman',
+                'title'    => 'Jejak Audit - Rangkuman',
+                'subtitle' => '',
+                'category' => 'audit',
+                'mode'     => 'audit_summary',
+            ],
+            'jejak-audit-semua' => [
+                'slug'     => 'jejak-audit-semua',
+                'title'    => 'Jejak Audit - Semua Transaksi',
+                'subtitle' => '',
+                'category' => 'audit',
+                'mode'     => 'audit_all',
+            ],
+            'jejak-audit-rincian' => [
+                'slug'     => 'jejak-audit-rincian',
+                'title'    => 'Rincian Jejak Audit - Semua Transaksi',
+                'subtitle' => '',
+                'category' => 'audit',
+                'mode'     => 'audit_detail',
+            ],
+        ];
+
+        return $map[$jenis] ?? $map['buku-besar-standar'];
+    }
+
+    /**
+     * Halaman Laporan Buku Besar & Jurnal format Zahir Accounting.
+     */
+    public function buku_besar_zahir_report($jenis = 'buku-besar-standar')
+    {
+        $this->load->model('M_Journal');
+        $meta = $this->_zahir_buku_besar_meta($jenis);
+
+        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']     = $meta;
+        $data['report_endpoint'] = base_url('laporan/keuangan/buku-besar-data');
+        $data['coa_options']     = $meta['category'] === 'ledger' ? $this->M_Journal->zahir_coa_options() : [];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/buku_besar_zahir_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    /**
+     * Endpoint JSON data untuk 10 laporan Buku Besar & Jurnal format Zahir.
+     */
+    public function buku_besar_zahir_data()
+    {
+        $this->load->model('M_Journal');
+
+        $jenis      = trim((string) $this->input->get('jenis', true));
+        $startDate  = trim((string) $this->input->get('start_date', true));
+        $endDate    = trim((string) $this->input->get('end_date', true));
+        $idAkun     = trim((string) $this->input->get('id_akun', true));
+        $keterangan = trim((string) $this->input->get('keterangan', true));
+        $nomor      = trim((string) $this->input->get('nomor', true));
+        $search     = trim((string) $this->input->get('search', true));
+
+        if ($startDate === '') {
+            $startDate = date('Y-m-01');
+        }
+        if ($endDate === '') {
+            $endDate = date('Y-m-t');
+        }
+
+        $meta = $this->_zahir_buku_besar_meta($jenis);
+        $rows = [];
+
+        if ($meta['category'] === 'ledger') {
+            $rows = $this->M_Journal->zahir_ledger_report($startDate, $endDate, $idAkun, $search);
+        } elseif ($meta['category'] === 'coa') {
+            $rows = $this->M_Journal->zahir_coa_list_report($search);
+        } else {
+            $rows = $this->M_Journal->zahir_journal_list_report($startDate, $endDate, $meta['mode'], $keterangan, $nomor);
+        }
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success'    => true,
+                'meta'       => $meta,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'rows'       => $rows,
+            ]));
     }
 }

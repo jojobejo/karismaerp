@@ -1743,6 +1743,285 @@ class M_Journal extends CI_Model
     }
 
     /**
+     * Laporan Penjualan - eFaktur format Zahir Accounting.
+     */
+    public function accounting_sales_efaktur_report($start_date = '', $end_date = '', $no_ref = '', $pelanggan = '', $npwp = '')
+    {
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $no_ref     = trim((string) $no_ref);
+        $pelanggan  = trim((string) $pelanggan);
+        $npwp       = trim((string) $npwp);
+
+        $whereParts = ["u.total_bruto > 0"];
+        $params     = [];
+
+        if ($start_date !== '' && $end_date !== '') {
+            $whereParts[] = 'u.tanggal_faktur >= ?';
+            $whereParts[] = 'u.tanggal_faktur <= ?';
+            $params[]     = $start_date;
+            $params[]     = $end_date;
+        }
+        if ($no_ref !== '') {
+            $whereParts[] = 'u.no_faktur LIKE ?';
+            $params[]     = '%' . $no_ref . '%';
+        }
+        if ($pelanggan !== '') {
+            $whereParts[] = 'u.pelanggan LIKE ?';
+            $params[]     = '%' . $pelanggan . '%';
+        }
+        if ($npwp !== '') {
+            $whereParts[] = 'u.npwp LIKE ?';
+            $params[]     = '%' . $npwp . '%';
+        }
+
+        $whereSql = implode(' AND ', $whereParts);
+
+        $sql = "
+            SELECT
+                u.tanggal_faktur,
+                u.no_faktur,
+                u.pelanggan,
+                u.nomor_seri_faktur,
+                u.npwp,
+                ROUND(u.total_bruto / 1.11, 2) AS jumlah_dpp,
+                ROUND(u.total_bruto - (u.total_bruto / 1.11), 2) AS jumlah_ppn,
+                u.sudah_efaktur
+            FROM (
+                SELECT
+                    f.tanggal_faktur,
+                    f.no_faktur,
+                    COALESCE(NULLIF(TRIM(c.nama_kios), ''), NULLIF(TRIM(c.nama_customer), ''), f.customer_name, '-') AS pelanggan,
+                    '' AS nomor_seri_faktur,
+                    COALESCE(
+                        (
+                            SELECT NULLIF(TRIM(ca.npwp), '')
+                            FROM tb_customer_acak ca
+                            WHERE (ca.kd_customer_induk = f.kd_customer OR ca.kd_customer = f.kd_customer)
+                              AND COALESCE(TRIM(ca.npwp), '') <> ''
+                            LIMIT 1
+                        ),
+                        '000000000000000'
+                    ) AS npwp,
+                    COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS total_bruto,
+                    '' AS sudah_efaktur
+                FROM tbso_faktur_penjualan f
+                LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+                WHERE f.status <> 'cancelled'
+                  AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+
+                UNION ALL
+
+                SELECT
+                    fh.tanggal_faktur,
+                    fh.no_faktur,
+                    COALESCE(NULLIF(TRIM(fh.nama_toko), ''), NULLIF(TRIM(fh.customer_name), ''), '-') AS pelanggan,
+                    '' AS nomor_seri_faktur,
+                    COALESCE(
+                        (
+                            SELECT NULLIF(TRIM(ca.npwp), '')
+                            FROM tb_customer_acak ca
+                            WHERE (ca.kd_customer_induk = fh.kd_customer OR ca.kd_customer = fh.kd_customer)
+                              AND COALESCE(TRIM(ca.npwp), '') <> ''
+                            LIMIT 1
+                        ),
+                        '000000000000000'
+                    ) AS npwp,
+                    COALESCE(fh.grand_total, 0) AS total_bruto,
+                    '' AS sudah_efaktur
+                FROM tbso_faktur_h_import fh
+                WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
+                  AND COALESCE(fh.status, '') <> 'cancelled'
+            ) u
+            WHERE {$whereSql}
+            ORDER BY u.tanggal_faktur ASC, u.no_faktur ASC
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Laporan Penjualan format Zahir Accounting:
+     * - 'rincian' (Penjualan - Rincian)
+     * - 'negatif-rangkuman' (Penjualan Bernilai Negatif - Rangkuman)
+     * - 'negatif-sederhana' (Penjualan Bernilai Negatif - Sederhana)
+     * - 'per-mata-uang-rangkuman' (Penjualan Per Mata Uang - Rangkuman)
+     */
+    public function accounting_sales_zahir_report($type, $start_date = '', $end_date = '', $no_ref = '', $pelanggan = '')
+    {
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $no_ref     = trim((string) $no_ref);
+        $pelanggan  = trim((string) $pelanggan);
+
+        if ($type === 'rincian') {
+            $this->db->select("
+                f.id_faktur,
+                f.no_faktur,
+                f.no_so,
+                f.tanggal_faktur,
+                f.kd_customer,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), NULLIF(TRIM(c.nama_customer), ''), f.customer_name, '-') AS pelanggan,
+                COALESCE(NULLIF(TRIM(g.nama_gudang), ''), f.gudang_id, '-') AS nama_gudang,
+                COALESCE(f.salesman, '-') AS salesman,
+                COALESCE(f.create_by, '-') AS create_by,
+                COALESCE(f.catatan, CONCAT('Penjualan, ', COALESCE(f.customer_name, ''))) AS catatan,
+                f.status,
+                COALESCE((SELECT SUM(pf.jumlah_pembayaran) FROM tbkeu_pembayaran_faktur pf WHERE pf.id_faktur = f.id_faktur AND COALESCE(pf.status, '') NOT IN ('cancelled', 'unposted')), 0) AS total_pembayaran
+            ", false);
+            $this->db->from('tbso_faktur_penjualan f');
+            $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+            $this->db->join('tb_gudang g', 'g.id_gudang = f.gudang_id', 'left');
+            $this->db->where('f.status <>', 'cancelled');
+            $this->db->where('(f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)', null, false);
+
+            if ($start_date !== '' && $end_date !== '') {
+                $this->db->where('f.tanggal_faktur >=', $start_date);
+                $this->db->where('f.tanggal_faktur <=', $end_date);
+            }
+            if ($no_ref !== '') {
+                $this->db->like('f.no_faktur', $no_ref);
+            }
+            if ($pelanggan !== '') {
+                $this->db->group_start();
+                $this->db->like('f.customer_name', $pelanggan);
+                $this->db->or_like('c.nama_kios', $pelanggan);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('f.tanggal_faktur', 'ASC');
+            $this->db->order_by('f.id_faktur', 'ASC');
+            $headers = $this->db->get()->result_array();
+
+            if (empty($headers)) {
+                return [];
+            }
+
+            $fakturIds = array_column($headers, 'id_faktur');
+            $detailRows = $this->db
+                ->select("id_faktur, kd_barang, nama_barang, qty, satuan, hrg_satuan, disc, pajak, total_harga")
+                ->from('tbso_faktur_detail')
+                ->where_in('id_faktur', $fakturIds)
+                ->order_by('id', 'ASC')
+                ->get()
+                ->result_array();
+
+            $detailsByFaktur = [];
+            foreach ($detailRows as $d) {
+                $totalHrg = (float) ($d['total_harga'] ?? 0);
+                $subTotalDpp = round($totalHrg / 1.11, 2);
+                $detailsByFaktur[$d['id_faktur']][] = [
+                    'kd_barang'   => $d['kd_barang'],
+                    'nama_barang' => $d['nama_barang'],
+                    'diterima'    => (float) ($d['qty'] ?? 0),
+                    'dipesan'     => 0.0,
+                    'satuan'      => $d['satuan'] ?? 'Pcs',
+                    'harga_satuan'=> (float) ($d['hrg_satuan'] ?? 0),
+                    'diskon'      => (float) ($d['disc'] ?? 0),
+                    'sub_total'   => $subTotalDpp,
+                    'pajak_pct'   => 11,
+                    'total_harga' => $totalHrg,
+                ];
+            }
+
+            foreach ($headers as &$h) {
+                $items = $detailsByFaktur[$h['id_faktur']] ?? [];
+                $grandTotal = array_sum(array_column($items, 'total_harga'));
+                $pembayaran = (float) ($h['total_pembayaran'] ?? 0);
+                $h['items']      = $items;
+                $h['total']      = $grandTotal;
+                $h['pembayaran'] = $pembayaran;
+                $h['saldo']      = max(0, $grandTotal - $pembayaran);
+            }
+            unset($h);
+
+            return $headers;
+        }
+
+        if ($type === 'negatif-rangkuman' || $type === 'negatif-sederhana') {
+            $this->db->select("
+                r.tanggal_retur AS tanggal,
+                r.no_retur AS reference,
+                COALESCE(NULLIF(r.no_faktur_potong, ''), r.no_spr, '') AS no_pesanan,
+                COALESCE(NULLIF(TRIM(c.nama_kios), ''), r.nama_customer, '-') AS pelanggan,
+                'IDR' AS mata_uang,
+                r.total_nilai_retur,
+                r.sisa_saldo_retur
+            ", false);
+            $this->db->from('tbrp_retur_penjualan_header r');
+            $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+            $this->db->where('r.status_retur', 'selesai');
+            $this->db->where('r.total_nilai_retur >', 0);
+
+            if ($start_date !== '' && $end_date !== '') {
+                $this->db->where('r.tanggal_retur >=', $start_date);
+                $this->db->where('r.tanggal_retur <=', $end_date);
+            }
+            if ($no_ref !== '') {
+                $this->db->like('r.no_retur', $no_ref);
+            }
+            if ($pelanggan !== '') {
+                $this->db->group_start();
+                $this->db->like('r.nama_customer', $pelanggan);
+                $this->db->or_like('c.nama_kios', $pelanggan);
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('r.tanggal_retur', 'ASC');
+            $rows = $this->db->get()->result_array();
+
+            $result = [];
+            foreach ($rows as $row) {
+                $bruto = (float) ($row['total_nilai_retur'] ?? 0);
+                $dpp   = round($bruto / 1.11, 2);
+                $ppn   = round($bruto - $dpp, 2);
+                $sisa  = (float) ($row['sisa_saldo_retur'] ?? 0);
+                $bayar = max(0, $bruto - $sisa);
+
+                $result[] = [
+                    'tanggal'         => $row['tanggal'],
+                    'reference'       => $row['reference'],
+                    'no_pesanan'      => $row['no_pesanan'],
+                    'pelanggan'       => $row['pelanggan'],
+                    'mata_uang'       => 'IDR',
+                    'sub_total'       => -$dpp,
+                    'diskon'          => 0.0,
+                    'pajak'           => -$ppn,
+                    'total_penjualan' => -$bruto,
+                    'pembayaran'      => -$bayar,
+                    'saldo'           => -$sisa,
+                ];
+            }
+            return $result;
+        }
+
+        // per-mata-uang-rangkuman
+        $whereDate = '';
+        $params    = [];
+        if ($start_date !== '' && $end_date !== '') {
+            $whereDate = ' AND t.tanggal_faktur >= ? AND t.tanggal_faktur <= ?';
+            $params    = [$start_date, $end_date];
+        }
+
+        $sql = "
+            SELECT 'IDR' AS mata_uang, COALESCE(SUM(t.total_bruto), 0) AS jumlah, COALESCE(SUM(t.total_bruto), 0) AS jumlah_idr
+            FROM (
+                SELECT f.tanggal_faktur,
+                       COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS total_bruto
+                FROM tbso_faktur_penjualan f
+                WHERE f.status <> 'cancelled' AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
+                UNION ALL
+                SELECT fh.tanggal_faktur, COALESCE(fh.grand_total, 0) AS total_bruto
+                FROM tbso_faktur_h_import fh
+                WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '') AND COALESCE(fh.status, '') <> 'cancelled'
+            ) t
+            WHERE 1=1 {$whereDate}
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
      * Memproses Jurnal Acak (Q) dan Jurnal (A) untuk Faktur Pecahan Z berdasarkan skema potongan
      * Skema Potongan:
      * - 0  : Tanpa Potongan
@@ -3861,5 +4140,329 @@ class M_Journal extends CI_Model
             'totals_p1'    => $data1['totals'],
             'totals_p2'    => $data2['totals'],
         ];
+    }
+
+    /**
+     * Ambil daftar akun aktif untuk opsi filter dropdown Buku Besar.
+     */
+    public function zahir_coa_options()
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id_akun, kode_akun, nama_akun')
+            ->from('tbkeu_akun')
+            ->where('is_active', 1)
+            ->order_by('kode_akun', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    /**
+     * Laporan Buku Besar format Zahir (Standar, Mutasi, Mata Uang Sebenarnya, Mutasi Mata Uang Sebenarnya).
+     */
+    public function zahir_ledger_report($start_date = '', $end_date = '', $id_akun = '', $search = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        $id_akun    = trim((string) $id_akun);
+        $search     = trim((string) $search);
+
+        // Ambil daftar akun yang sesuai filter
+        $this->db->select('a.id_akun, a.kode_akun, a.nama_akun, a.saldo_normal');
+        $this->db->from('tbkeu_akun a');
+        $this->db->where('a.is_active', 1);
+        if ($id_akun !== '') {
+            $this->db->where('a.id_akun', (int) $id_akun);
+        }
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('a.kode_akun', $search);
+            $this->db->or_like('a.nama_akun', $search);
+            $this->db->group_end();
+        }
+        $this->db->order_by('a.kode_akun', 'ASC');
+        $accounts = $this->db->get()->result_array();
+
+        if (empty($accounts)) {
+            return [];
+        }
+
+        $accountIds = array_map(function ($row) {
+            return (int) $row['id_akun'];
+        }, $accounts);
+
+        // Hitung saldo awal sebelum tanggal mulai
+        $openingMap = [];
+        if ($start_date !== '') {
+            $openingRows = $this->db
+                ->select('d.id_akun, COALESCE(SUM(d.debit), 0) AS total_debit, COALESCE(SUM(d.kredit), 0) AS total_kredit', false)
+                ->from('tbkeu_jurnal_detail d')
+                ->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner')
+                ->where_in('d.id_akun', $accountIds)
+                ->where('j.status', 'POSTED')
+                ->where('j.reversed_at IS NULL', null, false)
+                ->where('j.tanggal_transaksi <', $start_date)
+                ->group_by('d.id_akun')
+                ->get()
+                ->result_array();
+
+            foreach ($openingRows as $orow) {
+                $openingMap[(int) $orow['id_akun']] = [
+                    'debit'  => (float) $orow['total_debit'],
+                    'kredit' => (float) $orow['total_kredit'],
+                ];
+            }
+        }
+
+        // Ambil seluruh transaksi detail pada rentang tanggal
+        $this->db->select("
+            d.id_akun,
+            j.id_jurnal,
+            j.tanggal_transaksi,
+            COALESCE(NULLIF(jj.kode_jenis_jurnal, ''), 'GJ') AS tp,
+            COALESCE(NULLIF(j.source_no, ''), j.nomor_jurnal) AS no_ref,
+            j.nomor_jurnal,
+            COALESCE(NULLIF(d.keterangan, ''), j.keterangan, '') AS keterangan,
+            COALESCE(NULLIF(d.id_departemen, 0), '') AS no_dept,
+            '' AS no_proyek,
+            d.debit,
+            d.kredit
+        ", false);
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner');
+        $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+        $this->db->where_in('d.id_akun', $accountIds);
+        $this->db->where('j.status', 'POSTED');
+        $this->db->where('j.reversed_at IS NULL', null, false);
+        if ($start_date !== '' && $end_date !== '') {
+            $this->db->where('j.tanggal_transaksi >=', $start_date);
+            $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+        $this->db->order_by('j.tanggal_transaksi', 'ASC');
+        $this->db->order_by('j.id_jurnal', 'ASC');
+        $this->db->order_by('d.nomor_baris', 'ASC');
+        $detailRows = $this->db->get()->result_array();
+
+        $detailsByAccount = [];
+        foreach ($detailRows as $drow) {
+            $detailsByAccount[(int) $drow['id_akun']][] = $drow;
+        }
+
+        $result = [];
+        foreach ($accounts as $acc) {
+            $aid = (int) $acc['id_akun'];
+            $isCreditNormal = strtoupper((string) ($acc['saldo_normal'] ?? 'DEBIT')) === 'KREDIT';
+
+            $openDeb = $openingMap[$aid]['debit'] ?? 0.0;
+            $openKre = $openingMap[$aid]['kredit'] ?? 0.0;
+            $openingBalance = $isCreditNormal ? ($openKre - $openDeb) : ($openDeb - $openKre);
+
+            $txRows = $detailsByAccount[$aid] ?? [];
+
+            // Tampilkan hanya akun yang memiliki saldo awal atau mutasi di periode ini (kecuali filter akun spesifik)
+            if ($id_akun === '' && abs($openingBalance) < 0.0001 && empty($txRows)) {
+                continue;
+            }
+
+            $running = $openingBalance;
+            $totalDebit = 0.0;
+            $totalKredit = 0.0;
+            $formattedRows = [];
+
+            foreach ($txRows as $tx) {
+                $deb = (float) ($tx['debit'] ?? 0);
+                $kre = (float) ($tx['kredit'] ?? 0);
+                $totalDebit += $deb;
+                $totalKredit += $kre;
+                $running += $isCreditNormal ? ($kre - $deb) : ($deb - $kre);
+
+                $formattedRows[] = [
+                    'tanggal_transaksi' => $tx['tanggal_transaksi'],
+                    'tp'                => $tx['tp'],
+                    'no_ref'            => $tx['no_ref'],
+                    'nomor_jurnal'      => $tx['nomor_jurnal'],
+                    'keterangan'        => $tx['keterangan'],
+                    'no_dept'           => $tx['no_dept'],
+                    'no_proyek'         => $tx['no_proyek'],
+                    'debit'             => $deb,
+                    'kredit'            => $kre,
+                    'saldo'             => $running,
+                ];
+            }
+
+            $result[] = [
+                'id_akun'         => $aid,
+                'kode_akun'       => $acc['kode_akun'],
+                'nama_akun'       => $acc['nama_akun'],
+                'saldo_normal'    => $acc['saldo_normal'],
+                'opening_balance' => $openingBalance,
+                'total_debit'     => $totalDebit,
+                'total_kredit'    => $totalKredit,
+                'ending_balance'  => $running,
+                'rows'            => $formattedRows,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Laporan Daftar Jurnal & Jejak Audit format Zahir.
+     * Mode: 'all', 'general', 'audit_summary', 'audit_all', 'audit_detail'.
+     */
+    public function zahir_journal_list_report($start_date = '', $end_date = '', $mode = 'all', $keterangan = '', $nomor = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $isAudit = strpos((string) $mode, 'audit') === 0;
+
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            COALESCE(NULLIF(jj.kode_jenis_jurnal, ''), 'GJ') AS tp,
+            COALESCE(NULLIF(j.source_no, ''), j.nomor_jurnal) AS no_ref,
+            j.keterangan,
+            j.status,
+            j.total_debit,
+            j.total_kredit,
+            j.created_at,
+            j.updated_at,
+            j.reversed_at,
+            COALESCE(NULLIF(u_create.nama_lngkp, ''), NULLIF(u_create.username, ''), 'System') AS created_by_name,
+            COALESCE(NULLIF(u_upd.nama_lngkp, ''), NULLIF(u_upd.username, ''), '') AS updated_by_name,
+            COALESCE(NULLIF(u_rev.nama_lngkp, ''), NULLIF(u_rev.username, ''), '') AS reversed_by_name
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+        $this->db->join('tb_users u_create', 'u_create.id = j.created_by', 'left');
+        $this->db->join('tb_users u_upd', 'u_upd.id = j.updated_by', 'left');
+        $this->db->join('tb_users u_rev', 'u_rev.id = j.reversed_by', 'left');
+
+        if (!$isAudit) {
+            $this->db->where('j.status', 'POSTED');
+            $this->db->where('j.reversed_at IS NULL', null, false);
+        }
+
+        if ($mode === 'general') {
+            $this->db->group_start();
+            $this->db->where_in('jj.kode_jenis_jurnal', ['JU', 'GJ']);
+            $this->db->or_where('j.source_module', 'ACCOUNTING');
+            $this->db->group_end();
+        }
+
+        $start_date = trim((string) $start_date);
+        $end_date   = trim((string) $end_date);
+        if ($start_date !== '' && $end_date !== '') {
+            $this->db->where('j.tanggal_transaksi >=', $start_date);
+            $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+
+        $keterangan = trim((string) $keterangan);
+        if ($keterangan !== '') {
+            $this->db->like('j.keterangan', $keterangan);
+        }
+
+        $nomor = trim((string) $nomor);
+        if ($nomor !== '') {
+            $this->db->group_start();
+            $this->db->like('j.nomor_jurnal', $nomor);
+            $this->db->or_like('j.source_no', $nomor);
+            $this->db->or_like('j.source_id', $nomor);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('j.tanggal_transaksi', 'ASC');
+        $this->db->order_by('j.id_jurnal', 'ASC');
+        $headers = $this->db->get()->result_array();
+
+        if (empty($headers)) {
+            return [];
+        }
+
+        // Untuk rangkuman audit tidak perlu memuat baris detail akun
+        if ($mode === 'audit_summary') {
+            return $headers;
+        }
+
+        $journalIds = array_column($headers, 'id_jurnal');
+        $detailRows = $this->db
+            ->select("
+                d.id_jurnal,
+                d.nomor_baris,
+                a.kode_akun,
+                a.nama_akun,
+                COALESCE(NULLIF(d.keterangan, ''), '') AS keterangan,
+                d.debit,
+                d.kredit,
+                COALESCE(NULLIF(d.id_departemen, 0), '') AS no_dept,
+                '' AS no_proyek
+            ", false)
+            ->from('tbkeu_jurnal_detail d')
+            ->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner')
+            ->where_in('d.id_jurnal', $journalIds)
+            ->order_by('d.id_jurnal', 'ASC')
+            ->order_by('d.nomor_baris', 'ASC')
+            ->get()
+            ->result_array();
+
+        $detailsByJournal = [];
+        foreach ($detailRows as $drow) {
+            $detailsByJournal[$drow['id_jurnal']][] = $drow;
+        }
+
+        foreach ($headers as &$hdr) {
+            $hdr['details'] = $detailsByJournal[$hdr['id_jurnal']] ?? [];
+        }
+        unset($hdr);
+
+        return $headers;
+    }
+
+    /**
+     * Laporan Daftar Rekening (Chart of Accounts) format Zahir.
+     */
+    public function zahir_coa_list_report($search = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $search = trim((string) $search);
+
+        $this->db->select("
+            a.id_akun,
+            a.kode_akun,
+            a.nama_akun,
+            a.nama_akun AS nama_alias,
+            COALESCE(k.kode_klasifikasi, '') AS kode_klasifikasi,
+            COALESCE(k.nama_klasifikasi, 'Lainnya') AS nama_klasifikasi,
+            COALESCE(k.alias_klasifikasi, '') AS alias_klasifikasi,
+            COALESCE(k.urutan, 999) AS urutan
+        ", false);
+        $this->db->from('tbkeu_akun a');
+        $this->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
+        $this->db->where('a.is_active', 1);
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('a.kode_akun', $search);
+            $this->db->or_like('a.nama_akun', $search);
+            $this->db->or_like('k.nama_klasifikasi', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('urutan', 'ASC');
+        $this->db->order_by('a.kode_akun', 'ASC');
+        return $this->db->get()->result_array();
     }
 }
