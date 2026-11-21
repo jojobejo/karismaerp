@@ -1,3 +1,53 @@
+<?php
+// Muat konfigurasi template faktur dinamis dari Visual Template Designer
+$CI =& get_instance();
+$CI->load->model('sales/M_PrintTemplate');
+$req_tpl_id = (int) $CI->input->get('template_id');
+$active_tpl = $CI->M_PrintTemplate->get_active_template($req_tpl_id);
+$all_tpls   = $CI->M_PrintTemplate->get_all_templates();
+$tpl_bands  = $active_tpl['bands'] ?? [];
+$el_map     = [];
+foreach (($active_tpl['elements'] ?? []) as $el_item) {
+    if (!empty($el_item['key'])) {
+        $el_map[$el_item['key']] = $el_item;
+    }
+}
+
+$tpl_pw = (float) ($active_tpl['paper_width_mm'] ?? 210);
+$tpl_ph = (float) ($active_tpl['paper_height_mm'] ?? 140);
+$tpl_mt = (float) ($active_tpl['margin_top_mm'] ?? 12);
+$tpl_mr = (float) ($active_tpl['margin_right_mm'] ?? 1);
+$tpl_mb = (float) ($active_tpl['margin_bottom_mm'] ?? 0);
+$tpl_ml = (float) ($active_tpl['margin_left_mm'] ?? 0);
+$tpl_cw = max(50, $tpl_pw - $tpl_ml - $tpl_mr);
+$tpl_ch = max(50, $tpl_ph - $tpl_mt - $tpl_mb);
+
+$class_key_map = [
+    'memo32_nofaktur'   => '.frx-memo32-nofaktur',
+    'memo6_tgl'         => '.frx-memo6-tgl',
+    'memo50_term'       => '.frx-memo50-term',
+    'memo18_jtempo'     => '.frx-memo18-jtempo',
+    'memo8_kontak'      => '.frx-memo8-kontak',
+    'memo38_alamat'     => '.frx-memo38-alamat',
+    'memo52_lineno'     => '.frx-memo52-lineno',
+    'memo45_namabarang' => '.frx-memo45-namabarang',
+    'item_jumlah'       => '.frx-jumlah',
+    'item_unit'         => '.frx-idunit',
+    'memo61_harga'      => '.frx-memo61-harga',
+    'memo54_subtotal'   => '.frx-memo54-subtotal',
+    'item_lot'          => '.frx-lot-no',
+    'memo2_note'        => '.frx-memo2-note',
+    'memo60_salesman'   => '.frx-memo60-salesman',
+    'memo44_user'       => '.frx-memo44-user',
+    'memo25_total'      => '.frx-memo25-total',
+    'tgldiantar_box'    => '.frx-tgldiantar-box',
+    'jabatan_box'       => '.frx-jabatan-box',
+    'memo1_disclabel'   => '.frx-memo1-disclabel',
+    'disc_amount'       => '.frx-disc-amount',
+    'memo34_berat'      => '.frx-memo34-berat',
+    'memo55_rekening'   => '.frx-memo55-rekening',
+];
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -653,6 +703,44 @@
             }
         }
     </style>
+    <style id="dynamic-template-css">
+        .no-print-bar, .print-container { width: <?= $tpl_pw ?>mm; }
+        .print-sheet {
+            width: <?= $tpl_pw ?>mm;
+            height: <?= $tpl_ph ?>mm;
+            padding: <?= $tpl_mt ?>mm <?= $tpl_mr ?>mm <?= $tpl_mb ?>mm <?= $tpl_ml ?>mm;
+        }
+        .printable-canvas { width: <?= $tpl_cw ?>mm; height: <?= $tpl_ch ?>mm; }
+        .band-page-header { width: <?= $tpl_cw ?>mm; height: <?= (float)($tpl_bands['page_header_h'] ?? 13.76) ?>mm; }
+        .band-column-header {
+            width: <?= $tpl_cw ?>mm;
+            height: <?= (float)($tpl_bands['col_header_h'] ?? 21.17) ?>mm;
+            margin-top: <?= (float)($tpl_bands['col_header_mt'] ?? 2.00) ?>mm;
+        }
+        .band-master-container, .band-master-row { width: <?= $tpl_cw ?>mm; }
+        .band-master-row { height: <?= (float)($tpl_bands['master_row_h'] ?? 10.00) ?>mm; }
+        .band-page-footer { width: <?= $tpl_cw ?>mm; height: <?= (float)($tpl_bands['page_footer_h'] ?? 34.78) ?>mm; }
+        .frx-memo55-rekening { position: absolute; white-space: nowrap; }
+        <?php foreach ($class_key_map as $ekey => $ecss): if (isset($el_map[$ekey])): $e = $el_map[$ekey]; ?>
+        <?= $ecss ?> {
+            left: <?= (float)($e['left_mm'] ?? 0) ?>mm;
+            top: <?= (float)($e['top_mm'] ?? 0) ?>mm;
+            width: <?= (float)($e['width_mm'] ?? 20) ?>mm;
+            height: <?= (float)($e['height_mm'] ?? 5) ?>mm;
+            font-size: <?= (float)($e['font_size_pt'] ?? 11.25) ?>pt;
+            font-weight: <?= !empty($e['bold']) ? 'bold' : 'normal' ?>;
+            font-style: <?= !empty($e['italic']) ? 'italic' : 'normal' ?>;
+            text-align: <?= htmlspecialchars($e['align'] ?? 'left') ?>;
+            <?= !empty($e['border']) ? 'border: 1px solid #000000;' : 'border: none;' ?>
+            <?= empty($e['visible']) ? 'display: none !important;' : '' ?>
+        }
+        <?php endif; endforeach; ?>
+        @page { size: <?= $tpl_pw ?>mm <?= $tpl_ph ?>mm landscape; }
+        @media print {
+            @page { size: <?= $tpl_pw ?>mm <?= $tpl_ph ?>mm landscape; }
+            html, body, .print-container { width: <?= $tpl_cw ?>mm !important; }
+        }
+    </style>
 </head>
 <body>
 
@@ -716,7 +804,19 @@
                 <i class="fas fa-info-circle"></i> Tips Cetak: Di dialog Print browser, pastikan <strong>Layout: Landscape</strong> dan Paper Size: <strong>Custom (21x14 cm / 8.5x5.5")</strong>.
             </div>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <?php if (!empty($all_tpls)): ?>
+                <select onchange="var u=new URL(window.location.href);u.searchParams.set('template_id',this.value);window.location.href=u.toString();" style="height:31px;font-size:12px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px;">
+                    <?php foreach ($all_tpls as $t_opt): ?>
+                        <option value="<?= (int)$t_opt['id_template'] ?>" <?= ((int)$t_opt['id_template'] === (int)$active_tpl['id_template']) ? 'selected' : '' ?>>
+                            Template: <?= htmlspecialchars($t_opt['nama_template']) ?><?= ((int)$t_opt['is_default'] === 1) ? ' (Default)' : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            <?php endif; ?>
+            <a href="<?= base_url('sales/template-faktur?id=' . (int)($active_tpl['id_template'] ?? 0)) ?>" class="btn-action btn-back" target="_blank">
+                &#9881; Atur Template
+            </a>
             <button type="button" onclick="window.print()" class="btn-action btn-print">
                 &#128424; <?= $total_sheets > 1 ? 'Cetak Semua (' . $total_sheets . ' Faktur)' : 'Cetak Faktur (LX-310)' ?>
             </button>
@@ -971,7 +1071,7 @@
 
                         <!-- Memo1 & DISCOUNT_FINAL_AMOUNT -->
                         <?php if ($total_disc_amount > 0): ?>
-                            <div class="frx-memo1-disclabel">Disc :</div>
+                            <div class="frx-memo1-disclabel"><?= htmlspecialchars(!empty($el_map['memo1_disclabel']['custom_text']) ? $el_map['memo1_disclabel']['custom_text'] : 'Disc :') ?></div>
                             <div class="frx-disc-amount"><?= number_format($total_disc_amount, 0, '.', ',') ?></div>
                         <?php endif; ?>
 
@@ -979,6 +1079,13 @@
                         <?php if ($berat_val > 0): ?>
                             <div class="frx-memo34-berat">
                                 <?= number_format($berat_val, 2, '.', ',') ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Memo55: Info Rekening Transfer (opsional dari Designer) -->
+                        <?php if (!empty($el_map['memo55_rekening']['visible'])): ?>
+                            <div class="frx-memo55-rekening">
+                                <?= htmlspecialchars(!empty($el_map['memo55_rekening']['custom_text']) ? $el_map['memo55_rekening']['custom_text'] : 'Trans : BCA. 385-3808080 an. A. Sindhudjoyo') ?>
                             </div>
                         <?php endif; ?>
                     </div>

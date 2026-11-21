@@ -211,6 +211,18 @@ function openPeriodeFilter(reportType, customActionUrl) {
     } else if (reportType === 'neraca_perbandingan_4' || reportType === 'perbandingan_4') {
         targetUrl = '<?= base_url('laporan/keuangan/neraca-perbandingan-4') ?>';
         isCompare = true;
+    } else if (reportType === 'laba_rugi_standar') {
+        targetUrl = '<?= base_url('laporan/keuangan/laba-rugi') ?>';
+    } else if (reportType === 'laba_rugi_ytd') {
+        targetUrl = '<?= base_url('laporan/keuangan/laba-rugi-ytd') ?>';
+    } else if (reportType === 'laba_rugi_perbandingan_2') {
+        targetUrl = '<?= base_url('laporan/keuangan/laba-rugi-perbandingan-2') ?>';
+        isCompare = true;
+    } else if (reportType === 'laba_rugi_anggaran') {
+        targetUrl = '<?= base_url('laporan/keuangan/laba-rugi-anggaran') ?>';
+    } else if (reportType === 'laba_rugi_perbandingan_4') {
+        targetUrl = '<?= base_url('laporan/keuangan/laba-rugi-perbandingan-4') ?>';
+        isCompare = true;
     } else {
         targetUrl = '<?= base_url('laporan/keuangan/neraca') ?>';
     }

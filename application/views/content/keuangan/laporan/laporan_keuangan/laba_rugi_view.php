@@ -227,7 +227,7 @@ $isCompare = in_array($report_mode, ['perbandingan_2', 'perbandingan_4'], true);
                 </span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-info btn-sm mr-2" onclick="openZahirFilter('<?= $report_mode ?>')">
+                <button type="button" class="btn btn-info btn-sm mr-2" onclick="openPeriodeFilter('<?= $report_mode ?>', '<?= $filter_action ?>')">
                     <i class="fas fa-filter mr-1"></i> Filter Data
                 </button>
                 <a href="<?= $export_url ?>" class="btn btn-success btn-sm mr-2">
@@ -826,7 +826,7 @@ $isCompare = in_array($report_mode, ['perbandingan_2', 'perbandingan_4'], true);
 
 <?php 
 $filter_action_url = $filter_action;
-include APPPATH . 'views/content/keuangan/laporan/laporan_keuangan/_modal_filter_zahir.php'; 
+include APPPATH . 'views/content/keuangan/laporan/laporan_keuangan/_modal_filter_periode.php'; 
 ?>
 </body>
 </html>

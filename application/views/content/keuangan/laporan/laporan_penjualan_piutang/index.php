@@ -1,6 +1,12 @@
 <?php
 $menus = [
     [
+        'title' => 'Uang Muka',
+        'icon'  => 'fas fa-money-check-alt',
+        'url'   => base_url('laporan/penjualan/uang-muka'),
+        'desc'  => 'Penerimaan uang muka pelanggan dan pembayaran uang muka supplier.',
+    ],
+    [
         'title' => 'eFaktur Penjualan',
         'icon'  => 'fas fa-file-invoice',
         'url'   => base_url('laporan/penjualan/efaktur'),

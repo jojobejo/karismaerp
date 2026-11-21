@@ -168,13 +168,13 @@
                                     Tanggal :
                                 </div>
                                 <div class="col-auto">
-                                    <label class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Dari :</label>
-                                    <input type="date" id="modalStartDate" class="form-control form-control-sm" value="<?= date('Y-m-01') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; width:160px;">
+                                    <label for="modalStartDate" class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Dari</label>
+                                    <input type="date" id="modalStartDate" required class="form-control form-control-sm" value="<?= date('Y-m-01') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; max-width:160px;">
                                 </div>
                                 <div class="col-auto pb-1 px-2 font-weight-bold" style="color:#111827;">&gt;</div>
                                 <div class="col-auto">
-                                    <label class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Hingga :</label>
-                                    <input type="date" id="modalEndDate" class="form-control form-control-sm" value="<?= date('Y-m-t') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; width:160px;">
+                                    <label for="modalEndDate" class="mb-1 d-block" style="font-size:12px; color:#374151; font-weight:400;">Hingga</label>
+                                    <input type="date" id="modalEndDate" required class="form-control form-control-sm" value="<?= date('Y-m-t') ?>" style="background:#e5e7eb; border:1px solid #9ca3af; max-width:160px;">
                                 </div>
                             </div>
                         </div>
@@ -279,12 +279,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     var hasLoadedReportOnce = false;
+    var appliedSearch = { description: '', number: '' };
 
     function loadReport() {
         var startDate = $('#filterStartDate').val();
         var endDate = $('#filterEndDate').val();
-        var keteranganJurnal = $.trim($('#modalKeteranganJurnal').val() || '');
-        var nomorJurnal = $.trim($('#modalNomorJurnal').val() || '');
         
         $('#lblPeriode').text(formatDatePeriod(startDate) + ' - ' + formatDatePeriod(endDate));
         $('#reportTbody').html('<tr><td colspan="6" class="text-center py-4 text-muted">Memuat data...</td></tr>');
@@ -297,8 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 start_date: startDate,
                 end_date: endDate,
-                keterangan_jurnal: keteranganJurnal,
-                nomor_jurnal: nomorJurnal
+                keterangan_jurnal: appliedSearch.description,
+                nomor_jurnal: appliedSearch.number
             },
             success: function(resp) {
                 if (!resp.success) {
@@ -369,14 +368,27 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#btnOpenFilterModal').on('click', function() {
         $('#modalStartDate').val($('#filterStartDate').val());
         $('#modalEndDate').val($('#filterEndDate').val());
+        $('#modalEndDate')[0].setCustomValidity('');
+        $('#modalKeteranganJurnal').val(appliedSearch.description);
+        $('#modalNomorJurnal').val(appliedSearch.number);
         $('#modalFilterData').modal({ backdrop: 'static', keyboard: false, show: true });
     });
 
     $('#btnOkFilterModal').on('click', function() {
         var sDate = $('#modalStartDate').val();
         var eDate = $('#modalEndDate').val();
-        if (sDate) $('#filterStartDate').val(sDate);
-        if (eDate) $('#filterEndDate').val(eDate);
+        if (!sDate || !eDate || sDate > eDate) {
+            $('#tab-standar-link').tab('show');
+            $('#modalEndDate')[0].setCustomValidity(sDate && eDate && sDate > eDate ? 'Tanggal akhir harus sama dengan atau setelah tanggal awal.' : '');
+            $('#modalStartDate')[0].reportValidity() && $('#modalEndDate')[0].reportValidity();
+            return;
+        }
+        $('#filterStartDate').val(sDate);
+        $('#filterEndDate').val(eDate);
+        appliedSearch = {
+            description: $.trim($('#modalKeteranganJurnal').val() || ''),
+            number: $.trim($('#modalNomorJurnal').val() || '')
+        };
         hasLoadedReportOnce = true;
         $('#modalFilterData').modal('hide');
         loadReport();

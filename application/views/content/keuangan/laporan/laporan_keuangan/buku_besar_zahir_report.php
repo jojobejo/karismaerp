@@ -6,7 +6,8 @@ $subtitle   = $meta['subtitle'] ?? '';
 $category   = $meta['category'] ?? 'ledger';
 $variant    = $meta['variant'] ?? '';
 $mode       = $meta['mode'] ?? '';
-$coaOptions = $coa_options ?? [];
+$coaOptions         = $coa_options ?? [];
+$journalTypeOptions = $journal_type_options ?? [];
 ?>
 
 <style>
@@ -153,33 +154,163 @@ $coaOptions = $coa_options ?? [];
 
 /* Modal Filter Data bergaya Zahir */
 .zahir-filter-modal .modal-content {
-    border-radius: 4px;
+    border-radius: 2px;
     border: 1px solid #cbd5e1;
+    background: #f5f6f8;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.zahir-filter-modal .modal-body {
+    padding: 20px 24px 12px;
+}
+
+.zahir-filter-title {
+    font-size: 20px;
+    font-weight: 400;
+    color: #1f2937;
+    margin-bottom: 14px;
+}
+
+.zahir-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.zahir-filter-label {
+    width: 115px;
+    font-size: 12.5px;
+    color: #374151;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.zahir-filter-select,
+.zahir-filter-input {
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    border-radius: 0;
+    font-size: 12.5px;
+    color: #111827;
+    height: 30px;
+    padding: 3px 8px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
 }
 
 .zahir-filter-tabs {
     display: flex;
     gap: 6px;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 .zahir-filter-tab {
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
+    border: none;
+    background: transparent;
     color: #334155;
-    padding: 5px 14px;
+    padding: 4px 12px;
     font-size: 12.5px;
-    font-weight: 600;
-    border-radius: 3px;
+    font-weight: 400;
+    border-radius: 0;
     cursor: pointer;
 }
 
 .zahir-filter-tab.active {
-    background: #0284c7;
-    border-color: #0284c7;
+    background: #0c7cba;
     color: #fff;
+}
+
+.zahir-date-range {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.zahir-date-col label {
+    display: block;
+    font-size: 12px;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.zahir-date-col input[type="date"] {
+    background: #e5e7eb;
+    border: 1px solid #9ca3af;
+    border-radius: 0;
+    font-size: 12.5px;
+    color: #111827;
+    height: 30px;
+    padding: 2px 6px;
+}
+
+.zahir-date-arrow {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    padding-bottom: 4px;
+}
+
+.zahir-filter-modal .modal-footer {
+    border-top: none;
+    padding: 12px 24px 18px;
+    background: #f5f6f8;
+}
+
+.btn-zahir-blue {
+    background: #0c7cba;
+    border: 1px solid #0c7cba;
+    color: #fff;
+    border-radius: 0;
+    min-width: 78px;
+    font-size: 12.5px;
+    padding: 4px 14px;
+}
+
+.btn-zahir-blue:hover {
+    background: #09699e;
+    border-color: #09699e;
+    color: #fff;
+}
+
+/* Gaya khusus Daftar Rekening sesuai format PDF Zahir */
+.zahir-coa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border-bottom: 1.5px solid #334155;
+}
+
+.zahir-coa-table thead th {
+    background: #fff;
+    color: #111827;
+    font-weight: 700;
+    padding: 6px 8px;
+    border-bottom: 1.5px solid #334155;
+    text-align: left;
+}
+
+.zahir-coa-table tbody td {
+    padding: 2.5px 8px;
+    vertical-align: top;
+    color: #111827;
+    border: none;
+}
+
+.zahir-coa-class td {
+    color: #0284c7 !important;
+    font-weight: 700;
+    padding-top: 8px !important;
+    padding-bottom: 2px !important;
+}
+
+.zahir-coa-subclass td {
+    color: #0284c7 !important;
+    font-weight: 700;
+    padding-top: 5px !important;
+    padding-bottom: 2px !important;
 }
 
 @media print {
@@ -234,15 +365,17 @@ $coaOptions = $coa_options ?? [];
         <div class="container-fluid">
             <div class="zahir-toolbar no-print">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary btn-sm" id="btnOpenFilter">
-                        <i class="fas fa-filter mr-1"></i> Filter Data
-                    </button>
+                    <?php if ($category !== 'coa'): ?>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnOpenFilter">
+                            <i class="fas fa-filter mr-1"></i> Filter Data
+                        </button>
+                    <?php endif; ?>
                     <button type="button" class="btn btn-success btn-sm" onclick="window.print()">
                         <i class="fas fa-print mr-1"></i> Cetak Laporan
                     </button>
                 </div>
                 <div class="text-muted small" id="reportStatusInfo">
-                    Pilih filter untuk menampilkan laporan.
+                    <?= $category === 'coa' ? 'Memuat daftar rekening...' : 'Pilih filter untuk menampilkan laporan.' ?>
                 </div>
             </div>
 
@@ -264,7 +397,7 @@ $coaOptions = $coa_options ?? [];
 
                 <div id="zahirTableContainer">
                     <div class="text-center text-muted py-4">
-                        Silakan tentukan filter pada jendela Filter Data terlebih dahulu.
+                        <?= $category === 'coa' ? 'Memuat daftar rekening...' : 'Silakan tentukan filter pada jendela Filter Data terlebih dahulu.' ?>
                     </div>
                 </div>
             </div>
@@ -277,13 +410,29 @@ $coaOptions = $coa_options ?? [];
 <div class="modal fade zahir-filter-modal" id="modalFilterData" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-md" role="document">
         <div class="modal-content">
-            <div class="modal-header py-2 bg-light">
-                <h6 class="modal-title font-weight-bold mb-0">Filter Data - <?= htmlspecialchars($title) ?></h6>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
             <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="zahir-filter-title">Filter Data</div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup" style="font-size:18px;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <?php if ($category === 'journal'): ?>
+                    <div class="zahir-filter-row">
+                        <label class="zahir-filter-label" for="filterJenisJurnal">Jenis Jurnal :</label>
+                        <select class="zahir-filter-select" id="filterJenisJurnal" style="width: 210px;">
+                            <option value="">Semua Transaksi</option>
+                            <?php foreach ($journalTypeOptions as $jopt): ?>
+                                <option value="<?= (int) $jopt['id_jenis_jurnal'] ?>"
+                                    <?= ($mode === 'general' && in_array($jopt['kode_jenis_jurnal'], ['GJ', 'JU'], true)) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($jopt['nama_jenis_jurnal']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+
                 <div class="zahir-filter-tabs">
                     <button type="button" class="zahir-filter-tab active" data-tab="standar">Standar</button>
                     <button type="button" class="zahir-filter-tab" data-tab="pencarian">Pencarian</button>
@@ -291,22 +440,26 @@ $coaOptions = $coa_options ?? [];
 
                 <div id="filterTabStandar">
                     <?php if ($category !== 'coa'): ?>
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label class="small font-weight-bold">Dari Tanggal :</label>
-                                <input type="date" class="form-control form-control-sm" id="filterStartDate" value="<?= date('Y-m-01') ?>">
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label class="small font-weight-bold">Hingga Tanggal :</label>
-                                <input type="date" class="form-control form-control-sm" id="filterEndDate" value="<?= date('Y-m-t') ?>">
+                        <div class="zahir-filter-row align-items-end">
+                            <label class="zahir-filter-label" style="padding-bottom: 5px;">Tanggal :</label>
+                            <div class="zahir-date-range">
+                                <div class="zahir-date-col">
+                                    <label for="filterStartDate">Dari :</label>
+                                    <input type="date" id="filterStartDate" value="<?= date('Y-m-01') ?>">
+                                </div>
+                                <div class="zahir-date-arrow">&gt;</div>
+                                <div class="zahir-date-col">
+                                    <label for="filterEndDate">Hingga :</label>
+                                    <input type="date" id="filterEndDate" value="<?= date('Y-m-t') ?>">
+                                </div>
                             </div>
                         </div>
                     <?php endif; ?>
 
                     <?php if ($category === 'ledger'): ?>
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Akun / Rekening :</label>
-                            <select class="form-control form-control-sm" id="filterIdAkun">
+                        <div class="zahir-filter-row mb-0">
+                            <label class="zahir-filter-label" for="filterIdAkun">Rekening :</label>
+                            <select class="zahir-filter-select" id="filterIdAkun" style="flex: 1 1 0; min-width: 0; width: 100%;">
                                 <option value="">-- Semua Rekening --</option>
                                 <?php foreach ($coaOptions as $opt): ?>
                                     <option value="<?= (int) $opt['id_akun'] ?>">
@@ -315,35 +468,30 @@ $coaOptions = $coa_options ?? [];
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                    <?php elseif ($category === 'coa'): ?>
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Filter Klasifikasi / Rekening :</label>
-                            <input type="text" class="form-control form-control-sm" id="filterSearchStandar" placeholder="Kosongkan untuk semua rekening...">
-                        </div>
                     <?php endif; ?>
                 </div>
 
                 <div id="filterTabPencarian" style="display: none;">
-                    <?php if ($category === 'ledger' || $category === 'coa'): ?>
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Kode / Nama Rekening :</label>
-                            <input type="text" class="form-control form-control-sm" id="filterSearchKeyword" placeholder="Contoh: 11011 atau Kas...">
+                    <?php if ($category === 'ledger'): ?>
+                        <div class="zahir-filter-row mb-0">
+                            <label class="zahir-filter-label" for="filterSearchKeyword">Kode / Rekening :</label>
+                            <input type="text" class="zahir-filter-input" id="filterSearchKeyword" style="width: 210px;" placeholder="Contoh: 11011 atau Kas...">
                         </div>
                     <?php else: ?>
-                        <div class="form-group">
-                            <label class="small font-weight-bold">Keterangan Jurnal :</label>
-                            <input type="text" class="form-control form-control-sm" id="filterKeterangan" placeholder="Cari berdasarkan keterangan...">
+                        <div class="zahir-filter-row">
+                            <label class="zahir-filter-label" for="filterKeterangan">Keterangan Jurnal :</label>
+                            <input type="text" class="zahir-filter-input" id="filterKeterangan" style="width: 210px;">
                         </div>
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Nomor Jurnal / Referensi :</label>
-                            <input type="text" class="form-control form-control-sm" id="filterNomor" placeholder="Contoh: GJ-202611 atau INV...">
+                        <div class="zahir-filter-row mb-0">
+                            <label class="zahir-filter-label" for="filterNomor">Nomor Jurnal :</label>
+                            <input type="text" class="zahir-filter-input" id="filterNomor" style="width: 210px;">
                         </div>
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-sm btn-primary" id="btnApplyFilter">OK</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-zahir-blue" data-dismiss="modal"><u>B</u>atal</button>
+                <button type="button" class="btn btn-zahir-blue" id="btnApplyFilter"><u>O</u>K</button>
             </div>
         </div>
     </div>
@@ -550,21 +698,39 @@ $coaOptions = $coa_options ?? [];
             return '<div class="text-center text-muted py-4">Tidak ada daftar rekening yang cocok.</div>';
         }
 
-        var html = '<table class="zahir-table"><thead><tr>';
-        html += '<th style="width:220px">Klasifikasi</th>';
-        html += '<th style="width:130px">Kode Rekening</th>';
+        var html = '<table class="zahir-coa-table"><thead><tr>';
+        html += '<th style="width:140px">Klasifikasi</th>';
+        html += '<th style="width:120px">Kode Rekening</th>';
         html += '<th>Nama Rekening</th>';
         html += '<th>Nama Alias Rekening</th>';
         html += '</tr></thead><tbody>';
 
-        var lastGroup = '';
+        var lastClass = '';
+        var lastSubClass = '';
         rows.forEach(function(r) {
-            var grp = r.nama_klasifikasi || '';
-            var showGrp = (grp !== lastGroup) ? grp : '';
-            lastGroup = grp;
+            var cls = r.nama_klasifikasi || '';
+            var subCls = r.nama_sub_klasifikasi || '';
 
-            html += '<tr style="border-bottom:1px solid #f1f5f9;">';
-            html += '<td style="font-weight:' + (showGrp ? '700' : '400') + ';">' + esc(showGrp) + '</td>';
+            // Tampilkan baris klasifikasi utama jika berubah
+            if (cls && cls !== lastClass) {
+                html += '<tr class="zahir-coa-class">';
+                html += '<td colspan="4">' + esc(cls) + '</td>';
+                html += '</tr>';
+                lastClass = cls;
+                lastSubClass = '';
+            }
+
+            // Tampilkan baris sub-klasifikasi menjorok di kolom kedua jika berubah
+            if (subCls && subCls !== lastSubClass) {
+                html += '<tr class="zahir-coa-subclass">';
+                html += '<td></td>';
+                html += '<td colspan="3">' + esc(subCls) + '</td>';
+                html += '</tr>';
+                lastSubClass = subCls;
+            }
+
+            html += '<tr>';
+            html += '<td></td>';
             html += '<td>' + esc(r.kode_akun) + '</td>';
             html += '<td>' + esc(r.nama_akun) + '</td>';
             html += '<td>' + esc(r.nama_alias) + '</td>';
@@ -693,6 +859,7 @@ $coaOptions = $coa_options ?? [];
             start_date: $('#filterStartDate').val() || '',
             end_date: $('#filterEndDate').val() || '',
             id_akun: $('#filterIdAkun').val() || '',
+            id_jenis_jurnal: $('#filterJenisJurnal').val() || '',
             keterangan: $('#filterKeterangan').val() || '',
             nomor: $('#filterNomor').val() || '',
             search: $('#filterSearchKeyword').val() || $('#filterSearchStandar').val() || ''
@@ -753,8 +920,13 @@ $coaOptions = $coa_options ?? [];
             loadReport();
         });
 
-        // Buka modal Filter Data secara otomatis saat halaman pertama dibuka
-        $('#modalFilterData').modal('show');
+        if (reportMeta.category === 'coa') {
+            // Daftar Rekening tidak memerlukan modal filter, langsung muat data
+            loadReport();
+        } else {
+            // Buka modal Filter Data secara otomatis saat halaman pertama dibuka
+            $('#modalFilterData').modal('show');
+        }
     });
 })();
 </script>

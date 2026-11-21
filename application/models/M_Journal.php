@@ -1745,7 +1745,139 @@ class M_Journal extends CI_Model
     /**
      * Laporan Penjualan - eFaktur format Zahir Accounting.
      */
-    public function accounting_sales_efaktur_report($start_date = '', $end_date = '', $no_ref = '', $pelanggan = '', $npwp = '')
+    public function salesAdvanceCustomers()
+    {
+        $customers = [];
+        foreach ($this->salesAdvanceReport([], true) as $row) {
+            if ($row['customer'] !== '') {
+                $customers[$row['customer']] = $row['customer'];
+            }
+        }
+        asort($customers, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $customers;
+    }
+
+    public function salesAdvanceReport(array $filters = [], $customersOnly = false)
+    {
+        $rows = [];
+        foreach ([
+            ['masuk', 'diterima_dari', 'UANG_MUKA_CUSTOMER', '22110', 'Penerimaan pelanggan'],
+            ['keluar', 'penerima', 'UANG_MUKA_SUPPLIER', '15110', 'Pembayaran supplier'],
+        ] as [$direction, $party, $role, $accountCode, $label]) {
+            $table = 'tbkeu_kas_' . $direction;
+            $id = 'id_kas_' . $direction;
+            $this->db->from("$table h")
+                ->join("{$table}_detail d", "d.$id = h.$id")
+                ->join('tbkeu_akun a', 'a.id_akun = d.id_akun')
+                ->where("(EXISTS (SELECT 1 FROM tbkeu_mapping_akun m
+                    WHERE m.id_akun = d.id_akun AND m.is_active = 1 AND m.account_role = " . $this->db->escape($role) . ")
+                    OR REPLACE(REPLACE(a.kode_akun, '-', ''), '.', '') = " . $this->db->escape($accountCode) . ')', null, false);
+            if ($customersOnly) {
+                $names = $this->db->distinct()->select("TRIM(h.$party) AS customer", false)->get()->result_array();
+                $rows = array_merge($rows, $names);
+                continue;
+            }
+            $this->db->select("h.tanggal, h.no_referensi, TRIM(h.$party) AS customer, h.status, SUM(d.nilai) AS amount", false)
+                ->group_by(["h.$id", 'h.tanggal', 'h.no_referensi', "h.$party", 'h.status']);
+            $this->applySalesFilters($filters, [
+                'customer' => "TRIM(h.$party)",
+                'status' => 'h.status',
+            ]);
+            if (isset($filters['start_date'], $filters['end_date'])) {
+                $this->db->where('h.tanggal >=', $filters['start_date'])
+                    ->where('h.tanggal <=', $filters['end_date']);
+            }
+            foreach ($this->db->get()->result_array() as $row) {
+                $row['type'] = $label;
+                $rows[] = $row;
+            }
+        }
+        if ($customersOnly) {
+            return $rows;
+        }
+        usort($rows, static function ($left, $right) {
+            return [$left['tanggal'], $left['no_referensi'], $left['type']] <=> [$right['tanggal'], $right['no_referensi'], $right['type']];
+        });
+
+        return $rows;
+    }
+
+    public function salesReportFilterOptions($type)
+    {
+        $options = array_fill_keys(['customer', 'customer_class', 'salesman', 'salesman_class', 'status'], []);
+        $customers = $this->db->select("kd_customer, COALESCE(NULLIF(TRIM(nama_kios), ''), NULLIF(TRIM(nama_customer), ''), kd_customer) AS name,
+            TRIM(karakteristik_kios) AS customer_class, TRIM(nama_sales) AS salesman_class", false)
+            ->get('tb_customer')->result_array();
+
+        foreach ($customers as $row) {
+            $options['customer'][$row['kd_customer']] = $row['name'] . ' (' . $row['kd_customer'] . ')';
+            foreach (['customer_class', 'salesman_class'] as $key) {
+                if ($row[$key] !== null && $row[$key] !== '') {
+                    $options[$key][$row[$key]] = $row[$key];
+                }
+            }
+        }
+        if ($type !== 'efaktur') {
+            $sources = strpos($type, 'retur-') === 0 || strpos($type, 'negatif-') === 0
+                ? [['tbrp_retur_penjualan_header', 'nama_sales', 'status_retur']]
+                : [['tbso_faktur_penjualan', 'salesman', 'status'], ['tbso_faktur_h_import', 'salesman', 'status']];
+            foreach ($sources as [$table, $sales, $status]) {
+                $rows = $this->db->distinct()->select("kd_customer, TRIM($sales) AS salesman, $status AS status", false)
+                    ->get($table)->result_array();
+                foreach ($rows as $row) {
+                    if ($row['kd_customer'] !== null && $row['kd_customer'] !== '') {
+                        $options['customer'][$row['kd_customer']] = $options['customer'][$row['kd_customer']] ?? $row['kd_customer'];
+                    }
+                    if ($row['salesman'] !== null && $row['salesman'] !== '') {
+                        $options['salesman'][$row['salesman']] = $row['salesman'];
+                        $options['salesman_class'][$row['salesman']] = $row['salesman'];
+                    }
+                    if ($row['status'] !== null && !in_array($row['status'], ['', 'cancelled', 'draft', 'ditolak'], true)
+                        && (strpos($type, 'negatif-') !== 0 || $row['status'] === 'selesai')) {
+                        $options['status'][$row['status']] = ucfirst(str_replace('_', ' ', $row['status']));
+                    }
+                }
+            }
+            $options['salesman'] += $options['salesman_class'];
+        } else {
+            foreach (['tbso_faktur_penjualan', 'tbso_faktur_h_import'] as $table) {
+                foreach ($this->db->distinct()->select('kd_customer')->get($table)->result_array() as $row) {
+                    $code = $row['kd_customer'];
+                    if ($code !== null && $code !== '') {
+                        $options['customer'][$code] = $options['customer'][$code] ?? $code;
+                    }
+                }
+            }
+        }
+        foreach ($options as &$values) {
+            asort($values, SORT_NATURAL | SORT_FLAG_CASE);
+        }
+        unset($values);
+
+        return $options;
+    }
+
+    private function applySalesFilters(array $filters, array $columns)
+    {
+        foreach ($columns as $key => $column) {
+            if (($filters[$key] ?? '') !== '') {
+                $this->db->where("$column = " . $this->db->escape($filters[$key]), null, false);
+            }
+        }
+    }
+
+    private function appendSalesFilters(array &$where, array &$params, array $filters, array $columns)
+    {
+        foreach ($columns as $key => $column) {
+            if (($filters[$key] ?? '') !== '') {
+                $where[] = "$column = ?";
+                $params[] = $filters[$key];
+            }
+        }
+    }
+
+    public function accounting_sales_efaktur_report($start_date = '', $end_date = '', $no_ref = '', $pelanggan = '', $npwp = '', array $filters = [])
     {
         $start_date = trim((string) $start_date);
         $end_date   = trim((string) $end_date);
@@ -1775,6 +1907,18 @@ class M_Journal extends CI_Model
             $params[]     = '%' . $npwp . '%';
         }
 
+        $this->appendSalesFilters($whereParts, $params, $filters, [
+            'customer' => 'u.kd_customer',
+            'customer_class' => 'u.customer_class',
+        ]);
+        foreach (['export_status' => 'u.sudah_efaktur', 'serial_status' => 'u.nomor_seri_faktur'] as $key => $column) {
+            if (($filters[$key] ?? '') === 'recorded') {
+                $whereParts[] = "$column <> ''";
+            } elseif (($filters[$key] ?? '') === 'missing') {
+                $whereParts[] = "$column = ''";
+            }
+        }
+
         $whereSql = implode(' AND ', $whereParts);
 
         $sql = "
@@ -1791,6 +1935,8 @@ class M_Journal extends CI_Model
                 SELECT
                     f.tanggal_faktur,
                     f.no_faktur,
+                    f.kd_customer,
+                    TRIM(c.karakteristik_kios) AS customer_class,
                     COALESCE(NULLIF(TRIM(c.nama_kios), ''), NULLIF(TRIM(c.nama_customer), ''), f.customer_name, '-') AS pelanggan,
                     '' AS nomor_seri_faktur,
                     COALESCE(
@@ -1815,6 +1961,8 @@ class M_Journal extends CI_Model
                 SELECT
                     fh.tanggal_faktur,
                     fh.no_faktur,
+                    fh.kd_customer,
+                    TRIM(c.karakteristik_kios) AS customer_class,
                     COALESCE(NULLIF(TRIM(fh.nama_toko), ''), NULLIF(TRIM(fh.customer_name), ''), '-') AS pelanggan,
                     '' AS nomor_seri_faktur,
                     COALESCE(
@@ -1830,6 +1978,10 @@ class M_Journal extends CI_Model
                     COALESCE(fh.grand_total, 0) AS total_bruto,
                     '' AS sudah_efaktur
                 FROM tbso_faktur_h_import fh
+                LEFT JOIN (
+                        SELECT kd_customer, MAX(karakteristik_kios) AS karakteristik_kios, MAX(nama_sales) AS nama_sales
+                        FROM tb_customer GROUP BY kd_customer
+                    ) c ON c.kd_customer = fh.kd_customer
                 WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
                   AND COALESCE(fh.status, '') <> 'cancelled'
             ) u
@@ -1847,7 +1999,7 @@ class M_Journal extends CI_Model
      * - 'negatif-sederhana' (Penjualan Bernilai Negatif - Sederhana)
      * - 'per-mata-uang-rangkuman' (Penjualan Per Mata Uang - Rangkuman)
      */
-    public function accounting_sales_zahir_report($type, $start_date = '', $end_date = '', $no_ref = '', $pelanggan = '')
+    public function accounting_sales_zahir_report($type, $start_date = '', $end_date = '', $no_ref = '', $pelanggan = '', array $filters = [])
     {
         $start_date = trim((string) $start_date);
         $end_date   = trim((string) $end_date);
@@ -1888,6 +2040,14 @@ class M_Journal extends CI_Model
                 $this->db->or_like('c.nama_kios', $pelanggan);
                 $this->db->group_end();
             }
+
+            $this->applySalesFilters($filters, [
+                'customer' => 'f.kd_customer',
+                'customer_class' => 'TRIM(c.karakteristik_kios)',
+                'salesman' => "COALESCE(NULLIF(TRIM(f.salesman), ''), TRIM(c.nama_sales))",
+                'salesman_class' => "COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(f.salesman))",
+                'status' => 'f.status',
+            ]);
 
             $this->db->order_by('f.tanggal_faktur', 'ASC');
             $this->db->order_by('f.id_faktur', 'ASC');
@@ -1967,6 +2127,14 @@ class M_Journal extends CI_Model
                 $this->db->group_end();
             }
 
+            $this->applySalesFilters($filters, [
+                'customer' => 'r.kd_customer',
+                'customer_class' => 'TRIM(c.karakteristik_kios)',
+                'salesman' => "COALESCE(NULLIF(TRIM(r.nama_sales), ''), TRIM(c.nama_sales))",
+                'salesman_class' => "COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(r.nama_sales))",
+                'status' => 'r.status_retur',
+            ]);
+
             $this->db->order_by('r.tanggal_retur', 'ASC');
             $rows = $this->db->get()->result_array();
 
@@ -2016,6 +2184,13 @@ class M_Journal extends CI_Model
                 array_push($params, $like, $like, $like);
             }
 
+            $this->appendSalesFilters($whereParts, $params, $filters, [
+                'customer' => 't.filter_customer',
+                'customer_class' => 't.customer_class',
+                'salesman' => 't.filter_salesman',
+                'salesman_class' => 't.salesman_class',
+                'status' => 't.filter_status',
+            ]);
             $whereSql = implode(' AND ', $whereParts);
             $orderBy  = 't.tanggal_faktur ASC, t.no_faktur ASC';
             if ($type === 'per-salesman-faktur') {
@@ -2028,6 +2203,11 @@ class M_Journal extends CI_Model
                 SELECT * FROM (
                     SELECT
                         f.tanggal_faktur,
+                        f.kd_customer AS filter_customer,
+                        TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(f.salesman)) AS salesman_class,
+                        f.status AS filter_status,
                         f.no_faktur,
                         COALESCE(f.no_so, '') AS order_no,
                         COALESCE(f.kd_customer, '') AS kd_customer,
@@ -2046,6 +2226,11 @@ class M_Journal extends CI_Model
 
                     SELECT
                         fh.tanggal_faktur,
+                        fh.kd_customer AS filter_customer,
+                        TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(fh.salesman)) AS salesman_class,
+                        fh.status AS filter_status,
                         fh.no_faktur,
                         COALESCE(fh.no_so, '') AS order_no,
                         COALESCE(fh.kd_customer, '') AS kd_customer,
@@ -2056,6 +2241,10 @@ class M_Journal extends CI_Model
                         COALESCE(fh.grand_total, 0) AS jumlah,
                         COALESCE(fh.grand_total, 0) AS jumlah_idr
                     FROM tbso_faktur_h_import fh
+                    LEFT JOIN (
+                        SELECT kd_customer, MAX(karakteristik_kios) AS karakteristik_kios, MAX(nama_sales) AS nama_sales
+                        FROM tb_customer GROUP BY kd_customer
+                    ) c ON c.kd_customer = fh.kd_customer
                     WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
                       AND COALESCE(fh.status, '') <> 'cancelled'
                 ) t
@@ -2081,6 +2270,13 @@ class M_Journal extends CI_Model
                 $like = '%' . $pelanggan . '%';
                 array_push($params, $like, $like);
             }
+            $this->appendSalesFilters($whereParts, $params, $filters, [
+                'customer' => 't.filter_customer',
+                'customer_class' => 't.customer_class',
+                'salesman' => 't.filter_salesman',
+                'salesman_class' => 't.salesman_class',
+                'status' => 't.filter_status',
+            ]);
             $whereSql = implode(' AND ', $whereParts);
 
             $sql = "
@@ -2094,6 +2290,11 @@ class M_Journal extends CI_Model
                 FROM (
                     SELECT
                         f.tanggal_faktur,
+                        f.kd_customer AS filter_customer,
+                        TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(f.salesman)) AS salesman_class,
+                        f.status AS filter_status,
                         COALESCE(NULLIF(TRIM(c.nama_sales), ''), 'general') AS kelompok_salesman,
                         COALESCE(NULLIF(TRIM(f.salesman), ''), NULLIF(TRIM(c.nama_sales), ''), 'Others') AS nama_salesman,
                         COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS nilai,
@@ -2107,11 +2308,20 @@ class M_Journal extends CI_Model
 
                     SELECT
                         fh.tanggal_faktur,
+                        fh.kd_customer AS filter_customer,
+                        TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(fh.salesman)) AS salesman_class,
+                        fh.status AS filter_status,
                         COALESCE(NULLIF(TRIM(fh.salesman), ''), 'general') AS kelompok_salesman,
                         COALESCE(NULLIF(TRIM(fh.salesman), ''), 'Others') AS nama_salesman,
                         COALESCE(fh.grand_total, 0) AS nilai,
                         COALESCE(fh.total_bayar, 0) AS pembayaran
                     FROM tbso_faktur_h_import fh
+                    LEFT JOIN (
+                        SELECT kd_customer, MAX(karakteristik_kios) AS karakteristik_kios, MAX(nama_sales) AS nama_sales
+                        FROM tb_customer GROUP BY kd_customer
+                    ) c ON c.kd_customer = fh.kd_customer
                     WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '')
                       AND COALESCE(fh.status, '') <> 'cancelled'
                 ) t
@@ -2154,6 +2364,14 @@ class M_Journal extends CI_Model
                 $this->db->or_like('c.nama_kios', $pelanggan);
                 $this->db->group_end();
             }
+
+            $this->applySalesFilters($filters, [
+                'customer' => 'r.kd_customer',
+                'customer_class' => 'TRIM(c.karakteristik_kios)',
+                'salesman' => "COALESCE(NULLIF(TRIM(r.nama_sales), ''), TRIM(c.nama_sales))",
+                'salesman_class' => "COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(r.nama_sales))",
+                'status' => 'r.status_retur',
+            ]);
 
             $this->db->order_by('r.tanggal_retur', 'ASC');
             $this->db->order_by('r.id_retur', 'ASC');
@@ -2222,6 +2440,14 @@ class M_Journal extends CI_Model
                 $this->db->group_end();
             }
 
+            $this->applySalesFilters($filters, [
+                'customer' => 'r.kd_customer',
+                'customer_class' => 'TRIM(c.karakteristik_kios)',
+                'salesman' => "COALESCE(NULLIF(TRIM(r.nama_sales), ''), TRIM(c.nama_sales))",
+                'salesman_class' => "COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(r.nama_sales))",
+                'status' => 'r.status_retur',
+            ]);
+
             $this->db->order_by('r.tanggal_retur', 'ASC');
             $this->db->order_by('r.id_retur', 'ASC');
             $headers = $this->db->get()->result_array();
@@ -2274,26 +2500,54 @@ class M_Journal extends CI_Model
         }
 
         // per-mata-uang-rangkuman
-        $whereDate = '';
+        $whereParts = ['1=1'];
         $params    = [];
         if ($start_date !== '' && $end_date !== '') {
-            $whereDate = ' AND t.tanggal_faktur >= ? AND t.tanggal_faktur <= ?';
+            $whereParts[] = 't.tanggal_faktur >= ? AND t.tanggal_faktur <= ?';
             $params    = [$start_date, $end_date];
         }
+
+        $this->appendSalesFilters($whereParts, $params, $filters, [
+            'customer' => 't.filter_customer',
+            'customer_class' => 't.customer_class',
+            'salesman' => 't.filter_salesman',
+            'salesman_class' => 't.salesman_class',
+            'status' => 't.filter_status',
+        ]);
+        $whereSql = implode(' AND ', $whereParts);
 
         $sql = "
             SELECT 'IDR' AS mata_uang, COALESCE(SUM(t.total_bruto), 0) AS jumlah, COALESCE(SUM(t.total_bruto), 0) AS jumlah_idr
             FROM (
                 SELECT f.tanggal_faktur,
+                       f.kd_customer AS filter_customer,
+                       TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(f.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(f.salesman)) AS salesman_class,
+                        f.status AS filter_status,
                        COALESCE((SELECT SUM(d.total_harga) FROM tbso_faktur_detail d WHERE d.id_faktur = f.id_faktur), 0) AS total_bruto
                 FROM tbso_faktur_penjualan f
+                LEFT JOIN (
+                    SELECT kd_customer, MAX(karakteristik_kios) AS karakteristik_kios, MAX(nama_sales) AS nama_sales
+                    FROM tb_customer GROUP BY kd_customer
+                ) c ON c.kd_customer = f.kd_customer
                 WHERE f.status <> 'cancelled' AND (f.parent_id_faktur IS NULL OR f.parent_id_faktur = 0)
                 UNION ALL
-                SELECT fh.tanggal_faktur, COALESCE(fh.grand_total, 0) AS total_bruto
+                SELECT fh.tanggal_faktur,
+                       fh.kd_customer AS filter_customer,
+                       TRIM(c.karakteristik_kios) AS customer_class,
+                        COALESCE(NULLIF(TRIM(fh.salesman), ''), TRIM(c.nama_sales)) AS filter_salesman,
+                        COALESCE(NULLIF(TRIM(c.nama_sales), ''), TRIM(fh.salesman)) AS salesman_class,
+                        fh.status AS filter_status,
+                       COALESCE(fh.grand_total, 0) AS total_bruto
                 FROM tbso_faktur_h_import fh
+                LEFT JOIN (
+                        SELECT kd_customer, MAX(karakteristik_kios) AS karakteristik_kios, MAX(nama_sales) AS nama_sales
+                        FROM tb_customer GROUP BY kd_customer
+                    ) c ON c.kd_customer = fh.kd_customer
                 WHERE (fh.parent_no_faktur IS NULL OR fh.parent_no_faktur = '') AND COALESCE(fh.status, '') <> 'cancelled'
             ) t
-            WHERE 1=1 {$whereDate}
+            WHERE {$whereSql}
         ";
 
         return $this->db->query($sql, $params)->result_array();
@@ -4877,10 +5131,28 @@ class M_Journal extends CI_Model
     }
 
     /**
+     * Daftar pilihan Jenis Jurnal untuk filter laporan Daftar Jurnal Zahir.
+     */
+    public function zahir_journal_type_options()
+    {
+        if (!$this->db->table_exists('tbkeu_jenis_jurnal')) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id_jenis_jurnal, kode_jenis_jurnal, nama_jenis_jurnal')
+            ->from('tbkeu_jenis_jurnal')
+            ->order_by("FIELD(kode_jenis_jurnal, 'GJ','CD','CR','SJ','PJ','IJ','SD','PD','SF','PF','MR','SQ','RQ','PO','SO','CI','CO','PR','SR','PA','SA','DO','KM','JU','AUTO','REV')", '', false)
+            ->order_by('id_jenis_jurnal', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    /**
      * Laporan Daftar Jurnal & Jejak Audit format Zahir.
      * Mode: 'all', 'general', 'audit_summary', 'audit_all', 'audit_detail'.
      */
-    public function zahir_journal_list_report($start_date = '', $end_date = '', $mode = 'all', $keterangan = '', $nomor = '')
+    public function zahir_journal_list_report($start_date = '', $end_date = '', $mode = 'all', $keterangan = '', $nomor = '', $id_jenis_jurnal = '')
     {
         if (!$this->accounting_journal_schema_ready()) {
             return [];
@@ -4921,6 +5193,21 @@ class M_Journal extends CI_Model
             $this->db->where_in('jj.kode_jenis_jurnal', ['JU', 'GJ']);
             $this->db->or_where('j.source_module', 'ACCOUNTING');
             $this->db->group_end();
+        } elseif ($mode === 'cash_out') {
+            $this->db->group_start();
+            $this->db->where_in('jj.kode_jenis_jurnal', ['CD', 'KK']);
+            $this->db->or_where('j.source_module', 'KAS_KELUAR');
+            $this->db->group_end();
+        } elseif ($mode === 'cash_in') {
+            $this->db->group_start();
+            $this->db->where_in('jj.kode_jenis_jurnal', ['CR', 'KM']);
+            $this->db->or_where('j.source_module', 'KAS_MASUK');
+            $this->db->group_end();
+        }
+
+        $id_jenis_jurnal = (int) $id_jenis_jurnal;
+        if ($id_jenis_jurnal > 0) {
+            $this->db->where('j.id_jenis_jurnal', $id_jenis_jurnal);
         }
 
         $start_date = trim((string) $start_date);
@@ -5004,27 +5291,35 @@ class M_Journal extends CI_Model
 
         $this->db->select("
             a.id_akun,
-            a.kode_akun,
-            a.nama_akun,
-            a.nama_akun AS nama_alias,
+            COALESCE(NULLIF(TRIM(r.kode_rekening_display), ''), a.kode_akun) AS kode_akun,
+            COALESCE(NULLIF(TRIM(r.nama_karismaerp), ''), a.nama_akun) AS nama_akun,
+            COALESCE(NULLIF(TRIM(r.alias_karismaerp), ''), a.nama_akun) AS nama_alias,
             COALESCE(k.kode_klasifikasi, '') AS kode_klasifikasi,
             COALESCE(k.nama_klasifikasi, 'Lainnya') AS nama_klasifikasi,
             COALESCE(k.alias_klasifikasi, '') AS alias_klasifikasi,
+            COALESCE(sk.kode_sub_klasifikasi, LEFT(a.kode_akun, 3)) AS kode_sub_klasifikasi,
+            COALESCE(sk.nama_sub_klasifikasi, '') AS nama_sub_klasifikasi,
             COALESCE(k.urutan, 999) AS urutan
         ", false);
         $this->db->from('tbkeu_akun a');
         $this->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
+        $this->db->join('tbkeu_akun_karismaerp_ref r', 'r.id_akun = a.id_akun AND r.is_active = 1', 'left');
+        $this->db->join('tbkeu_sub_klasifikasi_akun sk', 'sk.id_sub_klasifikasi = r.id_sub_klasifikasi OR (r.id_sub_klasifikasi IS NULL AND sk.id_akun_header = a.parent_id)', 'left');
         $this->db->where('a.is_active', 1);
 
         if ($search !== '') {
             $this->db->group_start();
             $this->db->like('a.kode_akun', $search);
+            $this->db->or_like('r.kode_rekening_display', $search);
             $this->db->or_like('a.nama_akun', $search);
+            $this->db->or_like('r.alias_karismaerp', $search);
             $this->db->or_like('k.nama_klasifikasi', $search);
+            $this->db->or_like('sk.nama_sub_klasifikasi', $search);
             $this->db->group_end();
         }
 
         $this->db->order_by('urutan', 'ASC');
+        $this->db->order_by('kode_sub_klasifikasi', 'ASC');
         $this->db->order_by('a.kode_akun', 'ASC');
         return $this->db->get()->result_array();
     }

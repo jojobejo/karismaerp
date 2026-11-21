@@ -130,30 +130,7 @@ $title = $meta['title'];
     padding: 2px 6px 2px 0;
 }
 
-.zahir-filter-tabs {
-    display: flex;
-    gap: 6px;
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 8px;
-    margin-bottom: 14px;
-}
 
-.zahir-filter-tab {
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: #334155;
-    padding: 5px 14px;
-    font-size: 12.5px;
-    font-weight: 600;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.zahir-filter-tab.active {
-    background: #0284c7;
-    border-color: #0284c7;
-    color: #fff;
-}
 
 @media print {
     .no-print,
@@ -251,35 +228,11 @@ $title = $meta['title'];
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="zahir-filter-tabs">
-                    <button type="button" class="zahir-filter-tab active" data-tab="standar">Standar</button>
-                    <button type="button" class="zahir-filter-tab" data-tab="pencarian">Pencarian</button>
-                </div>
-
-                <div id="filterTabStandar">
-                    <div class="form-row">
-                        <div class="form-group col-md-6 mb-0">
-                            <label class="small font-weight-bold">Dari Tanggal :</label>
-                            <input type="date" class="form-control form-control-sm" id="filterStartDate" value="<?= date('Y-m-01') ?>">
-                        </div>
-                        <div class="form-group col-md-6 mb-0">
-                            <label class="small font-weight-bold">Hingga Tanggal :</label>
-                            <input type="date" class="form-control form-control-sm" id="filterEndDate" value="<?= date('Y-m-t') ?>">
-                        </div>
-                    </div>
-                </div>
-
-                <div id="filterTabPencarian" style="display: none;">
-                    <div class="form-group">
-                        <label class="small font-weight-bold">No. Reference / No. Faktur :</label>
-                        <input type="text" class="form-control form-control-sm" id="filterNoRef" placeholder="Cari nomor faktur/retur...">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="small font-weight-bold">Pelanggan :</label>
-                        <input type="text" class="form-control form-control-sm" id="filterPelanggan" placeholder="Nama pelanggan/kios...">
-                    </div>
-                </div>
+            <div class="modal-body" id="salesFilterFields">
+                <?php
+                $filter_type = 'sales';
+                include __DIR__ . '/_filter_fields.php';
+                ?>
             </div>
             <div class="modal-footer py-2">
                 <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Batal</button>
@@ -926,8 +879,11 @@ $title = $meta['title'];
             jenis: reportMeta.slug,
             start_date: $('#filterStartDate').val() || '',
             end_date: $('#filterEndDate').val() || '',
-            no_ref: $('#filterNoRef').val() || '',
-            pelanggan: $('#filterPelanggan').val() || ''
+            customer: $('#salesFilterFields [name=customer]').val() || '',
+            customer_class: $('#salesFilterFields [name=customer_class]').val() || '',
+            salesman: $('#salesFilterFields [name=salesman]').val() || '',
+            salesman_class: $('#salesFilterFields [name=salesman_class]').val() || '',
+            status: $('#salesFilterFields [name=status]').val() || ''
         };
 
         $('#pzContainer').html('<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat laporan...</div>');
@@ -976,17 +932,11 @@ $title = $meta['title'];
     }
 
     $(function() {
-        $('.zahir-filter-tab').on('click', function() {
-            $('.zahir-filter-tab').removeClass('active');
-            $(this).addClass('active');
-            var tab = $(this).data('tab');
-            if (tab === 'pencarian') {
-                $('#filterTabStandar').hide();
-                $('#filterTabPencarian').show();
-            } else {
-                $('#filterTabPencarian').hide();
-                $('#filterTabStandar').show();
-            }
+        var $fields = $('#salesFilterFields :input');
+        var appliedValues = $fields.map(function() { return this.value; }).get();
+
+        $('#modalFilterData').on('hidden.bs.modal', function() {
+            $fields.each(function(index) { this.value = appliedValues[index]; });
         });
 
         $('#btnOpenFilter').on('click', function() {
@@ -994,6 +944,11 @@ $title = $meta['title'];
         });
 
         $('#btnApplyFilter').on('click', function() {
+            var start = $('#filterStartDate').val();
+            var end = $('#filterEndDate').val();
+            $('#filterEndDate')[0].setCustomValidity(start && end && start > end ? 'Tanggal akhir harus sama dengan atau setelah tanggal awal.' : '');
+            if (!$fields.toArray().every(function(field) { return field.reportValidity(); })) return;
+            appliedValues = $fields.map(function() { return this.value; }).get();
             $('#modalFilterData').modal('hide');
             loadReport();
         });

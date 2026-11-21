@@ -130,6 +130,8 @@ class C_Laporan extends CI_Controller
     public function efaktur_penjualan_report()
     {
         $data['page_title']      = 'KARISMA - PENJUALAN EFAKTUR';
+        $this->load->model('M_Journal');
+        $data['filter_options'] = $this->M_Journal->salesReportFilterOptions('efaktur');
         $data['report_endpoint'] = base_url('laporan/penjualan/efaktur-data');
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/efaktur_penjualan_report.php', $data);
@@ -156,7 +158,7 @@ class C_Laporan extends CI_Controller
             $endDate = date('Y-m-t');
         }
 
-        $rows = $this->M_Journal->accounting_sales_efaktur_report($startDate, $endDate, $noRef, $pelanggan, $npwp);
+        $rows = $this->M_Journal->accounting_sales_efaktur_report($startDate, $endDate, $noRef, $pelanggan, $npwp, $this->salesReportFilters());
 
         $this->output
             ->set_content_type('application/json')
@@ -231,6 +233,8 @@ class C_Laporan extends CI_Controller
         $meta = $this->_zahir_penjualan_meta($jenis);
         $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
         $data['report_meta']     = $meta;
+        $this->load->model('M_Journal');
+        $data['filter_options'] = $this->M_Journal->salesReportFilterOptions($meta['slug']);
         $data['report_endpoint'] = base_url('laporan/penjualan/zahir-data');
 
         $this->load->view('partial/main/header.php', $data);
@@ -259,7 +263,7 @@ class C_Laporan extends CI_Controller
         }
 
         $meta = $this->_zahir_penjualan_meta($jenis);
-        $rows = $this->M_Journal->accounting_sales_zahir_report($meta['slug'], $startDate, $endDate, $noRef, $pelanggan);
+        $rows = $this->M_Journal->accounting_sales_zahir_report($meta['slug'], $startDate, $endDate, $noRef, $pelanggan, $this->salesReportFilters());
 
         $this->output
             ->set_content_type('application/json')
@@ -270,6 +274,46 @@ class C_Laporan extends CI_Controller
                 'end_date'   => $endDate,
                 'rows'       => $rows,
             ]));
+    }
+
+    public function uang_muka_penjualan_report()
+    {
+        $this->load->model('M_Journal');
+        $selected = array_intersect_key($this->salesReportFilters(), array_flip(['customer', 'status']));
+        $showReport = $this->input->get('start_date') !== null || $this->input->get('end_date') !== null;
+        $dateError = false;
+        foreach (['start_date' => date('Y-m-01'), 'end_date' => date('Y-m-t')] as $key => $default) {
+            $value = $this->input->get($key);
+            $date = is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/D', $value)
+                ? DateTime::createFromFormat('!Y-m-d', $value) : false;
+            $valid = $date && $date->format('Y-m-d') === $value;
+            $dateError = $dateError || ($showReport && !$valid);
+            $selected[$key] = $valid ? $value : $default;
+        }
+        $dateError = $dateError || $selected['start_date'] > $selected['end_date'];
+        $customers = $this->M_Journal->salesAdvanceCustomers();
+        $data = [
+            'page_title' => 'KARISMA - UANG MUKA',
+            'selected' => $selected,
+            'filter_options' => ['customer' => $customers, 'status' => ['DRAFT' => 'Draft', 'POSTED' => 'Posted']],
+            'rows' => $showReport && !$dateError ? $this->M_Journal->salesAdvanceReport($selected) : [],
+            'show_report' => $showReport,
+            'date_error' => $dateError,
+        ];
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_penjualan_piutang/uang_muka_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    private function salesReportFilters()
+    {
+        $filters = [];
+        foreach (['customer', 'customer_class', 'salesman', 'salesman_class', 'status', 'export_status', 'serial_status'] as $key) {
+            $value = $this->input->get($key);
+            $filters[$key] = is_string($value) ? trim($value) : '';
+        }
+
+        return $filters;
     }
 
     private function _zahir_piutang_meta($jenis)
@@ -2788,8 +2832,15 @@ class C_Laporan extends CI_Controller
     {
         $this->_ensure_access();
 
+        $p1Month   = (int)$this->input->get('p1_month', true);
+        $p1Year    = (int)$this->input->get('p1_year', true);
         $startDate = trim((string)$this->input->get('start_date', true));
         $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if ($p1Month >= 1 && $p1Month <= 12 && $p1Year >= 2000 && $p1Year <= 2100) {
+            $startDate = sprintf('%04d-%02d-01', $p1Year, $p1Month);
+            $endDate   = date('Y-m-t', strtotime($startDate));
+        }
 
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
             $startDate = date('Y-m-01');
@@ -2808,6 +2859,8 @@ class C_Laporan extends CI_Controller
             'report_mode'      => 'standar',
             'start_date'       => $startDate,
             'end_date'         => $endDate,
+            'p1_month'         => (int)date('n', strtotime($startDate)),
+            'p1_year'          => (int)date('Y', strtotime($startDate)),
             'period_label'     => date('F Y', strtotime($startDate)),
             'data'             => $reportData,
             'print_time'       => date('H:i   d F, Y'),
@@ -2827,8 +2880,15 @@ class C_Laporan extends CI_Controller
     {
         $this->_ensure_access();
 
+        $p1Month   = (int)$this->input->get('p1_month', true);
+        $p1Year    = (int)$this->input->get('p1_year', true);
         $startDate = trim((string)$this->input->get('start_date', true));
         $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if ($p1Month >= 1 && $p1Month <= 12 && $p1Year >= 2000 && $p1Year <= 2100) {
+            $startDate = sprintf('%04d-%02d-01', $p1Year, $p1Month);
+            $endDate   = date('Y-m-t', strtotime($startDate));
+        }
 
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
             $startDate = date('Y-m-01');
@@ -2847,6 +2907,8 @@ class C_Laporan extends CI_Controller
             'report_mode'      => 'ytd',
             'start_date'       => $startDate,
             'end_date'         => $endDate,
+            'p1_month'         => (int)date('n', strtotime($startDate)),
+            'p1_year'          => (int)date('Y', strtotime($startDate)),
             'period_label'     => date('F Y', strtotime($startDate)),
             'data'             => $reportData,
             'print_time'       => date('H:i   d F, Y'),
@@ -2866,10 +2928,23 @@ class C_Laporan extends CI_Controller
     {
         $this->_ensure_access();
 
+        $p1Month = (int)$this->input->get('p1_month', true);
+        $p1Year  = (int)$this->input->get('p1_year', true);
+        $p2Month = (int)$this->input->get('p2_month', true);
+        $p2Year  = (int)$this->input->get('p2_year', true);
         $p1Start = trim((string)$this->input->get('p1_start', true));
         $p1End   = trim((string)$this->input->get('p1_end', true));
         $p2Start = trim((string)$this->input->get('p2_start', true));
         $p2End   = trim((string)$this->input->get('p2_end', true));
+
+        if ($p1Month >= 1 && $p1Month <= 12 && $p1Year >= 2000 && $p1Year <= 2100) {
+            $p1Start = sprintf('%04d-%02d-01', $p1Year, $p1Month);
+            $p1End   = date('Y-m-t', strtotime($p1Start));
+        }
+        if ($p2Month >= 1 && $p2Month <= 12 && $p2Year >= 2000 && $p2Year <= 2100) {
+            $p2Start = sprintf('%04d-%02d-01', $p2Year, $p2Month);
+            $p2End   = date('Y-m-t', strtotime($p2Start));
+        }
 
         // Default: Periode 1 = Bulan berjalan, Periode 2 = Bulan lalu
         if (empty($p1Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1Start)) {
@@ -2897,6 +2972,10 @@ class C_Laporan extends CI_Controller
             'p1_end'           => $p1End,
             'p2_start'         => $p2Start,
             'p2_end'           => $p2End,
+            'p1_month'         => (int)date('n', strtotime($p1Start)),
+            'p1_year'          => (int)date('Y', strtotime($p1Start)),
+            'p2_month'         => (int)date('n', strtotime($p2Start)),
+            'p2_year'          => (int)date('Y', strtotime($p2Start)),
             'p1_label'         => date('F Y', strtotime($p1Start)),
             'p2_label'         => date('F Y', strtotime($p2Start)),
             'data'             => $reportData,
@@ -2917,8 +2996,15 @@ class C_Laporan extends CI_Controller
     {
         $this->_ensure_access();
 
+        $p1Month   = (int)$this->input->get('p1_month', true);
+        $p1Year    = (int)$this->input->get('p1_year', true);
         $startDate = trim((string)$this->input->get('start_date', true));
         $endDate   = trim((string)$this->input->get('end_date', true));
+
+        if ($p1Month >= 1 && $p1Month <= 12 && $p1Year >= 2000 && $p1Year <= 2100) {
+            $startDate = sprintf('%04d-%02d-01', $p1Year, $p1Month);
+            $endDate   = date('Y-m-t', strtotime($startDate));
+        }
 
         if (empty($startDate) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
             $startDate = date('Y-m-01');
@@ -2937,6 +3023,8 @@ class C_Laporan extends CI_Controller
             'report_mode'      => 'anggaran',
             'start_date'       => $startDate,
             'end_date'         => $endDate,
+            'p1_month'         => (int)date('n', strtotime($startDate)),
+            'p1_year'          => (int)date('Y', strtotime($startDate)),
             'period_label'     => date('F Y', strtotime($startDate)),
             'data'             => $reportData,
             'print_time'       => date('H:i   d F, Y'),
@@ -2956,10 +3044,23 @@ class C_Laporan extends CI_Controller
     {
         $this->_ensure_access();
 
+        $p1Month = (int)$this->input->get('p1_month', true);
+        $p1Year  = (int)$this->input->get('p1_year', true);
+        $p2Month = (int)$this->input->get('p2_month', true);
+        $p2Year  = (int)$this->input->get('p2_year', true);
         $p1Start = trim((string)$this->input->get('p1_start', true));
         $p1End   = trim((string)$this->input->get('p1_end', true));
         $p2Start = trim((string)$this->input->get('p2_start', true));
         $p2End   = trim((string)$this->input->get('p2_end', true));
+
+        if ($p1Month >= 1 && $p1Month <= 12 && $p1Year >= 2000 && $p1Year <= 2100) {
+            $p1Start = sprintf('%04d-%02d-01', $p1Year, $p1Month);
+            $p1End   = date('Y-m-t', strtotime($p1Start));
+        }
+        if ($p2Month >= 1 && $p2Month <= 12 && $p2Year >= 2000 && $p2Year <= 2100) {
+            $p2Start = sprintf('%04d-%02d-01', $p2Year, $p2Month);
+            $p2End   = date('Y-m-t', strtotime($p2Start));
+        }
 
         if (empty($p1Start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $p1Start)) {
             $p1Start = date('Y-m-01');
@@ -3620,6 +3721,20 @@ class C_Laporan extends CI_Controller
                 'category' => 'journal',
                 'mode'     => 'general',
             ],
+            'jurnal-kas-keluar' => [
+                'slug'     => 'jurnal-kas-keluar',
+                'title'    => 'Jurnal Kas Keluar',
+                'subtitle' => 'Write Checks',
+                'category' => 'journal',
+                'mode'     => 'cash_out',
+            ],
+            'jurnal-kas-masuk' => [
+                'slug'     => 'jurnal-kas-masuk',
+                'title'    => 'Jurnal Kas Masuk',
+                'subtitle' => 'Cash Deposit',
+                'category' => 'journal',
+                'mode'     => 'cash_in',
+            ],
             'daftar-rekening' => [
                 'slug'     => 'daftar-rekening',
                 'title'    => 'Daftar Rekening',
@@ -3661,10 +3776,11 @@ class C_Laporan extends CI_Controller
         $this->load->model('M_Journal');
         $meta = $this->_zahir_buku_besar_meta($jenis);
 
-        $data['page_title']      = 'KARISMA - ' . strtoupper($meta['title']);
-        $data['report_meta']     = $meta;
-        $data['report_endpoint'] = base_url('laporan/keuangan/buku-besar-data');
-        $data['coa_options']     = $meta['category'] === 'ledger' ? $this->M_Journal->zahir_coa_options() : [];
+        $data['page_title']           = 'KARISMA - ' . strtoupper($meta['title']);
+        $data['report_meta']          = $meta;
+        $data['report_endpoint']      = base_url('laporan/keuangan/buku-besar-data');
+        $data['coa_options']          = $meta['category'] === 'ledger' ? $this->M_Journal->zahir_coa_options() : [];
+        $data['journal_type_options'] = $meta['category'] === 'journal' ? $this->M_Journal->zahir_journal_type_options() : [];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/laporan/laporan_keuangan/buku_besar_zahir_report.php', $data);
@@ -3681,10 +3797,11 @@ class C_Laporan extends CI_Controller
         $jenis      = trim((string) $this->input->get('jenis', true));
         $startDate  = trim((string) $this->input->get('start_date', true));
         $endDate    = trim((string) $this->input->get('end_date', true));
-        $idAkun     = trim((string) $this->input->get('id_akun', true));
-        $keterangan = trim((string) $this->input->get('keterangan', true));
-        $nomor      = trim((string) $this->input->get('nomor', true));
-        $search     = trim((string) $this->input->get('search', true));
+        $idAkun        = trim((string) $this->input->get('id_akun', true));
+        $idJenisJurnal = trim((string) $this->input->get('id_jenis_jurnal', true));
+        $keterangan    = trim((string) $this->input->get('keterangan', true));
+        $nomor         = trim((string) $this->input->get('nomor', true));
+        $search        = trim((string) $this->input->get('search', true));
 
         if ($startDate === '') {
             $startDate = date('Y-m-01');
@@ -3701,7 +3818,7 @@ class C_Laporan extends CI_Controller
         } elseif ($meta['category'] === 'coa') {
             $rows = $this->M_Journal->zahir_coa_list_report($search);
         } else {
-            $rows = $this->M_Journal->zahir_journal_list_report($startDate, $endDate, $meta['mode'], $keterangan, $nomor);
+            $rows = $this->M_Journal->zahir_journal_list_report($startDate, $endDate, $meta['mode'], $keterangan, $nomor, $idJenisJurnal);
         }
 
         $this->output
