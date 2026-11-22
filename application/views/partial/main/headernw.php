@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="<?= base_url('assets/plugins/ekko-lightbox/ekko-lightbox.css') ?>">
     <!-- daterange picker -->
     <link rel="stylesheet" href="<?= base_url('assets/plugins/daterangepicker/daterangepicker.css') ?>">
+    <!-- Proteksi global agar input angka (qty/harga) tidak berubah saat di-scroll -->
+    <script src="<?= base_url('assets/js/disable-number-wheel.js') ?>"></script>
 
 </head>
 

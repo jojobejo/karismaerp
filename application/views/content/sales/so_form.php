@@ -131,7 +131,7 @@ input[type=number] {
                                         </div>
                                     </div>
 
-                                    <?php if (!empty($is_super_sales)): ?>
+                                    <?php if (!empty($can_select_salesman) || !empty($is_super_sales)): ?>
                                     <div class="form-group so-form-row">
                                         <label class="so-form-label">Salesman <span class="text-danger">*</span></label>
                                         <div class="so-form-control">
@@ -498,7 +498,8 @@ input[type=number] {
 var BASE_URL       = '<?= base_url() ?>';
 var BATAS_TONASE   = <?= (float)$batas_ton ?>;
 var BATAS_KUBIKASI = <?= (float)$batas_kub ?>;
-var IS_SUPER_SALES = <?= !empty($is_super_sales) ? 'true' : 'false' ?>;
+var CAN_SELECT_SALESMAN = <?= (!empty($can_select_salesman) || !empty($is_super_sales)) ? 'true' : 'false' ?>;
+var IS_SUPER_SALES = CAN_SELECT_SALESMAN;
 
 <?php
 $edit_details_safe = [];
@@ -1611,6 +1612,12 @@ document.getElementById('gudang_id_input').addEventListener('change', function()
 /* Submit */
 var soSubmitConfirmed = false;
 document.getElementById('form-so').addEventListener('submit', function(e){
+    if (CAN_SELECT_SALESMAN && elSalesmanSelect && !String(elSalesmanSelect.value || '').trim()) {
+        e.preventDefault();
+        salesToast('warning', 'Pilih salesman terlebih dahulu.');
+        elSalesmanSelect.focus();
+        return;
+    }
     if (!document.getElementById('customer_id').value) {
         e.preventDefault();
         document.getElementById('customer_validation').style.display='block';

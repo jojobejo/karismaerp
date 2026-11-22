@@ -66,4 +66,6 @@
       });
     });
   </script>
+  <!-- Proteksi global agar input angka (qty/harga) tidak berubah saat di-scroll -->
+  <script src="<?= base_url('assets/js/disable-number-wheel.js') ?>"></script>
 </head>

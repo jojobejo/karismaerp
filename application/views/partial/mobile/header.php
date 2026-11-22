@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="<?= base_url('assets/plugins/fontawesome-free/css/all.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/plugins/select2/css/select2.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/css/mobile-erp.css') ?>">
+    <!-- Proteksi global agar input angka (qty/harga) tidak berubah saat di-scroll -->
+    <script src="<?= base_url('assets/js/disable-number-wheel.js') ?>"></script>
 </head>
 
 <body class="mobile-erp-body">

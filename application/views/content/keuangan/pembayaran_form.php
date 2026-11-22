@@ -251,8 +251,11 @@ $default_metode = '';
                                         <?php else: ?>
                                             <?php foreach ($history as $row): ?>
                                                 <?php
-                                                $is_bg_row = strtolower((string)($row['metode_pembayaran'] ?? '')) === 'bg';
-                                                $is_bg_cair = ($row['status_bg'] ?? '') === 'cair';
+                                                $status_bg_val = strtolower(trim((string)($row['status_bg'] ?? '')));
+                                                $is_bg_row = strtolower(trim((string)($row['metode_pembayaran'] ?? ''))) === 'bg'
+                                                    || in_array($status_bg_val, ['pending', 'cair'], true)
+                                                    || trim((string)($row['no_bg'] ?? '')) !== '';
+                                                $is_bg_cair = $status_bg_val === 'cair';
                                                 ?>
                                                 <tr>
                                                     <td><?= date('d/m/Y', strtotime($row['tanggal_pembayaran'])) ?></td>

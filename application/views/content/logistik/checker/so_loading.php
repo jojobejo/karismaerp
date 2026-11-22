@@ -76,9 +76,12 @@
                     </div>
                 </div>
 
-                <div class="mb-2">
+                <div class="mb-2 d-flex flex-wrap align-items-center" style="gap: 8px;">
                     <a href="<?= base_url('checker') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i>Kembali ke Activity Warehouse
+                    </a>
+                    <a href="<?= base_url('checker/so_loading/riwayat') ?>" class="btn btn-info btn-sm">
+                        <i class="fas fa-history mr-1"></i>Riwayat Loading SO
                     </a>
                 </div>
             </div>

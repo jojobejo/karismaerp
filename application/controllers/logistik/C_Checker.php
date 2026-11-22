@@ -1147,6 +1147,235 @@ class C_Checker extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    // Halaman riwayat Sales Order yang sudah diproses loading oleh checker
+    public function so_loading_riwayat()
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+
+        $has_filter_param = $this->input->get('filter') !== null
+            || $this->input->get('tanggal_dari') !== null
+            || $this->input->get('tanggal_sampai') !== null
+            || $this->input->get('kd_rute') !== null
+            || $this->input->get('status_loading') !== null
+            || $this->input->get('q') !== null;
+
+        $tanggal_dari   = trim((string)$this->input->get('tanggal_dari', true));
+        $tanggal_sampai = trim((string)$this->input->get('tanggal_sampai', true));
+        $kd_rute        = trim((string)$this->input->get('kd_rute', true));
+        $status_loading = trim((string)$this->input->get('status_loading', true));
+        $q              = trim((string)$this->input->get('q', true));
+
+        // Default tampilkan 30 hari terakhir saat halaman dibuka pertama kali
+        if (!$has_filter_param) {
+            $tanggal_dari   = date('Y-m-d', strtotime('-30 days'));
+            $tanggal_sampai = date('Y-m-d');
+        }
+
+        $has_trip_table = $this->db->field_exists('id_trip', 'tbso_sales_order')
+            && $this->db->table_exists('tb_delivery_trip');
+        $trip_select = $has_trip_table
+            ? "MAX(t.kode_trip) AS kode_trip, MAX(t.status) AS trip_status,"
+            : "NULL AS kode_trip, NULL AS trip_status,";
+        $trip_join = $has_trip_table
+            ? "LEFT JOIN tb_delivery_trip t ON t.id_trip = so.id_trip"
+            : "";
+
+        $where_clauses = [
+            "(sod.checker_loaded IN (1, 2) OR dd.kd_do IS NOT NULL)"
+        ];
+        $params = [];
+
+        if ($tanggal_dari !== '') {
+            $where_clauses[] = "DATE(so.tanggal_transaksi) >= ?";
+            $params[] = $tanggal_dari;
+        }
+        if ($tanggal_sampai !== '') {
+            $where_clauses[] = "DATE(so.tanggal_transaksi) <= ?";
+            $params[] = $tanggal_sampai;
+        }
+        if ($kd_rute !== '') {
+            $where_clauses[] = "COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?";
+            $params[] = $kd_rute;
+        }
+        if ($q !== '') {
+            $like = '%' . $q . '%';
+            if ($has_trip_table) {
+                $where_clauses[] = "(so.no_so LIKE ? OR so.customer_name LIKE ? OR c.nama_kios LIKE ? OR fd.no_faktur LIKE ? OR dd.kd_do LIKE ? OR t.kode_trip LIKE ?)";
+                array_push($params, $like, $like, $like, $like, $like, $like);
+            } else {
+                $where_clauses[] = "(so.no_so LIKE ? OR so.customer_name LIKE ? OR c.nama_kios LIKE ? OR fd.no_faktur LIKE ? OR dd.kd_do LIKE ?)";
+                array_push($params, $like, $like, $like, $like, $like);
+            }
+        }
+
+        $where_sql = implode(' AND ', $where_clauses);
+
+        $having_sql = "";
+        if ($status_loading === 'sudah_do') {
+            $having_sql = "HAVING COUNT(DISTINCT dd.kd_do) > 0";
+        } elseif ($status_loading === 'menunggu_do') {
+            $having_sql = "HAVING COUNT(DISTINCT dd.kd_do) = 0 AND SUM(CASE WHEN sod.checker_loaded = 2 THEN 1 ELSE 0 END) = 0";
+        } elseif ($status_loading === 'ada_ditolak') {
+            $having_sql = "HAVING SUM(CASE WHEN sod.checker_loaded = 2 THEN 1 ELSE 0 END) > 0";
+        }
+
+        $rows = $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.customer_name,
+                so.status AS so_status,
+                MAX(c.nama_kios) AS nama_kios,
+                COALESCE(NULLIF(so.kd_rute, ''), MAX(c.kd_rute), 'TANPA_RUTE') AS kd_rute,
+                MAX(COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute')) AS nama_rute,
+                {$trip_select}
+                COUNT(DISTINCT sod.id) AS total_item,
+                COUNT(DISTINCT CASE WHEN (sod.checker_loaded = 1 OR dd.kd_do IS NOT NULL) THEN sod.id END) AS item_dimuat,
+                COUNT(DISTINCT CASE WHEN sod.checker_loaded = 2 THEN sod.id END) AS item_tidak_dimuat,
+                GROUP_CONCAT(DISTINCT fd.no_faktur ORDER BY fd.no_faktur SEPARATOR ', ') AS no_faktur_list,
+                GROUP_CONCAT(DISTINCT dd.kd_do ORDER BY dd.kd_do SEPARATOR ', ') AS kd_do_list
+            FROM tbso_sales_order so
+            JOIN tbso_sales_order_detail sod ON sod.id_so = so.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            {$trip_join}
+            LEFT JOIN tbso_faktur_detail fd ON fd.id_so_detail = sod.id
+            LEFT JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+            WHERE {$where_sql}
+            GROUP BY so.id_so, so.no_so, so.tanggal_transaksi, so.customer_name, so.status, so.kd_rute
+            {$having_sql}
+            ORDER BY so.tanggal_transaksi DESC, so.id_so DESC
+            LIMIT 500
+        ", $params)->result_array();
+
+        // Ambil daftar rute untuk dropdown filter
+        $route_options = $this->db->query("
+            SELECT DISTINCT
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                MAX(COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute')) AS nama_rute
+            FROM tbso_sales_order so
+            JOIN tbso_sales_order_detail sod ON sod.id_so = so.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN tbso_faktur_detail fd ON fd.id_so_detail = sod.id
+            LEFT JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+            WHERE sod.checker_loaded IN (1, 2) OR dd.kd_do IS NOT NULL
+            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
+            ORDER BY kd_rute ASC
+        ")->result_array();
+
+        // Hitung ringkasan statistik
+        $summary = [
+            'total_so'     => count($rows),
+            'sudah_do'     => 0,
+            'menunggu_do'  => 0,
+            'ada_ditolak'  => 0,
+        ];
+        foreach ($rows as $row) {
+            if ((int)$row['item_tidak_dimuat'] > 0) {
+                $summary['ada_ditolak']++;
+            } elseif (!empty($row['kd_do_list'])) {
+                $summary['sudah_do']++;
+            } else {
+                $summary['menunggu_do']++;
+            }
+        }
+
+        $data['page_title']     = 'Riwayat Loading SO - Checker';
+        $data['rows']           = $rows;
+        $data['route_options']  = $route_options;
+        $data['summary']        = $summary;
+        $data['role']           = $this->role();
+        $data['filter']         = [
+            'tanggal_dari'   => $tanggal_dari,
+            'tanggal_sampai' => $tanggal_sampai,
+            'kd_rute'        => $kd_rute,
+            'status_loading' => $status_loading,
+            'q'              => $q,
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/so_loading_riwayat.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // Endpoint AJAX untuk mengambil detail item SO pada halaman riwayat loading
+    public function so_loading_riwayat_detail($id_so)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!$this->canView()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak.']);
+            exit;
+        }
+
+        $id_so = (int)$id_so;
+        if ($id_so <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID Sales Order tidak valid.']);
+            exit;
+        }
+
+        $has_trip_table = $this->db->field_exists('id_trip', 'tbso_sales_order')
+            && $this->db->table_exists('tb_delivery_trip');
+        $trip_select = $has_trip_table ? "t.kode_trip," : "NULL AS kode_trip,";
+        $trip_join   = $has_trip_table ? "LEFT JOIN tb_delivery_trip t ON t.id_trip = so.id_trip" : "";
+
+        $header = $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.customer_name,
+                so.status AS so_status,
+                c.nama_kios,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                {$trip_select}
+                so.create_by
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            {$trip_join}
+            WHERE so.id_so = ?
+            LIMIT 1
+        ", [$id_so])->row_array();
+
+        if (!$header) {
+            echo json_encode(['status' => false, 'message' => 'Sales Order tidak ditemukan.']);
+            exit;
+        }
+
+        $items = $this->db->query("
+            SELECT
+                sod.id,
+                sod.kd_barang,
+                COALESCE(b.nama_barang, sod.kd_barang) AS nama_barang,
+                COALESCE(b.satuan, 'PCS') AS satuan,
+                COALESCE(sod.qty_siap_faktur, sod.qty, 0) AS qty_siap,
+                COALESCE(sod.checker_loaded, 0) AS checker_loaded,
+                sod.qty_checker_loaded,
+                COALESCE(sod.qty_tidak_terkirim, 0) AS qty_tidak_terkirim,
+                GROUP_CONCAT(DISTINCT fd.no_faktur ORDER BY fd.no_faktur SEPARATOR ', ') AS no_faktur_list,
+                GROUP_CONCAT(DISTINCT dd.kd_do ORDER BY dd.kd_do SEPARATOR ', ') AS kd_do_list
+            FROM tbso_sales_order_detail sod
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sod.kd_barang
+            LEFT JOIN tbso_faktur_detail fd ON fd.id_so_detail = sod.id
+            LEFT JOIN tb_detail_do dd ON dd.kd_faktur = fd.no_faktur
+            WHERE sod.id_so = ?
+            GROUP BY sod.id, sod.kd_barang, b.nama_barang, b.satuan, sod.qty_siap_faktur, sod.qty, sod.checker_loaded, sod.qty_checker_loaded, sod.qty_tidak_terkirim
+            ORDER BY sod.id ASC
+        ", [$id_so])->result_array();
+
+        echo json_encode([
+            'status' => true,
+            'header' => $header,
+            'items'  => $items,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     public function so_loading_detail($kd_rute)
     {
         if (!$this->canView()) { show_error('Akses ditolak', 403); }

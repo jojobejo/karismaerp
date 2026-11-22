@@ -615,8 +615,12 @@ $(function () {
 
                     let rowsHtml = '';
                     history.forEach(function(item) {
-                        let isBg = (item.metode_pembayaran || '').toLowerCase() === 'bg';
-                        let isBgCair = (item.status_bg || '') === 'cair';
+                        let statusBgVal = (item.status_bg || '').toLowerCase();
+                        let isBg = (item.metode_pembayaran || '').toLowerCase() === 'bg'
+                            || statusBgVal === 'pending'
+                            || statusBgVal === 'cair'
+                            || Boolean((item.no_bg || '').trim());
+                        let isBgCair = statusBgVal === 'cair';
                         let statusKasir = item.status_kasir || '';
                         let statusPosting = (item.status || 'POSTED').toUpperCase();
                         let isDraftOrUnpost = (statusPosting === 'DRAFT' || statusPosting === 'UNPOST');

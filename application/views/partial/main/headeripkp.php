@@ -44,4 +44,6 @@
   <!-- CSS Custom Karisma -->
   <link rel="stylesheet" href="<?php echo base_url("assets/ipkp.css") ?>">
   <link rel="stylesheet" href="<?= base_url('assets/dist/css/karisma-custom.css') ?>">
+  <!-- Proteksi global agar input angka (qty/harga) tidak berubah saat di-scroll -->
+  <script src="<?= base_url('assets/js/disable-number-wheel.js') ?>"></script>
 </head>

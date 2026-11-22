@@ -272,8 +272,13 @@ $(document).ready(function () {
                             var bayar = parseFloat(item.jumlah_pembayaran || 0);
                             
                             var statusBgLabel = '-';
-                            if (item.metode_pembayaran && item.metode_pembayaran.toLowerCase() === 'bg') {
-                                if (item.status_bg === 'cair') {
+                            var statusBgVal = (item.status_bg || '').toLowerCase();
+                            var isBgItem = (item.metode_pembayaran && item.metode_pembayaran.toLowerCase() === 'bg')
+                                || statusBgVal === 'pending'
+                                || statusBgVal === 'cair'
+                                || Boolean((item.no_bg || '').trim());
+                            if (isBgItem) {
+                                if (statusBgVal === 'cair') {
                                     statusBgLabel = '<span class="badge badge-success">Sudah Cair</span>';
                                 } else {
                                     statusBgLabel = '<span class="badge badge-warning">Belum Cair</span>';

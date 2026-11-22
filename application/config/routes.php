@@ -924,6 +924,8 @@ $route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
 // LOGISTIK - Checker
 $route['checker']                                   = 'logistik/C_Checker/index';
 $route['checker/so_loading']                        = 'logistik/C_Checker/so_loading';
+$route['checker/so_loading/riwayat']                = 'logistik/C_Checker/so_loading_riwayat';
+$route['checker/so_loading/riwayat_detail/(:num)']  = 'logistik/C_Checker/so_loading_riwayat_detail/$1';
 $route['checker/so_loading/detail/(:any)']          = 'logistik/C_Checker/so_loading_detail/$1';
 $route['checker/so_loading/start']                  = 'logistik/C_Checker/start_so_loading_rute';
 $route['checker/so_loading/cancel']                 = 'logistik/C_Checker/cancel_so_loading_rute';
@@ -1045,6 +1047,8 @@ $route['sales_order/admin_sc/update_harga_faktur/(:any)'] = 'sales/C_SalesOrder/
 $route['admin_sc']                                  = 'sales/C_SalesOrder/admin_sc';
 $route['sales_order/faktur_rute']                   = 'sales/C_SalesOrder/faktur_rute';
 $route['sales_order/so_rute']                       = 'sales/C_SalesOrder/so_rute';
+$route['sales_order/riwayat_loading']               = 'sales/C_SalesOrder/riwayat_loading';
+$route['sales_order/riwayat_loading_detail/(:num)'] = 'sales/C_SalesOrder/riwayat_loading_detail/$1';
 $route['sales_order/bulk_update_so_rute']           = 'sales/C_SalesOrder/bulk_update_so_rute';
 $route['sales_order/reset_so_rute']                 = 'sales/C_SalesOrder/reset_so_rute';
 $route['sales_order/confirm_so_rute_loading']       = 'sales/C_SalesOrder/confirm_so_rute_loading';

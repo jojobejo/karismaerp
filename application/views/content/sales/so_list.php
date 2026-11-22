@@ -144,6 +144,11 @@
                         <i class="fas fa-map-marked-alt"></i> SO per Rute
                     </a>
                 </div>
+                <div class="col-auto">
+                    <a href="<?= base_url('sales_order/riwayat_loading') ?>" class="btn btn-secondary">
+                        <i class="fas fa-truck-loading"></i> Riwayat SO Loading
+                    </a>
+                </div>
                 <?php if ($can_approve_so): ?>
                 <div class="col-auto" id="colPanelCancelSo" style="<?= $initial_cancel_so_count > 0 ? '' : 'display: none;' ?>">
                     <button type="button" class="btn btn-danger font-weight-bold btn-shake-notification" id="btnBukaPanelCancelSo" style="box-shadow: 0 0 12px rgba(220, 53, 69, 0.55);">
