@@ -266,7 +266,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                             $parts[] = (int)$qty_box . ' box';
                                                         }
                                                         if ($qty_pcs > 0) {
-                                                            $parts[] = (int)$qty_pcs . ' ' . $item['satuan'];
+                                                            $parts[] = (int)$qty_pcs . ' ' . htmlspecialchars($item['satuan']);
                                                         }
                                                         
                                                         if (empty($parts)) {
@@ -275,7 +275,9 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                             echo implode(' + ', $parts);
                                                         }
                                                     } else {
-                                                        echo number_format($qty, 2);
+                                                        // Format angka tanpa desimal berlebih serta tampilkan satuan agar selaras
+                                                        $qty_fmt = rtrim(rtrim(number_format($qty, 3, '.', ''), '0'), '.');
+                                                        echo $qty_fmt . ' ' . htmlspecialchars($item['satuan']);
                                                     }
                                                     ?>
                                                 </td>
@@ -310,7 +312,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                                            style="<?= $is_pcs_disabled ? 'background-color: #e9ecef; cursor: not-allowed; color: #6c757d;' : '' ?>"
                                                                            title="<?= $is_pcs_disabled ? 'Barang ini hanya satuan box utuh (tidak ada eceran/pcs)' : '' ?>"
                                                                            <?= (!$can_operate_loading || $is_pcs_disabled) ? 'disabled readonly tabindex="-1"' : '' ?>>
-                                                                    <div class="input-group-append"><span class="input-group-text">pcs</span></div>
+                                                                    <div class="input-group-append"><span class="input-group-text"><?= htmlspecialchars($item['satuan'] ?: 'pcs') ?></span></div>
                                                                 </div>
                                                             </div>
                                                         <?php else: ?>
@@ -329,7 +331,7 @@ $preparation_completed = !empty($activity['waktu_selesai_siapkan']);
                                                     </div>
                                                     <small class="text-muted qty-loading-info" id="qty-info-<?= (int)$item['id'] ?>">
                                                         <?php if ($isi_item > 1): ?>
-                                                            Maks. <?= (int)$qty_box_max ?> box<?= fmod($qty_maks_muat, $isi_item) > 0 ? ' + ' . rtrim(rtrim(number_format(fmod($qty_maks_muat, $isi_item), 3, ',', ''), '0'), ',') . ' pcs' : '' ?>
+                                                            Maks. <?= (int)$qty_box_max ?> box<?= fmod($qty_maks_muat, $isi_item) > 0 ? ' + ' . rtrim(rtrim(number_format(fmod($qty_maks_muat, $isi_item), 3, ',', ''), '0'), ',') . ' ' . htmlspecialchars($item['satuan'] ?: 'pcs') : '' ?>
                                                         <?php else: ?>
                                                             Maks. <?= rtrim(rtrim(number_format($qty_maks_muat, 3, ',', ''), '0'), ',') ?> <?= htmlspecialchars($item['satuan']) ?>
                                                         <?php endif; ?>

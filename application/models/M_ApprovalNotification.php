@@ -206,11 +206,14 @@ class M_ApprovalNotification extends CI_Model
     {
         $items = [];
         $jobdesk = strtoupper(trim((string)($user['jobdesk'] ?? '')));
+        $username = strtolower(trim((string)($user['username'] ?? '')));
         $lv = (int)($user['lv'] ?? 1);
         $isSuper = ($lv >= 99 || in_array($jobdesk, ['ADMIN', 'SUPER ADMIN', 'SUPERADMIN'], true));
+        $isDirectorAccount = in_array($username, ['direktur1', 'direktur2', 'direktur3'], true);
 
         // 4A. Pending SPR (tbrp_spr_header)
         if ($this->db->table_exists('tbrp_spr_header')) {
+            $hasAdmpnjSetting = $this->_user_has_retur_approval_setting($user, 'admpnj');
             $sprRules = [
                 'diajukan' => [
                     'roles' => ['KOORDINATOR', 'KOOR', 'MANAGERSC', 'MNGSC', 'MANAGER SC', 'MANAGER SALES COUNTER'],
@@ -223,8 +226,8 @@ class M_ApprovalNotification extends CI_Model
                     'url'   => 'retur_penjualan/kadepub/verifikasi/',
                 ],
                 'diverifikasi_koor' => [
-                    'roles' => ['ADMIN STOCK', 'ADMSTOCK'],
-                    'label' => 'Pengecekan SPR (Admin Stock)',
+                    'roles' => ['ADMPNJ', 'ADMIN PENJUALAN'],
+                    'label' => 'Pengecekan SPR (Admin Penjualan)',
                     'url'   => 'retur_penjualan/admretur/cek/',
                 ],
                 'dicek_admretur' => [
@@ -232,16 +235,12 @@ class M_ApprovalNotification extends CI_Model
                     'label' => 'Persetujuan SPR (Kadep SC)',
                     'url'   => 'retur_penjualan/kadep_sc/approve/',
                 ],
-                'disetujui_kadep' => [
-                    'roles' => ['LOGISTIC', 'LOGISTIK', 'MT KADEP LOGISTIK', 'ADMIN GUDANG', 'MT ADMIN LOGISTIK', 'ADMLPB', 'ADMINLOGLPB', 'ADMIN LPB & GUDANG BENIH'],
-                    'label' => 'Proses SPR menjadi Retur (Logistik)',
-                    'url'   => 'retur_penjualan/retur/buat/',
-                ],
             ];
 
             $sprStatuses = [];
             foreach ($sprRules as $st => $rule) {
-                if ($isSuper || in_array($jobdesk, $rule['roles'], true)) {
+                if ($isSuper || in_array($jobdesk, $rule['roles'], true)
+                    || ($st === 'diverifikasi_koor' && ($hasAdmpnjSetting || strtolower(trim((string)($user['username'] ?? ''))) === 'quri'))) {
                     $sprStatuses[] = $st;
                 }
             }
@@ -320,11 +319,16 @@ class M_ApprovalNotification extends CI_Model
                     'label' => 'Approval Retur (Direktur Operasional)',
                     'url'   => 'retur_penjualan/retur/detail/',
                 ],
+                'retur_menunggu_dirut' => [
+                    'roles' => ['DIREKTURUTAMA', 'DIREKSI', 'DIREKTUR', 'DIREKTUR UTAMA'],
+                    'label' => 'Approval Retur (Direktur Utama)',
+                    'url'   => 'retur_penjualan/retur/detail/',
+                ],
             ];
 
             $returStatuses = [];
             foreach ($returRules as $st => $rule) {
-                if ($isSuper || in_array($jobdesk, $rule['roles'], true)) {
+                if ($isSuper || in_array($jobdesk, $rule['roles'], true) || $isDirectorAccount) {
                     $returStatuses[] = $st;
                 }
             }
@@ -356,6 +360,33 @@ class M_ApprovalNotification extends CI_Model
         }
 
         return $items;
+    }
+
+    private function _user_has_retur_approval_setting(array $user, $roleKey)
+    {
+        if (!$this->db->table_exists('tb_retur_approval_setting')) {
+            return false;
+        }
+
+        $userId = (int)($user['id'] ?? 0);
+        $username = strtolower(trim((string)($user['username'] ?? '')));
+        if ($userId <= 0 && $username === '') {
+            return false;
+        }
+
+        $this->db->from('tb_retur_approval_setting')->where('role_key', strtolower(trim((string)$roleKey)));
+        $this->db->group_start();
+        if ($userId > 0) {
+            $this->db->where('user_id', $userId);
+            if ($username !== '') {
+                $this->db->or_where('username', $username);
+            }
+        } else {
+            $this->db->where('username', $username);
+        }
+        $this->db->group_end();
+
+        return $this->db->count_all_results() > 0;
     }
 }
 

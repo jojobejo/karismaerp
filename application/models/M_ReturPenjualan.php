@@ -1169,12 +1169,12 @@ class M_ReturPenjualan extends CI_Model
                 'description' => 'Verifikasi khusus SPR produk unit bisnis (jagung/benih).',
                 'default'     => 'Jobdesk: KADEPUB, KEPALA UNIT BISNIS, MT ABM SEED JATIM TIMUR',
             ],
-            'admstock' => [
+            'admpnj' => [
                 'group'       => 'Alur SPR (Surat Perintah Retur)',
                 'step'        => '3',
-                'label'       => 'Admin Stock',
-                'description' => 'Pengecekan stok / SPR setelah diverifikasi Manager SC.',
-                'default'     => 'Jobdesk: ADMSTOCK, ADMIN STOCK',
+                'label'       => 'Admin Penjualan',
+                'description' => 'Pengecekan SPR setelah diverifikasi Manager SC.',
+                'default'     => 'Jobdesk: ADMPNJ, ADMIN PENJUALAN / Username: quri (Quri Arifatma Sari)',
             ],
             'kadep_sc' => [
                 'group'       => 'Alur SPR (Surat Perintah Retur)',
@@ -1223,16 +1223,16 @@ class M_ReturPenjualan extends CI_Model
             'dirop' => [
                 'group'       => 'Alur Dokumen Retur & Keuangan',
                 'step'        => '10',
-                'label'       => 'Direktur Operasional',
-                'description' => 'Approval dokumen retur di tahap Direktur Operasional.',
-                'default'     => 'Jobdesk: DIREKTUROP, MT DIREKTUR OPERASIONAL',
+                'label'       => 'Direktur',
+                'description' => 'Approval final dokumen retur. Cukup satu direktur yang menyetujui agar proses approval selesai.',
+                'default'     => 'Jobdesk: DIREKTUROP, MT DIREKTUR OPERASIONAL / Username: direktur1, direktur2, direktur3',
             ],
             'dirut' => [
                 'group'       => 'Alur Dokumen Retur & Keuangan',
-                'step'        => '11',
-                'label'       => 'Direktur Utama',
-                'description' => 'Approval dokumen retur di tahap Direktur Utama.',
-                'default'     => 'Jobdesk: DIREKTURUTAMA, DIREKSI, DIREKTUR, DIREKTUR UTAMA',
+                'step'        => '11 (alur lama)',
+                'label'       => 'Direktur Utama (kompatibilitas data lama)',
+                'description' => 'Kompatibilitas untuk retur lama yang masih menunggu status Direktur Utama; alur baru cukup satu approval direktur.',
+                'default'     => 'Jobdesk: DIREKTURUTAMA, DIREKSI, DIREKTUR, DIREKTUR UTAMA / Username: direktur1, direktur2, direktur3',
             ],
             'collection' => [
                 'group'       => 'Alur Dokumen Retur & Keuangan',
@@ -1314,7 +1314,7 @@ class M_ReturPenjualan extends CI_Model
 
     /**
      * Simpan konfigurasi approval dinamis (transaksional).
-     * $roleUsersMap: ['koor_sc' => [12, 15], 'admstock' => [40], ...]
+     * $roleUsersMap: ['koor_sc' => [12, 15], 'admpnj' => [41], ...]
      */
     public function save_approval_settings(array $roleUsersMap, $savedBy = 'ADMIN')
     {

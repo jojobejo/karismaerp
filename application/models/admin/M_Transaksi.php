@@ -1324,11 +1324,12 @@ class M_Transaksi extends CI_Model
                     $this->_delete_old_journals('LOGISTIK', 'LPB_FINAL', (string)$lpb['id_lpb'], 'GOODS_RECEIPT-LPB-' . $lpb['id_lpb']);
 
                     // Kembalikan status LPB ke draft (status_lpb = 0)
+                    $updateLpb = ['status_lpb' => 0];
+                    if ($this->db->field_exists('updated_at', 'tb_lpb')) {
+                        $updateLpb['updated_at'] = $now;
+                    }
                     $this->db->where('id_lpb', (int)$lpb['id_lpb'])
-                        ->update('tb_lpb', [
-                            'status_lpb' => 0,
-                            'updated_at' => $now,
-                        ]);
+                        ->update('tb_lpb', $updateLpb);
                     break;
 
                 case 'pembayaran_customer':

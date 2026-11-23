@@ -51,8 +51,9 @@
                 $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
                 $is_mngacc      = in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','ADMIN']);
                 $is_mngse       = in_array($jobdesk, ['MANAGERSE','MANAGER SALES EXECUTIVE','ADMIN']);
-                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','MT DIREKTUR OPERASIONAL','ADMIN']);
-                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','DIREKSI','ADMIN']);
+                $is_director_account = in_array(strtolower((string)($user['username'] ?? '')), ['direktur1', 'direktur2', 'direktur3'], true);
+                $is_dirop       = $is_director_account || in_array($jobdesk, ['DIREKTUROP','MT DIREKTUR OPERASIONAL','ADMIN']);
+                $is_dirut       = $is_director_account || in_array($jobdesk, ['DIREKTURUTAMA','DIREKSI','DIREKTUR','DIREKTUR UTAMA','ADMIN']);
                 $is_kadepub     = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
                 ?>
                 <div class="row mb-3">
@@ -106,8 +107,8 @@
                                             'retur_menunggu_mngsc'  => 'Menunggu Manager SC',
                                             'retur_menunggu_mngse'   => 'Menunggu Manager SE',
                                             'retur_menunggu_kadepsc' => 'Menunggu Kadep SC',
-                                            'retur_menunggu_dirop'   => 'Menunggu Dirop',
-                                            'retur_menunggu_dirut'   => 'Menunggu Dirut',
+                                            'retur_menunggu_dirop'   => 'Menunggu Direktur',
+                                            'retur_menunggu_dirut'   => 'Menunggu Direktur',
                                             'menunggu_collection'    => 'Menunggu Collection',
                                             'menunggu_kasir'         => 'Menunggu Kasir',
                                             'selesai'                => 'Selesai',

@@ -566,9 +566,51 @@ class C_SalesOrder extends CI_Controller
             || $lv >= 99;
     }
 
-    private function _getFakturUserPrefix()
+    private function _getFakturUserPrefix($userIdentity = null)
     {
         $this->_ensureFakturPrefixColumn();
+
+        $userIdentity = trim((string)$userIdentity);
+        if ($userIdentity !== '') {
+            $creator = null;
+            $creator_table = '';
+
+            if ($this->db->table_exists('tb_karyawan') && $this->db->field_exists('faktur_prefix', 'tb_karyawan')) {
+                $creator = $this->db->query(
+                    "SELECT id, faktur_prefix FROM tb_karyawan
+                     WHERE LOWER(TRIM(username)) = LOWER(?) OR LOWER(TRIM(nm_karyawan)) = LOWER(?)
+                     ORDER BY CASE WHEN status_karyawan = 'AKTIF' THEN 0 ELSE 1 END, id ASC LIMIT 1",
+                    [$userIdentity, $userIdentity]
+                )->row_array();
+                if ($creator) {
+                    $creator_table = 'tb_karyawan';
+                }
+            }
+
+            if (!$creator) {
+                $creator = $this->db->query(
+                    "SELECT id, faktur_prefix FROM tb_users
+                     WHERE LOWER(TRIM(username)) = LOWER(?) OR LOWER(TRIM(nama_lngkp)) = LOWER(?)
+                     ORDER BY id ASC LIMIT 1",
+                    [$userIdentity, $userIdentity]
+                )->row_array();
+                if ($creator) {
+                    $creator_table = 'tb_users';
+                }
+            }
+
+            if (!$creator) {
+                return 'X';
+            }
+
+            $prefix = $this->_normalizeFakturPrefix($creator['faktur_prefix'] ?? '');
+            if ($prefix === '' || $prefix === 'K') {
+                $prefix = $this->_getAvailableFakturPrefix('X', $creator['id'], $creator_table);
+                $this->db->where('id', $creator['id'])->update($creator_table, ['faktur_prefix' => $prefix]);
+            }
+
+            return $prefix;
+        }
 
         $current_id = $this->session->userdata('id_karyawan')
             ?? $this->session->userdata('id')
@@ -614,7 +656,7 @@ class C_SalesOrder extends CI_Controller
 
         $saved_prefix = $this->_normalizeFakturPrefix($current_user['faktur_prefix'] ?? '');
         if ($saved_prefix !== '') {
-            return $saved_prefix;
+            return $saved_prefix === 'K' ? 'X' : $saved_prefix;
         }
 
         $legacy_prefix = $this->_numberToFakturPrefix($index + 1);
@@ -910,36 +952,49 @@ class C_SalesOrder extends CI_Controller
         return preg_replace('/[^A-Z]/', '', strtoupper((string)$prefix));
     }
 
-    private function _getAvailableFakturPrefix($preferred_prefix, $current_user_id)
+    private function _getAvailableFakturPrefix($preferred_prefix, $current_user_id, $current_table = 'tb_users')
     {
         $preferred_prefix = $this->_normalizeFakturPrefix($preferred_prefix);
         if ($preferred_prefix === '') {
             $preferred_prefix = 'X';
         }
 
-        if (!$this->_isFakturPrefixUsedByOtherUser($preferred_prefix, $current_user_id)) {
+        // Prefix K dicadangkan khusus untuk faktur gudang konsinyasi.
+        if ($preferred_prefix !== 'K' && !$this->_isFakturPrefixUsedByOtherUser($preferred_prefix, $current_user_id, $current_table)) {
             return $preferred_prefix;
         }
 
         $number = 1;
         do {
             $candidate = $this->_numberToFakturPrefix($number++);
-        } while ($this->_isFakturPrefixUsedByOtherUser($candidate, $current_user_id));
+        } while ($candidate === 'K' || $this->_isFakturPrefixUsedByOtherUser($candidate, $current_user_id, $current_table));
 
         return $candidate;
     }
 
-    private function _isFakturPrefixUsedByOtherUser($prefix, $current_user_id)
+    private function _isFakturPrefixUsedByOtherUser($prefix, $current_user_id, $current_table = 'tb_users')
     {
         $prefix = $this->_normalizeFakturPrefix($prefix);
         if ($prefix === '') {
             return false;
         }
 
-        return $this->db
-            ->where('faktur_prefix', $prefix)
-            ->where('id !=', $current_user_id)
-            ->count_all_results('tb_users') > 0;
+        $this->db->where('faktur_prefix', $prefix);
+        if ($current_table === 'tb_users' && $current_user_id) {
+            $this->db->where('id !=', $current_user_id);
+        }
+        if ($this->db->count_all_results('tb_users') > 0) {
+            return true;
+        }
+
+        if (!$this->db->table_exists('tb_karyawan') || !$this->db->field_exists('faktur_prefix', 'tb_karyawan')) {
+            return false;
+        }
+        $this->db->where('faktur_prefix', $prefix);
+        if ($current_table === 'tb_karyawan' && $current_user_id) {
+            $this->db->where('id !=', $current_user_id);
+        }
+        return $this->db->count_all_results('tb_karyawan') > 0;
     }
 
     private function _findUserPrefixIndex(array $users, $current_id, $current_username, $current_name)
@@ -2583,7 +2638,7 @@ class C_SalesOrder extends CI_Controller
             // Faktur Z Induk nominal aslinya tetap utuh (potongan 20% baru diterapkan saat dipecah menjadi Faktur H)
             return $item;
         }, array_values($items_outstanding));
-        $faktur_prefix             = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix()));
+        $faktur_prefix             = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : ($is_faktur_z ? 'Z' : $this->_getFakturUserPrefix($so['create_by'] ?? '')));
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
@@ -2688,7 +2743,7 @@ class C_SalesOrder extends CI_Controller
 
         $is_test_market = !empty($so['is_test_market']);
         $is_konsinyasi = $this->M_SalesOrder->is_gudang_konsinyasi($so['gudang_id'] ?? null);
-        $faktur_prefix = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix()));
+        $faktur_prefix = $is_test_market ? 'T' : ($is_konsinyasi ? 'K' : (!empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix($so['create_by'] ?? '')));
         $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
         $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
         $no_faktur = $posted_no_faktur;

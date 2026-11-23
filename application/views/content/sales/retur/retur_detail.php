@@ -83,8 +83,9 @@ if (!function_exists('hitung_durasi')) {
                 $is_kadep = in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
                 $is_mngacc      = in_array($jobdesk, ['MANAGERACC','MT MANAGER ACCOUNTING & TAX','ADMIN']);
                 $is_mngse       = in_array($jobdesk, ['MANAGERSE','MANAGER SALES EXECUTIVE','ADMIN']);
-                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','MT DIREKTUR OPERASIONAL','ADMIN']);
-                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','DIREKSI','ADMIN']);
+                $is_director_account = in_array(strtolower((string)($user['username'] ?? '')), ['direktur1', 'direktur2', 'direktur3'], true);
+                $is_dirop       = $is_director_account || in_array($jobdesk, ['DIREKTUROP','MT DIREKTUR OPERASIONAL','ADMIN']);
+                $is_dirut       = $is_director_account || in_array($jobdesk, ['DIREKTURUTAMA','DIREKSI','DIREKTUR','DIREKTUR UTAMA','ADMIN']);
                 $is_kadepub     = in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
                 ?>
 
@@ -114,8 +115,8 @@ if (!function_exists('hitung_durasi')) {
                                     'retur_menunggu_mngsc'  => ['info',    'Menunggu Manager SC'],
                                     'retur_menunggu_mngse'   => ['info',    'Menunggu Manager SE'],
                                     'retur_menunggu_kadepsc' => ['info',    'Menunggu Kadep SC'],
-                                    'retur_menunggu_dirop'   => ['info',    'Menunggu Dirop'],
-                                    'retur_menunggu_dirut'   => ['info',    'Menunggu Dirut'],
+                                    'retur_menunggu_dirop'   => ['info',    'Menunggu Direktur'],
+                                    'retur_menunggu_dirut'   => ['info',    'Menunggu Direktur'],
                                     'menunggu_verifikasi' => ['warning', 'Menunggu Admin Retur'],
                                     'menunggu_collection' => ['info',    'Menunggu Collection'],
                                     'menunggu_kasir'      => ['primary', 'Menunggu Kasir'],
@@ -399,23 +400,13 @@ if (!function_exists('hitung_durasi')) {
                                 ];
 
                                 $steps_retur[] = [
-                                    'label' => 'Persetujuan Direktur Operasional',
-                                    'icon' => 'user-cog',
+                                    'label' => 'Persetujuan Direktur',
+                                    'icon' => 'user-check',
                                     'done_statuses' => ['retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
                                     'by' => $retur['dirop_by_retur'] ?? null,
                                     'at' => $retur['dirop_at_retur'] ?? null,
                                     'note' => $retur['catatan_dirop_retur'] ?? null,
                                     'prev_at' => 'kadepsc_at_retur'
-                                ];
-
-                                $steps_retur[] = [
-                                    'label' => 'Persetujuan Direktur Utama',
-                                    'icon' => 'user-check',
-                                    'done_statuses' => ['menunggu_collection', 'menunggu_kasir', 'selesai'],
-                                    'by' => $retur['dirut_by_retur'] ?? null,
-                                    'at' => $retur['dirut_at_retur'] ?? null,
-                                    'note' => $retur['catatan_dirut_retur'] ?? null,
-                                    'prev_at' => 'dirop_at_retur'
                                 ];
 
                                 $rejected_by = '';

@@ -64,14 +64,13 @@
                     $can_manage_set = !empty($rf['can_manage_setting']);
                     $is_sc          = array_key_exists('is_sc', $rf) ? !empty($rf['is_sc']) : in_array($jobdesk, ['SC','SALESCOUNTER','SALES COUNTER','MT SALES COUNTER','ADMIN']);
                     $is_koor        = array_key_exists('is_koor', $rf) ? !empty($rf['is_koor']) : in_array($jobdesk, ['MANAGERSC','MANAGER SALES COUNTER','ADMINSC','ADMIN SALES COUNTER','ADMIN']);
-                    $is_admstock    = array_key_exists('is_admstock', $rf) ? !empty($rf['is_admstock']) : in_array($jobdesk, ['ADMSTOCK','ADMIN STOCK','ADMIN']);
+                    $is_admpnj      = array_key_exists('is_admpnj', $rf) ? !empty($rf['is_admpnj']) : in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
                     $is_admretur    = array_key_exists('is_admretur', $rf) ? !empty($rf['is_admretur']) : in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
                     $is_kadep       = array_key_exists('is_kadep', $rf) ? !empty($rf['is_kadep']) : in_array($jobdesk, ['KADEPSC','MT KADEP KEUANGAN & SALES','KADEP','ADMIN','MANAGER','KADEPUB','KEPALA UNIT BISNIS']);
                     $is_logistik    = array_key_exists('is_logistik', $rf) ? !empty($rf['is_logistik']) : in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','MT KADEP LOGISTIK','MT ADMIN LOGISTIK','ADMIN']);
                     $is_collection  = array_key_exists('is_collection', $rf) ? !empty($rf['is_collection']) : in_array($jobdesk, ['COLLECTION','KOLEKTOR','TEAM COLLECTION','ADMIN']);
                     $is_kasir       = array_key_exists('is_kasir', $rf) ? !empty($rf['is_kasir']) : in_array($jobdesk, ['KASIR','ADMIN']);
                     $is_admlpb      = array_key_exists('is_admlpb', $rf) ? !empty($rf['is_admlpb']) : (in_array($jobdesk, ['ADMLPB','ADMINLOGLPB','ADMIN LPB & GUDANG BENIH','LOGISTIK','MT KADEP LOGISTIK','ADMIN'], true) || in_array(strtolower((string)($user['username'] ?? '')), ['admlpb', 'yunika'], true));
-                    $is_admpnj      = $is_admstock || in_array($jobdesk, ['ADMPNJ','ADMIN PENJUALAN','ADMIN PRICELIST & RETUR PENJUALAN','ADMIN']);
                     $is_kadepub     = array_key_exists('is_kadepub', $rf) ? !empty($rf['is_kadepub']) : in_array($jobdesk, ['KADEPUB','KEPALA UNIT BISNIS','ADMIN']);
                     $is_retur_approver = !empty($rf['is_mngacc']) || !empty($rf['is_mngse']) || !empty($rf['is_dirop']) || !empty($rf['is_dirut']);
                     $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
@@ -285,7 +284,7 @@
                                                     $tindak_label = 'Verifikasi Jagung';
                                                     $tindak_icon = 'clipboard-check';
                                                     $tindak_class = 'success';
-                                                } elseif ($st === 'diverifikasi_koor' && $is_admstock) {
+                                                } elseif ($st === 'diverifikasi_koor' && $is_admpnj) {
                                                     $tindak_url = base_url('retur_penjualan/admretur/cek/' . $row['id_spr']);
                                                     $tindak_label = 'Cek SPR';
                                                     $tindak_icon = 'boxes';

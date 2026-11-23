@@ -353,7 +353,7 @@ input[type=number] {
                                             <th style="min-width:220px">Barang</th>
                                             <th style="min-width:155px">Expired / Lot</th>
                                             <th style="width:85px" class="text-center">Qty Box</th>
-                                            <th style="width:85px" class="text-center">+Eceran</th>
+                                            <th style="width:85px" class="text-center">Qty Kecil</th>
                                             <th style="width:80px" class="text-center">Pcs</th>
                                             <th style="width:60px">Satuan</th>
                                             <th style="width:115px">Harga/Pcs</th>
@@ -1035,7 +1035,7 @@ function renderStock(data) {
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
 
-        html+='<tr class="tr-pick-stock-row" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
+        html+='<tr class="tr-pick-stock-row" style="cursor:pointer;" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
         html+='<td><span class="stock-code-badge">'+esc(kd)+'</span>'
             +'<span class="stock-name-main">'+esc(d.nama_barang||'')+'</span>'
             +(!isNew?'<span class="stock-name-sub">Lot lain untuk barang yang sama</span>':'')
@@ -1389,12 +1389,12 @@ document.getElementById('item-body').addEventListener('click', function(e) {
     }
 });
 
-/* Pilih barang dari modal → tulis ke currentRowIdx */
+/* Pilih barang dari modal → klik baris barang maupun tombol Pilih menulis ke currentRowIdx */
 document.getElementById('stock-body').addEventListener('click', function(e) {
-    var btn = e.target.closest('.btn-pick-stock');
-    if (!btn || currentRowIdx === null) return;
-    applyBarangKeBaris(currentRowIdx, btn);
-    $('#modal-stock').modal('hide');
+    var tr = e.target.closest('.tr-pick-stock-row');
+    if (tr) {
+        chooseStockRow(tr);
+    }
 });
 
 document.getElementById('stock-search').addEventListener('keydown', function(e) {

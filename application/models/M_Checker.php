@@ -315,7 +315,7 @@ class M_Checker extends CI_Model
         return $this->sync_route_activity($rute, $event, $by);
     }
 
-    public function sync_route_activity($rute, $event, $by = null)
+    public function sync_route_activity($rute, $event, $by = null, $id_trip = null)
     {
         $rute = trim((string)$rute);
         if ($rute === '' || strtoupper($rute) === 'TANPA_RUTE') return false;
@@ -325,7 +325,12 @@ class M_Checker extends CI_Model
 
         $table = $type === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
         $trip = null;
-        if ($this->db->table_exists('tb_delivery_trip')) {
+        if ($id_trip && $this->db->table_exists('tb_delivery_trip')) {
+            $trip = $this->db->where('id_trip', (int)$id_trip)
+                ->where('kd_rute', strtoupper($rute))
+                ->limit(1)->get('tb_delivery_trip')->row_array();
+        }
+        if (!$trip && $this->db->table_exists('tb_delivery_trip')) {
             $trip = $this->db->where('kd_rute', strtoupper($rute))
                 ->where_in('status', ['DRAFT','VERIFIKASI','SIAP_LOADING','PROSES_LOADING','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
                 ->order_by('id_trip', 'DESC')->limit(1)->get('tb_delivery_trip')->row_array();
@@ -393,7 +398,7 @@ class M_Checker extends CI_Model
         return null;
     }
 
-    public function get_route_loading_activity($rute)
+    public function get_route_loading_activity($rute, $id_trip = null)
     {
         $type = $this->detect_loading_type_by_rute($rute);
         if (!$type) {
@@ -401,13 +406,14 @@ class M_Checker extends CI_Model
         }
 
         $table = $type === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
-        $row = $this->db
-            ->where('keterangan', strtoupper(trim((string)$rute)))
-            ->where('is_archived', 0)
-            ->order_by('id', 'DESC')
-            ->limit(1)
-            ->get($table)
-            ->row_array();
+        $this->db->where('keterangan', strtoupper(trim((string)$rute)))
+            ->where('is_archived', 0);
+        if ($id_trip && $this->db->field_exists('id_trip', $table)) {
+            $row = $this->db->where('id_trip', (int)$id_trip)->order_by('id', 'DESC')
+                ->limit(1)->get($table)->row_array();
+        } else {
+            $row = $this->db->order_by('id', 'DESC')->limit(1)->get($table)->row_array();
+        }
 
         if ($row) {
             $row['loading_type'] = $type;
@@ -415,9 +421,27 @@ class M_Checker extends CI_Model
         return $row ?: null;
     }
 
-    public function start_route_loading($rute, $nik, $nama)
+    /**
+     * Menyiapkan aktivitas loading untuk rute yang sudah terdaftar sebagai LK atau KK.
+     * Dipakai sebagai pemulihan jika sinkronisasi aktivitas sebelumnya terlewat.
+     */
+    public function ensure_route_loading_activity($rute, $by = null, $id_trip = null)
     {
-        $activity = $this->get_route_loading_activity($rute);
+        $activity = $this->get_route_loading_activity($rute, $id_trip);
+        if ($activity) {
+            return $activity;
+        }
+
+        if (!$this->sync_route_activity($rute, 'siap_loading', $by, $id_trip)) {
+            return null;
+        }
+
+        return $this->get_route_loading_activity($rute, $id_trip);
+    }
+
+    public function start_route_loading($rute, $nik, $nama, $id_trip = null)
+    {
+        $activity = $this->ensure_route_loading_activity($rute, $nama, $id_trip);
         if (!$activity) {
             return false;
         }

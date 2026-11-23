@@ -1101,10 +1101,13 @@ class C_Checker extends CI_Controller
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 DATE(so.tanggal_transaksi) AS tgl_transaksi,
                 MAX(COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute')) AS nama_rute,
+                MAX(t.id_trip) AS id_trip,
                 COUNT(DISTINCT so.id_so) AS total_so
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN tb_delivery_trip t ON t.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+                AND t.status IN ('DRAFT','VERIFIKASI','SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','SIAP_BERANGKAT','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN')
             WHERE so.status IN ('siap_faktur', 'partial', 'completed')
             AND EXISTS (
                 SELECT 1
@@ -1123,7 +1126,7 @@ class C_Checker extends CI_Controller
         ")->result_array();
 
         foreach ($routes as &$route) {
-            $route['activity'] = $this->M_Checker->get_route_loading_activity($route['kd_rute']);
+            $route['activity'] = $this->M_Checker->get_route_loading_activity($route['kd_rute'], $route['id_trip'] ?? null);
         }
         unset($route);
 
@@ -1456,14 +1459,17 @@ class C_Checker extends CI_Controller
         }
 
         $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        $id_trip = (int)$this->input->post('id_trip');
         if ($kd_rute === '') {
             echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid.']);
             exit;
         }
 
-        $activity = $this->M_Checker->get_route_loading_activity($kd_rute);
+        $nik = (string)$this->session->userdata('nik');
+        $nama = (string)($this->nama() ?: $this->session->userdata('username'));
+        $activity = $this->M_Checker->ensure_route_loading_activity($kd_rute, $nama, $id_trip ?: null);
         if (!$activity) {
-            echo json_encode(['status' => false, 'message' => 'Aktivitas Loading LK/KK untuk rute ini tidak ditemukan.']);
+            echo json_encode(['status' => false, 'message' => 'Rute tidak terdaftar sebagai LK/KK atau aktivitas loading gagal disiapkan.']);
             exit;
         }
         if ($activity['status'] === 'PROSES_LOADING' && !empty($activity['waktu_mulai'])) {
@@ -1471,9 +1477,7 @@ class C_Checker extends CI_Controller
             exit;
         }
 
-        $nik = (string)$this->session->userdata('nik');
-        $nama = (string)($this->nama() ?: $this->session->userdata('username'));
-        $ok = $this->M_Checker->start_route_loading($kd_rute, $nik, $nama);
+        $ok = $this->M_Checker->start_route_loading($kd_rute, $nik, $nama, $id_trip ?: null);
         if ($ok && !empty($activity['id_trip'])) {
             $trip = $this->M_DeliveryTrip->get((int)$activity['id_trip']);
             $next_status = $trip && $trip['status'] === 'PROSES_TAMBAHAN' ? 'PROSES_TAMBAHAN' : 'PROSES_LOADING';

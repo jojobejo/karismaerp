@@ -184,6 +184,7 @@
                                                 <button type="button"
                                                         class="btn btn-success btn-sm btn-start-route"
                                                         data-rute="<?= htmlspecialchars($route['kd_rute'], ENT_QUOTES, 'UTF-8') ?>"
+                                                        data-trip="<?= (int)($route['id_trip'] ?? 0) ?>"
                                                         data-url="<?= htmlspecialchars($detail_url, ENT_QUOTES, 'UTF-8') ?>">
                                                     <i class="fas fa-play mr-1"></i>Start
                                                 </button>
@@ -236,7 +237,7 @@ $(document).on('click', '.btn-start-route', function() {
         url: '<?= base_url("checker/so_loading/start") ?>',
         type: 'POST',
         dataType: 'json',
-        data: { kd_rute: route },
+        data: { kd_rute: route, id_trip: button.data('trip') || 0 },
         success: function(response) {
             if (response.status) {
                 window.location.href = detailUrl;
