@@ -5300,6 +5300,7 @@ class C_SalesOrder extends CI_Controller
             d.pajak,
             d.disc,
             d.total_harga,
+            COALESCE(p.skema_potongan, 20) AS skema_potongan,
             p.tanggal_faktur,
             p.salesman,
             p.kd_customer,
@@ -5480,6 +5481,9 @@ class C_SalesOrder extends CI_Controller
         $no = 1;
 
         foreach ($fakturGrouped as $noFakturH => $items) {
+            $skemaPotongan = isset($items[0]['skema_potongan']) ? (int)$items[0]['skema_potongan'] : 20;
+            $faktorNetto = ($skemaPotongan === 40) ? 0.6 : (($skemaPotongan === 0) ? 1.0 : 0.8);
+
             // Hitung total include PPN untuk faktur pecahan ini
             // Catatan: Barang diskon 100% adalah barang bonus sehingga bernilai 0 (tidak menambah/mengurangi total faktur)
             $fakturTotalNetto = 0;
@@ -5500,7 +5504,7 @@ class C_SalesOrder extends CI_Controller
             // Jika dalam satu faktur pecahan hanya berisi barang bonus/diskon 100% (netto = 0),
             // ambil nilai total dari Faktur Z induknya agar kolom Per Faktur tetap mengikuti nilai fakturnya
             if ($fakturTotalNetto <= 0.001 && !empty($items[0]['parent_id_faktur'])) {
-                $pNet = $this->db->select('COALESCE(SUM(qty * hrg_satuan * (1 - (disc/100)) * 0.8), 0) AS tot')
+                $pNet = $this->db->select('COALESCE(SUM(qty * hrg_satuan * (1 - (disc/100)) * ' . $faktorNetto . '), 0) AS tot', false)
                     ->from('tbso_faktur_detail')
                     ->where('id_faktur', (int)$items[0]['parent_id_faktur'])
                     ->get()->row_array();
@@ -5524,7 +5528,7 @@ class C_SalesOrder extends CI_Controller
                 $jenis     = !empty($item['kelompok_barang']) ? $item['kelompok_barang'] : (!empty($item['kategori_barang']) ? $item['kategori_barang'] : 'Umum');
 
                 $qty       = (float)$item['qty'];
-                $hrgNormal = ((float)$item['hrg_satuan_asli'] > 0) ? (float)$item['hrg_satuan_asli'] : round((float)$item['hrg_satuan'] / 0.8, 2);
+                $hrgNormal = ((float)$item['hrg_satuan_asli'] > 0) ? (float)$item['hrg_satuan_asli'] : round((float)$item['hrg_satuan'] / $faktorNetto, 2);
                 $disc      = (float)$item['disc'];
                 // Normalisasi diskon desimal sesuai template acuan format export.xlsx (1.00 untuk diskon 100%)
                 $discRate  = ($disc >= 100 || $disc == 1) ? 1.0 : (($disc > 1) ? round($disc / 100, 4) : (float)$disc);
@@ -5550,7 +5554,7 @@ class C_SalesOrder extends CI_Controller
 
                 // Rumus Formula Persis Template format export.xlsx yang aman dari nilai minus pada diskon 100% (bonus)
                 $sheet->setCellValue('Q' . $r, "=IF(W{$r}=0,R{$r},R{$r}/1.11)");
-                $sheet->setCellValue('R' . $r, "=+S{$r}*0.8");
+                $sheet->setCellValue('R' . $r, "=+S{$r}*{$faktorNetto}");
                 $sheet->setCellValue('S' . $r, $hrgNormal);
                 $sheet->setCellValue('T' . $r, $discRate);
                 $sheet->setCellValue('U' . $r, "=IF(T{$r}>=1,0,(P{$r}*Q{$r})-(P{$r}*Q{$r}*IF(T{$r}>1,T{$r}/100,T{$r})))");
@@ -5561,7 +5565,7 @@ class C_SalesOrder extends CI_Controller
                 // Kolom Z (Per Faktur): tetap mengikuti total nilai faktur, termasuk untuk barang bonus (diskon 100%)
                 $perFakturVal = $fakturTotalNetto;
                 $sheet->setCellValue('Z' . $r, $perFakturVal);
-                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}>0,Y{$r}/0.8,Z{$r}/0.8)");
+                $sheet->setCellValue('AA' . $r, "=IF(Y{$r}>0,Y{$r}/{$faktorNetto},Z{$r}/{$faktorNetto})");
                 $sheet->setCellValue('AB' . $r, $item['ket_faktur'] ?? '');
 
                 // Alignment Data
@@ -10115,10 +10119,90 @@ class C_SalesOrder extends CI_Controller
         $totalBruto = 0;
         $totalPot   = 0;
 
-        foreach ($faktursLunas as $idx => $f) {
-            $netto = (float)($f['total_bayar'] ?: $f['grand_total'] ?: 0);
-            $bruto = (float)($f['nominal_bruto'] ?: 0);
-            $pot   = (float)($f['nominal_potongan'] ?: 0);
+        $fakturByNo = [];
+        foreach ($faktursLunas as $f) {
+            $fakturByNo[(string)$f['no_faktur']] = $f;
+        }
+        $qGroups = [];
+        $aGroups = [];
+        foreach ($journalRows as $journalRow) {
+            $noH = (string)($journalRow['source_no'] ?? '');
+            $idJurnal = (int)($journalRow['id_jurnal'] ?? 0);
+            if ($idJurnal <= 0 || !isset($fakturByNo[$noH])) continue;
+            $ketJurnal = (string)($journalRow['keterangan_jurnal'] ?? '');
+            $ketDetail = (string)($journalRow['keterangan_detail'] ?? '');
+            if (stripos($ketJurnal . ' ' . $ketDetail, 'PND u/Pot') !== false) {
+                $aGroups[$idJurnal]['rows'][] = $journalRow;
+            } elseif (stripos($ketJurnal . ' ' . $ketDetail, 'Penerimaan dari') !== false) {
+                $qGroups[$idJurnal]['rows'][] = $journalRow;
+            }
+        }
+
+        $rekapRows = [];
+        $usedAGroups = [];
+        foreach ($qGroups as $qGroup) {
+            $qRows = $qGroup['rows'];
+            $noH = (string)($qRows[0]['source_no'] ?? '');
+            $f = $fakturByNo[$noH];
+            $nettoTermin = 0.0;
+            $brutoTermin = 0.0;
+            $metodeTermin = '';
+            foreach ($qRows as $qRow) {
+                $kodeAkun = (string)($qRow['kode_akun'] ?? '');
+                if ($kodeAkun === '13099') {
+                    $nettoTermin += (float)($qRow['kredit'] ?? 0);
+                } elseif ((float)($qRow['debit'] ?? 0) > 0) {
+                    $brutoTermin += (float)$qRow['debit'];
+                    $metodeTermin = (string)($qRow['nama_akun'] ?? '');
+                }
+            }
+            $potTermin = max(0, round($brutoTermin - $nettoTermin, 2));
+            $aNo = '-';
+            $aKet = '-';
+            if ($potTermin > 0) {
+                foreach ($aGroups as $aId => $aGroup) {
+                    if (isset($usedAGroups[$aId])) continue;
+                    $aRows = $aGroup['rows'];
+                    if ((string)($aRows[0]['source_no'] ?? '') !== $noH) continue;
+                    $aDebit = 0.0;
+                    foreach ($aRows as $aRow) $aDebit += (float)($aRow['debit'] ?? 0);
+                    if (abs($aDebit - $potTermin) > 0.01) continue;
+                    $usedAGroups[$aId] = true;
+                    $aNo = $aRows[0]['nomor_jurnal'] ?? '-';
+                    $aKet = $aRows[0]['keterangan_jurnal'] ?? '-';
+                    break;
+                }
+            }
+            $rekapRows[] = [
+                'faktur' => $f,
+                'netto' => $nettoTermin,
+                'bruto' => $brutoTermin,
+                'potongan' => $potTermin,
+                'metode' => $metodeTermin ?: ($f['metode_pembayaran'] ?: 'Q Mandiri'),
+                'tanggal' => $qRows[0]['tanggal_transaksi'] ?? ($f['tanggal_bayar'] ?: $f['tanggal_faktur']),
+                'nomor_q' => $qRows[0]['nomor_jurnal'] ?? '-',
+                'ket_q' => $qRows[0]['keterangan_jurnal'] ?? '-',
+                'nomor_a' => $aNo,
+                'ket_a' => $aKet,
+            ];
+        }
+        if (empty($rekapRows)) {
+            foreach ($faktursLunas as $f) {
+                $netto = (float)($f['total_bayar'] ?: $f['grand_total'] ?: 0);
+                $bruto = (float)($f['nominal_bruto'] ?: 0);
+                $pot = (float)($f['nominal_potongan'] ?: 0);
+                $rekapRows[] = ['faktur' => $f, 'netto' => $netto, 'bruto' => $bruto, 'potongan' => $pot,
+                    'metode' => $f['metode_pembayaran'] ?: 'Q Mandiri', 'tanggal' => $f['tanggal_bayar'] ?: $f['tanggal_faktur'],
+                    'nomor_q' => $f['nomor_jurnal_q'] ?: '-', 'ket_q' => !empty($f['kontak_person']) ? 'Penerimaan dari ' . $f['kontak_person'] : '-',
+                    'nomor_a' => $f['nomor_jurnal_a'] ?: '-', 'ket_a' => !empty($f['nomor_jurnal_a']) ? 'PND u/Pot Penjualan (Tax)' : '-'];
+            }
+        }
+
+        foreach ($rekapRows as $idx => $rekap) {
+            $f = $rekap['faktur'];
+            $netto = (float)$rekap['netto'];
+            $bruto = (float)$rekap['bruto'];
+            $pot   = (float)$rekap['potongan'];
             $skema = isset($f['skema_potongan']) ? (int)$f['skema_potongan'] : 20;
 
             if ($bruto <= 0 && $netto > 0) {
@@ -10131,8 +10215,8 @@ class C_SalesOrder extends CI_Controller
             $totalBruto += $bruto;
             $totalPot   += $pot;
 
-            $ketJurnalQ = !empty($f['kontak_person']) ? 'Penerimaan dari ' . $f['kontak_person'] : '-';
-            $ketJurnalA = !empty($f['nomor_jurnal_a']) ? 'PND u/Pot Penjualan (Tax)' : '-';
+            $ketJurnalQ = $rekap['ket_q'];
+            $ketJurnalA = $rekap['ket_a'];
 
             $rowData = [
                 $idx + 1,
@@ -10147,11 +10231,11 @@ class C_SalesOrder extends CI_Controller
                 $bruto,
                 $pot,
                 $skema . '%',
-                $f['metode_pembayaran'] ?: 'Q Mandiri',
-                $f['tanggal_bayar'] ?: $f['tanggal_faktur'],
-                $f['nomor_jurnal_q'] ?: '-',
+                $rekap['metode'],
+                $rekap['tanggal'],
+                $rekap['nomor_q'],
                 $ketJurnalQ,
-                $f['nomor_jurnal_a'] ?: '-',
+                $rekap['nomor_a'],
                 $ketJurnalA
             ];
             $sheet2->fromArray($rowData, null, 'A' . $row2);
@@ -10186,6 +10270,9 @@ class C_SalesOrder extends CI_Controller
         foreach (range('A', 'R') as $col) {
             $sheet2->getColumnDimension($col)->setAutoSize(true);
         }
+
+        // Hapus kolom No. Bukti kedua yang duplikat; nomor jurnal tetap dipertahankan.
+        $sheet->removeColumn('E');
 
         $spreadsheet->setActiveSheetIndex(0);
 
@@ -11826,6 +11913,147 @@ class C_SalesOrder extends CI_Controller
         header('Cache-Control: max-age=0');
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
         exit;
+    }
+
+    /**
+     * Menambahkan baris kredit Q Kas yang belum ada pada jurnal Q selain pembayaran Q Kas langsung.
+     */
+    private function _appendMissingQKasOffsetRows(array $journalRows, array $faktursLunas)
+    {
+        $fakturByNo = [];
+        foreach ($faktursLunas as $faktur) {
+            $metode = strtolower(trim((string)($faktur['metode_pembayaran'] ?? '')));
+            if ($metode !== 'q kas') {
+                $fakturByNo[(string)$faktur['no_faktur']] = $faktur;
+            }
+        }
+
+        $groups = [];
+        foreach ($journalRows as $index => $row) {
+            $noFaktur = (string)($row['source_no'] ?? '');
+            $ket = (string)($row['keterangan_jurnal'] ?? '');
+            $ketDetail = (string)($row['keterangan_detail'] ?? '');
+            if (!isset($fakturByNo[$noFaktur]) || stripos($ket . ' ' . $ketDetail, 'Penerimaan dari') === false) {
+                continue;
+            }
+            $idJurnal = (int)($row['id_jurnal'] ?? 0);
+            if ($idJurnal <= 0) continue;
+            $groups[$idJurnal]['no_faktur'] = $noFaktur;
+            $groups[$idJurnal]['indices'][] = $index;
+            if (($row['kode_akun'] ?? '') === '11010' && (float)($row['kredit'] ?? 0) > 0) {
+                $groups[$idJurnal]['has_qkas_offset'] = true;
+            }
+        }
+
+        $akunQKas = 'Q Kas';
+        if ($this->db->table_exists('tbkeu_akun')) {
+            $akun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row_array();
+            if (!empty($akun['nama_akun'])) $akunQKas = $akun['nama_akun'];
+        }
+
+        foreach ($groups as $idJurnal => $group) {
+            if (!empty($group['has_qkas_offset'])) continue;
+            $debit = 0.0;
+            $kreditPiutang = 0.0;
+            $representative = $journalRows[$group['indices'][0]];
+            foreach ($group['indices'] as $index) {
+                $row = $journalRows[$index];
+                if (($row['kode_akun'] ?? '') === '13099') {
+                    $kreditPiutang += (float)($row['kredit'] ?? 0);
+                } else {
+                    $debit += (float)($row['debit'] ?? 0);
+                }
+            }
+            $potongan = round(max(0, $debit - $kreditPiutang), 2);
+            if ($potongan <= 0) continue;
+
+            $journalRows[] = [
+                'id_jurnal' => $idJurnal,
+                'nomor_jurnal' => $representative['nomor_jurnal'] ?? '',
+                'tanggal_transaksi' => $representative['tanggal_transaksi'] ?? '',
+                'keterangan_jurnal' => $representative['keterangan_jurnal'] ?? '',
+                'source_no' => $group['no_faktur'],
+                'source_type' => $representative['source_type'] ?? '',
+                'kode_jenis_jurnal' => $representative['kode_jenis_jurnal'] ?? 'KM',
+                'keterangan_detail' => $representative['keterangan_jurnal'] ?? '',
+                'debit' => 0,
+                'kredit' => $potongan,
+                'kode_akun' => '11010',
+                'nama_akun' => $akunQKas,
+            ];
+        }
+        return $journalRows;
+    }
+
+    /**
+     * Menyusun baris jurnal Q dan A dari data faktur jika jurnal tersimpan belum ditemukan.
+     */
+    private function _buildFallbackJournalRowsFromFakturs(array $faktursLunas)
+    {
+        $akunMap = [
+            '11010' => 'Q Kas', '11030' => 'A Kas', '12011' => 'Q BCA',
+            '12013' => 'Q Danamon', '12014' => 'Q Mandiri', '12016' => 'Q BRI',
+            '12121' => 'Q BNI', '12123' => 'Q CIMB', '13036' => 'A PND atas Pendapatan Pot Penj KIU (Tax)',
+            '13041' => 'A PND atas Pendapatan Pot Penj KIU (Fee Petugas)', '13099' => 'Piutang Usaha',
+        ];
+        if ($this->db->table_exists('tbkeu_akun')) {
+            $akunRows = $this->db->select('kode_akun, nama_akun')
+                ->where_in('kode_akun', array_keys($akunMap))->get('tbkeu_akun')->result_array();
+            foreach ($akunRows as $akun) {
+                $akunMap[$akun['kode_akun']] = $akun['nama_akun'];
+            }
+        }
+
+        $rows = [];
+        $journalId = 1;
+        foreach ($faktursLunas as $faktur) {
+            $netto = round((float)($faktur['total_bayar'] ?: $faktur['grand_total'] ?: 0), 2);
+            if ($netto <= 0) continue;
+
+            $skema = isset($faktur['skema_potongan']) ? (int)$faktur['skema_potongan'] : 20;
+            $faktorNetto = ($skema === 40) ? 0.6 : (($skema === 0) ? 1.0 : 0.8);
+            $bruto = round((float)($faktur['nominal_bruto'] ?: ($netto / $faktorNetto)), 2);
+            $potongan = round((float)($faktur['nominal_potongan'] ?? max(0, $bruto - $netto)), 2);
+            $metode = strtolower((string)($faktur['metode_pembayaran'] ?? ''));
+            $isQKasOnly = ($metode === 'q kas');
+            $kodeKas = strpos($metode, 'bca') !== false ? '12011' : (strpos($metode, 'bri') !== false ? '12016' : (strpos($metode, 'bni') !== false ? '12121' : (strpos($metode, 'cimb') !== false ? '12123' : (strpos($metode, 'danamon') !== false ? '12013' : (strpos($metode, 'mandiri') !== false ? '12014' : '11010')))));
+            $tanggal = $faktur['tanggal_bayar'] ?: $faktur['tanggal_faktur'];
+            $namaQ = trim((string)($faktur['kontak_person'] ?? '')) ?: 'Pelanggan';
+            $ketQ = 'Penerimaan dari ' . $namaQ;
+            $noH = (string)$faktur['no_faktur'];
+            $noQ = $faktur['nomor_jurnal_q'] ?: ('Q-' . $noH);
+
+            $debitKas = $isQKasOnly ? $netto : $bruto;
+            foreach ([[$kodeKas, $akunMap[$kodeKas], $ketQ, $debitKas, 0], ['13099', $akunMap['13099'], $ketQ, 0, $netto]] as $line) {
+                $rows[] = ['id_jurnal' => $journalId, 'nomor_jurnal' => $noQ, 'tanggal_transaksi' => $tanggal, 'keterangan_jurnal' => $ketQ, 'source_no' => $noH, 'kode_jenis_jurnal' => 'KM', 'keterangan_detail' => $line[2], 'debit' => $line[3], 'kredit' => $line[4], 'kode_akun' => $line[0], 'nama_akun' => $line[1]];
+            }
+            if (!$isQKasOnly && $potongan > 0) {
+                $rows[] = ['id_jurnal' => $journalId, 'nomor_jurnal' => $noQ, 'tanggal_transaksi' => $tanggal, 'keterangan_jurnal' => $ketQ, 'source_no' => $noH, 'kode_jenis_jurnal' => 'KM', 'keterangan_detail' => $ketQ, 'debit' => 0, 'kredit' => $potongan, 'kode_akun' => '11010', 'nama_akun' => $akunMap['11010']];
+            }
+            $journalId++;
+
+            if ($potongan > 0 && $skema > 0) {
+                $namaA = trim((string)($faktur['customer_name'] ?? '')) ?: 'Pelanggan';
+                $parentNo = trim((string)($faktur['parent_no_faktur'] ?? ''));
+                if ($parentNo !== '') {
+                    $parent = $this->db->select('f.customer_name, c.nama_kios, c.nama_customer')
+                        ->from('tbso_faktur_penjualan f')
+                        ->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left')
+                        ->where('f.no_faktur', $parentNo)->get()->row_array();
+                    if ($parent) $namaA = trim((string)($parent['nama_kios'] ?: $parent['nama_customer'] ?: $parent['customer_name']));
+                }
+                $ketA = 'PND u/Pot ' . $namaA . ' F.' . ($parentNo ?: $noH) . ($skema === 40 ? ' (Tax & Fee Petugas)' : ' (Tax)');
+                $noA = $faktur['nomor_jurnal_a'] ?: ('KM-A-' . $noH);
+                $rows[] = ['id_jurnal' => $journalId, 'nomor_jurnal' => $noA, 'tanggal_transaksi' => $tanggal, 'keterangan_jurnal' => $ketA, 'source_no' => $noH, 'kode_jenis_jurnal' => 'KM', 'keterangan_detail' => $ketA, 'debit' => $potongan, 'kredit' => 0, 'kode_akun' => '11030', 'nama_akun' => $akunMap['11030']];
+                $tax = ($skema === 40) ? round($potongan / 2, 2) : $potongan;
+                $rows[] = ['id_jurnal' => $journalId, 'nomor_jurnal' => $noA, 'tanggal_transaksi' => $tanggal, 'keterangan_jurnal' => $ketA, 'source_no' => $noH, 'kode_jenis_jurnal' => 'KM', 'keterangan_detail' => $ketA, 'debit' => 0, 'kredit' => $tax, 'kode_akun' => '13036', 'nama_akun' => $akunMap['13036']];
+                if ($skema === 40) {
+                    $rows[] = ['id_jurnal' => $journalId, 'nomor_jurnal' => $noA, 'tanggal_transaksi' => $tanggal, 'keterangan_jurnal' => $ketA, 'source_no' => $noH, 'kode_jenis_jurnal' => 'KM', 'keterangan_detail' => $ketA, 'debit' => 0, 'kredit' => $potongan - $tax, 'kode_akun' => '13041', 'nama_akun' => $akunMap['13041']];
+                }
+                $journalId++;
+            }
+        }
+        return $rows;
     }
 
     /**
