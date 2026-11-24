@@ -3579,7 +3579,7 @@ class C_SalesOrder extends CI_Controller
      */
     private function _applyPelunasanTemplateStyling($sheet, $nextRow, $maxMetodeSlots)
     {
-        $lastColumnIndex = 4 + (($maxMetodeSlots - 1) * 2) + 5;
+        $lastColumnIndex = 1 + ($maxMetodeSlots * 3) + 5;
         $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColumnIndex);
         $lastDataRow = max(1, (int)$nextRow - 1);
 
@@ -3611,12 +3611,22 @@ class C_SalesOrder extends CI_Controller
         }
         $sheet->calculateColumnWidths();
 
-        // Batasi lebar kolom keterangan agar data tetap nyaman dibaca.
-        foreach (['B' => 18, 'C' => 22, 'D' => 18] as $column => $width) {
-            $sheet->getColumnDimension($column)->setAutoSize(false)->setWidth($width);
+        // Atur lebar tanggal, metode, dan nominal untuk setiap termin pembayaran.
+        for ($slot = 1; $slot <= $maxMetodeSlots; $slot++) {
+            $dateColumnIndex = 2 + (($slot - 1) * 3);
+            $methodColumnIndex = $dateColumnIndex + 1;
+            $amountColumnIndex = $dateColumnIndex + 2;
+            $dateColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($dateColumnIndex);
+            $methodColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($methodColumnIndex);
+            $amountColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($amountColumnIndex);
+            $sheet->getColumnDimension($dateColumn)->setAutoSize(false)->setWidth(14);
+            $sheet->getColumnDimension($methodColumn)->setAutoSize(false)->setWidth(24);
+            $sheet->getColumnDimension($amountColumn)->setAutoSize(false)->setWidth(18);
+            if ($lastDataRow >= 2) {
+                $sheet->getStyle($dateColumn . '2:' . $dateColumn . $lastDataRow)
+                    ->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+            }
         }
-        $sheet->getColumnDimension('L')->setAutoSize(false)->setWidth(32);
-        $sheet->getColumnDimension('M')->setAutoSize(false)->setWidth(26);
     }
 
     /**
@@ -9197,15 +9207,12 @@ class C_SalesOrder extends CI_Controller
         $sheet->setTitle('Pelunasan Faktur Z');
 
         $maxMetodeSlots = 7;
-        $headers = [
-            'no_faktur_z',
-            'tanggal_pembayaran',
-            'metode_pembayaran1',
-            'jumlah_pembayaran1',
-        ];
-        for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
-            $headers[] = 'metode_pembayaran_' . $slot;
-            $headers[] = 'jumlah_pembayaran_' . $slot;
+        $headers = ['no_faktur_z'];
+        for ($slot = 1; $slot <= $maxMetodeSlots; $slot++) {
+            $suffix = $slot === 1 ? '1' : '_' . $slot;
+            $headers[] = 'tanggal_pembayaran' . $suffix;
+            $headers[] = 'metode_pembayaran' . $suffix;
+            $headers[] = 'jumlah_pembayaran' . $suffix;
         }
         $headers = array_merge($headers, [
             'skema_potongan',
@@ -9234,15 +9241,13 @@ class C_SalesOrder extends CI_Controller
                 }
 
                 $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
-                $rowValues = [
-                    $z['no_faktur_z'],
-                    $z['tanggal_faktur'] ?: date('Y-m-d'),
-                    !empty($z['metode_pembayaran']) ? $z['metode_pembayaran'] : $defaultMetode,
-                    '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
-                ];
-                for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
-                    $rowValues[] = ''; // Opsional: isi Metode Pembayaran N
-                    $rowValues[] = ''; // Opsional: isi Nominal Pembayaran N
+                $rowValues = [$z['no_faktur_z']];
+                for ($slot = 1; $slot <= $maxMetodeSlots; $slot++) {
+                    $rowValues[] = ''; // Isi tanggal transaksi pada setiap termin pembayaran.
+                    $rowValues[] = $slot === 1
+                        ? (!empty($z['metode_pembayaran']) ? $z['metode_pembayaran'] : $defaultMetode)
+                        : '';
+                    $rowValues[] = ''; // Isi nominal untuk termin pembayaran ini.
                 }
                 $rowValues = array_merge($rowValues, [
                     $z['skema_potongan'] !== null ? (int)$z['skema_potongan'] : $defaultSkema,
@@ -9258,10 +9263,17 @@ class C_SalesOrder extends CI_Controller
             }
         } else {
             // Mode contoh manual (?mode=sample)
-            $extraEmptyCols = array_fill(0, ($maxMetodeSlots - 2) * 2, '');
             $sampleRows = [
-                array_merge(['ZINV2601001', date('Y-m-d'), 'Q Mandiri', 1500000, 'Q BRI', 500000], $extraEmptyCols, [20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000]),
-                array_merge(['ZINV2601002', date('Y-m-d'), 'Q Kas Ayat Silang', 1500000, '', ''], $extraEmptyCols, [20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000]),
+                array_merge(
+                    ['ZINV2601001', date('Y-m-d'), 'Q Mandiri', 1500000, date('Y-m-d'), 'Q BRI', 500000],
+                    array_fill(0, ($maxMetodeSlots - 2) * 3, ''),
+                    [20, 'TOKO MAKMUR JAYA (BAPAK BUDI)', '2 Faktur H (2 Belum Lunas)', 2000000, 2000000]
+                ),
+                array_merge(
+                    ['ZINV2601002', date('Y-m-d'), 'Q Kas Ayat Silang', 1500000, '', '', ''],
+                    array_fill(0, ($maxMetodeSlots - 2) * 3, ''),
+                    [20, 'UD TANI SEJAHTERA (H. AHMAD)', '1 Faktur H (1 Belum Lunas)', 1500000, 1500000]
+                ),
             ];
             $sheet->fromArray($sampleRows, null, 'A2');
             $rowIdx = 4;
@@ -9914,6 +9926,24 @@ class C_SalesOrder extends CI_Controller
         }
         $jurnalIds = array_unique(array_filter($jurnalIds));
 
+        // Sertakan seluruh jurnal Q/A dari setiap termin pembayaran, bukan hanya ID terakhir di header faktur.
+        $hNos = array_values(array_unique(array_filter(array_map(function ($f) {
+            return trim((string)($f['no_faktur'] ?? ''));
+        }, $faktursLunas))));
+        if (!empty($hNos) && $this->db->table_exists('tbkeu_jurnal')) {
+            $extraJurnals = $this->db->select('id_jurnal')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'KEUANGAN')
+                ->where('source_type', 'PEMBAYARAN_FAKTUR')
+                ->where('status', 'POSTED')
+                ->where_in('source_no', $hNos)
+                ->get()->result_array();
+            foreach ($extraJurnals as $extraJurnal) {
+                $jurnalIds[] = (int)$extraJurnal['id_jurnal'];
+            }
+        }
+        $jurnalIds = array_values(array_unique(array_filter($jurnalIds)));
+
         $journalRows = [];
         if (!empty($jurnalIds)) {
             $this->db->select('
@@ -10362,15 +10392,12 @@ class C_SalesOrder extends CI_Controller
         $sheet->setTitle('Pelunasan Faktur Z');
 
         $maxMetodeSlots = 7;
-        $headers = [
-            'no_faktur_z',
-            'tanggal_pembayaran',
-            'metode_pembayaran1',
-            'jumlah_pembayaran1',
-        ];
-        for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
-            $headers[] = 'metode_pembayaran_' . $slot;
-            $headers[] = 'jumlah_pembayaran_' . $slot;
+        $headers = ['no_faktur_z'];
+        for ($slot = 1; $slot <= $maxMetodeSlots; $slot++) {
+            $suffix = $slot === 1 ? '1' : '_' . $slot;
+            $headers[] = 'tanggal_pembayaran' . $suffix;
+            $headers[] = 'metode_pembayaran' . $suffix;
+            $headers[] = 'jumlah_pembayaran' . $suffix;
         }
         $headers = array_merge($headers, [
             'skema_potongan',
@@ -10450,15 +10477,11 @@ class C_SalesOrder extends CI_Controller
             }
 
             $infoPecahan = $z['total_h'] . ' Faktur H (' . $z['belum_lunas_h'] . ' Belum Lunas)';
-            $rowValues = [
-                $z['no_faktur_z'],
-                $z['tanggal_faktur'],
-                $z['metode_pembayaran'],
-                '', // Dikosongkan agar user mengisi nominal bayar Faktur Z (Metode 1)
-            ];
-            for ($slot = 2; $slot <= $maxMetodeSlots; $slot++) {
-                $rowValues[] = ''; // Opsional: isi Metode Pembayaran N
-                $rowValues[] = ''; // Opsional: isi Nominal Pembayaran N
+            $rowValues = [$z['no_faktur_z']];
+            for ($slot = 1; $slot <= $maxMetodeSlots; $slot++) {
+                $rowValues[] = ''; // Isi tanggal transaksi pada setiap termin pembayaran.
+                $rowValues[] = $slot === 1 ? $z['metode_pembayaran'] : '';
+                $rowValues[] = ''; // Isi nominal untuk termin pembayaran ini.
             }
             $rowValues = array_merge($rowValues, [
                 $z['skema_potongan'],

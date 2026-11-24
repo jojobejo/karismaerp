@@ -77,6 +77,15 @@ Misalkan Faktur H bernominal **Rp 1.000.000** (Netto 80%) dan dilunasi **Rp 1.00
    - `parent_no_faktur` *(Opsional)*: Nomor Faktur Z induk untuk referensi keterangan pada Jurnal A.
 4. Klik tombol hijau **Import Pelunasan Faktur H (Jurnal Q & A)**, pilih file Excel tersebut, lalu klik **Proses Import Pelunasan & Buat Jurnal**.
 
+### Template Pelunasan Berdasarkan Faktur Z dengan Beberapa Termin
+
+Template pelunasan berdasarkan Faktur Z menyediakan sampai tujuh kelompok kolom termin:
+`tanggal_pembayaran1`, `metode_pembayaran1`, `jumlah_pembayaran1`, lalu kolom bernomor `_2` sampai `_7`.
+Isi tanggal sesuai tanggal transaksi masing-masing termin. Jika tanggal termin dikosongkan, sistem memakai tanggal bawaan import (atau tanggal hari ini).
+Format lama yang hanya memiliki kolom `tanggal_pembayaran` tetap diterima sebagai tanggal bawaan untuk semua termin.
+
+Setiap nominal termin diproses sebagai pembayaran tersendiri dan jurnal Q/A memakai tanggal pada termin tersebut. Ekspor jurnal Faktur H mengambil seluruh jurnal pembayaran yang terkait, termasuk jurnal dari termin sebelumnya, bukan hanya jurnal terakhir yang tercatat pada header faktur.
+
 ### Cara 2: Pelunasan Batch via Checkbox di Tabel
 1. Centang beberapa (atau klik **Pilih Semua**) Faktur H pada tabel.
 2. Klik tombol **Lunasi Terpilih**, pilih Tanggal Pelunasan, Metode Pembayaran, dan Skema Potongan, lalu klik **Proses Lunasi Semua Terpilih**.
