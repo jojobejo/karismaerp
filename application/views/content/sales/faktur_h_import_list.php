@@ -65,8 +65,8 @@
                     <button type="button" class="btn btn-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" data-toggle="modal" data-target="#modalImportPelunasanFakturH" title="Import file pelunasan berdasarkan Nomor Faktur Z Induk dari Excel / CSV (otomatis mengalokasikan ke Faktur H & membuat Jurnal Q/A)">
                         <i class="fas fa-check-double mr-1"></i> Import Pelunasan Faktur Z (Jurnal Q & A)
                     </button>
-                    <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" class="btn btn-outline-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" title="Unduh file Excel seluruh Faktur H yang berstatus lunas beserta data Jurnal Q & A">
-                        <i class="fas fa-file-excel mr-1"></i> Export Faktur Lunas & Jurnal (.xlsx)
+                    <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" class="btn btn-outline-success btn-sm shadow-sm font-weight-bold mr-2 mb-1" title="Unduh Faktur H yang sudah menerima pembayaran, termasuk pembayaran sebagian, beserta data Jurnal Q & A">
+                        <i class="fas fa-file-excel mr-1"></i> Export Pembayaran & Jurnal (.xlsx)
                     </a>
                 </div>
                 <div>
@@ -261,8 +261,8 @@
                         </span>
                         <a href="<?= base_url('sales_order/export_faktur_h_lunas?' . http_build_query($filter ?? [])) ?>" 
                            class="btn btn-success btn-sm font-weight-bold shadow-sm mr-2 mb-1"
-                           title="Export seluruh Faktur H yang berstatus lunas beserta data Jurnal Q & A ke Excel (.xlsx)">
-                            <i class="fas fa-file-excel mr-1"></i> Export Lunas & Jurnal
+                           title="Export seluruh Faktur H yang sudah menerima pembayaran, termasuk pembayaran sebagian, beserta data Jurnal Q & A ke Excel (.xlsx)">
+                            <i class="fas fa-file-excel mr-1"></i> Export Pembayaran & Jurnal
                         </a>
                         <button type="button" 
                                 class="btn btn-primary btn-sm font-weight-bold shadow-sm mb-1"

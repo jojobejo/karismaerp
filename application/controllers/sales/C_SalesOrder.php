@@ -9849,7 +9849,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     /**
-     * Mengekspor Faktur H Import yang sudah lunas beserta data Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) ke Excel (.xlsx).
+     * Mengekspor Faktur H Import yang sudah menerima pembayaran, termasuk pembayaran sebagian, beserta jurnal Q dan A ke Excel (.xlsx).
      * Format Sheet 1 persis Report Jurnal Keuangan (C_ReportJurnal::export_excel) dan Sheet 2 Rekap Faktur H Lunas.
      */
     public function export_faktur_h_lunas()
@@ -9876,7 +9876,7 @@ class C_SalesOrder extends CI_Controller
             'date1'        => $this->input->get('date1', true),
             'date2'        => $this->input->get('date2', true),
             'search'       => $this->input->get('search', true),
-            'status_bayar' => 'lunas',
+            'status_bayar' => 'terbayar',
         ];
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
@@ -9884,7 +9884,8 @@ class C_SalesOrder extends CI_Controller
 
         $this->db->select('fh.*');
         $this->db->from('tbso_faktur_h_import fh');
-        $this->db->where('fh.status_bayar', 'lunas');
+        $this->db->where_in('fh.status_bayar', ['lunas', 'sebagian']);
+        $this->db->where('fh.total_bayar >', 0);
 
         if (!empty($ids)) {
             $this->db->where_in('fh.id_import_h', $ids);
@@ -9914,7 +9915,7 @@ class C_SalesOrder extends CI_Controller
         $faktursLunas = $this->db->get()->result_array();
 
         if (empty($faktursLunas)) {
-            $this->session->set_flashdata('error', 'Tidak ada data Faktur H Import yang berstatus lunas untuk diekspor.');
+            $this->session->set_flashdata('error', 'Tidak ada Faktur H Import yang memiliki pembayaran untuk diekspor.');
             redirect('sales_order/faktur_h_import');
             return;
         }
@@ -9987,7 +9988,7 @@ class C_SalesOrder extends CI_Controller
         $sheet->setCellValue('A1', 'KARISMA ERP - REPORT JURNAL TRANSAKSI');
         $periodeStr = (!empty($filter['date1']) || !empty($filter['date2']))
             ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
-            : 'Periode: Pelunasan Faktur H Lunas (' . date('d/m/Y') . ')';
+            : 'Periode: Pembayaran Faktur H (Lunas/Sebagian) (' . date('d/m/Y') . ')';
         $sheet->setCellValue('A2', $periodeStr);
         $sheet->mergeCells('A1:L1');
         $sheet->mergeCells('A2:L2');
@@ -10158,7 +10159,7 @@ class C_SalesOrder extends CI_Controller
 
         // SHEET 2: REKAP FAKTUR H LUNAS
         $sheet2 = $spreadsheet->createSheet();
-        $sheet2->setTitle('Rekap Faktur H Lunas');
+        $sheet2->setTitle('Rekap Pembayaran Faktur H');
 
         $sheet2->setCellValue('A1', 'LAPORAN REKAP FAKTUR H LUNAS & JURNAL PELUNASAN');
         $sheet2->setCellValue('A2', 'PT. Karisma Indoagro Universal');
@@ -11534,7 +11535,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     /**
-     * Mengekspor Faktur Pecahan Kode H (Sistem) yang sudah lunas beserta data Jurnal Pembayaran Acak (Q) dan Jurnal Kas Masuk (A) ke Excel (.xlsx).
+     * Mengekspor Faktur Pecahan Kode H (Sistem) yang sudah menerima pembayaran, termasuk pembayaran sebagian, beserta jurnal Q dan A ke Excel (.xlsx).
      * Format kolom, warna legend, dan struktur persis Report Jurnal Keuangan (C_ReportJurnal::export_excel).
      */
     public function export_faktur_z_pecah_lunas()
@@ -11561,7 +11562,7 @@ class C_SalesOrder extends CI_Controller
             'date1'        => $this->input->get('date1', true),
             'date2'        => $this->input->get('date2', true),
             'search'       => $this->input->get('search', true),
-            'status_bayar' => 'lunas',
+            'status_bayar' => 'terbayar',
         ];
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
@@ -11581,7 +11582,8 @@ class C_SalesOrder extends CI_Controller
         $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
         $this->db->join('tb_customer c', 'c.kd_customer = p.kd_customer OR c.kd_customer = ca.kd_customer_induk', 'left');
         $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
-        $this->db->where('p.status_bayar', 'lunas');
+        $this->db->where_in('p.status_bayar', ['lunas', 'sebagian']);
+        $this->db->where('p.total_bayar >', 0);
 
         if (!empty($ids)) {
             $this->db->where_in('p.id_pecah', $ids);
@@ -11618,7 +11620,7 @@ class C_SalesOrder extends CI_Controller
         $faktursLunas = $this->db->get()->result_array();
 
         if (empty($faktursLunas)) {
-            $this->session->set_flashdata('error', 'Tidak ada data Faktur Pecahan H yang berstatus lunas untuk diekspor.');
+            $this->session->set_flashdata('error', 'Tidak ada Faktur Pecahan H yang memiliki pembayaran untuk diekspor.');
             redirect('sales_order/pecah_faktur#content-faktur-h');
             return;
         }
@@ -11707,7 +11709,7 @@ class C_SalesOrder extends CI_Controller
         $sheet->setCellValue('A1', 'KARISMA ERP - REPORT JURNAL TRANSAKSI');
         $periodeStr = (!empty($filter['date1']) || !empty($filter['date2']))
             ? 'Periode: ' . (!empty($filter['date1']) ? date('d/m/Y', strtotime($filter['date1'])) : 'Awal') . ' s/d ' . (!empty($filter['date2']) ? date('d/m/Y', strtotime($filter['date2'])) : 'Akhir')
-            : 'Periode: Pelunasan Faktur Pecahan H (' . date('d/m/Y') . ')';
+            : 'Periode: Pembayaran Faktur Pecahan H (' . date('d/m/Y') . ')';
         $sheet->setCellValue('A2', $periodeStr);
         $sheet->mergeCells('A1:L1');
         $sheet->mergeCells('A2:L2');
@@ -11862,9 +11864,9 @@ class C_SalesOrder extends CI_Controller
 
         // SHEET 2: REKAP FAKTUR H LUNAS
         $sheet2 = $spreadsheet->createSheet();
-        $sheet2->setTitle('Rekap Faktur H Lunas');
+        $sheet2->setTitle('Rekap Pembayaran H');
 
-        $sheet2->setCellValue('A1', 'LAPORAN REKAP FAKTUR PECAHAN H LUNAS & JURNAL PELUNASAN');
+        $sheet2->setCellValue('A1', 'LAPORAN REKAP PEMBAYARAN FAKTUR H & JURNAL');
         $sheet2->setCellValue('A2', 'PT. Karisma Indoagro Universal');
         $sheet2->setCellValue('A3', $periodeStr . ' | Total: ' . count($faktursLunas) . ' Faktur');
 

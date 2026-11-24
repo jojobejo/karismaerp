@@ -626,8 +626,8 @@
                                                 <a class="dropdown-item font-weight-bold" href="javascript:void(0)" id="btnExportFakturH" title="Export Faktur Pecahan Kode H sesuai baris yang tampil di tabel ke Excel (.xlsx)">
                                                     <i class="fas fa-file-excel text-success mr-2"></i> Export Faktur H (.xlsx)
                                                 </a>
-                                                <a class="dropdown-item font-weight-bold" href="<?= base_url('sales_order/export_faktur_z_pecah_lunas') ?>" id="btnExportFakturZLunas" title="Export Faktur Pecahan H yang Sudah Lunas beserta Jurnal Q & A ke Excel (Format Report Jurnal)">
-                                                    <i class="fas fa-book text-primary mr-2"></i> Export Lunas &amp; Jurnal
+                                                <a class="dropdown-item font-weight-bold" href="<?= base_url('sales_order/export_faktur_z_pecah_lunas') ?>" id="btnExportFakturZLunas" title="Export Faktur Pecahan H yang sudah menerima pembayaran, termasuk sebagian, beserta Jurnal Q & A ke Excel (Format Report Jurnal)">
+                                                    <i class="fas fa-book text-primary mr-2"></i> Export Pembayaran &amp; Jurnal
                                                 </a>
                                             </div>
                                         </div>
