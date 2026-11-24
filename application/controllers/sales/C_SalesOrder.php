@@ -3557,7 +3557,7 @@ class C_SalesOrder extends CI_Controller
      */
     private function _loadPhpSpreadsheetForFakturZ()
     {
-        if (class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+        if (class_exists('\PhpOffice\PhpSpreadsheet\\Spreadsheet')) {
             return;
         }
         if (file_exists(FCPATH . 'vendor/autoload.php')) {
@@ -3565,9 +3565,58 @@ class C_SalesOrder extends CI_Controller
         } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
             require_once APPPATH . 'libraries/PhpSpreadsheet.php';
         }
-        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+        if (!class_exists('\PhpOffice\PhpSpreadsheet\\Spreadsheet')) {
             throw new \RuntimeException('Library PhpSpreadsheet tidak tersedia.');
         }
+    }
+
+    /**
+     * Mengatur tampilan template Excel pelunasan Faktur Z.
+     *
+     * @param \PhpOffice\PhpSpreadsheet\\Worksheet\\Worksheet $sheet
+     * @param int $nextRow Baris kosong setelah data terakhir.
+     * @param int $maxMetodeSlots Jumlah slot metode pembayaran.
+     */
+    private function _applyPelunasanTemplateStyling($sheet, $nextRow, $maxMetodeSlots)
+    {
+        $lastColumnIndex = 4 + (($maxMetodeSlots - 1) * 2) + 5;
+        $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColumnIndex);
+        $lastDataRow = max(1, (int)$nextRow - 1);
+
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter('A1:' . $lastColumn . $lastDataRow);
+        $sheet->getRowDimension(1)->setRowHeight(32);
+        $sheet->getStyle('A1:' . $lastColumn . '1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '157347'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'B7C9BE'],
+                ],
+            ],
+        ]);
+
+        for ($columnIndex = 1; $columnIndex <= $lastColumnIndex; $columnIndex++) {
+            $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        $sheet->calculateColumnWidths();
+
+        // Batasi lebar kolom keterangan agar data tetap nyaman dibaca.
+        foreach (['B' => 18, 'C' => 22, 'D' => 18] as $column => $width) {
+            $sheet->getColumnDimension($column)->setAutoSize(false)->setWidth($width);
+        }
+        $sheet->getColumnDimension('L')->setAutoSize(false)->setWidth(32);
+        $sheet->getColumnDimension('M')->setAutoSize(false)->setWidth(26);
     }
 
     /**
@@ -5252,7 +5301,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         // Pastikan PhpSpreadsheet tersedia
-        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+        if (!class_exists('\PhpOffice\PhpSpreadsheet\\Spreadsheet')) {
             if (file_exists(FCPATH . 'vendor/autoload.php')) {
                 require_once FCPATH . 'vendor/autoload.php';
             } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
@@ -5912,7 +5961,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         // Pastikan PhpSpreadsheet tersedia
-        if (!class_exists('\\PhpOffice\\PhpSpreadsheet\\Spreadsheet')) {
+        if (!class_exists('\PhpOffice\PhpSpreadsheet\\Spreadsheet')) {
             if (file_exists(FCPATH . 'vendor/autoload.php')) {
                 require_once FCPATH . 'vendor/autoload.php';
             } elseif (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
@@ -12171,6 +12220,125 @@ class C_SalesOrder extends CI_Controller
         }
         $merged = implode($separator, $parts);
         return strlen($merged) > $maxLength ? substr($merged, 0, $maxLength) : $merged;
+    }
+
+    /**
+     * Membuat peta alias header Excel/CSV untuk import pelunasan Faktur Z.
+     *
+     * @param int $maxPaymentSlots Jumlah maksimal termin pembayaran dalam satu baris.
+     * @param bool $allowFakturFallback Izinkan header umum no_faktur dipakai sebagai nomor Faktur Z.
+     * @return array
+     */
+    private function _buildPelunasanImportHeaderAliases($maxPaymentSlots = 20, $allowFakturFallback = false)
+    {
+        $aliases = [
+            'no_faktur_z'          => 'no_faktur_z',
+            'nomor_faktur_z'       => 'no_faktur_z',
+            'faktur_z'             => 'no_faktur_z',
+            'no_faktur_induk'      => 'no_faktur_z',
+            'nomor_faktur_induk'   => 'no_faktur_z',
+            'parent_no_faktur'     => 'parent_no_faktur',
+            'no_faktur_parent'     => 'parent_no_faktur',
+            'tanggal_pembayaran'   => 'tanggal_pembayaran',
+            'tgl_pembayaran'       => 'tanggal_pembayaran',
+            'tanggal_bayar'        => 'tanggal_pembayaran',
+            'tgl_bayar'            => 'tanggal_pembayaran',
+            'skema_potongan'       => 'skema_potongan',
+            'skema_potongan_z'     => 'skema_potongan',
+            'potongan'             => 'skema_potongan',
+            'keterangan'           => 'keterangan',
+            'catatan'              => 'keterangan',
+        ];
+
+        if ($allowFakturFallback) {
+            $aliases['no_faktur'] = 'no_faktur_fallback';
+            $aliases['nomor_faktur'] = 'no_faktur_fallback';
+        } else {
+            // Terima juga format lama yang hanya memiliki kolom nomor faktur.
+            $aliases['no_faktur'] = 'no_faktur_z';
+            $aliases['nomor_faktur'] = 'no_faktur_z';
+        }
+
+        $maxPaymentSlots = max(1, min(20, (int)$maxPaymentSlots));
+        for ($slot = 1; $slot <= $maxPaymentSlots; $slot++) {
+            $suffix = (string)$slot;
+            $methodKey = 'metode_pembayaran_' . $slot;
+            $amountKey = 'jumlah_pembayaran_' . $slot;
+            $dateKey = 'tanggal_pembayaran_' . $slot;
+
+            if ($slot === 1) {
+                $aliases['metode_pembayaran'] = $methodKey;
+                $aliases['jumlah_pembayaran'] = $amountKey;
+                $aliases['nominal_pembayaran'] = $amountKey;
+                $aliases['tanggal_pembayaran_1'] = $dateKey;
+                $aliases['tanggal_bayar_1'] = $dateKey;
+                $aliases['metode_pembayaran1'] = $methodKey;
+                $aliases['jumlah_pembayaran1'] = $amountKey;
+            }
+
+            foreach (['metode_pembayaran', 'metode_bayar', 'cara_pembayaran'] as $prefix) {
+                $aliases[$prefix . '_' . $suffix] = $methodKey;
+                $aliases[$prefix . $suffix] = $methodKey;
+            }
+            foreach (['jumlah_pembayaran', 'nominal_pembayaran', 'jumlah_bayar', 'nominal_bayar'] as $prefix) {
+                $aliases[$prefix . '_' . $suffix] = $amountKey;
+                $aliases[$prefix . $suffix] = $amountKey;
+            }
+            foreach (['tanggal_pembayaran', 'tanggal_bayar', 'tgl_pembayaran', 'tgl_bayar'] as $prefix) {
+                $aliases[$prefix . '_' . $suffix] = $dateKey;
+                $aliases[$prefix . $suffix] = $dateKey;
+            }
+        }
+
+        return $aliases;
+    }
+
+    /**
+     * Mengambil daftar termin pembayaran dari baris import.
+     *
+     * @param callable $getVal Pembaca nilai berdasarkan nama kolom kanonis.
+     * @param string $defaultMetode Metode pembayaran bawaan.
+     * @param string $defaultTanggal Tanggal pembayaran bawaan.
+     * @param int $maxPaymentSlots Jumlah maksimal termin yang dibaca.
+     * @return array
+     */
+    private function _extractPelunasanPaymentSplits($getVal, $defaultMetode, $defaultTanggal, $maxPaymentSlots = 20)
+    {
+        $splits = [];
+        $maxPaymentSlots = max(1, min(20, (int)$maxPaymentSlots));
+
+        for ($slot = 1; $slot <= $maxPaymentSlots; $slot++) {
+            $methodKey = 'metode_pembayaran_' . $slot;
+            $amountKey = 'jumlah_pembayaran_' . $slot;
+            $dateKey = 'tanggal_pembayaran_' . $slot;
+
+            $amountRaw = $getVal($amountKey, '');
+            $amount = $this->_parseImportNumber($amountRaw);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $method = trim((string)$getVal($methodKey, ''));
+            if ($method === '') {
+                $method = trim((string)$defaultMetode);
+            }
+            if ($method === '') {
+                $method = 'Q Mandiri';
+            }
+
+            $paymentDate = trim((string)$getVal($dateKey, ''));
+            $paymentDate = $paymentDate !== ''
+                ? $this->_parseImportExcelDate($paymentDate, $defaultTanggal)
+                : trim((string)$defaultTanggal);
+
+            $splits[] = [
+                'metode'  => $method,
+                'jumlah'  => round($amount, 2),
+                'tanggal' => $paymentDate,
+            ];
+        }
+
+        return $splits;
     }
 
     /**
