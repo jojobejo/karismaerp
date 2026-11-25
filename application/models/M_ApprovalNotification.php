@@ -334,22 +334,47 @@ class M_ApprovalNotification extends CI_Model
             }
 
             if (!empty($returStatuses)) {
-                $this->db->select('id_retur, no_retur, tanggal_retur, nama_customer, create_by_retur, status_retur, create_at_retur');
-                $this->db->from('tbrp_retur_penjualan_header');
-                $this->db->where_in('status_retur', $returStatuses);
-                $this->db->order_by('id_retur', 'DESC');
+                $this->db->select('
+                    r.id_retur,
+                    r.no_retur,
+                    r.tanggal_retur,
+                    r.nama_customer,
+                    r.nama_sales,
+                    r.create_by_retur,
+                    r.status_retur,
+                    r.create_at_retur,
+                    s.create_by AS spr_create_by,
+                    s.nama_sales AS spr_nama_sales
+                ');
+                $this->db->from('tbrp_retur_penjualan_header r');
+                $this->db->join('tbrp_spr_header s', 's.id_spr = r.id_spr', 'left');
+                $this->db->where_in('r.status_retur', $returStatuses);
+                $this->db->order_by('r.id_retur', 'DESC');
                 $this->db->limit(15);
                 $rows = $this->db->get()->result_array();
 
                 foreach ($rows as $row) {
                     $st = $row['status_retur'];
                     $rule = $returRules[$st] ?? null;
+
+                    // Gunakan pembuat SPR / nama sales dari SPR, bukan nama Admin LPB yang menginput fisik retur
+                    $creatorName = trim((string)($row['spr_create_by'] ?? ''));
+                    if ($creatorName === '') {
+                        $creatorName = trim((string)($row['nama_sales'] ?? ''));
+                    }
+                    if ($creatorName === '') {
+                        $creatorName = trim((string)($row['spr_nama_sales'] ?? ''));
+                    }
+                    if ($creatorName === '') {
+                        $creatorName = trim((string)($row['create_by_retur'] ?? '')) ?: 'Sales';
+                    }
+
                     $items[] = [
                         'category'    => 'Retur Penjualan',
                         'badge_class' => 'badge-warning',
                         'icon'        => 'fas fa-file-invoice text-warning',
                         'title'       => ($rule ? $rule['label'] : 'Approval Retur') . ' · ' . ($row['no_retur'] ?: ('#' . $row['id_retur'])),
-                        'subtitle'    => ($row['create_by_retur'] ?: 'User') . ' · ' . ($row['nama_customer'] ?: '-'),
+                        'subtitle'    => $creatorName . ' · ' . ($row['nama_customer'] ?: '-'),
                         'detail'      => 'Status: ' . str_replace('_', ' ', strtoupper($st)),
                         'url'         => base_url(($rule ? $rule['url'] : 'retur_penjualan/retur/detail/') . $row['id_retur']),
                         'datetime'    => $row['create_at_retur'] ?: ($row['tanggal_retur'] . ' 00:00:00'),
