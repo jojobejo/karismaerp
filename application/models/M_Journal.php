@@ -1641,24 +1641,23 @@ class M_Journal extends CI_Model
 
         // â”€â”€ Deteksi Skema Potongan Otomatis (0%, 20%, atau 40%) â”€â”€
         $skema_potongan_z = 20; // Default standar Karisma
-        if (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '') {
+        $tot_z_induk = (float)($this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $id_faktur)->get('tbso_faktur_detail')->row()->tot ?? 0);
+        $tot_h_pecahan = 0.0;
+        foreach ($pecahans as $p) {
+            $tot_h_pecahan += (float)$p['total_pecahan'];
+        }
+        if ($tot_z_induk > 0 && $tot_h_pecahan > 0 && ($tot_h_pecahan / $tot_z_induk) >= 0.98) {
+            $skema_potongan_z = 0; // Tanpa Potongan (Netto 100%)
+        } elseif (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '') {
             $skema_potongan_z = (int)$pecahans[0]['skema_potongan'];
-        } else {
-            // Deteksi cerdas dari rasio nilai total pecahan terhadap Faktur Z induk
-            $tot_z_induk = (float)$this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $id_faktur)->get('tbso_faktur_detail')->row()->tot;
-            $tot_h_pecahan = 0.0;
-            foreach ($pecahans as $p) {
-                $tot_h_pecahan += (float)$p['total_pecahan'];
-            }
-            if ($tot_z_induk > 0 && $tot_h_pecahan > 0) {
-                $ratio_h_z = $tot_h_pecahan / $tot_z_induk;
-                if ($ratio_h_z <= 0.65) {
-                    $skema_potongan_z = 40; // Potongan 40% (Netto ~60%)
-                } elseif ($ratio_h_z <= 0.85) {
-                    $skema_potongan_z = 20; // Potongan 20% (Netto ~80%)
-                } else {
-                    $skema_potongan_z = 0;  // Tanpa Potongan (Netto ~100%)
-                }
+        } elseif ($tot_z_induk > 0 && $tot_h_pecahan > 0) {
+            $ratio_h_z = $tot_h_pecahan / $tot_z_induk;
+            if ($ratio_h_z <= 0.65) {
+                $skema_potongan_z = 40; // Potongan 40% (Netto ~60%)
+            } elseif ($ratio_h_z <= 0.85) {
+                $skema_potongan_z = 20; // Potongan 20% (Netto ~80%)
+            } else {
+                $skema_potongan_z = 0;  // Tanpa Potongan (Netto ~100%)
             }
         }
 
@@ -2048,10 +2047,19 @@ class M_Journal extends CI_Model
                 }
             }
 
-            // Deteksi skema potongan (pastikan nilai 0 tidak dianggap kosong oleh !empty)
-            $skema_potongan_z = (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '')
-                ? (int)$pecahans[0]['skema_potongan']
-                : 20;
+            // Deteksi skema potongan (prioritaskan rasio aktual 100% tanpa potongan terhadap Faktur Z Induk)
+            $tot_z_sync = (float)($this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $pid)->get('tbso_faktur_detail')->row()->tot ?? 0);
+            $tot_h_sync = 0.0;
+            foreach ($pecahans as $p_sync) {
+                $tot_h_sync += (float)($p_sync['total_pecahan'] ?? 0);
+            }
+            if ($tot_z_sync > 0 && $tot_h_sync > 0 && ($tot_h_sync / $tot_z_sync) >= 0.98) {
+                $skema_potongan_z = 0;
+            } else {
+                $skema_potongan_z = (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '')
+                    ? (int)$pecahans[0]['skema_potongan']
+                    : 20;
+            }
             $pembagi_bruto = ($skema_potongan_z === 40) ? 0.6 : (($skema_potongan_z === 20) ? 0.8 : 1.0);
 
             // Ambil Jurnal A terakhir yang POSTED untuk Faktur Z Induk ini (dari pembayaran keuangan)
@@ -2815,13 +2823,36 @@ class M_Journal extends CI_Model
             return $result;
         }
 
+        // Proteksi universal: jika Faktur Pecahan H dipecah 100% utuh tanpa potongan (rasio >= 0.98 terhadap Faktur Z Induk),
+        // maka jurnal pelunasan wajib tanpa potongan (skema 0%, tanpa selisih Q Kas dan tanpa Jurnal A)
+        $parent_id_chk = (int)($faktur['parent_id_faktur'] ?? 0);
+        $force_no_discount = false;
+        if ($sourceType === 'PEMBAYARAN_FAKTUR_PECAH' && $parent_id_chk > 0 && $this->db->table_exists('tbso_faktur_detail')) {
+            $tot_z_chk = (float)($this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $parent_id_chk)->get('tbso_faktur_detail')->row()->tot ?? 0);
+            $tot_h_chk = (float)($this->db->select('COALESCE(SUM(pd.total_harga), 0) AS tot', false)
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'inner')
+                ->where('p.parent_id_faktur', $parent_id_chk)
+                ->where('p.status !=', 'cancelled')
+                ->get()->row()->tot ?? 0);
+            if ($tot_z_chk > 0 && $tot_h_chk > 0 && ($tot_h_chk / $tot_z_chk) >= 0.98) {
+                $skema_potongan = 0;
+                $force_no_discount = true;
+            }
+        }
+
         $pembagi_bruto = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 20) ? 0.8 : 1.0);
-        $bruto_pecahan = isset($paymentData['nominal_bruto']) && (float)$paymentData['nominal_bruto'] > 0
-            ? round((float)$paymentData['nominal_bruto'], 2)
-            : (($pembagi_bruto > 0 && $pembagi_bruto < 1.0) ? round($netto_pecahan / $pembagi_bruto, 2) : $netto_pecahan);
-        $potongan_pecahan = isset($paymentData['nominal_potongan']) && (float)$paymentData['nominal_potongan'] >= 0
-            ? round((float)$paymentData['nominal_potongan'], 2)
-            : max(0, round($bruto_pecahan - $netto_pecahan, 2));
+        if ($force_no_discount || $skema_potongan === 0) {
+            $bruto_pecahan    = $netto_pecahan;
+            $potongan_pecahan = 0.0;
+        } else {
+            $bruto_pecahan = isset($paymentData['nominal_bruto']) && (float)$paymentData['nominal_bruto'] > 0
+                ? round((float)$paymentData['nominal_bruto'], 2)
+                : round($netto_pecahan / $pembagi_bruto, 2);
+            $potongan_pecahan = isset($paymentData['nominal_potongan']) && (float)$paymentData['nominal_potongan'] >= 0
+                ? round((float)$paymentData['nominal_potongan'], 2)
+                : max(0, round($bruto_pecahan - $netto_pecahan, 2));
+        }
 
         $userId = (int)($this->session->userdata('id_karyawan')
             ?: $this->session->userdata('id')

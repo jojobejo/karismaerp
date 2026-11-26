@@ -3206,6 +3206,33 @@ class M_SalesOrder extends CI_Model
                 $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
             }
 
+            // Koreksi otomatis skema_potongan bila rasio harga satuan detail terhadap harga asli Faktur Z adalah 100% (tanpa potongan)
+            $detected_slot_skema = $skema_potongan;
+            $slot_sum_pecah = 0.0;
+            $slot_sum_asli  = 0.0;
+            foreach ($items as $detail_id => $it) {
+                $q_chk = (float)($it['qty'] ?? 0);
+                if ($q_chk > 0.0001 && isset($parent_details[$detail_id])) {
+                    $pd_chk = $parent_details[$detail_id];
+                    $hrg_asli_chk = (float)($pd_chk['hrg_satuan'] ?? 0);
+                    $hrg_pecah_chk = (isset($it['hrg_satuan']) && is_numeric($it['hrg_satuan']))
+                        ? (float)$it['hrg_satuan']
+                        : round($hrg_asli_chk * $disc_factor, 2);
+                    $slot_sum_asli  += ($q_chk * $hrg_asli_chk);
+                    $slot_sum_pecah += ($q_chk * $hrg_pecah_chk);
+                }
+            }
+            if ($slot_sum_asli > 0 && $slot_sum_pecah > 0) {
+                $slot_ratio = $slot_sum_pecah / $slot_sum_asli;
+                if ($slot_ratio >= 0.98) {
+                    $detected_slot_skema = 0;
+                } elseif ($slot_ratio <= 0.62) {
+                    $detected_slot_skema = 40;
+                } elseif ($slot_ratio >= 0.78 && $slot_ratio <= 0.82) {
+                    $detected_slot_skema = 20;
+                }
+            }
+
             $fh = [
                 'no_faktur'           => $no_faktur_child,
                 'parent_id_faktur'    => $parent_id_header,
@@ -3223,7 +3250,7 @@ class M_SalesOrder extends CI_Model
                 'tempo'               => $tempo_calc,
                 'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_full . "\n" . trim((string)($s['catatan'] ?? '')),
                 'status'              => 'confirmed',
-                'skema_potongan'      => $skema_potongan,
+                'skema_potongan'      => $detected_slot_skema,
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
                 'total_tonase'        => 0,

@@ -10434,7 +10434,7 @@ class C_SalesOrder extends CI_Controller
         $hasSkemaCol = $this->db->field_exists('skema_potongan', 'tbso_faktur_z_pecah');
         $skemaSelect = $hasSkemaCol ? 'p.skema_potongan' : ($defaultSkema . ' AS skema_potongan');
 
-        // Ambil seluruh child Faktur Pecahan H beserta nominalnya untuk dikelompokkan per Faktur Z
+        // Ambil seluruh child Faktur Pecahan H beserta nominalnya dan total Faktur Z Induk untuk deteksi akurat skema potongan
         $childRows = $this->db->select('
                 p.id_pecah,
                 p.parent_id_faktur,
@@ -10445,11 +10445,13 @@ class C_SalesOrder extends CI_Controller
                 p.total_bayar,
                 p.metode_pembayaran,
                 ' . $skemaSelect . ',
-                COALESCE(d.grand_total, 0) AS grand_total
+                COALESCE(d.grand_total, 0) AS grand_total,
+                COALESCE(fz_tot.total_faktur_z, 0) AS total_faktur_z
             ', false)
             ->from('tbso_faktur_z_pecah p')
             ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
             ->join('(SELECT id_pecah, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_z_pecah_detail GROUP BY id_pecah) d', 'd.id_pecah = p.id_pecah', 'left')
+            ->join('(SELECT id_faktur, COALESCE(SUM(total_harga), 0) AS total_faktur_z FROM tbso_faktur_detail GROUP BY id_faktur) fz_tot', 'fz_tot.id_faktur = p.parent_id_faktur', 'left')
             ->where('p.status !=', 'cancelled')
             ->order_by('p.no_faktur', 'ASC')
             ->order_by('p.id_pecah', 'ASC')
@@ -10472,8 +10474,11 @@ class C_SalesOrder extends CI_Controller
                     'total_h'           => 0,
                     'belum_lunas_h'     => 0,
                     'total_tagihan_z'   => 0.0,
+                    'total_faktur_z'    => (float)($row['total_faktur_z'] ?? 0),
                     'sisa_belum_lunas'  => 0.0,
                 ];
+            } elseif ($groupedZ[$noZ]['total_faktur_z'] <= 0 && (float)($row['total_faktur_z'] ?? 0) > 0) {
+                $groupedZ[$noZ]['total_faktur_z'] = (float)$row['total_faktur_z'];
             }
 
             $tagihanH    = (float)$row['grand_total'];
@@ -10488,6 +10493,19 @@ class C_SalesOrder extends CI_Controller
                 $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
             }
         }
+
+        // Koreksi otomatis skema_potongan pada template berdasarkan rasio aktual total Faktur H terhadap Faktur Z Induk
+        foreach ($groupedZ as $noZKey => &$zItem) {
+            if ($zItem['total_faktur_z'] > 0 && $zItem['total_tagihan_z'] > 0) {
+                $ratioHZ = $zItem['total_tagihan_z'] / $zItem['total_faktur_z'];
+                if ($ratioHZ >= 0.98) {
+                    $zItem['skema_potongan'] = 0;
+                } elseif ($ratioHZ <= 0.62) {
+                    $zItem['skema_potongan'] = 40;
+                }
+            }
+        }
+        unset($zItem);
 
         $rowIdx = 2;
         $written = 0;
@@ -10698,29 +10716,50 @@ class C_SalesOrder extends CI_Controller
                     $skemaExplicit = null;
                 }
 
-                // Cari ID Faktur Z Induk di tbso_faktur_penjualan (bila ada)
-                $parentRow = $this->db->select('id_faktur, no_faktur')
-                    ->from('tbso_faktur_penjualan')
-                    ->where('no_faktur', $noFakturZ)
+                // Cari ID Faktur Z Induk beserta total nilai asli Faktur Z di tbso_faktur_penjualan
+                $parentRow = $this->db->select('fp.id_faktur, fp.no_faktur, COALESCE(SUM(fd.total_harga), 0) AS total_faktur_z', false)
+                    ->from('tbso_faktur_penjualan fp')
+                    ->join('tbso_faktur_detail fd', 'fd.id_faktur = fp.id_faktur', 'left')
+                    ->where('fp.no_faktur', $noFakturZ)
+                    ->group_by('fp.id_faktur, fp.no_faktur')
                     ->limit(1)
                     ->get()->row_array();
                 $parentIdFaktur = $parentRow ? (int)$parentRow['id_faktur'] : 0;
+                $totalNilaiZAsli = $parentRow ? round((float)($parentRow['total_faktur_z'] ?? 0), 2) : 0.0;
 
                 $paidChildForThisZ = 0;
                 $zFoundAnyChild    = false;
                 $zHasUnpaid        = false;
                 $sisaDanaTotalZ    = 0.0;
 
-                // Reset seluruh riwayat pembayaran lama pada Faktur Pecahan H milik Faktur Z ini
-                // agar Import Pelunasan menjadi satu-satunya sumber kebenaran dan tidak menggandakan pembayaran/jurnal lama
-                $existingChildrenForReset = $this->db->select('p.*')
+                // Deteksi otomatis skema tanpa potongan (0%) bila total nilai seluruh Faktur Pecahan H sama dengan 100% Faktur Z Induk
+                // (mencegah potongan ganda 20% saat kolom skema_potongan di template/database lama masih berisi angka default 20)
+                $detectedRatioSkema = null;
+                $existingChildrenForReset = $this->db->select('p.*, COALESCE(d.grand_total, 0) AS grand_total', false)
                     ->from('tbso_faktur_z_pecah p')
+                    ->join('(SELECT id_pecah, COALESCE(SUM(total_harga), 0) AS grand_total FROM tbso_faktur_z_pecah_detail GROUP BY id_pecah) d', 'd.id_pecah = p.id_pecah', 'left')
                     ->group_start()
                     ->where('p.parent_no_faktur', $noFakturZ)
                     ->or_where('p.parent_id_faktur', $parentIdFaktur > 0 ? $parentIdFaktur : -1)
                     ->group_end()
                     ->where('p.status !=', 'cancelled')
                     ->get()->result_array();
+
+                if (!empty($existingChildrenForReset) && $totalNilaiZAsli > 0) {
+                    $sumAllChildH = 0.0;
+                    foreach ($existingChildrenForReset as $chkChild) {
+                        $sumAllChildH += (float)($chkChild['grand_total'] ?? 0);
+                    }
+                    if ($sumAllChildH > 0) {
+                        $ratioAllHZ = $sumAllChildH / $totalNilaiZAsli;
+                        if ($ratioAllHZ >= 0.98) {
+                            // Faktur Z dipecah 100% utuh tanpa potongan -> wajib skema 0% (tidak boleh dikenai potongan 20% di atas 100%)
+                            $detectedRatioSkema = 0;
+                        } elseif (!$hasExplicitSkema && $ratioAllHZ <= 0.62) {
+                            $detectedRatioSkema = 40;
+                        }
+                    }
+                }
 
                 if (!empty($existingChildrenForReset)) {
                     foreach ($existingChildrenForReset as $oldChild) {
@@ -10819,11 +10858,19 @@ class C_SalesOrder extends CI_Controller
                             break;
                         }
 
-                        // Gunakan skema potongan bawaan Faktur Pecahan H apabila kolom skema_potongan di Excel dikosongkan
+                        // Gunakan deteksi rasio aktual 100% (tanpa potongan), atau skema eksplisit Excel, atau skema bawaan Faktur H
                         $childSkemaDb = (isset($child['skema_potongan']) && $child['skema_potongan'] !== null && $child['skema_potongan'] !== '')
                             ? (int)$child['skema_potongan']
                             : $defaultSkema;
-                        $skemaChild   = $hasExplicitSkema ? $skemaExplicit : (($childSkemaDb === 40) ? 40 : (($childSkemaDb === 0) ? 0 : 20));
+                        if ($detectedRatioSkema === 0 || $childSkemaDb === 0) {
+                            $skemaChild = 0;
+                        } elseif ($hasExplicitSkema) {
+                            $skemaChild = $skemaExplicit;
+                        } elseif ($detectedRatioSkema !== null) {
+                            $skemaChild = $detectedRatioSkema;
+                        } else {
+                            $skemaChild = ($childSkemaDb === 40) ? 40 : 20;
+                        }
                         $pembagiChild = ($skemaChild === 40) ? 0.6 : (($skemaChild === 20) ? 0.8 : 1.0);
 
                         $brutoChild = ($pembagiChild > 0 && $pembagiChild < 1.0) ? round($bayarChild / $pembagiChild, 2) : $bayarChild;
@@ -11007,6 +11054,23 @@ class C_SalesOrder extends CI_Controller
         $grand_total = round((float)$faktur['grand_total'], 2);
         $sudah_bayar = round((float)($faktur['total_bayar'] ?? 0), 2);
         $sisa_awal   = max(0.0, round($grand_total - $sudah_bayar, 2));
+
+        // Pastikan faktur yang dipecah tanpa potongan (skema 0 atau rasio 100% terhadap Faktur Z Induk) tetap memakai skema 0%
+        $parentIdChk = (int)($faktur['parent_id_faktur'] ?? 0);
+        if ((int)($faktur['skema_potongan'] ?? 20) === 0) {
+            $skema_potongan = 0;
+        } elseif ($parentIdChk > 0) {
+            $totZChk = (float)($this->db->select('COALESCE(SUM(total_harga), 0) AS tot', false)->where('id_faktur', $parentIdChk)->get('tbso_faktur_detail')->row()->tot ?? 0);
+            $totHChk = (float)($this->db->select('COALESCE(SUM(pd.total_harga), 0) AS tot', false)
+                ->from('tbso_faktur_z_pecah p')
+                ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'inner')
+                ->where('p.parent_id_faktur', $parentIdChk)
+                ->where('p.status !=', 'cancelled')
+                ->get()->row()->tot ?? 0);
+            if ($totZChk > 0 && $totHChk > 0 && ($totHChk / $totZChk) >= 0.98) {
+                $skema_potongan = 0;
+            }
+        }
 
         if ($jumlah_bayar <= 0 && $jumlah_bayar_2 <= 0) {
             $jumlah_bayar = ($sisa_awal > 0.01) ? $sisa_awal : $grand_total;
@@ -11202,6 +11266,21 @@ class C_SalesOrder extends CI_Controller
                 ? (int)$faktur['skema_potongan']
                 : 20;
             $skemaFaktur = $useAutoSkema ? (($fakturSkemaDb === 40) ? 40 : (($fakturSkemaDb === 0) ? 0 : 20)) : $skema_potongan;
+            $parentIdChkB = (int)($faktur['parent_id_faktur'] ?? 0);
+            if ($fakturSkemaDb === 0) {
+                $skemaFaktur = 0;
+            } elseif ($parentIdChkB > 0) {
+                $totZChkB = (float)($this->db->select('COALESCE(SUM(total_harga), 0) AS tot', false)->where('id_faktur', $parentIdChkB)->get('tbso_faktur_detail')->row()->tot ?? 0);
+                $totHChkB = (float)($this->db->select('COALESCE(SUM(pd.total_harga), 0) AS tot', false)
+                    ->from('tbso_faktur_z_pecah p')
+                    ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'inner')
+                    ->where('p.parent_id_faktur', $parentIdChkB)
+                    ->where('p.status !=', 'cancelled')
+                    ->get()->row()->tot ?? 0);
+                if ($totZChkB > 0 && $totHChkB > 0 && ($totHChkB / $totZChkB) >= 0.98) {
+                    $skemaFaktur = 0;
+                }
+            }
             $pembagi     = ($skemaFaktur === 40) ? 0.6 : (($skemaFaktur === 20) ? 0.8 : 1.0);
 
             $tgl = $tanggal_pembayaran !== '' ? $tanggal_pembayaran : (!empty($faktur['tanggal_faktur']) ? $faktur['tanggal_faktur'] : date('Y-m-d'));
