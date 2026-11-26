@@ -45,6 +45,12 @@ class M_ApprovalNotification extends CI_Model
             $items[] = $r;
         }
 
+        // Permintaan pengembalian SO dari Admin SC kepada Sales pemilik SO.
+        $returnSoItems = $this->_get_return_to_sales_pending($user);
+        foreach ($returnSoItems as $r) {
+            $items[] = $r;
+        }
+
         // Urutkan notifikasi berdasarkan created_at / tanggal terbaru
         usort($items, function ($a, $b) {
             return strcmp($b['datetime'] ?? '', $a['datetime'] ?? '');
@@ -54,6 +60,31 @@ class M_ApprovalNotification extends CI_Model
             'total' => count($items),
             'items' => $items,
         ];
+    }
+
+    private function _get_return_to_sales_pending($user)
+    {
+        if (!$this->db->table_exists('tbso_return_to_sales_request')) return [];
+        $username = trim((string)($user['username'] ?? ''));
+        if ($username === '') return [];
+        $rows = $this->db->where('status', 'pending')
+            ->where('sales_username', $username)
+            ->order_by('id', 'DESC')->limit(20)
+            ->get('tbso_return_to_sales_request')->result_array();
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = [
+                'category' => 'Sales Order', 'badge_class' => 'badge-info',
+                'icon' => 'fas fa-reply text-info',
+                'title' => 'Approval Pengembalian SO ' . ($row['no_so'] ?: ('#' . $row['id_so'])),
+                'subtitle' => 'Diajukan oleh ' . ($row['request_by'] ?: 'Admin SC'),
+                'detail' => 'SO menunggu persetujuan Anda untuk dikembalikan ke Sales.',
+                'url' => base_url('sales_order/edit/' . (int)$row['id_so']),
+                'datetime' => $row['request_at'],
+                'time_label' => date('d M Y H:i', strtotime($row['request_at'])),
+            ];
+        }
+        return $items;
     }
 
     /**

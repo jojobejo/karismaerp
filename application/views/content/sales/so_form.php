@@ -67,6 +67,19 @@ input[type=number] {
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                     </div>
                 <?php endif; ?>
+
+                <?php if (!empty($return_to_sales_request_pending)): ?>
+                    <div class="alert alert-info shadow-sm d-flex align-items-center justify-content-between p-3 mb-3 flex-wrap" style="border-left: 5px solid #17a2b8;">
+                        <div class="mb-2 mb-md-0">
+                            <h6 class="font-weight-bold text-dark mb-1"><i class="fas fa-reply text-info mr-1"></i> Permintaan Pengembalian SO</h6>
+                            <div class="text-muted small">Admin SC meminta SO ini dikembalikan. Silakan setujui atau tolak permintaan tersebut.</div>
+                        </div>
+                        <div class="d-flex align-items-center" style="gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-success font-weight-bold" onclick="processReturnToSales(<?= (int)$return_to_sales_request_pending['id'] ?>, true)"><i class="fas fa-check mr-1"></i> Setujui</button>
+                            <button type="button" class="btn btn-sm btn-danger font-weight-bold" onclick="processReturnToSales(<?= (int)$return_to_sales_request_pending['id'] ?>, false)"><i class="fas fa-times mr-1"></i> Tolak</button>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <?php if ($this->session->flashdata('warning')): ?>
                     <div class="alert alert-warning alert-dismissible fade show">
                         <?= $this->session->flashdata('warning') ?>
@@ -465,7 +478,7 @@ input[type=number] {
                     <span class="customer-modal-icon"><i class="fas fa-store"></i></span>
                     <div>
                         <h5 class="customer-modal-title">Pilih Customer</h5>
-                        <div class="customer-modal-subtitle">Pilih customer berdasarkan nama, kios, atau rute.</div>
+                        <div class="customer-modal-subtitle">Pilih customer berdasarkan nama, kios, regional, alamat, atau rute.</div>
                     </div>
                 </div>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span>&times;</span></button>
@@ -473,17 +486,19 @@ input[type=number] {
             <div class="modal-body">
                 <div class="customer-search-wrap">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="customer-search" class="form-control" placeholder="Cari nama customer, kios, atau kode rute...">
+                    <input type="text" id="customer-search" class="form-control" placeholder="Cari nama, kios, regional, alamat, atau kode rute...">
                 </div>
                 <div class="customer-table-shell">
                     <table class="table table-sm mb-0" id="tbl-customer-pick">
                         <thead>
                             <tr>
-                                <th style="width:32%">Customer</th>
-                                <th style="width:20%">Nama Kios</th>
-                                <th style="width:13%">KD Rute</th>
-                                <th style="width:17%">Plafon</th>
-                                <th style="width:18%">Status Piutang</th>
+                                <th style="width:20%">Customer</th>
+                                <th style="width:12%">Nama Kios</th>
+                                <th style="width:10%">Regional</th>
+                                <th style="width:20%">Alamat</th>
+                                <th style="width:8%">KD Rute</th>
+                                <th style="width:15%">Plafon</th>
+                                <th style="width:15%">Status Piutang</th>
                             </tr>
                         </thead>
                         <tbody id="customer-body"></tbody>
@@ -1135,12 +1150,14 @@ function renderCustomers(q) {
     var list = q ? baseList.filter(function(c){
         return String(c.nama_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.nama_kios||'').toLowerCase().indexOf(q) >= 0 ||
+               String(c.regional||'').toLowerCase().indexOf(q) >= 0 ||
+               String(c.alamat_kios||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.kd_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.kd_rute||'').toLowerCase().indexOf(q) >= 0;
     }) : baseList;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
-            '<tr><td colspan="5" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
+            '<tr><td colspan="7" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
         return;
     }
     var html = '';
@@ -1180,8 +1197,10 @@ function renderCustomers(q) {
               + '<span class="customer-code-sub">'+esc(c.kd_customer||'-')+'</span></div>'
               + '</div></td>'
               + '<td><span class="customer-kios-pill">'+esc(c.nama_kios||'-')+'</span></td>'
+              + '<td><span class="customer-route-pill">'+esc(c.regional||'-')+'</span></td>'
+              + '<td><span class="small text-muted" title="'+esc(c.alamat_kios||'-')+'">'+esc(c.alamat_kios||'-')+'</span></td>'
               + '<td><span class="customer-route-pill">'+esc(c.kd_rute||'-')+'</span></td>'
-              + '<td><span class="customer-route-pill '+esc(plafonColorClass(c.plafon_aktif))+'">'+esc(formatRupiah(c.plafon_aktif))+'</span></td>'
+              + '<td><span class="customer-plafon-pill '+esc(plafonColorClass(c.plafon_aktif))+'">'+esc(formatRupiah(c.plafon_aktif))+'</span></td>'
               + '<td>' + piutangHtml + '</td>'
               + '</tr>';
     });
@@ -1907,6 +1926,17 @@ function handleRejectCancelSo(idRequest, idSo) {
             }
         });
     });
+}
+</script>
+<script>
+function processReturnToSales(requestId, approve) {
+    if (!confirm(approve ? 'Setujui pengembalian SO ini ke Sales?' : 'Tolak permintaan pengembalian SO ini?')) return;
+    $.post('<?= base_url('sales_order/') ?>' + (approve ? 'approve_return_to_sales' : 'reject_return_to_sales'), {
+        request_id: requestId
+    }, function(res) {
+        alert(res.message || 'Proses selesai.');
+        if (res.status) window.location.reload();
+    }, 'json').fail(function() { alert('Terjadi kesalahan koneksi.'); });
 }
 </script>
 </body>

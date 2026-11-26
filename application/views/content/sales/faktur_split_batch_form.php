@@ -1297,11 +1297,12 @@ $(document).ready(function() {
             return false;
         }
 
-        // Nonaktifkan input pada baris barang dengan kuantitas 0 agar payload POST ringan dan tidak melebihi batas max_input_vars PHP
+        // Nonaktifkan hanya input rincian barang (qty/harga/disc/pajak) pada baris dengan kuantitas 0 agar payload POST ringan
+        // tanpa menonaktifkan input hidden utama seperti pakai_potongan_20
         $('.row-item-split').each(function() {
             var q = parseFloat($(this).find('.input-qty-split').val()) || 0;
             if (q <= 0.0001) {
-                $(this).find('input').prop('disabled', true);
+                $(this).find('input[name^="splits["]').prop('disabled', true);
             }
         });
 

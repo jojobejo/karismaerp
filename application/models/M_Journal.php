@@ -2937,24 +2937,23 @@ class M_Journal extends CI_Model
 
         // ── Deteksi Skema Potongan Otomatis (0%, 20%, atau 40%) ──
         $skema_potongan_z = 20; // Default standar Karisma
-        if (!empty($pecahans[0]['skema_potongan'])) {
+        $tot_z_induk = (float)($this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $id_faktur)->get('tbso_faktur_detail')->row()->tot ?? 0);
+        $tot_h_pecahan = 0.0;
+        foreach ($pecahans as $p) {
+            $tot_h_pecahan += (float)$p['total_pecahan'];
+        }
+        if ($tot_z_induk > 0 && $tot_h_pecahan > 0 && ($tot_h_pecahan / $tot_z_induk) >= 0.98) {
+            $skema_potongan_z = 0; // Tanpa Potongan (Netto 100%)
+        } elseif (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '') {
             $skema_potongan_z = (int)$pecahans[0]['skema_potongan'];
-        } else {
-            // Deteksi cerdas dari rasio nilai total pecahan terhadap Faktur Z induk
-            $tot_z_induk = (float)$this->db->select('SUM(total_harga) AS tot')->where('id_faktur', $id_faktur)->get('tbso_faktur_detail')->row()->tot;
-            $tot_h_pecahan = 0.0;
-            foreach ($pecahans as $p) {
-                $tot_h_pecahan += (float)$p['total_pecahan'];
-            }
-            if ($tot_z_induk > 0 && $tot_h_pecahan > 0) {
-                $ratio_h_z = $tot_h_pecahan / $tot_z_induk;
-                if ($ratio_h_z <= 0.65) {
-                    $skema_potongan_z = 40; // Potongan 40% (Netto ~60%)
-                } elseif ($ratio_h_z <= 0.85) {
-                    $skema_potongan_z = 20; // Potongan 20% (Netto ~80%)
-                } else {
-                    $skema_potongan_z = 0;  // Tanpa Potongan (Netto ~100%)
-                }
+        } elseif ($tot_z_induk > 0 && $tot_h_pecahan > 0) {
+            $ratio_h_z = $tot_h_pecahan / $tot_z_induk;
+            if ($ratio_h_z <= 0.65) {
+                $skema_potongan_z = 40; // Potongan 40% (Netto ~60%)
+            } elseif ($ratio_h_z <= 0.85) {
+                $skema_potongan_z = 20; // Potongan 20% (Netto ~80%)
+            } else {
+                $skema_potongan_z = 0;  // Tanpa Potongan (Netto ~100%)
             }
         }
 
@@ -3768,7 +3767,26 @@ class M_Journal extends CI_Model
             $prefix_jurnal_q = 'KM';
         }
         $jenis_q = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix_jurnal_q])->row();
-        $id_jenis_jurnal_q = $jenis_q ? (int)$jenis_q->id_jenis_jurnal : 3;
+        if (!$jenis_q) {
+            $nama_jenis_map = [
+                'KM' => 'Kas Masuk',
+                'MR' => 'Masuk Rekening',
+                'BC' => 'Masuk Rekening BCA',
+                'BR' => 'Masuk Rekening BRI',
+            ];
+            $this->db->insert('tbkeu_jenis_jurnal', [
+                'kode_jenis_jurnal' => $prefix_jurnal_q,
+                'nama_jenis_jurnal' => $nama_jenis_map[$prefix_jurnal_q] ?? ('Penerimaan ' . $prefix_jurnal_q),
+                'keterangan'        => 'Penerimaan pelunasan faktur (' . $prefix_jurnal_q . ')',
+                'is_manual'         => 0,
+                'is_active'         => 1,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'updated_at'        => date('Y-m-d H:i:s'),
+            ]);
+            $id_jenis_jurnal_q = (int)$this->db->insert_id();
+        } else {
+            $id_jenis_jurnal_q = (int)$jenis_q->id_jenis_jurnal;
+        }
 
         // 3. Akun Q Kas (11010) untuk Kredit Potongan pada Jurnal Q
         $akun_q_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();

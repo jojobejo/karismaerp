@@ -484,10 +484,29 @@ class M_SalesOrder extends CI_Model
     {
         return $this->db
             ->where('is_active', 1)
-            ->where_in('tipe', ['INDUK'])
+            // Sales Order hanya menggunakan gudang induk utama dan gudang konsinyasi.
+            ->where_in('id_gudang', [2, 13])
             ->order_by('nama_gudang', 'ASC')
             ->get('tb_gudang')
             ->result_array();
+    }
+
+    /**
+     * Memeriksa apakah gudang boleh digunakan untuk membuat atau mengubah SO.
+     */
+    public function is_gudang_sales_order_allowed($gudang_id)
+    {
+        if (empty($gudang_id)) {
+            return false;
+        }
+
+        foreach ($this->get_gudang_list() as $gudang) {
+            if ((string)$gudang['id_gudang'] === (string)$gudang_id) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function get_tax_list()
@@ -3278,6 +3297,33 @@ class M_SalesOrder extends CI_Model
                 $tgl_tempo = date('Y-m-d', strtotime($tgl_faktur . " +{$tempo_calc} days"));
             }
 
+            // Koreksi otomatis skema_potongan bila rasio harga satuan detail terhadap harga asli Faktur Z adalah 100% (tanpa potongan)
+            $detected_slot_skema = $skema_potongan;
+            $slot_sum_pecah = 0.0;
+            $slot_sum_asli  = 0.0;
+            foreach ($items as $detail_id => $it) {
+                $q_chk = (float)($it['qty'] ?? 0);
+                if ($q_chk > 0.0001 && isset($parent_details[$detail_id])) {
+                    $pd_chk = $parent_details[$detail_id];
+                    $hrg_asli_chk = (float)($pd_chk['hrg_satuan'] ?? 0);
+                    $hrg_pecah_chk = (isset($it['hrg_satuan']) && is_numeric($it['hrg_satuan']))
+                        ? (float)$it['hrg_satuan']
+                        : round($hrg_asli_chk * $disc_factor, 2);
+                    $slot_sum_asli  += ($q_chk * $hrg_asli_chk);
+                    $slot_sum_pecah += ($q_chk * $hrg_pecah_chk);
+                }
+            }
+            if ($slot_sum_asli > 0 && $slot_sum_pecah > 0) {
+                $slot_ratio = $slot_sum_pecah / $slot_sum_asli;
+                if ($slot_ratio >= 0.98) {
+                    $detected_slot_skema = 0;
+                } elseif ($slot_ratio <= 0.62) {
+                    $detected_slot_skema = 40;
+                } elseif ($slot_ratio >= 0.78 && $slot_ratio <= 0.82) {
+                    $detected_slot_skema = 20;
+                }
+            }
+
             $fh = [
                 'no_faktur'           => $no_faktur_child,
                 'parent_id_faktur'    => $parent_id_header,
@@ -3295,7 +3341,7 @@ class M_SalesOrder extends CI_Model
                 'tempo'               => $tempo_calc,
                 'catatan'             => 'Pecahan Massal dari Faktur Z: ' . $parent_no_full . "\n" . trim((string)($s['catatan'] ?? '')),
                 'status'              => 'confirmed',
-                'skema_potongan'      => $skema_potongan,
+                'skema_potongan'      => $detected_slot_skema,
                 'create_by'           => $username,
                 'create_at'           => date('Y-m-d H:i:s'),
                 'total_tonase'        => 0,
@@ -4296,6 +4342,63 @@ class M_SalesOrder extends CI_Model
         }
         $generated_numbers[] = $no_faktur;
         return $no_faktur;
+    }
+
+    /** Memastikan tabel permintaan pengembalian SO ke Sales tersedia. */
+    public function ensure_return_to_sales_request_table()
+    {
+        if (!$this->db->table_exists('tbso_return_to_sales_request')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tbso_return_to_sales_request` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY, `id_so` INT NOT NULL, `no_so` VARCHAR(30) NOT NULL,
+                `sales_username` VARCHAR(100) NOT NULL, `alasan` TEXT NULL,
+                `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                `request_by` VARCHAR(100) NOT NULL, `request_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `approve_by` VARCHAR(100) NULL, `approve_at` DATETIME NULL, `catatan_approval` TEXT NULL,
+                KEY `idx_return_so` (`id_so`), KEY `idx_return_status` (`status`), KEY `idx_return_sales` (`sales_username`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
+
+    public function get_pending_return_to_sales_request($id_so)
+    {
+        $this->ensure_return_to_sales_request_table();
+        return $this->db->where('id_so', (int)$id_so)->where('status', 'pending')
+            ->order_by('id', 'DESC')->get('tbso_return_to_sales_request')->row_array();
+    }
+
+    public function submit_return_to_sales_request($id_so, $request_by, $alasan = '')
+    {
+        $this->ensure_return_to_sales_request_table();
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => (int)$id_so])->row_array();
+        if (!$so) return ['success' => false, 'message' => 'SO tidak ditemukan.'];
+        if (!in_array($so['status'], ['siap_faktur', 'partial'], true)) return ['success' => false, 'message' => 'SO tidak dalam status yang bisa dikembalikan.'];
+        if (empty(trim((string)($so['create_by'] ?? '')))) return ['success' => false, 'message' => 'Sales pemilik SO tidak ditemukan.'];
+        if ($this->get_pending_return_to_sales_request($id_so)) return ['success' => false, 'message' => 'Permintaan pengembalian SO ini masih menunggu persetujuan Sales.'];
+        $ok = $this->db->insert('tbso_return_to_sales_request', [
+            'id_so' => (int)$id_so, 'no_so' => $so['no_so'], 'sales_username' => trim((string)$so['create_by']),
+            'alasan' => trim((string)$alasan), 'status' => 'pending', 'request_by' => $request_by, 'request_at' => date('Y-m-d H:i:s')
+        ]);
+        return $ok ? ['success' => true, 'message' => 'Permintaan pengembalian SO sudah dikirim ke Sales untuk disetujui.'] : ['success' => false, 'message' => 'Gagal menyimpan permintaan pengembalian SO.'];
+    }
+
+    public function approve_return_to_sales_request($request_id, $sales_username, $catatan = '')
+    {
+        $this->ensure_return_to_sales_request_table();
+        $req = $this->db->get_where('tbso_return_to_sales_request', ['id' => (int)$request_id, 'status' => 'pending'])->row_array();
+        if (!$req || strcasecmp(trim((string)$req['sales_username']), trim((string)$sales_username)) !== 0) return ['success' => false, 'message' => 'Permintaan tidak ditemukan atau bukan milik Sales ini.'];
+        $result = $this->kembalikan_so_ke_sales((int)$req['id_so'], $sales_username);
+        if (!empty($result['errors'])) return ['success' => false, 'message' => implode('<br>', $result['errors'])];
+        $this->db->where('id', (int)$request_id)->update('tbso_return_to_sales_request', ['status' => 'approved', 'approve_by' => $sales_username, 'approve_at' => date('Y-m-d H:i:s'), 'catatan_approval' => trim((string)$catatan)]);
+        return ['success' => true, 'message' => 'Pengembalian SO disetujui.'];
+    }
+
+    public function reject_return_to_sales_request($request_id, $sales_username, $catatan = '')
+    {
+        $this->ensure_return_to_sales_request_table();
+        $req = $this->db->get_where('tbso_return_to_sales_request', ['id' => (int)$request_id, 'status' => 'pending'])->row_array();
+        if (!$req || strcasecmp(trim((string)$req['sales_username']), trim((string)$sales_username)) !== 0) return ['success' => false, 'message' => 'Permintaan tidak ditemukan atau bukan milik Sales ini.'];
+        $ok = $this->db->where('id', (int)$request_id)->update('tbso_return_to_sales_request', ['status' => 'rejected', 'approve_by' => $sales_username, 'approve_at' => date('Y-m-d H:i:s'), 'catatan_approval' => trim((string)$catatan)]);
+        return ['success' => (bool)$ok, 'message' => $ok ? 'Permintaan pengembalian SO ditolak.' : 'Gagal menolak permintaan.'];
     }
 
     public function kembalikan_so_ke_sales($id_so, $update_by)

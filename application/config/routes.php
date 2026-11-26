@@ -1306,6 +1306,8 @@ $route['sales_order/get_pending_cancel_so_requests']        = 'sales/C_SalesOrde
 $route['sales_order/request_cancel_so']                     = 'sales/C_SalesOrder/request_cancel_so';
 $route['sales_order/approve_cancel_so']                     = 'sales/C_SalesOrder/approve_cancel_so';
 $route['sales_order/reject_cancel_so']                      = 'sales/C_SalesOrder/reject_cancel_so';
+$route['sales_order/approve_return_to_sales']               = 'sales/C_SalesOrder/approve_return_to_sales';
+$route['sales_order/reject_return_to_sales']                = 'sales/C_SalesOrder/reject_return_to_sales';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

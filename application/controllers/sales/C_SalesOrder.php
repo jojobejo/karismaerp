@@ -1791,6 +1791,12 @@ class C_SalesOrder extends CI_Controller
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
 
+        if (!$this->M_SalesOrder->is_gudang_sales_order_allowed($gudang_id)) {
+            $this->session->set_flashdata('error', 'Gudang yang dipilih tidak tersedia untuk Sales Order. Pilih gudang induk atau gudang konsinyasi.');
+            redirect('sales_order/create');
+            return;
+        }
+
         $canSelectSalesman = $this->_canSelectSalesman();
         $selectedSalesman  = $canSelectSalesman ? trim((string)($post['salesman'] ?? '')) : '';
 
@@ -1999,6 +2005,7 @@ class C_SalesOrder extends CI_Controller
         $data['total_available_faktur'] = $total_available_faktur;
         $data['is_atasan']              = $this->_isAtasanSc();
         $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
+        $data['return_to_sales_request_pending'] = $this->M_SalesOrder->get_pending_return_to_sales_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -2084,6 +2091,7 @@ class C_SalesOrder extends CI_Controller
         $data['can_select_salesman']    = $this->_canSelectSalesman();
         $data['salesman_list']          = $data['can_select_salesman'] ? $this->M_SalesOrder->get_salesman_list() : [];
         $data['cancel_request_pending'] = $this->M_SalesOrder->get_pending_cancel_so_request($id_so);
+        $data['return_to_sales_request_pending'] = $this->M_SalesOrder->get_pending_return_to_sales_request($id_so);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_form.php', $data);
@@ -2109,6 +2117,12 @@ class C_SalesOrder extends CI_Controller
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
+
+        if (!$this->M_SalesOrder->is_gudang_sales_order_allowed($gudang_id)) {
+            $this->session->set_flashdata('error', 'Gudang yang dipilih tidak tersedia untuk Sales Order. Pilih gudang induk atau gudang konsinyasi.');
+            redirect('sales_order/edit/' . $id_so);
+            return;
+        }
 
         $canSelectSalesman = $this->_canSelectSalesman();
         $selectedSalesman  = $canSelectSalesman ? trim((string)($post['salesman'] ?? '')) : '';
@@ -4146,6 +4160,9 @@ class C_SalesOrder extends CI_Controller
         }
 
         $raw_pot = $this->input->post('pakai_potongan_20');
+        if ($raw_pot === null || $raw_pot === '') {
+            $raw_pot = $this->input->get('pakai_potongan_20');
+        }
         $skema_potongan = ((string)$raw_pot === '40') ? 40 : (((string)$raw_pot === '0') ? 0 : 20);
         $disc_factor = ($skema_potongan === 40) ? 0.6 : (($skema_potongan === 0) ? 1.0 : 0.8);
 
@@ -7041,8 +7058,8 @@ class C_SalesOrder extends CI_Controller
         $this->load->model('M_SalesOrder');
         $result = $this->M_SalesOrder->repost_item_faktur($id_faktur, $id_fd_list, $repost_by);
 
-        if (!empty($result['errors'])) {
-            echo json_encode(['status' => false, 'message' => implode('<br>', $result['errors'])]);
+        if (empty($result['success'])) {
+            echo json_encode(['status' => false, 'message' => $result['message'] ?? 'Gagal mengajukan pengembalian SO.']);
             exit;
         }
 
@@ -7163,16 +7180,16 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
-        $result = $this->M_SalesOrder->kembalikan_so_ke_sales($id_so, $update_by);
+        $result = $this->M_SalesOrder->submit_return_to_sales_request($id_so, $update_by);
 
-        if (!empty($result['errors'])) {
-            echo json_encode(['status' => false, 'message' => implode('<br>', $result['errors'])]);
+        if (empty($result['success'])) {
+            echo json_encode(['status' => false, 'message' => $result['message'] ?? 'Gagal mengajukan pengembalian SO.']);
             exit;
         }
 
         $this->M_ActivityLog->log(
-            $so['no_so'] ?? '', '', 'KEMBALIKAN_SO_KE_SALES',
-            'SO dikembalikan ke Sales oleh Admin SC. Status baru: ' . $result['new_status'],
+            $so['no_so'] ?? '', '', 'REQUEST_KEMBALIKAN_SO_KE_SALES',
+            'Admin SC mengajukan pengembalian SO kepada Sales untuk disetujui.',
             $update_by
         );
 
@@ -7180,12 +7197,12 @@ class C_SalesOrder extends CI_Controller
             $so['no_so'] ?? '',
             null,
             null,
-            'KEMBALIKAN_SO',
-            'Admin SC mengembalikan SO ' . ($so['no_so'] ?? '') . ' ke Sales. Status baru: ' . $result['new_status'],
+            'REQUEST_KEMBALIKAN_SO',
+            'Admin SC mengajukan pengembalian SO ' . ($so['no_so'] ?? '') . ' kepada Sales.',
             $update_by
         );
 
-        $message = 'SO berhasil dikembalikan ke Sales dengan status <b>' . $result['new_status'] . '</b>.';
+        $message = $result['message'];
         
         // Jika DO otomatis dibuat karena matching barang tidak terfaktur = tidak dimuat
         if (!empty($result['do_created'])) {
@@ -7195,9 +7212,32 @@ class C_SalesOrder extends CI_Controller
         echo json_encode([
             'status'     => true,
             'message'    => $message,
-            'new_status' => $result['new_status'],
-            'do_created' => $result['do_created'] ?? null,
+            'new_status' => null,
         ]);
+        exit;
+    }
+
+    public function approve_return_to_sales()
+    {
+        $this->_process_return_to_sales_approval(true);
+    }
+
+    public function reject_return_to_sales()
+    {
+        $this->_process_return_to_sales_approval(false);
+    }
+
+    private function _process_return_to_sales_approval($approve)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        $request_id = (int)$this->input->post('request_id', true);
+        $username = $this->_getUsername();
+        $catatan = trim((string)$this->input->post('catatan', true));
+        $result = $approve
+            ? $this->M_SalesOrder->approve_return_to_sales_request($request_id, $username, $catatan)
+            : $this->M_SalesOrder->reject_return_to_sales_request($request_id, $username, $catatan);
+        echo json_encode(['status' => !empty($result['success']), 'message' => $result['message'] ?? 'Proses selesai.']);
         exit;
     }
 
@@ -7598,12 +7638,16 @@ class C_SalesOrder extends CI_Controller
             p.status_bayar,
             p.total_bayar,
             p.metode_pembayaran,
-            COALESCE(SUM(pd.total_harga), 0) AS grand_total
+            COALESCE(SUM(pd.total_harga), 0) AS grand_total,
+            COALESCE(MAX(fz_tot.total_faktur_z), 0) AS total_faktur_z,
+            COALESCE(MAX(ph_tot.total_semua_h), 0) AS total_semua_h
         ');
         $this->db->from('tbso_faktur_z_pecah p');
         $this->db->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left');
         $this->db->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left');
         $this->db->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left');
+        $this->db->join('(SELECT id_faktur, COALESCE(SUM(total_harga), 0) AS total_faktur_z FROM tbso_faktur_detail GROUP BY id_faktur) fz_tot', 'fz_tot.id_faktur = p.parent_id_faktur', 'left');
+        $this->db->join('(SELECT p2.parent_id_faktur, COALESCE(SUM(pd2.total_harga), 0) AS total_semua_h FROM tbso_faktur_z_pecah p2 JOIN tbso_faktur_z_pecah_detail pd2 ON pd2.id_pecah = p2.id_pecah WHERE p2.status != "cancelled" GROUP BY p2.parent_id_faktur) ph_tot', 'ph_tot.parent_id_faktur = p.parent_id_faktur', 'left');
 
         if ($mode === 'unpaid') {
             $this->db->group_start();
@@ -7621,6 +7665,11 @@ class C_SalesOrder extends CI_Controller
             $tglFaktur = !empty($f['tanggal_faktur']) ? $f['tanggal_faktur'] : date('Y-m-d');
             $metodeRow = !empty($f['metode_pembayaran']) ? $f['metode_pembayaran'] : $defaultMetode;
             $skemaRow  = isset($f['skema_potongan']) && $f['skema_potongan'] !== null ? (int)$f['skema_potongan'] : $defaultSkema;
+            $totZ      = (float)($f['total_faktur_z'] ?? 0);
+            $totSemuaH = (float)($f['total_semua_h'] ?? 0);
+            if ($totZ > 0 && $totSemuaH > 0 && ($totSemuaH / $totZ) >= 0.98) {
+                $skemaRow = 0;
+            }
             $tagihan   = (float)$f['grand_total'];
 
             $sheet->fromArray([
@@ -7851,25 +7900,30 @@ class C_SalesOrder extends CI_Controller
 
                 $metode   = $getVal('metode_pembayaran', $defaultMetode);
                 $skemaRaw = $getVal('skema_potongan', '');
-                if ($skemaRaw !== '') {
+                $hasExplicitSkema = ($skemaRaw !== '');
+                if ($hasExplicitSkema) {
                     $skemaParsed = (int)$this->_parseImportNumber($skemaRaw);
-                    $skema = ($skemaParsed === 40) ? 40 : (($skemaParsed === 0) ? 0 : 20);
+                    $skemaExplicit = ($skemaParsed === 40) ? 40 : (($skemaParsed === 0) ? 0 : 20);
                 } else {
-                    $skema = $defaultSkema;
+                    $skemaExplicit = null;
                 }
 
-                // Cari data Faktur Pecahan H di tbso_faktur_z_pecah
+                // Cari data Faktur Pecahan H di tbso_faktur_z_pecah beserta rasio terhadap Faktur Z Induk
                 $faktur = $this->db->select('
                     p.*,
                     COALESCE(fp.tanggal_faktur, p.tanggal_faktur) AS tanggal_faktur,
                     COALESCE(MAX(ca.kontak_person), "") AS kontak_person,
                     MAX(ca.nama_toko) AS nama_toko,
-                    COALESCE(SUM(pd.total_harga), 0) AS grand_total
+                    COALESCE(SUM(pd.total_harga), 0) AS grand_total,
+                    COALESCE(MAX(fz_tot.total_faktur_z), 0) AS total_faktur_z,
+                    COALESCE(MAX(ph_tot.total_semua_h), 0) AS total_semua_h
                 ')
                 ->from('tbso_faktur_z_pecah p')
                 ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = p.parent_id_faktur', 'left')
                 ->join('tb_customer_acak ca', 'ca.kd_customer = p.kd_customer', 'left')
                 ->join('tbso_faktur_z_pecah_detail pd', 'pd.id_pecah = p.id_pecah', 'left')
+                ->join('(SELECT id_faktur, COALESCE(SUM(total_harga), 0) AS total_faktur_z FROM tbso_faktur_detail GROUP BY id_faktur) fz_tot', 'fz_tot.id_faktur = p.parent_id_faktur', 'left')
+                ->join('(SELECT p2.parent_id_faktur, COALESCE(SUM(pd2.total_harga), 0) AS total_semua_h FROM tbso_faktur_z_pecah p2 JOIN tbso_faktur_z_pecah_detail pd2 ON pd2.id_pecah = p2.id_pecah WHERE p2.status != "cancelled" GROUP BY p2.parent_id_faktur) ph_tot', 'ph_tot.parent_id_faktur = p.parent_id_faktur', 'left')
                 ->where('p.no_faktur', $noFaktur)
                 ->group_by('p.id_pecah')
                 ->get()->row_array();
@@ -7877,6 +7931,19 @@ class C_SalesOrder extends CI_Controller
                 if (!$faktur) {
                     $notFoundList[] = $noFaktur;
                     continue;
+                }
+
+                $totZ      = (float)($faktur['total_faktur_z'] ?? 0);
+                $totSemuaH = (float)($faktur['total_semua_h'] ?? 0);
+                $fakturSkemaDb = (isset($faktur['skema_potongan']) && $faktur['skema_potongan'] !== null && $faktur['skema_potongan'] !== '')
+                    ? (int)$faktur['skema_potongan']
+                    : $defaultSkema;
+                if ($totZ > 0 && $totSemuaH > 0 && ($totSemuaH / $totZ) >= 0.98) {
+                    $skema = 0;
+                } elseif ($hasExplicitSkema) {
+                    $skema = $skemaExplicit;
+                } else {
+                    $skema = ($fakturSkemaDb === 40) ? 40 : (($fakturSkemaDb === 0) ? 0 : 20);
                 }
 
                 $pembagi = ($skema === 40) ? 0.6 : (($skema === 20) ? 0.8 : 1.0);
@@ -8453,7 +8520,7 @@ class C_SalesOrder extends CI_Controller
                 $ref = 'CD';
             } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
                 $ref = 'JU';
-            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM' || $kode_jenis === 'BC' || $kode_jenis === 'BR') {
                 $ref = 'CR';
             } else {
                 $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
