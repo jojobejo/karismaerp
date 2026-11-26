@@ -127,6 +127,70 @@ class M_ReturPembelian extends CI_Model
             KEY `idx_retur_log` (`id_retur_pembelian`),
             KEY `idx_action` (`action_type`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        $this->db->query("CREATE TABLE IF NOT EXISTS `tb_tmp_retur_pembelian` (
+            `id` INT(11) NOT NULL AUTO_INCREMENT,
+            `kd_supplier` VARCHAR(100) NOT NULL,
+            `nama_supplier` VARCHAR(255) DEFAULT NULL,
+            `gudang_id` VARCHAR(30) NOT NULL,
+            `kd_barang` VARCHAR(100) NOT NULL,
+            `nama_barang` VARCHAR(255) DEFAULT NULL,
+            `satuan` VARCHAR(50) DEFAULT 'PCS',
+            `no_lot` VARCHAR(50) DEFAULT NULL,
+            `expired_date` DATE DEFAULT NULL,
+            `qty_retur` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+            `user_inputer` VARCHAR(100) NOT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_tmp_user` (`user_inputer`),
+            KEY `idx_tmp_supplier` (`kd_supplier`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        $this->ensure_gudang_retur_pembelian();
+    }
+
+    /**
+     * Memastikan master gudang 'Gdg. Retur Pembelian' tersedia di tb_gudang.
+     * Mengembalikan objek baris gudang tersebut.
+     */
+    public function ensure_gudang_retur_pembelian()
+    {
+        if (!$this->db->table_exists('tb_gudang')) {
+            return null;
+        }
+
+        $row = $this->db
+            ->where('LOWER(TRIM(nama_gudang))', 'gdg. retur pembelian')
+            ->or_where('LOWER(TRIM(nama_gudang))', 'gudang retur pembelian')
+            ->order_by('id_gudang', 'ASC')
+            ->limit(1)
+            ->get('tb_gudang')
+            ->row_array();
+
+        if ($row) {
+            if ((int)($row['is_active'] ?? 1) !== 1) {
+                $this->db->where('id_gudang', (int)$row['id_gudang'])->update('tb_gudang', ['is_active' => 1]);
+                $row['is_active'] = 1;
+            }
+            return $row;
+        }
+
+        $insertData = [
+            'nama_gudang' => 'Gdg. Retur Pembelian',
+            'tipe'        => 'INDUK',
+            'is_active'   => 1,
+            'created_at'  => date('Y-m-d H:i:s'),
+        ];
+        $this->db->insert('tb_gudang', $insertData);
+        $newId = (int)$this->db->insert_id();
+
+        return $this->db->where('id_gudang', $newId)->get('tb_gudang')->row_array();
+    }
+
+    public function get_gudang_retur_pembelian_id()
+    {
+        $gudang = $this->ensure_gudang_retur_pembelian();
+        return $gudang ? (int)$gudang['id_gudang'] : 0;
     }
 
     public function header_rows($limit = 100)
@@ -135,10 +199,13 @@ class M_ReturPembelian extends CI_Model
         $sql = "SELECT r.*, 
                     MAX(l.nomor_lpb) AS nomor_lpb, 
                     MAX(s.nama_suplier) AS nama_suplier,
-                    COUNT(d.id_detail_retur_pembelian) AS total_item
+                    MAX(g.nama_gudang) AS nama_gudang,
+                    COUNT(d.id_detail_retur_pembelian) AS total_item,
+                    COALESCE(SUM(d.qty_retur), 0) AS total_qty_retur
                 FROM tb_retur_pembelian r
                 LEFT JOIN tb_lpb l ON l.id_lpb = r.id_lpb
                 LEFT JOIN tbpo_suplier s ON s.kd_suplier = r.kd_supplier
+                LEFT JOIN tb_gudang g ON CAST(g.id_gudang AS CHAR) = CAST(r.gudang_id AS CHAR)
                 LEFT JOIN tb_retur_pembelian_detail d ON d.id_retur_pembelian = r.id_retur_pembelian
                 GROUP BY r.id_retur_pembelian
                 ORDER BY r.created_at DESC, r.id_retur_pembelian DESC
@@ -376,6 +443,475 @@ class M_ReturPembelian extends CI_Model
                 ORDER BY l.input_at DESC, l.id_lpb DESC
                 LIMIT 30";
         return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Mengambil daftar supplier untuk dropdown Select2 pada halaman Retur Pembelian.
+     */
+    public function supplier_options($search = '')
+    {
+        $search = trim((string)$search);
+        $this->db->select('kd_suplier, nama_suplier, alamat_suplier')
+            ->from('tbpo_suplier')
+            ->where("COALESCE(NULLIF(TRIM(kd_suplier), ''), '') <> ''", null, false);
+
+        if ($search !== '') {
+            $this->db->group_start()
+                ->like('kd_suplier', $search)
+                ->or_like('nama_suplier', $search)
+                ->group_end();
+        }
+
+        $this->db->order_by('nama_suplier', 'ASC')->limit(30);
+        return $this->db->get()->result_array();
+    }
+
+    /**
+     * Mencari daftar nama barang yang memiliki stok tersedia di Gudang Retur Pembelian.
+     */
+    public function barang_gudang_retur_options($gudangId, $search = '')
+    {
+        $this->ensure_schema();
+        $gudangId = trim((string)$gudangId);
+        if ($gudangId === '') {
+            $gudangId = (string)$this->get_gudang_retur_pembelian_id();
+        }
+
+        $params = [$gudangId];
+        $whereSearch = '';
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $whereSearch = " AND (sb.kd_barang LIKE ? OR b.nama_barang LIKE ?)";
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql = "SELECT 
+                    sb.kd_barang,
+                    COALESCE(NULLIF(TRIM(MAX(b.nama_barang)), ''), sb.kd_barang) AS nama_barang,
+                    COALESCE(NULLIF(TRIM(MAX(b.satuan)), ''), 'PCS') AS satuan_kecil,
+                    COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_tersedia
+                FROM tberp_stock_batch sb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+                WHERE CAST(sb.gudang_id AS CHAR) = ?
+                    {$whereSearch}
+                GROUP BY sb.kd_barang
+                HAVING qty_tersedia > 0
+                ORDER BY nama_barang ASC
+                LIMIT 40";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Mengambil daftar No Lot berdasarkan Nama/Kode Barang yang dipilih dan Gudang Retur Pembelian.
+     */
+    public function lot_gudang_retur_options($gudangId, $kdBarang, $search = '')
+    {
+        $this->ensure_schema();
+        $gudangId = trim((string)$gudangId);
+        $kdBarang = trim((string)$kdBarang);
+        if ($gudangId === '' || $kdBarang === '') {
+            return [];
+        }
+
+        $params = [$gudangId, $kdBarang];
+        $whereSearch = '';
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $whereSearch = " AND COALESCE(NULLIF(TRIM(sb.no_lot), ''), '-') LIKE ?";
+            $params[] = '%' . $search . '%';
+        }
+
+        $sql = "SELECT 
+                    COALESCE(NULLIF(TRIM(sb.no_lot), ''), '-') AS no_lot,
+                    COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_tersedia
+                FROM tberp_stock_batch sb
+                WHERE CAST(sb.gudang_id AS CHAR) = ?
+                    AND sb.kd_barang = ?
+                    {$whereSearch}
+                GROUP BY COALESCE(NULLIF(TRIM(sb.no_lot), ''), '-')
+                HAVING qty_tersedia > 0
+                ORDER BY no_lot ASC
+                LIMIT 40";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Mengambil daftar Expired Date yang menyesuaikan dengan No Lot, Barang, dan Gudang Retur Pembelian.
+     */
+    public function exp_gudang_retur_options($gudangId, $kdBarang, $noLot, $search = '')
+    {
+        $this->ensure_schema();
+        $gudangId = trim((string)$gudangId);
+        $kdBarang = trim((string)$kdBarang);
+        $noLot = trim((string)$noLot);
+        if ($gudangId === '' || $kdBarang === '' || $noLot === '') {
+            return [];
+        }
+
+        $params = [$gudangId, $kdBarang, $noLot];
+        $whereSearch = '';
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $whereSearch = " AND COALESCE(CAST(sb.expired_date AS CHAR), '-') LIKE ?";
+            $params[] = '%' . $search . '%';
+        }
+
+        $sql = "SELECT 
+                    COALESCE(CAST(sb.expired_date AS CHAR), '-') AS expired_date,
+                    COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_tersedia,
+                    COALESCE(NULLIF(TRIM(MAX(b.satuan)), ''), 'PCS') AS satuan_kecil
+                FROM tberp_stock_batch sb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+                WHERE CAST(sb.gudang_id AS CHAR) = ?
+                    AND sb.kd_barang = ?
+                    AND COALESCE(NULLIF(TRIM(sb.no_lot), ''), '-') = ?
+                    {$whereSearch}
+                GROUP BY sb.expired_date
+                HAVING qty_tersedia > 0
+                ORDER BY sb.expired_date ASC
+                LIMIT 40";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    /**
+     * Mengambil stok tersedia spesifik untuk gudang, barang, no_lot, dan expired_date.
+     */
+    public function get_batch_available_qty($gudangId, $kdBarang, $noLot, $expiredDate)
+    {
+        $gudangId = trim((string)$gudangId);
+        $kdBarang = trim((string)$kdBarang);
+        $noLot = trim((string)$noLot);
+        $noLot = ($noLot === '') ? '-' : $noLot;
+        $normExp = $this->normalize_date($expiredDate);
+
+        $params = [$gudangId, $kdBarang, $noLot];
+        $whereExp = $normExp !== '' ? "AND sb.expired_date = ?" : "AND (sb.expired_date IS NULL OR CAST(sb.expired_date AS CHAR) IN ('', '0000-00-00'))";
+        if ($normExp !== '') {
+            $params[] = $normExp;
+        }
+
+        $row = $this->db->query(
+            "SELECT COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_tersedia
+             FROM tberp_stock_batch sb
+             WHERE CAST(sb.gudang_id AS CHAR) = ?
+               AND sb.kd_barang = ?
+               AND COALESCE(NULLIF(TRIM(sb.no_lot), ''), '-') = ?
+               {$whereExp}",
+            $params
+        )->row_array();
+
+        return (float)($row['qty_tersedia'] ?? 0);
+    }
+
+    /**
+     * Mengambil daftar item draft temporary retur pembelian berdasarkan user aktif.
+     */
+    public function get_tmp_draft_rows($user)
+    {
+        $this->ensure_schema();
+        $user = trim((string)$user);
+        $sql = "SELECT t.*,
+                    COALESCE(NULLIF(TRIM(s.nama_suplier), ''), t.nama_supplier, t.kd_supplier) AS supplier_label,
+                    COALESCE(NULLIF(TRIM(b.nama_barang), ''), t.nama_barang, t.kd_barang) AS barang_label,
+                    COALESCE(NULLIF(TRIM(b.satuan), ''), t.satuan, 'PCS') AS satuan_kecil
+                FROM tb_tmp_retur_pembelian t
+                LEFT JOIN tbpo_suplier s ON s.kd_suplier = t.kd_supplier
+                LEFT JOIN tbpo_barang b ON b.kode_barang = t.kd_barang
+                WHERE t.user_inputer = ?
+                ORDER BY t.id ASC";
+        return $this->db->query($sql, [$user])->result_array();
+    }
+
+    /**
+     * Menambahkan item ke tabel draft temporary (tb_tmp_retur_pembelian).
+     */
+    public function add_tmp_draft_item($payload, $user)
+    {
+        $this->ensure_schema();
+        $user = trim((string)$user);
+        $kdSupplier = trim((string)($payload['kd_supplier'] ?? ''));
+        $gudangId = trim((string)($payload['gudang_id'] ?? ''));
+        if ($gudangId === '') {
+            $gudangId = (string)$this->get_gudang_retur_pembelian_id();
+        }
+        $kdBarang = trim((string)($payload['kd_barang'] ?? ''));
+        $noLot = trim((string)($payload['no_lot'] ?? ''));
+        $noLot = ($noLot === '') ? '-' : $noLot;
+        $expiredDateRaw = trim((string)($payload['expired_date'] ?? ''));
+        $expiredDate = ($expiredDateRaw !== '' && $expiredDateRaw !== '-') ? $this->normalize_date($expiredDateRaw) : null;
+        $qtyRetur = (float)($payload['qty_retur'] ?? 0);
+
+        if ($kdSupplier === '' || $kdBarang === '' || $noLot === '' || $qtyRetur <= 0) {
+            return $this->fail('Supplier, Nama Barang, No Lot, Expired Date, dan Qty wajib diisi dengan benar.', ['INVALID_DRAFT_INPUT']);
+        }
+
+        // Pastikan supplier konsisten dalam 1 draft user
+        $existingRows = $this->get_tmp_draft_rows($user);
+        if (!empty($existingRows)) {
+            $firstSupplier = trim((string)$existingRows[0]['kd_supplier']);
+            if ($firstSupplier !== '' && $firstSupplier !== $kdSupplier) {
+                return $this->fail(
+                    'Draft aktif saat ini menggunakan supplier ' . ($existingRows[0]['supplier_label'] ?? $firstSupplier) . '. Selesaikan/posting atau hapus draft terlebih dahulu sebelum mengganti supplier.',
+                    ['SUPPLIER_MISMATCH']
+                );
+            }
+        }
+
+        $availableQty = $this->get_batch_available_qty($gudangId, $kdBarang, $noLot, $expiredDate ?? '');
+        if ($availableQty <= 0) {
+            return $this->fail('Stok batch barang tersebut tidak tersedia di Gudang Retur Pembelian.', ['BATCH_EMPTY']);
+        }
+
+        // Cek apakah batch yang sama sudah ada di draft user
+        $existingBatch = null;
+        foreach ($existingRows as $r) {
+            $rLot = trim((string)($r['no_lot'] ?: '-'));
+            $rExp = $r['expired_date'] ? $this->normalize_date($r['expired_date']) : null;
+            if ($r['kd_barang'] === $kdBarang && $rLot === $noLot && $rExp === $expiredDate && (string)$r['gudang_id'] === $gudangId) {
+                $existingBatch = $r;
+                break;
+            }
+        }
+
+        $newTotalQty = $qtyRetur + ($existingBatch ? (float)$existingBatch['qty_retur'] : 0);
+        if ($newTotalQty > $availableQty + 0.0001) {
+            return $this->fail(
+                'Total Qty retur (' . number_format($newTotalQty, 2, ',', '.') . ') melebihi stok tersedia di Gudang Retur Pembelian (' . number_format($availableQty, 2, ',', '.') . ').',
+                ['QTY_EXCEEDS_STOCK']
+            );
+        }
+
+        $barangRow = $this->db->select('nama_barang, satuan')->where('kode_barang', $kdBarang)->get('tbpo_barang')->row_array();
+        $supplierRow = $this->db->select('nama_suplier')->where('kd_suplier', $kdSupplier)->get('tbpo_suplier')->row_array();
+
+        if ($existingBatch) {
+            $this->db->where('id', (int)$existingBatch['id'])->update('tb_tmp_retur_pembelian', [
+                'qty_retur' => $newTotalQty,
+            ]);
+        } else {
+            $this->db->insert('tb_tmp_retur_pembelian', [
+                'kd_supplier'   => $kdSupplier,
+                'nama_supplier' => $supplierRow['nama_suplier'] ?? $kdSupplier,
+                'gudang_id'     => $gudangId,
+                'kd_barang'     => $kdBarang,
+                'nama_barang'   => $barangRow['nama_barang'] ?? $kdBarang,
+                'satuan'        => !empty($barangRow['satuan']) ? $barangRow['satuan'] : 'PCS',
+                'no_lot'        => $noLot,
+                'expired_date'  => $expiredDate ?: null,
+                'qty_retur'     => $qtyRetur,
+                'user_inputer'  => $user,
+                'created_at'    => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        return $this->ok('Item berhasil ditambahkan ke draft retur pembelian.', [
+            'rows' => $this->get_tmp_draft_rows($user),
+        ]);
+    }
+
+    /**
+     * Menghapus satu baris item dari draft temporary.
+     */
+    public function delete_tmp_draft_item($id, $user)
+    {
+        $this->ensure_schema();
+        $id = (int)$id;
+        $user = trim((string)$user);
+        if ($id <= 0) {
+            return $this->fail('ID item draft tidak valid.', ['INVALID_ID']);
+        }
+
+        $this->db->where('id', $id)->where('user_inputer', $user)->delete('tb_tmp_retur_pembelian');
+        return $this->ok('Item draft berhasil dihapus.', [
+            'rows' => $this->get_tmp_draft_rows($user),
+        ]);
+    }
+
+    /**
+     * Mengosongkan seluruh draft temporary milik user.
+     */
+    public function clear_tmp_draft($user)
+    {
+        $this->ensure_schema();
+        $user = trim((string)$user);
+        $this->db->where('user_inputer', $user)->delete('tb_tmp_retur_pembelian');
+        return $this->ok('Draft retur pembelian berhasil dikosongkan.', ['rows' => []]);
+    }
+
+    /**
+     * Memposting data draft retur pembelian dari Gudang Retur Pembelian:
+     * - Menyimpan dokumen ke tb_retur_pembelian & tb_retur_pembelian_detail
+     * - Menginput Jenis Penyelesaian & Alasan Retur setelah pembuatan draft
+     * - Mengurangi stok fisik di Gudang Retur Pembelian dan mencatat ke tberp_stock_ledger (RBELI)
+     */
+    public function post_from_tmp_draft($payload, $user)
+    {
+        $this->ensure_schema();
+        $user = trim((string)$user);
+        $draftRows = $this->get_tmp_draft_rows($user);
+        if (empty($draftRows)) {
+            return $this->fail('Draft item retur pembelian masih kosong. Tambahkan minimal 1 barang terlebih dahulu.', ['DRAFT_EMPTY']);
+        }
+
+        $tanggal = $this->normalize_date($payload['tanggal_retur'] ?? date('Y-m-d'));
+        $jenis = strtoupper(trim((string)($payload['jenis_penyelesaian'] ?? '')));
+        $alasan = trim((string)($payload['alasan_retur'] ?? ''));
+        $kdSupplier = trim((string)($payload['kd_supplier'] ?? ($draftRows[0]['kd_supplier'] ?? '')));
+        $gudangId = trim((string)($draftRows[0]['gudang_id'] ?? $this->get_gudang_retur_pembelian_id()));
+
+        if ($tanggal === '') {
+            return $this->fail('Tanggal retur wajib diisi.', ['DATE_REQUIRED']);
+        }
+        if ($jenis === '') {
+            return $this->fail('Jenis penyelesaian wajib dipilih.', ['SETTLEMENT_REQUIRED']);
+        }
+        if ($alasan === '') {
+            return $this->fail('Alasan retur wajib diisi sebelum memposting data.', ['REASON_REQUIRED']);
+        }
+
+        // Validasi stok fisik setiap baris draft terhadap Gudang Retur Pembelian
+        foreach ($draftRows as $d) {
+            $avail = $this->get_batch_available_qty($gudangId, $d['kd_barang'], $d['no_lot'], $d['expired_date'] ?? '');
+            if ((float)$d['qty_retur'] > $avail + 0.0001) {
+                return $this->fail(
+                    'Stok fisik barang ' . ($d['barang_label'] ?? $d['kd_barang']) . ' (Lot: ' . ($d['no_lot'] ?: '-') . ') tidak mencukupi di Gudang Retur Pembelian. Tersedia: ' . number_format($avail, 2, ',', '.'),
+                    ['STOCK_NOT_ENOUGH']
+                );
+            }
+        }
+
+        $this->db->trans_begin();
+        $noRetur = $this->generate_number();
+        $now = date('Y-m-d H:i:s');
+
+        $headerData = [
+            'no_retur_pembelian' => $noRetur,
+            'id_lpb'             => 0,
+            'kd_po'              => null,
+            'no_po'              => null,
+            'kd_supplier'        => $kdSupplier,
+            'tanggal_retur'      => $tanggal,
+            'gudang_id'          => (string)$gudangId,
+            'status'             => self::STATUS_POSTED,
+            'status_persiapan'   => self::PERSIAPAN_BELUM,
+            'jenis_penyelesaian' => $jenis,
+            'alasan_retur'       => $alasan,
+            'total_dpp'          => '0.0000',
+            'total_ppn'          => '0.0000',
+            'grand_total'        => '0.0000',
+            'created_by'         => $user,
+            'created_at'         => $now,
+            'updated_by'         => $user,
+            'updated_at'         => $now,
+            'submitted_by'       => $user,
+            'submitted_at'       => $now,
+            'posted_by'          => $user,
+            'posted_at'          => $now,
+        ];
+
+        $this->db->insert('tb_retur_pembelian', $headerData);
+        $idRetur = (int)$this->db->insert_id();
+
+        $totals = ['dpp' => '0.0000', 'ppn' => '0.0000', 'grand' => '0.0000'];
+
+        foreach ($draftRows as $d) {
+            $resolved = $this->resolve_latest_purchase_info($d['kd_barang'], $d['no_lot'], $d['expired_date'], $kdSupplier);
+            $hargaSatuan = $this->money($resolved['harga_satuan'] ?? '0');
+            $kelompok = (string)($resolved['kelompok_dagang'] ?? '');
+            $qty = (float)$d['qty_retur'];
+            $dpp = $this->money(bcmul((string)$qty, $hargaSatuan, 4));
+            $ppn = ($kelompok === '2') ? $this->money(bcdiv(bcmul($dpp, '11', 4), '100', 4)) : '0.0000';
+            $total = bcadd($dpp, $ppn, 4);
+
+            $detailRow = [
+                'id_retur_pembelian' => $idRetur,
+                'id_detail_lpb'      => (int)($resolved['id_detail_lpb'] ?? 0),
+                'kd_barang'          => $d['kd_barang'],
+                'no_lot'             => $d['no_lot'],
+                'expired_date'       => $d['expired_date'] ?: null,
+                'qty_retur'          => $qty,
+                'harga_satuan'       => $hargaSatuan,
+                'dpp'                => $dpp,
+                'ppn'                => $ppn,
+                'total'              => $total,
+                'kelompok_dagang'    => $kelompok,
+                'alasan_retur'       => $alasan,
+                'created_at'         => $now,
+            ];
+
+            $this->db->insert('tb_retur_pembelian_detail', $detailRow);
+
+            // Kurangi stok fisik dari Gudang Retur Pembelian dan catat di stock ledger
+            $this->decrease_stock($headerData, $detailRow);
+
+            $totals['dpp'] = bcadd($totals['dpp'], $dpp, 4);
+            $totals['ppn'] = bcadd($totals['ppn'], $ppn, 4);
+            $totals['grand'] = bcadd($totals['grand'], $total, 4);
+        }
+
+        $this->db->where('id_retur_pembelian', $idRetur)->update('tb_retur_pembelian', [
+            'total_dpp'   => $totals['dpp'],
+            'total_ppn'   => $totals['ppn'],
+            'grand_total' => $totals['grand'],
+        ]);
+
+        // Kosongkan draft temporary milik user
+        $this->db->where('user_inputer', $user)->delete('tb_tmp_retur_pembelian');
+
+        $after = $this->header($idRetur);
+        $this->write_log(
+            $idRetur,
+            'POST_GUDANG_RETUR',
+            self::STATUS_DRAFT,
+            self::STATUS_POSTED,
+            null,
+            $after,
+            'Retur pembelian diposting dari Gudang Retur Pembelian (' . $jenis . ').',
+            $user
+        );
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return $this->fail('Gagal memposting data retur pembelian.', ['DATABASE_ERROR']);
+        }
+
+        $this->db->trans_commit();
+        return $this->ok('Data Retur Pembelian (' . $noRetur . ') berhasil diposting dan stok Gudang Retur Pembelian telah dikurangi.', [
+            'id_retur_pembelian' => $idRetur,
+            'no_retur_pembelian' => $noRetur,
+        ]);
+    }
+
+    /**
+     * Mencari referensi harga satuan & kelompok dagang terakhir dari LPB/PO jika tersedia (opsional).
+     */
+    private function resolve_latest_purchase_info($kdBarang, $noLot, $expiredDate, $kdSupplier = '')
+    {
+        $barang = $this->db->select('kelompok_dagang, kelompok_barang')
+            ->where('kode_barang', $kdBarang)
+            ->get('tbpo_barang')
+            ->row_array();
+
+        $kelompok = trim((string)($barang['kelompok_dagang'] ?? ($barang['kelompok_barang'] ?? '')));
+
+        $sql = "SELECT d.id_detail_lpb, d.id_lpb,
+                    COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0) AS harga_satuan
+                FROM tb_lpb_detail d
+                INNER JOIN tb_lpb l ON l.id_lpb = d.id_lpb
+                LEFT JOIN tbpo_detail_po pp ON pp.kd_po = l.kd_po AND pp.no_po = l.no_po AND pp.kd_barang = d.kd_barang
+                WHERE d.kd_barang = ?
+                ORDER BY (CASE WHEN COALESCE(d.no_lot, '-') = COALESCE(?, '-') THEN 0 ELSE 1 END) ASC,
+                         d.id_detail_lpb DESC
+                LIMIT 1";
+        $lpbRow = $this->db->query($sql, [$kdBarang, $noLot])->row_array();
+
+        return [
+            'id_detail_lpb'   => (int)($lpbRow['id_detail_lpb'] ?? 0),
+            'harga_satuan'    => (float)($lpbRow['harga_satuan'] ?? 0),
+            'kelompok_dagang' => $kelompok,
+        ];
     }
 
     public function lpb_detail_rows($idLpb)
@@ -618,17 +1154,21 @@ class M_ReturPembelian extends CI_Model
         $this->db->trans_begin();
 
         $header = $this->locked_header((int)$idRetur);
-        if (!$header || $header['status'] !== self::STATUS_POSTED || (int)$header['id_jurnal'] <= 0) {
+        if (!$header || $header['status'] !== self::STATUS_POSTED) {
             $this->db->trans_rollback();
             return $this->fail('Hanya retur POSTED yang dapat di-void.', ['RETUR_NOT_POSTED']);
         }
 
-        $reversal = $this->accounting_service->reversal_journal((int)$header['id_jurnal'], 'Void retur pembelian ' . $header['no_retur_pembelian'] . ': ' . $reason, $user);
-        if (!$reversal['success']) {
-            $this->db->trans_rollback();
-            return $reversal;
+        $idJurnalReversal = null;
+        if ((int)$header['id_jurnal'] > 0) {
+            $reversal = $this->accounting_service->reversal_journal((int)$header['id_jurnal'], 'Void retur pembelian ' . $header['no_retur_pembelian'] . ': ' . $reason, $user);
+            if (!$reversal['success']) {
+                $this->db->trans_rollback();
+                return $reversal;
+            }
+            $idJurnalReversal = (int)$reversal['data']['id_jurnal'];
+            $this->write_log((int)$idRetur, 'REVERSE', self::STATUS_POSTED, self::STATUS_POSTED, $header, $header, 'Jurnal reversal dibuat untuk void retur pembelian.', $user);
         }
-        $this->write_log((int)$idRetur, 'REVERSE', self::STATUS_POSTED, self::STATUS_POSTED, $header, $header, 'Jurnal reversal dibuat untuk void retur pembelian.', $user);
 
         foreach ($this->details((int)$idRetur) as $detail) {
             $this->reverse_stock($header, $detail);
@@ -636,7 +1176,7 @@ class M_ReturPembelian extends CI_Model
 
         $this->db->where('id_retur_pembelian', (int)$idRetur)->update('tb_retur_pembelian', [
             'status' => self::STATUS_VOID,
-            'id_jurnal_reversal' => (int)$reversal['data']['id_jurnal'],
+            'id_jurnal_reversal' => $idJurnalReversal,
             'reversed_by' => $user,
             'reversed_at' => date('Y-m-d H:i:s'),
             'updated_by' => $user,
@@ -651,7 +1191,7 @@ class M_ReturPembelian extends CI_Model
         }
 
         $this->db->trans_commit();
-        return $this->ok('Retur pembelian berhasil di-void dengan jurnal reversal.', ['id_jurnal_reversal' => (int)$reversal['data']['id_jurnal']]);
+        return $this->ok('Retur pembelian berhasil di-void dan stok telah dikembalikan.', ['id_jurnal_reversal' => $idJurnalReversal]);
     }
 
     private function post_purchase_return_journal($header, $details, $user)
@@ -815,16 +1355,34 @@ class M_ReturPembelian extends CI_Model
         ];
     }
 
+    private function apply_batch_where($kdBarang, $gudangId, $noLot, $expiredDate)
+    {
+        $this->db->where('kd_barang', $kdBarang);
+        $this->db->where('gudang_id', (string)$gudangId);
+        $lot = trim((string)$noLot);
+        if ($lot === '' || $lot === '-') {
+            $this->db->group_start()
+                ->where('no_lot', '-')
+                ->or_where('no_lot', '')
+                ->or_where('no_lot IS NULL', null, false)
+                ->group_end();
+        } else {
+            $this->db->where('no_lot', $lot);
+        }
+
+        if ($expiredDate !== null && $expiredDate !== '' && $expiredDate !== '-' && $expiredDate !== '0000-00-00') {
+            $this->db->where('expired_date', $expiredDate);
+        } else {
+            $this->db->group_start()
+                ->where('expired_date IS NULL', null, false)
+                ->or_where("CAST(expired_date AS CHAR) IN ('', '0000-00-00')", null, false)
+                ->group_end();
+        }
+    }
+
     private function decrease_stock($header, $detail)
     {
-        $this->db->where('kd_barang', $detail['kd_barang']);
-        $this->db->where('gudang_id', (string)$header['gudang_id']);
-        $this->db->where('no_lot', $detail['no_lot']);
-        if ($detail['expired_date'] !== null) {
-            $this->db->where('expired_date', $detail['expired_date']);
-        } else {
-            $this->db->where('expired_date', null);
-        }
+        $this->apply_batch_where($detail['kd_barang'], $header['gudang_id'], $detail['no_lot'], $detail['expired_date']);
         $this->db->set('qty_on_hand', 'qty_on_hand - ' . (float)$detail['qty_retur'], false);
         $this->db->set('update_at', date('Y-m-d H:i:s'));
         $this->db->update('tberp_stock_batch');
@@ -844,14 +1402,7 @@ class M_ReturPembelian extends CI_Model
 
     private function reverse_stock($header, $detail)
     {
-        $this->db->where('kd_barang', $detail['kd_barang']);
-        $this->db->where('gudang_id', (string)$header['gudang_id']);
-        $this->db->where('no_lot', $detail['no_lot']);
-        if ($detail['expired_date'] !== null) {
-            $this->db->where('expired_date', $detail['expired_date']);
-        } else {
-            $this->db->where('expired_date', null);
-        }
+        $this->apply_batch_where($detail['kd_barang'], $header['gudang_id'], $detail['no_lot'], $detail['expired_date']);
         $this->db->set('qty_on_hand', 'qty_on_hand + ' . (float)$detail['qty_retur'], false);
         $this->db->set('update_at', date('Y-m-d H:i:s'));
         $this->db->update('tberp_stock_batch');

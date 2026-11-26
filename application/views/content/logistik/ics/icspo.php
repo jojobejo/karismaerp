@@ -21,13 +21,15 @@ $isDataLpbPage = !empty($is_data_lpb_page);
 $hideSupplierCode = !empty($hide_lpb_supplier_code);
 $hideLastInput = !empty($hide_lpb_last_input);
 $lpbTableColspan = 10 - ($hideSupplierCode ? 1 : 0) - ($hideLastInput ? 1 : 0);
-$panelCount = ($showLogistikPanel ? 1 : 0) + ($showPurchasingPanel ? 1 : 0) + 1;
+$panelCount = ($showLogistikPanel ? 2 : 0) + ($showPurchasingPanel ? 1 : 0) + 1;
 $showPanelTabs = $panelCount > 1;
 $isManualTabActive = (!empty($active_tab) && $active_tab === 'lpb-manual');
-$isLogistikActive = !$isManualTabActive && $showLogistikPanel;
-$isPurchasingActive = !$isManualTabActive && !$showLogistikPanel && $showPurchasingPanel;
+$isPoSupplierTabActive = (!empty($active_tab) && $active_tab === 'po-supplier' && $showLogistikPanel);
+$isLogistikActive = !$isManualTabActive && !$isPoSupplierTabActive && $showLogistikPanel;
+$isPurchasingActive = !$isManualTabActive && !$isPoSupplierTabActive && !$showLogistikPanel && $showPurchasingPanel;
 
 $logistikPanelClass = $showPanelTabs ? ($isLogistikActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
+$poSupplierPanelClass = $showPanelTabs ? ($isPoSupplierTabActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
 $purchasingPanelClass = $showPanelTabs ? ($isPurchasingActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
 $manualPanelClass = $showPanelTabs ? ($isManualTabActive ? 'tab-pane fade show active' : 'tab-pane fade') : '';
 
@@ -355,6 +357,11 @@ $formatDate = function ($dateStr) {
                                             <i class="fas fa-file-invoice mr-1"></i> Data PO
                                         </a>
                                     </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link <?= $isPoSupplierTabActive ? 'active' : '' ?>" id="po-supplier-tab" data-toggle="tab" href="#po-supplier-panel" role="tab" aria-controls="po-supplier-panel" aria-selected="<?= $isPoSupplierTabActive ? 'true' : 'false' ?>">
+                                            <i class="fas fa-truck-loading mr-1 text-primary"></i> Data PO Supplier
+                                        </a>
+                                    </li>
                                     <?php endif; ?>
                                     <?php if ($showPurchasingPanel) : ?>
                                     <li class="nav-item">
@@ -481,6 +488,95 @@ $formatDate = function ($dateStr) {
                                         </tbody>
                                     </table>
                                 </div>
+                                    </div>
+
+                                    <div class="<?= $poSupplierPanelClass ?>" id="po-supplier-panel" role="tabpanel" aria-labelledby="po-supplier-tab">
+                                        <div class="card border shadow-sm mb-3" style="border-radius: 10px; background: #f8fafc;">
+                                            <div class="card-body py-3 px-3">
+                                                <div class="row align-items-end">
+                                                    <div class="col-lg-5 col-md-7 mb-2 mb-md-0">
+                                                        <label for="filterPoSupplierSelect" class="font-weight-bold mb-1" style="font-size: 13px; color: #334155;">
+                                                            <i class="fas fa-building text-primary mr-1"></i> Pilih Supplier (PO)
+                                                        </label>
+                                                        <select id="filterPoSupplierSelect" class="form-control select2" style="width: 100%;" data-placeholder="-- Cari & Pilih Supplier --">
+                                                            <option value="">-- Cari & Pilih Supplier --</option>
+                                                            <?php if (!empty($po_suppliers)) : ?>
+                                                                <?php foreach ($po_suppliers as $supp) :
+                                                                    $kdSuppOpt = trim((string) ($supp['kdsupp'] ?? ''));
+                                                                    $nmSuppOpt = trim((string) ($supp['nm_suplier'] ?? $kdSuppOpt));
+                                                                    $totalPoOpt = (int) ($supp['total_po'] ?? 0);
+                                                                    $labelOpt = ($hideSupplierCode || $kdSuppOpt === '' || $kdSuppOpt === $nmSuppOpt)
+                                                                        ? $nmSuppOpt
+                                                                        : ($kdSuppOpt . ' - ' . $nmSuppOpt);
+                                                                ?>
+                                                                    <option value="<?= htmlspecialchars($kdSuppOpt, ENT_QUOTES, 'UTF-8') ?>">
+                                                                        <?= htmlspecialchars($labelOpt) ?> (<?= $totalPoOpt ?> PO)
+                                                                    </option>
+                                                                <?php endforeach; ?>
+                                                            <?php endif; ?>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-lg-3 col-md-5 mb-2 mb-lg-0 d-flex align-items-center" style="gap: 8px;">
+                                                        <button type="button" id="btnReloadPoSupplier" class="btn btn-primary btn-sm px-3" disabled>
+                                                            <i class="fas fa-sync-alt mr-1"></i> Muat Data
+                                                        </button>
+                                                        <button type="button" id="btnResetPoSupplier" class="btn btn-outline-secondary btn-sm px-3" disabled>
+                                                            <i class="fas fa-redo mr-1"></i> Reset
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-lg-4 col-md-12 text-lg-right mt-2 mt-lg-0">
+                                                        <div id="poSupplierSummaryBadges" class="d-none">
+                                                            <span class="badge badge-primary px-2 py-1 mr-1" style="font-size: 12px;">
+                                                                Total PO: <strong id="summarySupplierTotalPo">0</strong>
+                                                            </span>
+                                                            <span class="badge badge-info px-2 py-1 mr-1" style="font-size: 12px;">
+                                                                Total Barang: <strong id="summarySupplierTotalItem">0</strong>
+                                                            </span>
+                                                            <span class="badge badge-success px-2 py-1" style="font-size: 12px;">
+                                                                Diterima: <strong id="summarySupplierTotalReceived">0</strong> / <strong id="summarySupplierTotalOrder">0</strong>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+                                            <div class="lpb-filter-toolbar" id="poSupplierStatusFilter">
+                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="belum">
+                                                    <i class="fas fa-times mr-1"></i> Belum
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="partial">
+                                                    <i class="fas fa-clock mr-1"></i> Partial
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="done">
+                                                    <i class="fas fa-check mr-1"></i> Done
+                                                </button>
+                                            </div>
+                                            <div id="poSupplierLoadingIndicator" class="text-primary font-weight-bold d-none" style="font-size: 13px;">
+                                                <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data barang PO supplier...
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover" id="idtb_ics_po_supplier" style="width: 100%;">
+                                                <thead class="thead-dark text-center">
+                                                    <tr>
+                                                        <th>No PO</th>
+                                                        <th>Tanggal Transaksi</th>
+                                                        <th>Nama Barang</th>
+                                                        <th class="text-center">Qty Barang</th>
+                                                        <th class="text-center">Qty Barang Diterima</th>
+                                                        <th class="text-center">Progress</th>
+                                                        <th class="text-center">Status Input Terakhir</th>
+                                                        <th class="text-center">Status</th>
+                                                        <th class="text-center" style="width:90px;">#</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                     <?php endif; ?>
 
@@ -832,6 +928,274 @@ $formatDate = function ($dateStr) {
                     .addClass('btn-primary active');
                 lpbTable.draw();
             });
+
+            // Inisialisasi Select2 & DataTable untuk Tab Data PO Supplier
+            if ($.fn.select2) {
+                $('#filterPoSupplierSelect').select2({
+                    theme: 'bootstrap4',
+                    placeholder: '-- Cari & Pilih Supplier --',
+                    allowClear: true,
+                    width: '100%'
+                });
+            }
+
+            var poSupplierStatusFilter = 'all';
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (!settings.nTable || settings.nTable.id !== 'idtb_ics_po_supplier') {
+                    return true;
+                }
+
+                if (poSupplierStatusFilter === 'all') {
+                    return true;
+                }
+
+                var rowData = settings.aoData[dataIndex];
+                if (!rowData || !rowData.nTr) {
+                    return true;
+                }
+                var $row = $(rowData.nTr);
+                return String($row.attr('data-lpb-status') || '') === poSupplierStatusFilter;
+            });
+
+            var poSupplierTable = $('#idtb_ics_po_supplier').DataTable({
+                responsive: true,
+                autoWidth: false,
+                pageLength: 25,
+                order: [
+                    [1, 'desc'],
+                    [0, 'desc']
+                ],
+                columnDefs: [
+                    {
+                        className: 'text-center font-weight-bold',
+                        targets: [3, 4]
+                    },
+                    {
+                        className: 'text-center',
+                        targets: [5, 6, 7, 8]
+                    },
+                    {
+                        orderable: false,
+                        targets: -1
+                    }
+                ],
+                createdRow: function(row, data) {
+                    var st = (data && data._status) ? String(data._status) : '';
+                    $(row).attr('data-lpb-status', st);
+                    if (st === 'done') {
+                        $(row).addClass('table-success');
+                    } else if (st === 'partial') {
+                        $(row).addClass('table-warning');
+                    }
+                },
+                columns: [
+                    { data: 'no_po_html' },
+                    {
+                        data: 'tgl_transaksi_display',
+                        render: function(data, type, row) {
+                            if (type === 'sort' || type === 'type') {
+                                return row.tgl_transaksi_raw || '';
+                            }
+                            return data;
+                        }
+                    },
+                    { data: 'nama_barang_html' },
+                    { data: 'qty_barang_html' },
+                    { data: 'qty_diterima_html' },
+                    { data: 'progress_html' },
+                    { data: 'input_terakhir_html' },
+                    { data: 'status_html' },
+                    { data: 'action_html' }
+                ],
+                language: {
+                    search: 'Cari Barang / No PO:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                    zeroRecords: 'Tidak ada data barang PO yang cocok dengan filter',
+                    emptyTable: 'Silakan pilih Supplier terlebih dahulu untuk menampilkan data barang PO',
+                    paginate: {
+                        first: 'Pertama',
+                        last: 'Terakhir',
+                        next: 'Berikutnya',
+                        previous: 'Sebelumnya'
+                    }
+                }
+            });
+
+            function escapeHtmlStr(str) {
+                return String(str == null ? '' : str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function formatDateId(dateStr) {
+                var s = String(dateStr == null ? '' : dateStr).trim();
+                if (!s || s === '-' || s === '0000-00-00' || s === '0000-00-00 00:00:00') {
+                    return '-';
+                }
+                var parts = s.split(' ')[0].split('-');
+                if (parts.length === 3) {
+                    return parts[2] + '/' + parts[1] + '/' + parts[0];
+                }
+                return s;
+            }
+
+            function formatNumberClean(val) {
+                var num = parseFloat(val);
+                if (isNaN(num)) {
+                    return '0';
+                }
+                if (Math.floor(num) === num) {
+                    return num.toLocaleString('id-ID');
+                }
+                return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            }
+
+            function loadPoSupplierItems(kdSuplier) {
+                var kd = String(kdSuplier == null ? '' : kdSuplier).trim();
+                if (!kd) {
+                    poSupplierTable.clear().draw();
+                    $('#poSupplierSummaryBadges').addClass('d-none');
+                    $('#btnReloadPoSupplier, #btnResetPoSupplier').prop('disabled', true);
+                    return;
+                }
+
+                $('#btnReloadPoSupplier, #btnResetPoSupplier').prop('disabled', false);
+                $('#poSupplierLoadingIndicator').removeClass('d-none');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_get_po_supplier_items') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        kd_suplier: kd,
+                        date1: '<?= htmlspecialchars((string) ($date1 ?? ''), ENT_QUOTES, 'UTF-8') ?>',
+                        date2: '<?= htmlspecialchars((string) ($date2 ?? ''), ENT_QUOTES, 'UTF-8') ?>'
+                    },
+                    success: function(res) {
+                        $('#poSupplierLoadingIndicator').addClass('d-none');
+                        if (!res || res.status !== 'success') {
+                            poSupplierTable.clear().draw();
+                            $('#poSupplierSummaryBadges').addClass('d-none');
+                            return;
+                        }
+
+                        var rows = Array.isArray(res.rows) ? res.rows : [];
+                        var tableRows = [];
+
+                        for (var i = 0; i < rows.length; i++) {
+                            var r = rows[i] || {};
+                            var noPo = String(r.no_po || '');
+                            var kdSupp = String(r.kdsupp || kd);
+                            var kdBarang = String(r.kd_barang || '');
+                            var namaBarang = String(r.nama_barang || '-');
+                            var tglRaw = String(r.tgl_transaksi || '');
+                            var qtyOrderNum = parseFloat(r.qty_barang || 0) || 0;
+                            var qtyRcvNum = parseFloat(r.qty_barang_diterima || 0) || 0;
+                            var progressRaw = parseFloat(r.progress_persen || 0) || 0;
+                            var progress = Math.max(0, Math.min(100, progressRaw));
+                            var progressText = Number(progress.toFixed(2)).toString();
+                            var status = String(r.status || 'belum').toLowerCase().trim();
+                            var inputTerakhir = String(r.input_terakhir || '-');
+
+                            var progressClass = 'is-danger';
+                            var badgeHtml = '<span class="badge badge-danger px-2 py-1"><i class="fas fa-times mr-1"></i> Belum</span>';
+                            if (status === 'done') {
+                                progressClass = 'is-success';
+                                badgeHtml = '<span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> Done</span>';
+                            } else if (status === 'partial') {
+                                progressClass = 'is-warning';
+                                badgeHtml = '<span class="badge badge-warning px-2 py-1"><i class="fas fa-clock mr-1"></i> Partial</span>';
+                            }
+
+                            var qtyOrderFmt = formatNumberClean(qtyOrderNum);
+                            var qtyRcvFmt = formatNumberClean(qtyRcvNum);
+
+                            var progressHtml = '<div class="po-progress-wrap">' +
+                                '<div class="po-progress-label">' +
+                                    '<span>' + escapeHtmlStr(progressText) + '%</span>' +
+                                    '<span>' + escapeHtmlStr(qtyRcvFmt) + ' / ' + escapeHtmlStr(qtyOrderFmt) + '</span>' +
+                                '</div>' +
+                                '<div class="po-progress-track">' +
+                                    '<div class="po-progress-fill ' + progressClass + '" style="width: ' + progress + '%;"></div>' +
+                                '</div>' +
+                                '<div class="po-progress-note">Berdasarkan qty diterima</div>' +
+                            '</div>';
+
+                            var detailUrl = '<?= base_url('ics/detail_po') ?>?no_po=' + encodeURIComponent(noPo) + '&kd_suplier=' + encodeURIComponent(kdSupp);
+                            var actionHtml = '<a href="' + detailUrl + '" class="btn btn-info btn-sm" target="_blank">' +
+                                '<i class="fas fa-eye"></i> Detail' +
+                            '</a>';
+
+                            var namaBarangHtml = '<div class="font-weight-bold">' + escapeHtmlStr(namaBarang) + '</div>' +
+                                (kdBarang ? '<small class="text-muted">' + escapeHtmlStr(kdBarang) + '</small>' : '');
+
+                            tableRows.push({
+                                _status: status,
+                                no_po_html: '<span class="font-weight-bold">' + escapeHtmlStr(noPo) + '</span>',
+                                tgl_transaksi_raw: tglRaw,
+                                tgl_transaksi_display: escapeHtmlStr(formatDateId(tglRaw)),
+                                nama_barang_html: namaBarangHtml,
+                                qty_barang_html: escapeHtmlStr(qtyOrderFmt),
+                                qty_diterima_html: '<span class="' + (qtyRcvNum > 0 ? 'text-success' : 'text-danger') + '">' + escapeHtmlStr(qtyRcvFmt) + '</span>',
+                                progress_html: progressHtml,
+                                input_terakhir_html: escapeHtmlStr(inputTerakhir),
+                                status_html: badgeHtml,
+                                action_html: actionHtml
+                            });
+                        }
+
+                        poSupplierTable.clear().rows.add(tableRows).draw();
+
+                        var summary = res.summary || {};
+                        $('#summarySupplierTotalPo').text(formatNumberClean(summary.total_po || 0));
+                        $('#summarySupplierTotalItem').text(formatNumberClean(summary.total_item || rows.length));
+                        $('#summarySupplierTotalOrder').text(formatNumberClean(summary.total_qty_order || 0));
+                        $('#summarySupplierTotalReceived').text(formatNumberClean(summary.total_qty_diterima || 0));
+                        $('#poSupplierSummaryBadges').removeClass('d-none');
+                    },
+                    error: function() {
+                        $('#poSupplierLoadingIndicator').addClass('d-none');
+                        poSupplierTable.clear().draw();
+                        $('#poSupplierSummaryBadges').addClass('d-none');
+                    }
+                });
+            }
+
+            $(document).on('change', '#filterPoSupplierSelect', function() {
+                loadPoSupplierItems($(this).val());
+            });
+
+            $(document).on('click', '#btnReloadPoSupplier', function() {
+                loadPoSupplierItems($('#filterPoSupplierSelect').val());
+            });
+
+            $(document).on('click', '#btnResetPoSupplier', function() {
+                $('#filterPoSupplierSelect').val('').trigger('change');
+                poSupplierStatusFilter = 'all';
+                $('#poSupplierStatusFilter button[data-filter]')
+                    .removeClass('btn-primary active')
+                    .addClass('btn-outline-secondary');
+                $('#poSupplierStatusFilter button[data-filter="all"]')
+                    .removeClass('btn-outline-secondary')
+                    .addClass('btn-primary active');
+                poSupplierTable.clear().draw();
+            });
+
+            $(document).on('click', '#poSupplierStatusFilter button[data-filter]', function() {
+                poSupplierStatusFilter = $(this).attr('data-filter') || 'all';
+                $('#poSupplierStatusFilter button[data-filter]')
+                    .removeClass('btn-primary active')
+                    .addClass('btn-outline-secondary');
+                $(this)
+                    .removeClass('btn-outline-secondary')
+                    .addClass('btn-primary active');
+                poSupplierTable.draw();
+            });
             <?php endif; ?>
 
             <?php if ($showPurchasingPanel) : ?>
@@ -964,6 +1328,8 @@ $formatDate = function ($dateStr) {
 
             <?php if (!empty($active_tab) && $active_tab === 'lpb-manual') : ?>
                 $('#lpb-manual-tab').tab('show');
+            <?php elseif (!empty($active_tab) && $active_tab === 'po-supplier' && $showLogistikPanel) : ?>
+                $('#po-supplier-tab').tab('show');
             <?php endif; ?>
         });
     </script>

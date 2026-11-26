@@ -675,6 +675,9 @@ class C_Ics extends CI_Controller
         $data['lpb']        = $showLogistikPanel
             ? $this->M_Logistik->get_lpb($date1, $date2)
             : [];
+        $data['po_suppliers'] = $showLogistikPanel
+            ? $this->M_Logistik->get_po_suppliers_for_lpb()
+            : [];
         $data['lpb_purchasing'] = $showPurchasingPanel
             ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2, null, null, TRUE, TRUE)
             : [];
@@ -714,6 +717,7 @@ class C_Ics extends CI_Controller
         $data['hide_lpb_supplier_code'] = TRUE;
         $data['hide_lpb_last_input'] = TRUE;
         $data['lpb'] = $this->M_Logistik->get_lpb($date1, $date2);
+        $data['po_suppliers'] = $this->M_Logistik->get_po_suppliers_for_lpb();
         $data['lpb_purchasing'] = $showPurchasingPanel ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2, null, null, TRUE, TRUE) : [];
         $data['lpb_manual'] = $this->M_Logistik->get_lpb_manual_view($date1, $date2, TRUE);
         $data['active_tab'] = $this->input->get('tab') ?: '';
@@ -926,6 +930,68 @@ class C_Ics extends CI_Controller
         echo json_encode([
             'status' => 'success',
             'rows'   => $this->M_Logistik->detail_po_received(urldecode($no_po), urldecode($kd_suplier))
+        ]);
+    }
+
+    /**
+     * Endpoint AJAX untuk memuat daftar barang PO berdasarkan filter supplier
+     */
+    public function ajax_get_po_supplier_items()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->resolve_ics_po_panel_mode() === 'purchasing' && !$this->is_admlpb_user()) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Akses tab Data PO Supplier hanya untuk Logistik dan Admin.',
+                'rows'    => []
+            ]);
+            return;
+        }
+
+        $kd_suplier = trim((string) ($this->input->get('kd_suplier', TRUE) ?: $this->input->post('kd_suplier', TRUE)));
+        $date1      = trim((string) ($this->input->get('date1', TRUE) ?: $this->input->post('date1', TRUE)));
+        $date2      = trim((string) ($this->input->get('date2', TRUE) ?: $this->input->post('date2', TRUE)));
+
+        if ($kd_suplier === '') {
+            echo json_encode([
+                'status'  => 'success',
+                'rows'    => [],
+                'summary' => [
+                    'total_po'            => 0,
+                    'total_item'          => 0,
+                    'total_qty_order'     => 0,
+                    'total_qty_diterima'  => 0
+                ]
+            ]);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_po_items_by_supplier(urldecode($kd_suplier), $date1, $date2);
+        $poMap = [];
+        $totalQtyOrder = 0.0;
+        $totalQtyDiterima = 0.0;
+
+        foreach ($rows as $r) {
+            $poKey = (string) ($r['kd_po'] ?? $r['no_po'] ?? '');
+            if ($poKey !== '') {
+                $poMap[$poKey] = true;
+            }
+            $totalQtyOrder += (float) ($r['qty_barang'] ?? 0);
+            $totalQtyDiterima += (float) ($r['qty_barang_diterima'] ?? 0);
+        }
+
+        echo json_encode([
+            'status'  => 'success',
+            'rows'    => $rows,
+            'summary' => [
+                'total_po'            => count($poMap),
+                'total_item'          => count($rows),
+                'total_qty_order'     => $totalQtyOrder,
+                'total_qty_diterima'  => $totalQtyDiterima
+            ]
         ]);
     }
 
@@ -6003,12 +6069,214 @@ class C_Ics extends CI_Controller
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $this->M_ReturPembelian->ensure_schema();
+        $gudangRetur = $this->M_ReturPembelian->ensure_gudang_retur_pembelian();
+        $data['gudang_retur'] = $gudangRetur;
+        $data['gudang_retur_id'] = $gudangRetur ? (int)$gudangRetur['id_gudang'] : 0;
+        $data['gudang_retur_nama'] = $gudangRetur['nama_gudang'] ?? 'Gdg. Retur Pembelian';
+        $data['draft_rows'] = $this->M_ReturPembelian->get_tmp_draft_rows($this->active_user_name());
         $data['retur_pembelian_rows'] = $this->M_ReturPembelian->header_rows(100);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/returform_pembelian.php', $data);
         $this->load->view('content/logistik/ics/ajax_retur_pembelian.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_retur_pembelian_supplier_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $rows = $this->M_ReturPembelian->supplier_options($this->input->get('term', true));
+        $result = [];
+        foreach ($rows as $row) {
+            $kd = trim((string)($row['kd_suplier'] ?? ''));
+            $nama = trim((string)($row['nama_suplier'] ?? ''));
+            $result[] = [
+                'id'            => $kd,
+                'text'          => ($nama !== '' ? $nama . ' (' . $kd . ')' : $kd),
+                'kd_supplier'   => $kd,
+                'nama_supplier' => $nama,
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_gudang_barang_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $gudangId = $this->input->get('gudang_id', true);
+        $term = $this->input->get('term', true);
+        $rows = $this->M_ReturPembelian->barang_gudang_retur_options($gudangId, $term);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $kd = trim((string)$row['kd_barang']);
+            $nama = trim((string)$row['nama_barang']);
+            $satuan = trim((string)($row['satuan_kecil'] ?? 'PCS'));
+            $qty = (float)($row['qty_tersedia'] ?? 0);
+            $result[] = [
+                'id'           => $kd,
+                'text'         => $nama . ' [' . $kd . '] — Stok: ' . number_format($qty, 0, ',', '.') . ' ' . $satuan,
+                'kd_barang'    => $kd,
+                'nama_barang'  => $nama,
+                'satuan_kecil' => $satuan,
+                'qty_tersedia' => $qty,
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_gudang_lot_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $gudangId = $this->input->get('gudang_id', true);
+        $kdBarang = $this->input->get('kd_barang', true);
+        $term = $this->input->get('term', true);
+        $rows = $this->M_ReturPembelian->lot_gudang_retur_options($gudangId, $kdBarang, $term);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $lot = trim((string)$row['no_lot']);
+            $qty = (float)($row['qty_tersedia'] ?? 0);
+            $result[] = [
+                'id'           => $lot,
+                'text'         => $lot . ' (Stok: ' . number_format($qty, 0, ',', '.') . ')',
+                'no_lot'       => $lot,
+                'qty_tersedia' => $qty,
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_gudang_exp_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $gudangId = $this->input->get('gudang_id', true);
+        $kdBarang = $this->input->get('kd_barang', true);
+        $noLot = $this->input->get('no_lot', true);
+        $term = $this->input->get('term', true);
+        $rows = $this->M_ReturPembelian->exp_gudang_retur_options($gudangId, $kdBarang, $noLot, $term);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $exp = trim((string)$row['expired_date']);
+            $qty = (float)($row['qty_tersedia'] ?? 0);
+            $satuan = trim((string)($row['satuan_kecil'] ?? 'PCS'));
+            $result[] = [
+                'id'           => $exp,
+                'text'         => $exp . ' (Stok: ' . number_format($qty, 0, ',', '.') . ' ' . $satuan . ')',
+                'expired_date' => $exp,
+                'qty_tersedia' => $qty,
+                'satuan_kecil' => $satuan,
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_draft_list()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $rows = $this->M_ReturPembelian->get_tmp_draft_rows($this->active_user_name());
+        $this->json_response([
+            'status' => true,
+            'rows'   => $rows,
+        ]);
+    }
+
+    public function ajax_retur_pembelian_draft_add()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->add_tmp_draft_item([
+            'kd_supplier'  => $this->input->post('kd_supplier', true),
+            'gudang_id'    => $this->input->post('gudang_id', true),
+            'kd_barang'    => $this->input->post('kd_barang', true),
+            'no_lot'       => $this->input->post('no_lot', true),
+            'expired_date' => $this->input->post('expired_date', true),
+            'qty_retur'    => $this->input->post('qty_retur', true),
+        ], $this->active_user_name());
+
+        $this->json_response([
+            'status'  => (bool)$result['success'],
+            'message' => $result['message'],
+            'data'    => $result['data'],
+            'errors'  => $result['errors'],
+        ]);
+    }
+
+    public function ajax_retur_pembelian_draft_delete()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->delete_tmp_draft_item(
+            (int)$this->input->post('id', true),
+            $this->active_user_name()
+        );
+
+        $this->json_response([
+            'status'  => (bool)$result['success'],
+            'message' => $result['message'],
+            'data'    => $result['data'],
+            'errors'  => $result['errors'],
+        ]);
+    }
+
+    public function ajax_retur_pembelian_draft_clear()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->clear_tmp_draft($this->active_user_name());
+        $this->json_response([
+            'status'  => (bool)$result['success'],
+            'message' => $result['message'],
+            'data'    => $result['data'],
+            'errors'  => $result['errors'],
+        ]);
+    }
+
+    public function ajax_retur_pembelian_post_draft()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->post_from_tmp_draft([
+            'kd_supplier'        => $this->input->post('kd_supplier', true),
+            'tanggal_retur'      => $this->input->post('tanggal_retur', true),
+            'jenis_penyelesaian' => $this->input->post('jenis_penyelesaian', true),
+            'alasan_retur'       => $this->input->post('alasan_retur', true),
+        ], $this->active_user_name());
+
+        $this->json_response([
+            'status'  => (bool)$result['success'],
+            'message' => $result['message'],
+            'data'    => $result['data'],
+            'errors'  => $result['errors'],
+        ]);
     }
 
     public function retur_pembelian_monitoring()

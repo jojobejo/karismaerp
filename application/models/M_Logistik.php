@@ -4029,6 +4029,120 @@ FROM (
         return $this->db->query($sql, $params)->result_array();
     }
 
+    /**
+     * Mengambil daftar supplier yang memiliki PO dengan status DONE untuk filter Select2
+     */
+    public function get_po_suppliers_for_lpb()
+    {
+        $sql = "SELECT
+                p.kd_suplier AS kdsupp,
+                COALESCE(NULLIF(TRIM(MAX(supp.nama_suplier)), ''), p.kd_suplier) AS nm_suplier,
+                COUNT(DISTINCT p.kd_po) AS total_po
+            FROM tbpo_po p
+            LEFT JOIN tbpo_suplier supp
+                ON supp.kd_suplier = p.kd_suplier
+            WHERE UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'
+              AND COALESCE(TRIM(p.kd_suplier), '') <> ''
+            GROUP BY p.kd_suplier
+            ORDER BY nm_suplier ASC";
+
+        return $this->db->query($sql)->result_array();
+    }
+
+    /**
+     * Mengambil detail data barang PO berdasarkan filter supplier
+     */
+    public function get_po_items_by_supplier($kd_suplier, $date1 = null, $date2 = null)
+    {
+        $kd_suplier = trim((string) $kd_suplier);
+        if ($kd_suplier === '') {
+            return [];
+        }
+
+        $sql = "SELECT
+                po_items.kd_po,
+                po_items.no_po,
+                DATE_FORMAT(po_items.tgl_transaksi, '%Y-%m-%d') AS tgl_transaksi,
+                po_items.kdsupp,
+                CASE
+                    WHEN po_items.nm_suplier IS NULL OR po_items.nm_suplier = '' THEN po_items.kdsupp
+                    ELSE po_items.nm_suplier
+                END AS nm_suplier,
+                po_items.kd_barang,
+                po_items.nama_barang,
+                po_items.qty_barang,
+                COALESCE(rcv.qty_diterima, 0) AS qty_barang_diterima,
+                COALESCE(DATE_FORMAT(rcv.input_terakhir, '%Y-%m-%d %H:%i:%s'), '-') AS input_terakhir,
+                CASE
+                    WHEN po_items.qty_barang <= 0 THEN 0
+                    WHEN COALESCE(rcv.qty_diterima, 0) >= po_items.qty_barang THEN 100
+                    ELSE ROUND((COALESCE(rcv.qty_diterima, 0) / po_items.qty_barang) * 100, 2)
+                END AS progress_persen,
+                CASE
+                    WHEN COALESCE(rcv.qty_diterima, 0) <= 0 THEN 'belum'
+                    WHEN COALESCE(rcv.qty_diterima, 0) < po_items.qty_barang THEN 'partial'
+                    ELSE 'done'
+                END AS status
+            FROM (
+                SELECT
+                    p.kd_po,
+                    MAX(p.no_po) AS no_po,
+                    MAX(p.tgl_transaksi) AS tgl_transaksi,
+                    MAX(p.kd_suplier) AS kdsupp,
+                    MAX(supp.nama_suplier) AS nm_suplier,
+                    d.kd_barang,
+                    COALESCE(NULLIF(TRIM(MAX(d.nama_barang)), ''), MAX(b.nama_barang), d.kd_barang) AS nama_barang,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN COALESCE(d.qty_kecil, 0) > 0 THEN d.qty_kecil
+                            ELSE d.qty
+                        END
+                    ), 0) AS qty_barang
+                FROM tbpo_po p
+                INNER JOIN tbpo_detail_po d
+                    ON d.kd_po = p.kd_po
+                LEFT JOIN tbpo_suplier supp
+                    ON supp.kd_suplier = p.kd_suplier
+                LEFT JOIN tbpo_barang b
+                    ON b.kode_barang = d.kd_barang
+                WHERE UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'
+                  AND p.kd_suplier = ?";
+
+        $params = [$kd_suplier];
+
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+
+            $sql .= " AND DATE(p.tgl_transaksi) BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= "
+                GROUP BY p.kd_po, d.kd_barang
+            ) po_items
+            LEFT JOIN (
+                SELECT
+                    h.kd_po,
+                    d.kd_barang,
+                    SUM(d.qty_diterima) AS qty_diterima,
+                    MAX(COALESCE(d.input_at, h.input_at)) AS input_terakhir
+                FROM tb_lpb h
+                INNER JOIN tb_lpb_detail d
+                    ON d.id_lpb = h.id_lpb
+                WHERE h.kd_suplier = ?
+                GROUP BY h.kd_po, d.kd_barang
+            ) rcv
+                ON rcv.kd_po = po_items.kd_po
+                AND rcv.kd_barang = po_items.kd_barang
+            ORDER BY po_items.tgl_transaksi DESC, po_items.no_po DESC, po_items.nama_barang ASC";
+
+        $params[] = $kd_suplier;
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function get_lpb_admin_po($date1 = null, $date2 = null)
     {
         $sql = "SELECT
