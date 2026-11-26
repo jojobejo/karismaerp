@@ -623,10 +623,10 @@
                                                 <i class="fas fa-file-excel mr-1"></i> Export Excel
                                             </button>
                                             <div class="dropdown-menu dropdown-menu-right shadow">
-                                                <a class="dropdown-item font-weight-bold" href="javascript:void(0)" id="btnExportFakturH" title="Export Faktur Pecahan Kode H sesuai baris yang tampil di tabel ke Excel (.xlsx)">
+                                                <a class="dropdown-item font-weight-bold" href="javascript:void(0)" id="btnExportFakturH" title="Export seluruh Faktur Pecahan Kode H (atau yang dicentang / difilter) ke Excel (.xlsx)">
                                                     <i class="fas fa-file-excel text-success mr-2"></i> Export Faktur H (.xlsx)
                                                 </a>
-                                                <a class="dropdown-item font-weight-bold" href="<?= base_url('sales_order/export_faktur_z_pecah_lunas') ?>" id="btnExportFakturZLunas" title="Export Faktur Pecahan H yang sudah menerima pembayaran, termasuk sebagian, beserta Jurnal Q & A ke Excel (Format Report Jurnal)">
+                                                <a class="dropdown-item font-weight-bold" href="<?= base_url('sales_order/export_faktur_z_pecah_lunas?' . http_build_query(array_filter($filter ?? []))) ?>" id="btnExportFakturZLunas" title="Export Faktur Pecahan H yang sudah menerima pembayaran, termasuk sebagian, beserta Jurnal Q & A ke Excel (Format Report Jurnal)">
                                                     <i class="fas fa-book text-primary mr-2"></i> Export Pembayaran &amp; Jurnal
                                                 </a>
                                             </div>
@@ -821,6 +821,7 @@
                                                                             data-customer="<?= htmlspecialchars($fh['customer_name'] ?? '') ?>"
                                                                             data-tanggal="<?= htmlspecialchars(!empty($fh['tanggal_faktur']) ? date('Y-m-d', strtotime($fh['tanggal_faktur'])) : date('Y-m-d')) ?>"
                                                                             data-nominal="<?= $sisaTagihan ?>"
+                                                                            data-skema="<?= isset($fh['skema_potongan']) ? (int)$fh['skema_potongan'] : 20 ?>"
                                                                             title="Bayar / Lunasi Sisa Tagihan Faktur Pecahan H ini (Sisa: Rp <?= number_format($sisaTagihan, 0, ',', '.') ?>)">
                                                                         <i class="fas fa-check mr-1"></i> Lunasi
                                                                     </button>
@@ -839,6 +840,7 @@
                                                                             data-customer="<?= htmlspecialchars($fh['customer_name'] ?? '') ?>"
                                                                             data-tanggal="<?= htmlspecialchars(!empty($fh['tanggal_faktur']) ? date('Y-m-d', strtotime($fh['tanggal_faktur'])) : date('Y-m-d')) ?>"
                                                                             data-nominal="<?= $grandTotal ?>"
+                                                                            data-skema="<?= isset($fh['skema_potongan']) ? (int)$fh['skema_potongan'] : 20 ?>"
                                                                             title="Lunasi Faktur Pecahan H ini & Buat Jurnal Q + A">
                                                                         <i class="fas fa-check mr-1"></i> Lunasi
                                                                     </button>
@@ -989,7 +991,8 @@
                         <div class="form-group mb-0">
                             <label class="small font-weight-bold">Skema Potongan (Untuk Jurnal A)</label>
                             <select name="skema_potongan" class="form-control form-control-sm">
-                                <option value="20" selected>Potongan 20% (Tax) — Netto 80%</option>
+                                <option value="auto" selected>Otomatis Sesuai Skema Masing-Masing Faktur H (0% / 20% / 40%)</option>
+                                <option value="20">Potongan 20% (Tax) — Netto 80%</option>
                                 <option value="40">Potongan 40% (20% Tax + 20% Fee Petugas) — Netto 60%</option>
                                 <option value="0">Tanpa Potongan (0%) — Hanya Jurnal Q</option>
                             </select>
@@ -1768,13 +1771,22 @@ function updateSelectedFakturHState() {
     }
 }
 
-// Fungsi mengambil ID Faktur Pecahan H yang sedang tampil di halaman DataTables saat ini
+// Fungsi mengambil ID Faktur Pecahan H yang cocok dengan pencarian/filter DataTables (seluruh halaman, atau yang dicentang jika ada)
 function getVisibleFakturHIds() {
     var ids = [];
     if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#tableFakturH')) {
         var dt = window.jQuery('#tableFakturH').DataTable();
-        // Mengambil DOM nodes dari baris yang berada pada halaman aktif / sedang ditampilkan saat ini
-        var rows = dt.rows({ page: 'current' }).nodes();
+        // Jika user mencentang checkbox tertentu, prioritaskan yang dicentang
+        var checkedBoxes = dt.$('.check-item-faktur-h:checked');
+        if (checkedBoxes.length > 0) {
+            checkedBoxes.each(function() {
+                var val = window.jQuery(this).val();
+                if (val) ids.push(val);
+            });
+            return ids;
+        }
+        // Ambil seluruh baris yang sesuai filter/search di semua halaman pagination (bukan hanya 25 baris halaman pertama)
+        var rows = dt.rows({ search: 'applied' }).nodes();
         for (var i = 0; i < rows.length; i++) {
             var id = window.jQuery(rows[i]).attr('data-id-pecah');
             if (id) {
@@ -1782,8 +1794,16 @@ function getVisibleFakturHIds() {
             }
         }
     } else {
+        var checkedFallback = window.jQuery('.check-item-faktur-h:checked');
+        if (checkedFallback.length > 0) {
+            checkedFallback.each(function() {
+                var val = window.jQuery(this).val();
+                if (val) ids.push(val);
+            });
+            return ids;
+        }
         // Fallback jika DataTable belum terpasang
-        window.jQuery('#tableFakturH tbody tr:visible').each(function() {
+        window.jQuery('#tableFakturH tbody tr').each(function() {
             var id = window.jQuery(this).attr('data-id-pecah');
             if (id) {
                 ids.push(id);
@@ -1825,7 +1845,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var netto1 = parseFloat($('#singleLunasiPecahNominal').val() || 0);
             var netto2 = $('#toggleSplitMetodeSinglePecah').is(':checked') ? parseFloat($('#singleLunasiPecahNominal2').val() || 0) : 0;
             var netto = Math.max(0, netto1) + Math.max(0, netto2);
-            var skema = parseInt($('#singleLunasiPecahSkema').val() || 20, 10);
+            var rawSkema = $('#singleLunasiPecahSkema').val();
+            var skema = (rawSkema !== null && rawSkema !== undefined && rawSkema !== '') ? parseInt(rawSkema, 10) : 20;
             var pembagi = (skema === 40) ? 0.6 : ((skema === 20) ? 0.8 : 1.0);
             var bruto = (pembagi > 0 && pembagi < 1.0) ? Math.round(netto / pembagi) : netto;
             var potongan = Math.max(0, bruto - netto);
@@ -1864,6 +1885,8 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#toggleSplitMetodeSinglePecah').prop('checked', false);
             $('#wrapSplitMetodeSinglePecah').hide();
             $('#singleLunasiPecahNominal2').val('');
+            var skemaBtn = btn.attr('data-skema');
+            $('#singleLunasiPecahSkema').val((skemaBtn !== undefined && skemaBtn !== '') ? String(skemaBtn) : '20');
             $('#singleLunasiPecahParentNo').val(btn.data('parent-no') || '');
             updateSingleLunasiPecahPreview();
             $('#modalLunasiSingleFakturPecah').modal('show');
@@ -1950,6 +1973,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 form.remove();
                 $btn.prop('disabled', false).html(oriHtml);
             }, 2500);
+        });
+
+        // Handler klik tombol Export Pembayaran & Jurnal: hormati checkbox terpilih atau kata kunci pencarian DataTables jika sedang mencari
+        $(document).on('click', '#btnExportFakturZLunas', function(e) {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#tableFakturH')) {
+                var dt = $('#tableFakturH').DataTable();
+                var checkedBoxes = dt.$('.check-item-faktur-h:checked');
+                var searchVal = $.trim(dt.search() || '');
+                var targetIds = [];
+
+                if (checkedBoxes.length > 0) {
+                    checkedBoxes.each(function() {
+                        var st = $(this).attr('data-status-bayar');
+                        if (st === 'lunas' || st === 'sebagian') {
+                            targetIds.push($(this).val());
+                        }
+                    });
+                } else if (searchVal !== '') {
+                    var filteredNodes = dt.rows({ search: 'applied' }).nodes();
+                    for (var i = 0; i < filteredNodes.length; i++) {
+                        var stRow = $(filteredNodes[i]).attr('data-status-bayar');
+                        var idRow = $(filteredNodes[i]).attr('data-id-pecah');
+                        if (idRow && (stRow === 'lunas' || stRow === 'sebagian')) {
+                            targetIds.push(idRow);
+                        }
+                    }
+                }
+
+                if (checkedBoxes.length > 0 || searchVal !== '') {
+                    e.preventDefault();
+                    if (targetIds.length === 0) {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Tidak Ada Pembayaran',
+                                text: 'Faktur Pecahan H yang sedang dipilih/dicari belum memiliki pembayaran (status Belum Lunas).'
+                            });
+                        } else {
+                            alert('Faktur Pecahan H yang sedang dipilih/dicari belum memiliki pembayaran (status Belum Lunas).');
+                        }
+                        return false;
+                    }
+
+                    var formLunas = $('<form>', {
+                        'action': $(this).attr('href'),
+                        'method': 'POST',
+                        'style': 'display:none;'
+                    });
+                    formLunas.append($('<input>', {
+                        'type': 'hidden',
+                        'name': 'ids',
+                        'value': targetIds.join(',')
+                    }));
+                    $('body').append(formLunas);
+                    formLunas.submit();
+                    setTimeout(function() {
+                        formLunas.remove();
+                    }, 2500);
+                }
+            }
         });
 
         // Handler klik tombol Cetak Semua Faktur H (LX-310) sesuai baris yang tampil

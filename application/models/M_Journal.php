@@ -1641,7 +1641,7 @@ class M_Journal extends CI_Model
 
         // â”€â”€ Deteksi Skema Potongan Otomatis (0%, 20%, atau 40%) â”€â”€
         $skema_potongan_z = 20; // Default standar Karisma
-        if (!empty($pecahans[0]['skema_potongan'])) {
+        if (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '') {
             $skema_potongan_z = (int)$pecahans[0]['skema_potongan'];
         } else {
             // Deteksi cerdas dari rasio nilai total pecahan terhadap Faktur Z induk
@@ -1782,6 +1782,27 @@ class M_Journal extends CI_Model
 
             $no_jurnal_q = $this->generate_no_jurnal($metode);
             $is_q_kas_only = (strtolower(trim((string)$metode)) === 'q kas');
+            // Pastikan Jurnal Acak Q menggunakan akun Q (bukan akun A bila metode pembayaran Induk memakai rekening A)
+            $id_akun_debit_q = $id_akun_debit;
+            if (preg_match('/^a\s+/i', trim((string)$metode))) {
+                $mLower = strtolower((string)$metode);
+                $qAkun = null;
+                if (strpos($mLower, 'bca') !== false) {
+                    $qAkun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12011'])->row_array();
+                } elseif (strpos($mLower, 'bri') !== false) {
+                    $qAkun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12016'])->row_array();
+                } elseif (strpos($mLower, 'mandiri') !== false) {
+                    $qAkun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '12014'])->row_array();
+                } elseif (strpos($mLower, 'ayat silang') !== false) {
+                    $qAkun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11020'])->row_array();
+                } elseif (strpos($mLower, 'kas') !== false) {
+                    $qAkun = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row_array();
+                    $is_q_kas_only = true;
+                }
+                if ($qAkun && !empty($qAkun['id_akun'])) {
+                    $id_akun_debit_q = (int)$qAkun['id_akun'];
+                }
+            }
             $nama_cust_q = !empty($pec['kontak_person']) && trim((string)$pec['kontak_person']) !== '-'
                 ? trim((string)$pec['kontak_person'])
                 : (!empty($pec['customer_name']) ? $pec['customer_name'] : $pec['kd_customer']);
@@ -1812,7 +1833,7 @@ class M_Journal extends CI_Model
             $this->db->insert('tbkeu_jurnal_detail', [
                 'id_jurnal'   => $id_jurnal_q,
                 'nomor_baris' => $line_q++,
-                'id_akun'     => $id_akun_debit,
+                'id_akun'     => $id_akun_debit_q,
                 'keterangan'  => $ket_q,
                 'debit'       => $is_q_kas_only ? $netto_pecahan : $bruto_pecahan,
                 'kredit'      => 0
@@ -2027,8 +2048,10 @@ class M_Journal extends CI_Model
                 }
             }
 
-            // Deteksi skema potongan
-            $skema_potongan_z = !empty($pecahans[0]['skema_potongan']) ? (int)$pecahans[0]['skema_potongan'] : 20;
+            // Deteksi skema potongan (pastikan nilai 0 tidak dianggap kosong oleh !empty)
+            $skema_potongan_z = (isset($pecahans[0]['skema_potongan']) && $pecahans[0]['skema_potongan'] !== null && $pecahans[0]['skema_potongan'] !== '')
+                ? (int)$pecahans[0]['skema_potongan']
+                : 20;
             $pembagi_bruto = ($skema_potongan_z === 40) ? 0.6 : (($skema_potongan_z === 20) ? 0.8 : 1.0);
 
             // Ambil Jurnal A terakhir yang POSTED untuk Faktur Z Induk ini (dari pembayaran keuangan)
@@ -2082,13 +2105,20 @@ class M_Journal extends CI_Model
                     continue;
                 }
 
-                // Ambil seluruh Jurnal Q yang POSTED dari pembayaran Faktur Z Induk untuk Faktur H ini
+        // Ambil seluruh Jurnal Q yang POSTED dari pembayaran Faktur Z Induk yang valid (bukan jurnal Faktur H Import)
                 $qJournals = $this->db->select('j.id_jurnal, j.nomor_jurnal, j.tanggal_transaksi, j.source_id, j.total_debit')
                     ->from('tbkeu_jurnal j')
+                    ->join('tbkeu_pembayaran_faktur pf', 'pf.id_pembayaran = CAST(j.source_id AS UNSIGNED)', 'inner')
                     ->where('j.source_module', 'KEUANGAN')
                     ->where('j.source_type', 'PEMBAYARAN_FAKTUR')
                     ->where('j.source_no', $no_h)
                     ->where('j.status', 'POSTED')
+                    ->where('pf.id_faktur', $pid)
+                    ->where("COALESCE(pf.status, 'POSTED') = 'POSTED'", null, false)
+                    ->group_start()
+                        ->where('j.idempotency_key IS NULL', null, false)
+                        ->or_not_like('j.idempotency_key', 'PAYMENT_FH_IMPORT_', 'after')
+                    ->group_end()
                     ->order_by('j.id_jurnal', 'ASC')
                     ->get()->result_array();
 
@@ -2824,24 +2854,36 @@ class M_Journal extends CI_Model
         }
         $id_akun_piutang = $akun_piutang ? (int)$akun_piutang->id_akun : 196;
 
-        // 2. Akun Kas / Bank sesuai metode pembayaran
+        // 2. Akun Kas / Bank sesuai metode pembayaran (Pastikan Jurnal Acak Q selalu menggunakan akun Q, bukan akun A)
         $akun_kas = null;
-        $metodeLower = strtolower($metode);
-        if (!empty($metode)) {
+        $metodeClean = trim((string)$metode);
+        if (preg_match('/^a\s+/i', $metodeClean)) {
+            // Konversi awalan akun A menjadi Q untuk Jurnal Acak Q (mis. "A BCA (Annelia)" -> cari akun Q BCA)
+            $metodeClean = 'Q ' . preg_replace('/^a\s+/i', '', $metodeClean);
+            $metodeClean = trim(preg_replace('/\([^)]*\)/', '', $metodeClean));
+        }
+        $metodeLower = strtolower($metodeClean);
+        if (!empty($metodeClean)) {
             $this->db->where('LOWER(nama_akun)', $metodeLower);
+            $this->db->not_like('nama_akun', 'A ', 'after');
             $akun_kas = $this->db->get('tbkeu_akun')->row();
 
             if (!$akun_kas) {
-                $this->db->where('kode_akun', $metode);
+                $this->db->where('kode_akun', $metodeClean);
+                $this->db->not_like('nama_akun', 'A ', 'after');
                 $akun_kas = $this->db->get('tbkeu_akun')->row();
             }
             if (!$akun_kas) {
-                $this->db->like('nama_akun', $metode);
+                $this->db->like('nama_akun', $metodeClean);
+                $this->db->not_like('nama_akun', 'A ', 'after');
                 $akun_kas = $this->db->get('tbkeu_akun')->row();
             }
             // Pencocokan cerdas berdasarkan kata kunci bila nama metode (mis. "Q Kas Ayat Silang") belum terdaftar persis di tbkeu_akun
             if (!$akun_kas) {
-                if (strpos($metodeLower, 'ayat silang') !== false || strpos($metodeLower, 'kas') !== false) {
+                if (strpos($metodeLower, 'ayat silang') !== false) {
+                    $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11020'])->row()
+                        ?: $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
+                } elseif (strpos($metodeLower, 'kas') !== false) {
                     $akun_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row()
                         ?: $this->db->like('nama_akun', 'Q Kas')->get('tbkeu_akun')->row();
                 } elseif (strpos($metodeLower, 'bca') !== false) {
@@ -2882,7 +2924,26 @@ class M_Journal extends CI_Model
             $prefix_jurnal_q = 'BR';
         }
         $jenis_q = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix_jurnal_q])->row();
-        $id_jenis_jurnal_q = $jenis_q ? (int)$jenis_q->id_jenis_jurnal : 3;
+        if (!$jenis_q) {
+            $nama_jenis_map = [
+                'KM' => 'Kas Masuk',
+                'MR' => 'Masuk Rekening',
+                'BC' => 'Masuk Rekening BCA',
+                'BR' => 'Masuk Rekening BRI',
+            ];
+            $this->db->insert('tbkeu_jenis_jurnal', [
+                'kode_jenis_jurnal' => $prefix_jurnal_q,
+                'nama_jenis_jurnal' => $nama_jenis_map[$prefix_jurnal_q] ?? ('Penerimaan ' . $prefix_jurnal_q),
+                'keterangan'        => 'Penerimaan pelunasan faktur (' . $prefix_jurnal_q . ')',
+                'is_manual'         => 0,
+                'is_active'         => 1,
+                'created_at'        => date('Y-m-d H:i:s'),
+                'updated_at'        => date('Y-m-d H:i:s'),
+            ]);
+            $id_jenis_jurnal_q = (int)$this->db->insert_id();
+        } else {
+            $id_jenis_jurnal_q = (int)$jenis_q->id_jenis_jurnal;
+        }
 
         // 3. Akun Q Kas (11010) untuk Kredit Potongan pada Jurnal Q
         $akun_q_kas = $this->db->get_where('tbkeu_akun', ['kode_akun' => '11010'])->row();
@@ -2945,8 +3006,8 @@ class M_Journal extends CI_Model
             'source_id'         => (string)$idRef,
             'source_no'         => $no_faktur_h,
             'idempotency_key'   => $idem_key_q,
-            'total_debit'       => $bruto_pecahan,
-            'total_kredit'      => $bruto_pecahan,
+            'total_debit'       => $is_q_kas_only ? $netto_pecahan : $bruto_pecahan,
+            'total_kredit'      => $is_q_kas_only ? $netto_pecahan : $bruto_pecahan,
             'created_by'        => $userId,
             'created_at'        => date('Y-m-d H:i:s'),
             'posted_by'         => $userId,

@@ -177,7 +177,7 @@ class C_ReportJurnal extends CI_Controller
                 $ref = 'CD';
             } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
                 $ref = 'JU';
-            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM' || $kode_jenis === 'BC' || $kode_jenis === 'BR') {
                 $ref = 'CR';
             } else {
                 $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
@@ -351,7 +351,7 @@ class C_ReportJurnal extends CI_Controller
                 $ref = 'CD';
             } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
                 $ref = 'JU';
-            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM' || $kode_jenis === 'BC' || $kode_jenis === 'BR') {
                 $ref = 'CR';
             } else {
                 $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
@@ -501,7 +501,7 @@ class C_ReportJurnal extends CI_Controller
                 $ref = 'CD';
             } elseif ($kode_jenis === 'JU' || $kode_jenis === 'GL') {
                 $ref = 'JU';
-            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM') {
+            } elseif ($kode_jenis === 'MR' || $kode_jenis === 'KM' || $kode_jenis === 'BC' || $kode_jenis === 'BR') {
                 $ref = 'CR';
             } else {
                 $ref = !empty($kode_jenis) ? $kode_jenis : 'CR';
