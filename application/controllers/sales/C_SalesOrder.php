@@ -10471,11 +10471,11 @@ class C_SalesOrder extends CI_Controller
                     'customer_name'     => $row['customer_name'] ?: '-',
                     'metode_pembayaran' => $row['metode_pembayaran'] ?: $defaultMetode,
                     'skema_potongan'    => ($row['skema_potongan'] !== null && $row['skema_potongan'] !== '') ? (int)$row['skema_potongan'] : $defaultSkema,
-                    'total_h'           => 0,
-                    'belum_lunas_h'     => 0,
-                    'total_tagihan_z'   => 0.0,
-                    'total_faktur_z'    => (float)($row['total_faktur_z'] ?? 0),
-                    'sisa_belum_lunas'  => 0.0,
+                    'total_h'            => 0,
+                    'belum_lunas_h'      => 0,
+                    'total_tagihan_h'    => 0.0,
+                    'total_faktur_z'     => (float)($row['total_faktur_z'] ?? 0),
+                    'sisa_belum_lunas_h' => 0.0,
                 ];
             } elseif ($groupedZ[$noZ]['total_faktur_z'] <= 0 && (float)($row['total_faktur_z'] ?? 0) > 0) {
                 $groupedZ[$noZ]['total_faktur_z'] = (float)$row['total_faktur_z'];
@@ -10487,22 +10487,33 @@ class C_SalesOrder extends CI_Controller
             $sisaH       = $isLunasH ? 0.0 : max(0.0, round($tagihanH - $sudahBayarH, 2));
 
             $groupedZ[$noZ]['total_h']++;
-            $groupedZ[$noZ]['total_tagihan_z'] += $tagihanH;
+            $groupedZ[$noZ]['total_tagihan_h'] += $tagihanH;
             if (!$isLunasH && $sisaH > 0.01) {
                 $groupedZ[$noZ]['belum_lunas_h']++;
-                $groupedZ[$noZ]['sisa_belum_lunas'] += $sisaH;
+                $groupedZ[$noZ]['sisa_belum_lunas_h'] += $sisaH;
             }
         }
 
         // Koreksi otomatis skema_potongan pada template berdasarkan rasio aktual total Faktur H terhadap Faktur Z Induk
         foreach ($groupedZ as $noZKey => &$zItem) {
-            if ($zItem['total_faktur_z'] > 0 && $zItem['total_tagihan_z'] > 0) {
-                $ratioHZ = $zItem['total_tagihan_z'] / $zItem['total_faktur_z'];
+            if ($zItem['total_faktur_z'] > 0 && $zItem['total_tagihan_h'] > 0) {
+                $ratioHZ = $zItem['total_tagihan_h'] / $zItem['total_faktur_z'];
                 if ($ratioHZ >= 0.98) {
                     $zItem['skema_potongan'] = 0;
                 } elseif ($ratioHZ <= 0.62) {
                     $zItem['skema_potongan'] = 40;
                 }
+            }
+
+            // Hitung total tagihan dan sisa belum lunas berdasarkan nominal Faktur Z Induk
+            $zItem['total_tagihan_z'] = $zItem['total_faktur_z'] > 0
+                ? $zItem['total_faktur_z']
+                : $zItem['total_tagihan_h'];
+
+            if ($zItem['total_faktur_z'] > 0 && $zItem['total_tagihan_h'] > 0) {
+                $zItem['sisa_belum_lunas'] = $zItem['total_faktur_z'] * ($zItem['sisa_belum_lunas_h'] / $zItem['total_tagihan_h']);
+            } else {
+                $zItem['sisa_belum_lunas'] = $zItem['sisa_belum_lunas_h'];
             }
         }
         unset($zItem);
@@ -10836,11 +10847,11 @@ class C_SalesOrder extends CI_Controller
                     }
                     $zHasUnpaid = true;
 
-                    // Alokasikan dana pembayaran Faktur Z ke masing-masing child Faktur H secara berurutan (FIFO berdasarkan no_faktur ASC)
-                    $sisaDanaBayar = round($jmlBayar, 2);
+                    // Alokasikan dana pembayaran Faktur Z (nominal bruto) ke masing-masing child Faktur H secara berurutan (FIFO berdasarkan no_faktur ASC)
+                    $sisaDanaBruto = round($jmlBayar, 2);
 
                     foreach ($unpaidChildren as $child) {
-                        if ($sisaDanaBayar <= 0.01) {
+                        if ($sisaDanaBruto <= 0.01) {
                             break;
                         }
 
@@ -10849,13 +10860,6 @@ class C_SalesOrder extends CI_Controller
                         $sisaTagihanH = (float)$child['_sisa_tagihan_h'];
                         if ($tagihanH <= 0 || $sisaTagihanH <= 0.01) {
                             continue;
-                        }
-
-                        // Serap dana ke Faktur H terawal hingga sisa tagihannya terpenuhi (boleh sebagian)
-                        $bayarChild = min($sisaDanaBayar, $sisaTagihanH);
-                        $bayarChild = round($bayarChild, 2);
-                        if ($bayarChild <= 0.01) {
-                            break;
                         }
 
                         // Gunakan deteksi rasio aktual 100% (tanpa potongan), atau skema eksplisit Excel, atau skema bawaan Faktur H
@@ -10873,8 +10877,27 @@ class C_SalesOrder extends CI_Controller
                         }
                         $pembagiChild = ($skemaChild === 40) ? 0.6 : (($skemaChild === 20) ? 0.8 : 1.0);
 
-                        $brutoChild = ($pembagiChild > 0 && $pembagiChild < 1.0) ? round($bayarChild / $pembagiChild, 2) : $bayarChild;
-                        $potChild   = max(0, round($brutoChild - $bayarChild, 2));
+                        // Konversi sisa tagihan Faktur H (netto) ke ekuivalen Faktur Z (bruto) karena nominal input Excel adalah pembayaran Faktur Z
+                        $sisaTagihanBruto = ($pembagiChild > 0 && $pembagiChild < 1.0)
+                            ? round($sisaTagihanH / $pembagiChild, 2)
+                            : $sisaTagihanH;
+
+                        if ($sisaDanaBruto >= ($sisaTagihanBruto - 0.01)) {
+                            $brutoChild = min($sisaDanaBruto, $sisaTagihanBruto);
+                            $bayarChild = $sisaTagihanH;
+                        } else {
+                            $brutoChild = $sisaDanaBruto;
+                            $bayarChild = ($pembagiChild > 0 && $pembagiChild < 1.0)
+                                ? round($brutoChild * $pembagiChild, 2)
+                                : $brutoChild;
+                            $bayarChild = min($bayarChild, $sisaTagihanH);
+                        }
+                        $brutoChild = round($brutoChild, 2);
+                        $bayarChild = round($bayarChild, 2);
+                        if ($brutoChild <= 0.01 || $bayarChild <= 0.01) {
+                            break;
+                        }
+                        $potChild = max(0, round($brutoChild - $bayarChild, 2));
 
                         $totalBayarBaru  = round($sudahBayarH + $bayarChild, 2);
                         $sisaTagihanBaru = max(0.0, round($tagihanH - $totalBayarBaru, 2));
@@ -10949,12 +10972,12 @@ class C_SalesOrder extends CI_Controller
                                 $partialHCount++;
                                 $partialInfoList[] = "{$child['no_faktur']} (bayar Rp " . number_format($bayarChild, 0, ',', '.') . ", sisa Rp " . number_format($sisaTagihanBaru, 0, ',', '.') . ")";
                             }
-                            $sisaDanaBayar = max(0, round($sisaDanaBayar - $bayarChild, 2));
+                            $sisaDanaBruto = max(0, round($sisaDanaBruto - $brutoChild, 2));
                         }
                     }
 
-                    if ($sisaDanaBayar > 0.01) {
-                        $sisaDanaTotalZ += $sisaDanaBayar;
+                    if ($sisaDanaBruto > 0.01) {
+                        $sisaDanaTotalZ += $sisaDanaBruto;
                     }
                 }
 
