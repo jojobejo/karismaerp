@@ -541,6 +541,18 @@ class M_SalesOrder extends CI_Model
             ->get('tbpo_barang')
             ->result_array();
 
+        $satuanMap = [];
+        if ($this->db->field_exists('satuan_qty', 'tbpo_barang') && $this->db->table_exists('tbpo_satuan')) {
+            $satuanRows = $this->db->select('b.kode_barang, s.nm_satuan')
+                ->from('tbpo_barang b')
+                ->join('tbpo_satuan s', 's.id_satuan = b.satuan_qty', 'left')
+                ->where_in('b.kode_barang', $unique_kds)
+                ->get()->result_array();
+            foreach ($satuanRows as $satuanRow) {
+                $satuanMap[$satuanRow['kode_barang']] = trim((string)($satuanRow['nm_satuan'] ?? ''));
+            }
+        }
+
         // Fetch HPP from tb_lpb_detail for these items jika tabel tersedia
         $hpp_map = [];
         if ($this->db->table_exists('tb_lpb_detail')) {
@@ -565,6 +577,10 @@ class M_SalesOrder extends CI_Model
         foreach ($rows as $r) {
             $kd = $r['kode_barang'];
             $normalized = $this->_normalize_barang($r);
+            $normalized['produk_fokus'] = trim((string)($r['produk_fokus'] ?? '-')) ?: '-';
+            if (!empty($satuanMap[$kd])) {
+                $normalized['satuan'] = $satuanMap[$kd];
+            }
             if (isset($hpp_map[$kd]) && $hpp_map[$kd] > 0) {
                 $normalized['hpp'] = $hpp_map[$kd];
             }
@@ -602,7 +618,7 @@ class M_SalesOrder extends CI_Model
         $t = (int)($row['t'] ?? $row['tinggi']  ?? $row['height'] ?? 0);
 
         $isi = 0;
-        foreach (['isi_box', 'qty_isi', 'isi', 'isi_per_box', 'qty_per_box', 'jumlah_isi'] as $c) {
+        foreach (['isi_per_box', 'isi_box', 'qty_isi', 'isi', 'qty_per_box', 'jumlah_isi'] as $c) {
             if (array_key_exists($c, $row) && (int)$row[$c] > 0) {
                 $isi = (int)$row[$c];
                 break;
@@ -612,7 +628,7 @@ class M_SalesOrder extends CI_Model
         if ($isi < 1) $isi = 1;
 
         $satuan = '';
-        foreach (['satuan', 'unit', 'uom', 'satuan_kecil'] as $c) {
+        foreach (['nm_satuan', 'satuan', 'unit', 'uom', 'satuan_kecil'] as $c) {
             if (!empty($row[$c])) {
                 $satuan = (string)$row[$c];
                 break;
@@ -667,6 +683,18 @@ class M_SalesOrder extends CI_Model
 
         if (empty($stocks)) return [];
 
+        $satuanMap = [];
+        if ($this->db->field_exists('satuan_qty', 'tbpo_barang') && $this->db->table_exists('tbpo_satuan')) {
+            $satuanRows = $this->db->select('b.kode_barang, s.nm_satuan')
+                ->from('tbpo_barang b')
+                ->join('tbpo_satuan s', 's.id_satuan = b.satuan_qty', 'left')
+                ->where_in('b.kode_barang', array_values(array_unique(array_column($stocks, 'kd_barang'))))
+                ->get()->result_array();
+            foreach ($satuanRows as $satuanRow) {
+                $satuanMap[$satuanRow['kode_barang']] = trim((string)($satuanRow['nm_satuan'] ?? ''));
+            }
+        }
+
         $master = $this->_get_master_bulk(array_column($stocks, 'kd_barang'));
 
         // Harga pokok yang ditampilkan/dibawa ke SO mengikuti moving average
@@ -702,7 +730,12 @@ class M_SalesOrder extends CI_Model
             $row['l']           = $m['l']           ?? 0;
             $row['t']           = $m['t']           ?? 0;
             $row['isi_per_box'] = $m['isi_per_box'] ?? 1;
-            $row['satuan']      = $m['satuan']      ?? ($row['satuan'] ?? '');
+            $row['satuan']      = $satuanMap[$kd] ?? ($m['satuan'] ?? ($row['satuan'] ?? ''));
+            $produkFokus = strtoupper(trim((string)($m['produk_fokus'] ?? '-')));
+            $row['produk_fokus'] = $produkFokus !== '' ? $produkFokus : '-';
+            $row['tempo_hari'] = $this->is_gudang_konsinyasi($row['gudang_id'] ?? $gudang_id)
+                ? 90
+                : (in_array($row['produk_fokus'], ['A', 'B', 'C'], true) ? 60 : 30);
 
             if (isset($row['expired_date'])) {
                 $row['exp_date'] = $this->_normalizeDate($row['expired_date']);
@@ -1382,7 +1415,7 @@ class M_SalesOrder extends CI_Model
     {
         // Alias id → id_so_detail agar tidak perlu ubah controller/view
         $rows = $this->db
-            ->select('d.id AS id_so_detail, d.*, b.kelompok_dagang, g.DESKRIPSI AS kelompok_dagang_deskripsi')
+            ->select('d.id AS id_so_detail, d.*, b.kelompok_dagang, b.produk_fokus AS master_produk_fokus, g.DESKRIPSI AS kelompok_dagang_deskripsi')
             ->from('tbso_sales_order_detail d')
             ->join('tbpo_barang b', 'd.kd_barang = b.kode_barang', 'left')
             ->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left')
@@ -1390,7 +1423,18 @@ class M_SalesOrder extends CI_Model
             ->get()
             ->result_array();
 
+        $soHeader = $this->db->select('gudang_id')->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
         foreach ($rows as &$row) {
+            $masterFokus = strtoupper(trim((string)($row['master_produk_fokus'] ?? ($row['produk_fokus'] ?? '-')))) ?: '-';
+            $row['produk_fokus'] = $masterFokus;
+            // Hitung tempo standar berdasarkan master barang dan gudang konsinyasi
+            $tempoMaster = $this->is_gudang_konsinyasi($soHeader['gudang_id'] ?? null)
+                ? 90
+                : (in_array($masterFokus, ['A', 'B', 'C'], true) ? 60 : 30);
+            $row['tempo_master_hari'] = $tempoMaster;
+            $row['tempo_hari'] = (isset($row['tempo_hari']) && $row['tempo_hari'] !== '' && $row['tempo_hari'] !== null)
+                ? (int)$row['tempo_hari']
+                : $tempoMaster;
             $row['berat_gram']      = (float)($row['berat_gram']       ?? 0);
             $row['kubikasi_m3']     = (float)($row['kubikasi_m3']      ?? 0);
             $row['hrg_pokok']       = (float)($row['hrg_pokok']        ?? 0);
@@ -4577,8 +4621,32 @@ class M_SalesOrder extends CI_Model
         ];
     }
 
+    /**
+     * Memastikan tabel permintaan cancel partial SO tersedia.
+     */
+    public function ensure_cancel_partial_request_table()
+    {
+        if (!$this->db->table_exists('tbso_cancel_partial_request')) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS `tbso_cancel_partial_request` (
+                `id` INT NOT NULL AUTO_INCREMENT,
+                `id_so` INT NOT NULL,
+                `id_so_detail` INT NOT NULL,
+                `qty_cancel` DECIMAL(15,3) NOT NULL,
+                `status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                `request_by` VARCHAR(50) NOT NULL,
+                `request_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `approve_by` VARCHAR(50) DEFAULT NULL,
+                `approve_at` DATETIME DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `fk_cpreq_id_so` (`id_so`),
+                KEY `fk_cpreq_id_so_detail` (`id_so_detail`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        }
+    }
+
     public function submit_cancel_partial_request($id_so, $details, $user)
     {
+        $this->ensure_cancel_partial_request_table();
         $this->db->trans_start();
         foreach ($details as $detail) {
             $data = [
@@ -4597,6 +4665,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_pending_cancel_requests($id_so = null)
     {
+        $this->ensure_cancel_partial_request_table();
         $this->db->select('cr.*, sd.kd_barang, sd.nama_barang, sd.hrg_satuan, so.no_so, so.tanggal_transaksi, c.nama_customer')
                  ->from('tbso_cancel_partial_request cr')
                  ->join('tbso_sales_order_detail sd', 'sd.id = cr.id_so_detail')
@@ -4611,11 +4680,13 @@ class M_SalesOrder extends CI_Model
 
     public function get_request_by_id($req_id)
     {
+        $this->ensure_cancel_partial_request_table();
         return $this->db->get_where('tbso_cancel_partial_request', ['id' => $req_id])->row_array();
     }
 
     public function approve_cancel_partial($request_ids, $user)
     {
+        $this->ensure_cancel_partial_request_table();
         $this->db->trans_start();
 
         foreach ($request_ids as $req_id) {
@@ -4660,6 +4731,7 @@ class M_SalesOrder extends CI_Model
     
     public function reject_cancel_partial($request_ids, $user)
     {
+        $this->ensure_cancel_partial_request_table();
         $this->db->trans_start();
         $this->db->where_in('id', $request_ids)
                  ->where('status', 'pending')

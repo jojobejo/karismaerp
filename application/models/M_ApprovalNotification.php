@@ -310,11 +310,7 @@ class M_ApprovalNotification extends CI_Model
                     'label' => 'Verifikasi Retur (Admin Retur)',
                     'url'   => 'retur_penjualan/retur/verifikasi/',
                 ],
-                'menunggu_collection' => [
-                    'roles' => ['COLLECTION', 'KOLEKTOR', 'TEAM COLLECTION', 'MT TEAM COLLECTION'],
-                    'label' => 'Proses Retur (Collection)',
-                    'url'   => 'retur_penjualan/retur/collection/',
-                ],
+                // Status menunggu_collection tidak perlu dimunculkan di notifikasi
                 'menunggu_kasir' => [
                     'roles' => ['KASIR'],
                     'label' => 'Penyelesaian Retur (Kasir)',

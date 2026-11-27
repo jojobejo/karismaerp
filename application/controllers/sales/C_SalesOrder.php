@@ -814,6 +814,22 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    // Pastikan kolom tempo_hari tersedia pada tabel detail SO agar perubahan tempo oleh sales tersimpan
+    private function _ensureSoDetailTempoColumn()
+    {
+        if ($this->db->field_exists('tempo_hari', 'tbso_sales_order_detail')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order_detail', [
+            'tempo_hari' => [
+                'type' => 'INT',
+                'null' => true,
+            ],
+        ]);
+    }
+
     private function _ensureFakturPaymentInfoColumns()
     {
         $this->load->dbforge();
@@ -1354,6 +1370,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoDetailTempoColumn();
         $this->_ensureFakturStatusEnum();
         $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 
@@ -1633,6 +1650,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
@@ -1755,6 +1773,7 @@ class C_SalesOrder extends CI_Controller
     {
         $this->_ensureSoCaraPembayaranColumn();
         $this->_ensureTestMarketColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $data['page_title']     = 'KARISMA - Buat Sales Order';
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
@@ -1786,6 +1805,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoCaraPembayaranColumn();
         $this->_ensureTestMarketColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
@@ -1854,6 +1874,13 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
+            redirect('sales_order/create');
+            return;
+        }
+
+        $tempo_error = $this->_validate_tempo_barang($details, $gudang_id);
+        if ($tempo_error !== '') {
+            $this->session->set_flashdata('error', $tempo_error);
             redirect('sales_order/create');
             return;
         }
@@ -2019,6 +2046,7 @@ class C_SalesOrder extends CI_Controller
     {
         $this->_ensureSoCaraPembayaranColumn();
         $this->_ensureTestMarketColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
@@ -2106,6 +2134,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoCaraPembayaranColumn();
         $this->_ensureTestMarketColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
@@ -2181,6 +2210,13 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
+            redirect('sales_order/edit/' . $id_so);
+            return;
+        }
+
+        $tempo_error = $this->_validate_tempo_barang($details, $gudang_id);
+        if ($tempo_error !== '') {
+            $this->session->set_flashdata('error', $tempo_error);
             redirect('sales_order/edit/' . $id_so);
             return;
         }
@@ -2574,6 +2610,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureFakturPaymentInfoColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
@@ -2630,6 +2667,14 @@ class C_SalesOrder extends CI_Controller
             return false;
         });
 
+        $tempo_filter_raw = $this->input->get('tempo_filter', true);
+        if ($tempo_filter_raw !== null && $tempo_filter_raw !== '') {
+            $tempo_filter = (int)$tempo_filter_raw;
+            $items_outstanding = array_filter($items_outstanding, function($d) use ($tempo_filter) {
+                return (int)($d['tempo_hari'] ?? 30) === $tempo_filter;
+            });
+        }
+
         if (empty($items_outstanding)) {
             $message = !empty($selected_items)
                 ? 'Item yang dipilih tidak valid, sudah difakturkan seluruhnya, atau tidak sesuai jenis faktur ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . '.'
@@ -2638,6 +2683,18 @@ class C_SalesOrder extends CI_Controller
             redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
             return;
         }
+
+        // Barang dengan tempo berbeda tidak boleh dijadikan dalam 1 faktur
+        $tempo_set = [];
+        foreach ($items_outstanding as $d) {
+            $tempo_set[(int)($d['tempo_hari'] ?? 30)] = true;
+        }
+        if (count($tempo_set) > 1) {
+            $this->session->set_flashdata('error', 'Barang dengan tempo berbeda tidak boleh dijadikan dalam 1 faktur. Silakan pilih tempo terlebih dahulu.');
+            redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+            return;
+        }
+        $faktur_tempo = (int)array_key_first($tempo_set);
 
         $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
         $data['so']                = $so;
@@ -2657,6 +2714,7 @@ class C_SalesOrder extends CI_Controller
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
         $data['tax_rate']          = $tax_rate;
+        $data['faktur_tempo']      = $faktur_tempo;
         $data['batas_tonase']      = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi']    = M_SalesOrder::BATAS_KUBIKASI;
 
@@ -2676,6 +2734,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureFakturPaymentInfoColumns();
+        $this->_ensureSoDetailTempoColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
@@ -2704,10 +2763,19 @@ class C_SalesOrder extends CI_Controller
         }
 
         $first_category = null;
+        $first_tempo = null;
         foreach ($faktur_items as $item) {
             $so_det = $details_map[(int)$item['id_so_detail']] ?? null;
             if (!$so_det) {
                 $this->session->set_flashdata('error', 'Item tidak valid.');
+                redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+                return;
+            }
+            $item_tempo = (int)($so_det['tempo_hari'] ?? 30);
+            if ($first_tempo === null) {
+                $first_tempo = $item_tempo;
+            } elseif ($first_tempo !== $item_tempo) {
+                $this->session->set_flashdata('error', 'Tidak boleh menggabungkan barang dengan tempo yang berbeda dalam satu faktur.');
                 redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
                 return;
             }
@@ -6740,10 +6808,17 @@ class C_SalesOrder extends CI_Controller
                 'total_harga'          => $total_tax,
                 'berat_gram'           => $this->_parse_number_input($post['berat_gram'][$i]  ?? 0),
                 'kubikasi_m3'          => $this->_parse_number_input($post['kubikasi_m3'][$i] ?? 0),
+                'tempo_hari'           => (isset($post['tempo_hari'][$i]) && $post['tempo_hari'][$i] !== '') ? max(0, (int)$post['tempo_hari'][$i]) : null,
                 'create_by'            => $this->_getUsername(),
             ];
         }
         return $details;
+    }
+
+    private function _validate_tempo_barang(array $details, $gudangId)
+    {
+        // Izinkan penyimpanan SO meskipun item memiliki tempo yang berbeda
+        return '';
     }
 
     private function _validate_harga_approval(array $details)

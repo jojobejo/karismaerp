@@ -126,11 +126,18 @@ $faktur_back_url = $is_admin_sc_context
                                 </div>
                                 <div class="form-group">
                                     <label>Tempo <span class="text-danger">*</span></label>
+                                    <?php
+                                    $selected_tempo = isset($faktur_tempo) ? (int)$faktur_tempo : 0;
+                                    $tempo_options  = [0, 30, 60, 90];
+                                    if (!in_array($selected_tempo, $tempo_options, true)) {
+                                        $tempo_options[] = $selected_tempo;
+                                        sort($tempo_options);
+                                    }
+                                    ?>
                                     <select class="form-control" name="jtempo" id="jtempo" required>
-                                        <option value="0">0 Hari</option>
-                                        <option value="30">30 Hari</option>
-                                        <option value="60">60 Hari</option>
-                                        <option value="90">90 Hari</option>
+                                        <?php foreach ($tempo_options as $opt_tempo): ?>
+                                            <option value="<?= $opt_tempo ?>" <?= $selected_tempo === $opt_tempo ? 'selected' : '' ?>><?= $opt_tempo ?> Hari</option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="form-group">

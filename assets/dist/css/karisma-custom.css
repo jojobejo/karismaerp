@@ -694,7 +694,7 @@
     max-height: 62vh;
 }
 #modal-customer .modal-dialog {
-    max-width: min(900px, calc(100vw - 1.5rem));
+    max-width: min(1120px, calc(100vw - 1.5rem));
 }
 #modal-customer .customer-table-shell {
     max-height: 60vh;
@@ -706,14 +706,21 @@
     table-layout: fixed;
 }
 #tbl-stock-pick {
-    min-width: 1040px;
+    min-width: 880px;
+    width: 100%;
 }
 #tbl-customer-pick {
-    min-width: 720px;
+    min-width: 960px;
+    width: 100%;
 }
-#tbl-stock-pick .col-stock-name { width: 290px; }
-#tbl-stock-pick .col-stock-exp { width: 105px; }
-#tbl-stock-pick .col-stock-lot { width: 110px; }
+#tbl-stock-pick .col-stock-fokus { width: 95px; }
+#tbl-stock-pick .col-stock-tempo { width: 80px; }
+#tbl-stock-pick .col-stock-exp { width: 100px; }
+#tbl-stock-pick .col-stock-lot { width: 90px; }
+#tbl-stock-pick .col-stock-avail { width: 80px; }
+#tbl-stock-pick .col-stock-ecer { width: 80px; }
+#tbl-stock-pick .col-stock-satuan { width: 70px; }
+#tbl-stock-pick .col-stock-pick { width: 85px; }
 #tbl-stock-pick thead th,
 #tbl-customer-pick thead th {
     position: sticky;
@@ -835,15 +842,13 @@
     font-size: 11px;
 }
 #tbl-stock-pick .stock-lot-cell {
-    max-width: 110px;
+    max-width: 90px;
+    text-align: center;
     white-space: normal;
     overflow-wrap: anywhere;
     line-height: 1.15;
 }
-#tbl-stock-pick .col-stock-hidden,
-#tbl-stock-pick tbody td:nth-child(9),
-#tbl-stock-pick tbody td:nth-child(10),
-#tbl-stock-pick tbody td:nth-child(11) {
+#tbl-stock-pick .col-stock-hidden {
     display: none;
 }
 #tbl-stock-pick .btn-pick-stock {

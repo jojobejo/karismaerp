@@ -126,15 +126,16 @@
                 <form action="<?= base_url('sales_order/admin_sc/form_faktur/' . $so['id_so']) ?>" method="get" id="formPilihFaktur">
                     <input type="hidden" name="tax_mode" id="taxMode" value="pajak">
                     <input type="hidden" name="kelompok_filter" id="kelompokFilter" value="bkp">
+                    <input type="hidden" name="tempo_filter" id="tempoFilter" value="">
                     <div class="card card-outline card-success">
                         <div class="card-header">
                             <h3 class="card-title">
                                 <i class="fas fa-list-ul mr-1"></i> Barang Terverifikasi
                             </h3>
                             <div class="card-tools">
-                                <div class="form-inline d-flex align-items-center">
+                                <div class="form-inline d-flex align-items-center flex-wrap">
                                     <label class="mr-2 mb-0 small font-weight-bold">Pilih Kategori Faktur</label>
-                                    <div class="tax-choice-group" role="group" aria-label="Kategori Faktur">
+                                    <div class="tax-choice-group mr-3" role="group" aria-label="Kategori Faktur">
                                         <button type="button" class="tax-choice-btn active" data-kategori="bkp">
                                             BKP (Pajak)
                                         </button>
@@ -148,6 +149,8 @@
                                             Promosi (Non Pajak)
                                         </button>
                                     </div>
+                                    <label class="mr-2 mb-0 small font-weight-bold">Tempo</label>
+                                    <div class="tax-choice-group" id="tempoChoiceGroup" role="group" aria-label="Filter Tempo"></div>
                                 </div>
                             </div>
                         </div>
@@ -156,6 +159,7 @@
                                 <thead class="thead-light">
                                     <tr>
                                         <th>Barang</th>
+                                        <th class="text-center">Tempo</th>
                                         <th>Lot / Exp</th>
                                         <th class="text-right">Qty</th>
                                         <th>Catatan Verifikasi</th>
@@ -199,8 +203,10 @@
                                          } elseif ($item_category === 'dagangan') {
                                              $badge_color = '#28a745'; // green
                                          }
+                                         $item_tempo = (int)($detail['tempo_hari'] ?? 30);
+                                         $item_tempo_master = (int)($detail['tempo_master_hari'] ?? $item_tempo);
                                      ?>
-                                         <tr data-kategori="<?= $item_category ?>">
+                                         <tr data-kategori="<?= $item_category ?>" data-tempo="<?= $item_tempo ?>">
                                              <td>
                                                  <strong><?= htmlspecialchars($detail['nama_barang']) ?></strong>
                                                  <br><small class="text-muted"><?= htmlspecialchars($kd_barang) ?></small>
@@ -210,6 +216,14 @@
                                                  <span class="tax-badge" style="color: #fff; background-color: <?= $badge_color ?>;">
                                                      <?= strtoupper($item_category) ?>
                                                  </span>
+                                             </td>
+                                             <td class="text-center align-middle">
+                                                 <span class="badge <?= $item_tempo <= 0 ? 'badge-success' : ($item_tempo <= 30 ? 'badge-info' : ($item_tempo <= 60 ? 'badge-danger' : 'badge-dark')) ?>">
+                                                     <?= $item_tempo ?> hari
+                                                 </span>
+                                                 <?php if ($item_tempo !== $item_tempo_master): ?>
+                                                     <br><small class="text-warning font-weight-bold">Master: <?= $item_tempo_master ?> hari</small>
+                                                 <?php endif; ?>
                                              </td>
                                              <td>
                                                  <small>
@@ -269,8 +283,46 @@ $(document).ready(function () {
         return $('#kelompokFilter').val() || 'bkp';
     }
 
+    function activeTempo() {
+        return $('#tempoFilter').val();
+    }
+
+    // Menyusun tombol pilihan tempo sesuai barang yang tersedia di kategori aktif
+    function renderTempoButtons(kategori) {
+        var tempos = [];
+        $('tbody tr[data-kategori="' + kategori + '"]').each(function () {
+            var t = String($(this).data('tempo'));
+            if (tempos.indexOf(t) === -1) tempos.push(t);
+        });
+        tempos.sort(function (a, b) { return parseInt(a, 10) - parseInt(b, 10); });
+
+        var currentTempo = $('#tempoFilter').val();
+        if (tempos.length && tempos.indexOf(String(currentTempo)) === -1) {
+            currentTempo = tempos[0];
+            $('#tempoFilter').val(currentTempo);
+        } else if (!tempos.length) {
+            currentTempo = '';
+            $('#tempoFilter').val('');
+        }
+
+        var $group = $('#tempoChoiceGroup').empty();
+        if (!tempos.length) {
+            $group.append('<span class="text-muted small">-</span>');
+            return;
+        }
+        tempos.forEach(function (t) {
+            var $btn = $('<button type="button" class="tax-choice-btn"></button>')
+                .attr('data-tempo', t)
+                .text(t + ' Hari')
+                .toggleClass('active', String(t) === String(currentTempo));
+            $group.append($btn);
+        });
+    }
+
     function applyFilters() {
         var kategori = activeKategori();
+        renderTempoButtons(kategori);
+        var tempo = activeTempo();
 
         // Update button states
         $('.tax-choice-btn[data-kategori]')
@@ -279,18 +331,23 @@ $(document).ready(function () {
             .addClass('active');
 
         $('tbody tr[data-kategori]').each(function () {
-            var match = $(this).data('kategori') === kategori;
-            $(this).toggleClass('tax-hidden', !match);
+            var matchKat = $(this).data('kategori') === kategori;
+            var matchTempo = tempo === '' || String($(this).data('tempo')) === String(tempo);
+            $(this).toggleClass('tax-hidden', !(matchKat && matchTempo));
         });
 
         updateButton();
     }
 
     function updateButton() {
-        var kategori = activeKategori();
-        var total = $('tbody tr[data-kategori="' + kategori + '"]').length;
-        $('#btnLanjutFaktur').prop('disabled', total < 1);
+        var visibleRows = $('tbody tr[data-kategori]:not(.tax-hidden)').length;
+        $('#btnLanjutFaktur').prop('disabled', visibleRows < 1);
     }
+
+    $(document).on('click', '#tempoChoiceGroup .tax-choice-btn[data-tempo]', function () {
+        $('#tempoFilter').val(String($(this).data('tempo')));
+        applyFilters();
+    });
 
     $('.tax-choice-btn[data-kategori]').on('click', function () {
         var kat = $(this).data('kategori');
@@ -307,10 +364,19 @@ $(document).ready(function () {
     });
 
     $('#formPilihFaktur').on('submit', function (e) {
-        var kategori = activeKategori();
-        if ($('tbody tr[data-kategori="' + kategori + '"]').length < 1) {
+        var $visible = $('tbody tr[data-kategori]:not(.tax-hidden)');
+        if ($visible.length < 1) {
             e.preventDefault();
-            alert('Tidak ada barang untuk kategori yang dipilih.');
+            alert('Tidak ada barang untuk kategori dan tempo yang dipilih.');
+            return;
+        }
+        var tempos = {};
+        $visible.each(function () {
+            tempos[String($(this).data('tempo'))] = true;
+        });
+        if (Object.keys(tempos).length > 1) {
+            e.preventDefault();
+            alert('Barang dengan tempo berbeda tidak boleh dijadikan dalam 1 faktur.');
         }
     });
 

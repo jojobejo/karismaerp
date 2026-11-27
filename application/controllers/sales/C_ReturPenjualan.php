@@ -2352,18 +2352,7 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 5. Collection
-        if ($this->_isCollection()) {
-            $returs = $this->db->query("SELECT * FROM tbrp_retur_penjualan_header WHERE status_retur = 'menunggu_collection' OR (status_retur = 'selesai' AND tipe_retur = 'biasa' AND sisa_saldo_retur > 0)")->result_array();
-            foreach ($returs as $r) {
-                $pending_items[] = [
-                    'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
-                    'title' => 'Proses Retur (Collection)',
-                    'body' => 'Retur ' . $r['no_retur'] . ' siap diproses oleh Collection.',
-                    'url' => base_url('retur_penjualan/retur/collection/' . $r['id_retur'])
-                ];
-            }
-        }
+        // 5. Collection: Dinonaktifkan agar retur yang sudah sampai di bagian Collection tidak memunculkan notifikasi
         
         // 6. Kasir
         if ($this->_isKasir()) {

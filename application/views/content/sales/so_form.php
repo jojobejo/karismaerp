@@ -379,8 +379,14 @@ input[type=number] {
                                     <tbody id="item-body"></tbody>
                                     <tfoot>
                                         <tr>
-                                            <td colspan="9" class="text-right">GRAND TOTAL</td>
-                                            <td class="text-right font-weight-bold" id="total-grand">Rp 0</td>
+                                            <td colspan="7" class="text-left align-middle">
+                                                <span id="tempo-mismatch-notice" class="d-none text-danger font-weight-bold small">
+                                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                    Tempo barang tidak sama.
+                                                </span>
+                                            </td>
+                                            <td colspan="2" class="text-right align-middle">GRAND TOTAL</td>
+                                            <td class="text-right font-weight-bold align-middle" id="total-grand">Rp 0</td>
                                             <td></td>
                                         </tr>
                                     </tfoot>
@@ -447,14 +453,13 @@ input[type=number] {
                     <table class="table table-sm mb-0" id="tbl-stock-pick">
                         <thead>
                             <tr>
-                                <th class="col-stock-name">Nama Barang</th><th class="col-stock-exp">Exp Date</th><th class="col-stock-lot">No Lot</th>
-                                <th class="text-right">Avail Box</th><th class="text-right">Sisa Ecer</th>
-                                <th class="text-right">Total Pcs</th><th class="text-center">Isi/Box</th>
-                                <th>Satuan</th>
+                                <th class="col-stock-name">Nama Barang</th><th class="text-center col-stock-fokus">Produk Fokus</th><th class="text-center col-stock-tempo">Tempo</th><th class="col-stock-exp">Exp Date</th><th class="text-center col-stock-lot">No Lot</th>
+                                <th class="text-right col-stock-avail">Avail Box</th><th class="text-right col-stock-ecer">Sisa Ecer</th>
+                                <th class="col-stock-satuan">Satuan</th>
                                 <th class="col-stock-hidden">Berat/pcs</th>
                                 <th class="col-stock-hidden">Kubik/pcs</th>
                                 <th class="col-stock-hidden">Gudang</th>
-                                <th class="text-center">Pilih</th>
+                                <th class="text-center col-stock-pick">Pilih</th>
                             </tr>
                         </thead>
                         <tbody id="stock-body">
@@ -471,7 +476,7 @@ input[type=number] {
 
 <!-- MODAL: Pilih Customer -->
 <div class="modal fade" id="modal-customer" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header customer-modal-header">
                 <div class="d-flex align-items-center">
@@ -691,6 +696,9 @@ function buatBaris(idx, d) {
     var av     = parseFloat(d.available_stock || 0);
     var avBox  = Math.floor(av / isi);
     var avEcer = Math.floor(av % isi);
+    var tempoVal = (d.tempo_hari !== undefined && d.tempo_hari !== null && d.tempo_hari !== '') ? parseInt(d.tempo_hari, 10) : '';
+    var tempoMaster = (d.tempo_master_hari !== undefined && d.tempo_master_hari !== null && d.tempo_master_hari !== '') ? parseInt(d.tempo_master_hari, 10) : tempoVal;
+    var isMasterMismatch = (kd !== '' && tempoVal !== '' && tempoMaster !== '' && tempoVal !== tempoMaster);
     var qtyKecil  = (qtyBox * isi) + qtySat;
     var subBefore = hrg * qtyKecil;
     var subDisc   = subBefore * (1 - disc / 100);
@@ -719,11 +727,17 @@ function buatBaris(idx, d) {
        + '<input type="hidden" name="berat_gram[]"  id="bg_'+idx+'" value="'+beratG+'">'
        + '<input type="hidden" name="kubikasi_m3[]" id="km_'+idx+'" value="'+kubikM+'">'
        + '<input type="hidden" name="isi_per_box[]" id="isi_'+idx+'" value="'+isi+'">'
+       + '<input type="hidden" name="produk_fokus[]" id="produk_fokus_'+idx+'" value="'+esc(d.produk_fokus || '-')+'">'
+       + '<input type="hidden" id="tempo_master_hari_'+idx+'" value="'+(tempoMaster !== '' ? tempoMaster : '')+'">'
        + '<input type="hidden" name="pajak[]"       value="0">'
        + '<div class="d-flex align-items-center">'
        +   '<div class="flex-grow-1">'
        +     '<small class="text-muted" id="kdlbl_'+idx+'">'+(kd||'&mdash;')+'</small><br>'
        +     '<span id="nmlbl_'+idx+'">'+(nm ? esc(nm) : '<span class="text-muted small">← Klik Pilih</span>')+'</span>'
+       +     '<small class="d-block text-muted mt-1">Produk fokus: <span id="fokuslbl_'+idx+'">'+esc(d.produk_fokus || '-')+'</span> · Tempo: '
+       +       '<input type="number" min="0" step="1" name="tempo_hari[]" id="tempo_hari_'+idx+'" value="'+(tempoVal !== '' ? tempoVal : '')+'" class="form-control form-control-sm d-inline-block text-center" style="width:62px;height:22px;padding:1px 4px;font-size:12px;" oninput="updateTempoMismatchNotice()" onchange="updateTempoMismatchNotice()"> hari'
+       +     '</small>'
+       +     '<div id="tempo_master_warn_'+idx+'" class="small text-warning font-weight-bold'+(isMasterMismatch ? '' : ' d-none')+'"><i class="fas fa-exclamation-triangle mr-1"></i>Tidak sesuai dengan master barang (<span id="tempo_master_val_'+idx+'">'+(tempoMaster !== '' ? tempoMaster : '-')+'</span> hari)</div>'
        +   '</div>'
        +   '<button type="button" class="btn btn-xs btn-outline-primary ml-1 btn-pick" data-idx="'+idx+'">'
        +   '<i class="fas fa-search"></i> Pilih</button>'
@@ -925,6 +939,46 @@ function hitungBaris(idx) {
     hitungGrand(); hitungTK();
 }
 
+// Menampilkan informasi per baris dan di sisi kiri GRAND TOTAL jika tempo berbeda atau tidak sesuai master barang
+function updateTempoMismatchNotice() {
+    var noticeEl = document.getElementById('tempo-mismatch-notice');
+
+    var tempos = {};
+    var hasMasterMismatch = false;
+    document.querySelectorAll('#item-body tr').forEach(function(tr) {
+        var i = tr.dataset.idx;
+        var kd = ((document.getElementById('kd_' + i) || {}).value || '').trim();
+        var tempoEl = document.getElementById('tempo_hari_' + i);
+        var masterEl = document.getElementById('tempo_master_hari_' + i);
+        var warnEl = document.getElementById('tempo_master_warn_' + i);
+        if (!kd) {
+            if (warnEl) warnEl.classList.add('d-none');
+            return;
+        }
+        if (!tempoEl) return;
+        var val = parseInt(tempoEl.value, 10);
+        if (!isNaN(val)) tempos[val] = true;
+
+        var masterVal = masterEl ? parseInt(masterEl.value, 10) : NaN;
+        var rowMasterMismatch = (!isNaN(val) && !isNaN(masterVal) && val !== masterVal);
+        if (warnEl) warnEl.classList.toggle('d-none', !rowMasterMismatch);
+        if (rowMasterMismatch) hasMasterMismatch = true;
+    });
+
+    if (!noticeEl) return;
+    var hasCrossMismatch = Object.keys(tempos).length > 1;
+    var msgs = [];
+    if (hasCrossMismatch) msgs.push('Tempo barang tidak sama.');
+    if (hasMasterMismatch) msgs.push('Ada tempo yang tidak sesuai dengan master barang.');
+
+    if (msgs.length) {
+        noticeEl.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> ' + msgs.join(' ');
+        noticeEl.classList.remove('d-none');
+    } else {
+        noticeEl.classList.add('d-none');
+    }
+}
+
 function hitungGrand() {
     var g=0;
     document.querySelectorAll('#item-body tr').forEach(function(tr) {
@@ -937,6 +991,7 @@ function hitungGrand() {
         g += hrg*qK*(1-d/100);
     });
     document.getElementById('total-grand').textContent = 'Rp ' + fmtNum(g);
+    updateTempoMismatchNotice();
 }
 
 function hitungTK() {
@@ -1018,11 +1073,21 @@ function loadStock(callback) {
         })
         .catch(function(err){
             document.getElementById('stock-body').innerHTML =
-                '<tr><td colspan="12" class="text-center text-danger py-3">'+esc(err.message)+'</td></tr>';
+            '<tr><td colspan="12" class="text-center text-danger py-3">'+esc(err.message)+'</td></tr>';
         })
         .finally(function(){
             salesLoading(false);
         });
+}
+
+// Menentukan class warna badge berdasarkan jumlah hari tempo
+function getTempoBadgeClass(tempo) {
+    if (tempo <= 0)  return 'badge-success';
+    if (tempo <= 14) return 'badge-primary';
+    if (tempo <= 30) return 'badge-info';
+    if (tempo <= 45) return 'badge-warning';
+    if (tempo <= 60) return 'badge-danger';
+    return 'badge-dark';
 }
 
 function renderStock(data) {
@@ -1049,27 +1114,31 @@ function renderStock(data) {
         var gdgId=String(d.gudang_id||'');
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
+        var fokus = d.produk_fokus || '-';
+        var tempo = (d.tempo_hari !== undefined && d.tempo_hari !== null && d.tempo_hari !== '') ? parseInt(d.tempo_hari, 10) : 30;
+        var tempoBadge = getTempoBadgeClass(tempo);
 
         html+='<tr class="tr-pick-stock-row" style="cursor:pointer;" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
         html+='<td><span class="stock-code-badge">'+esc(kd)+'</span>'
             +'<span class="stock-name-main">'+esc(d.nama_barang||'')+'</span>'
             +(!isNew?'<span class="stock-name-sub">Lot lain untuk barang yang sama</span>':'')
             +'</td>';
+        html+='<td class="text-center"><span class="badge badge-light border">'+esc(fokus)+'</span></td>';
+        html+='<td class="text-center"><span class="badge '+tempoBadge+'">'+tempo+' hari</span></td>';
         html+='<td>'+(exp?'<span class="stock-exp-badge '+(isExpiringSoon(exp)?'warn':'ok')+'">'+esc(formatTgl(exp))+'</span>':'<span class="text-muted">-</span>')+'</td>';
-        html+='<td class="stock-lot-cell"><span class="stock-lot-pill">'+esc(d.no_lot||'-')+'</span></td>';
+        html+='<td class="text-center stock-lot-cell"><span class="stock-lot-pill">'+esc(d.no_lot||'-')+'</span></td>';
         html+='<td class="text-right"><span class="stock-metric text-success">'+fmtNum(avB,0)+'</span><span class="stock-metric-label">box</span></td>';
         html+='<td class="text-right"><span class="stock-metric text-info">'+fmtNum(avE,0)+'</span><span class="stock-metric-label">pcs</span></td>';
-        html+='<td class="text-right"><span class="stock-metric">'+fmtNum(avT,0)+'</span><span class="stock-metric-label">pcs total</span></td>';
-        html+='<td class="text-center"><span class="stock-isi-pill">'+isi+'</span></td>';
         html+='<td><span class="font-weight-bold text-secondary">'+esc(d.satuan||'-')+'</span></td>';
-        html+='<td class="text-right"><small>'+(parseFloat(d.berat_gram||0)/1000).toFixed(3)+' kg</small></td>';
-        html+='<td class="text-right"><small>'+parseFloat(d.kubikasi_m3||0).toFixed(6)+' m³</small></td>';
-        html+='<td><small class="text-muted">'+esc(gdgNm)+'</small></td>';
+        html+='<td class="text-right col-stock-hidden"><small>'+(parseFloat(d.berat_gram||0)/1000).toFixed(3)+' kg</small></td>';
+        html+='<td class="text-right col-stock-hidden"><small>'+parseFloat(d.kubikasi_m3||0).toFixed(6)+' m³</small></td>';
+        html+='<td class="col-stock-hidden"><small class="text-muted">'+esc(gdgNm)+'</small></td>';
         html+='<td class="text-center"><button type="button" tabindex="-1" class="btn btn-sm btn-primary btn-pick-stock"'
             +' data-kd="'+esc(kd)+'" data-nm="'+esc(d.nama_barang||'')+'" data-exp="'+esc(exp)+'"'
             +' data-lot="'+esc(d.no_lot||'')+'" data-sat="'+esc(d.satuan||'')+'" data-av="'+avT+'"'
             +' data-ton="'+parseFloat(d.berat_gram||0)+'" data-kub="'+parseFloat(d.kubikasi_m3||0)+'"'
             +' data-isi="'+isi+'" data-gudang="'+esc(gdgId)+'" data-pk="'+parseFloat(d.hpp||0)+'"'
+            +' data-fokus="'+esc(fokus)+'" data-tempo="'+tempo+'"'
             +' data-stock-key="'+esc(stockKey)+'">'
             +'<i class="fas fa-check mr-1"></i>Pilih</button></td>';
         html+='</tr>';
@@ -1084,10 +1153,21 @@ function applyBarangKeBaris(i, btn) {
     var kd = btn.dataset.kd;
     var beratBarang = parseFloat(btn.dataset.ton || 0);
     var kubikBarang = parseFloat(btn.dataset.kub || 0);
+    var produkFokus = btn.dataset.fokus || '-';
+    var tempoHari = (btn.dataset.tempo !== undefined && btn.dataset.tempo !== '') ? parseInt(btn.dataset.tempo, 10) : 30;
     document.getElementById('kd_'    +i).value       = kd;
     document.getElementById('nm_'    +i).value       = btn.dataset.nm;
+    var fokusEl = document.getElementById('produk_fokus_' + i);
+    if (fokusEl) fokusEl.value = produkFokus;
+    var tempoEl = document.getElementById('tempo_hari_' + i);
+    if (tempoEl) tempoEl.value = tempoHari;
+    var tempoMasterEl = document.getElementById('tempo_master_hari_' + i);
+    if (tempoMasterEl) tempoMasterEl.value = tempoHari;
+    var tempoMasterValEl = document.getElementById('tempo_master_val_' + i);
+    if (tempoMasterValEl) tempoMasterValEl.textContent = tempoHari;
     document.getElementById('kdlbl_' +i).textContent = kd;
     document.getElementById('nmlbl_' +i).innerHTML   = esc(btn.dataset.nm);
+    document.getElementById('fokuslbl_' +i).textContent = produkFokus;
     document.getElementById('pk_'    +i).value       = btn.dataset.pk;
     document.getElementById('sat_'   +i).value       = btn.dataset.sat;
     document.getElementById('satlbl_'+i).value       = btn.dataset.sat;
