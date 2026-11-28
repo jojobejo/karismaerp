@@ -74,14 +74,177 @@ class M_Checker extends CI_Model
         return $this->db->get_where('tb_bongkaran', ['id' => $id])->row_array();
     }
 
-    // Daftar user dengan bagian CHECKER (untuk dropdown MANAGERCK)
+    // Pastikan tabel daftar checker aktif tersedia dan terisi seed awal
+    public function ensure_checker_master_table()
+    {
+        if (!$this->db->table_exists('tb_checker_master')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tb_checker_master` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `nik` VARCHAR(50) NOT NULL UNIQUE,
+                    `username` VARCHAR(100) NOT NULL DEFAULT '',
+                    `nama_lngkp` VARCHAR(255) NOT NULL,
+                    `departement` VARCHAR(100) NOT NULL DEFAULT 'LOGISTIC',
+                    `bagian` VARCHAR(100) NOT NULL DEFAULT '',
+                    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `created_by` VARCHAR(100) DEFAULT NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        $count = (int)$this->db->count_all('tb_checker_master');
+        if ($count === 0) {
+            $defaultNiks = ['QIU2511309', 'QIU0703034', 'QIU2505275'];
+            $users = $this->db
+                ->select('nik, username, nama_lngkp, departement, bagian')
+                ->where_in('nik', $defaultNiks)
+                ->get('tb_users')->result_array();
+
+            if (!empty($users)) {
+                foreach ($users as $u) {
+                    $this->db->insert('tb_checker_master', [
+                        'nik'         => $u['nik'],
+                        'username'    => $u['username'],
+                        'nama_lngkp'  => $u['nama_lngkp'],
+                        'departement' => $u['departement'] ?: 'LOGISTIC',
+                        'bagian'      => $u['bagian'] ?: '',
+                        'is_active'   => 1,
+                        'created_by'  => 'SYSTEM_INIT',
+                    ]);
+                }
+            } else {
+                // Fallback jika data belum ada di tb_users
+                $fallback = [
+                    ['nik' => 'QIU2511309', 'username' => 'nando',  'nama_lngkp' => 'Fernando Ihza Aprianto',  'departement' => 'LOGISTIC', 'bagian' => 'MT ADMIN LOGISTIK'],
+                    ['nik' => 'QIU0703034', 'username' => 'sholeh', 'nama_lngkp' => 'Muhammad Sholeh',         'departement' => 'LOGISTIC', 'bagian' => 'CHECKER'],
+                    ['nik' => 'QIU2505275', 'username' => 'iqbal',  'nama_lngkp' => 'Moh. Iqbal Fajar Ismail', 'departement' => 'LOGISTIC', 'bagian' => 'MT ADMIN LOGISTIK'],
+                ];
+                foreach ($fallback as $row) {
+                    $this->db->insert('tb_checker_master', $row + ['is_active' => 1, 'created_by' => 'SYSTEM_INIT']);
+                }
+            }
+        }
+    }
+
+    // Daftar checker aktif yang dikelola oleh koordinator (Ahmad Fauzan)
     public function get_list_checker()
     {
+        $this->ensure_checker_master_table();
         return $this->db
-            ->select('nik, nama_lngkp AS nm_karyawan')
-            ->where_in('bagian', ['CHECKER', 'MT CHECKER'])
+            ->select('nik, username, nama_lngkp AS nm_karyawan, departement, bagian')
+            ->where('is_active', 1)
             ->order_by('nama_lngkp', 'ASC')
-            ->get('tb_users')->result_array();
+            ->get('tb_checker_master')->result_array();
+    }
+
+    // Cek apakah NIK terdaftar sebagai checker aktif
+    public function is_registered_checker($nik)
+    {
+        $nik = trim((string)$nik);
+        if ($nik === '') return false;
+        $this->ensure_checker_master_table();
+        return $this->db
+            ->where('nik', $nik)
+            ->where('is_active', 1)
+            ->count_all_results('tb_checker_master') > 0;
+    }
+
+    // Ambil data checker aktif berdasarkan NIK
+    public function get_registered_checker($nik)
+    {
+        $nik = trim((string)$nik);
+        if ($nik === '') return null;
+        $this->ensure_checker_master_table();
+        return $this->db
+            ->where('nik', $nik)
+            ->where('is_active', 1)
+            ->get('tb_checker_master')->row_array();
+    }
+
+    // Ambil kandidat user aktif dari departemen LOGISTIC yang belum masuk daftar checker
+    public function get_logistic_candidates()
+    {
+        $this->ensure_checker_master_table();
+        $activeNiks = array_column($this->get_list_checker(), 'nik');
+        $this->db->select('nik, username, nama_lngkp, departement, bagian')
+            ->from('tb_users')
+            ->where('status', 1)
+            ->where('UPPER(TRIM(departement)) =', 'LOGISTIC')
+            ->where("TRIM(COALESCE(nik, '')) !=", '');
+        if (!empty($activeNiks)) {
+            $this->db->where_not_in('nik', $activeNiks);
+        }
+        return $this->db->order_by('nama_lngkp', 'ASC')->get()->result_array();
+    }
+
+    // Tambah checker baru ke daftar checker aktif (hanya departemen LOGISTIC)
+    public function add_checker_master($nik, $createdBy = '')
+    {
+        $this->ensure_checker_master_table();
+        $nik = trim((string)$nik);
+        if ($nik === '') return ['status' => false, 'msg' => 'Pilih user terlebih dahulu.'];
+
+        $user = $this->db
+            ->where('nik', $nik)
+            ->where('status', 1)
+            ->get('tb_users')->row_array();
+        if (!$user) {
+            return ['status' => false, 'msg' => 'User tidak ditemukan atau tidak aktif.'];
+        }
+        if (strtoupper(trim((string)$user['departement'])) !== 'LOGISTIC') {
+            return ['status' => false, 'msg' => 'Checker pengganti/tambahan harus berasal dari departemen LOGISTIC.'];
+        }
+
+        $existing = $this->db->where('nik', $nik)->get('tb_checker_master')->row_array();
+        if ($existing) {
+            $ok = $this->db->where('id', (int)$existing['id'])->update('tb_checker_master', [
+                'username'    => $user['username'],
+                'nama_lngkp'  => $user['nama_lngkp'],
+                'departement' => $user['departement'],
+                'bagian'      => $user['bagian'],
+                'is_active'   => 1,
+            ]);
+            return ['status' => (bool)$ok, 'msg' => $ok ? 'Checker berhasil diaktifkan kembali.' : 'Gagal menyimpan checker.'];
+        }
+
+        $ok = $this->db->insert('tb_checker_master', [
+            'nik'         => $user['nik'],
+            'username'    => $user['username'],
+            'nama_lngkp'  => $user['nama_lngkp'],
+            'departement' => $user['departement'],
+            'bagian'      => $user['bagian'],
+            'is_active'   => 1,
+            'created_by'  => $createdBy,
+        ]);
+        return ['status' => (bool)$ok, 'msg' => $ok ? 'Checker berhasil ditambahkan.' : 'Gagal menambahkan checker.'];
+    }
+
+    // Nonaktifkan/hapus checker dari daftar aktif
+    public function remove_checker_master($nik)
+    {
+        $this->ensure_checker_master_table();
+        $nik = trim((string)$nik);
+        if ($nik === '') return false;
+        return $this->db->where('nik', $nik)->update('tb_checker_master', ['is_active' => 0]);
+    }
+
+    // Tetapkan checker untuk rute KK/LK sebelum proses loading dimulai
+    public function assign_checker_kk($id, $nik_ck, $nama_ck)
+    {
+        return $this->db->where('id', (int)$id)->update('tb_loading_kk', [
+            'nik_checker' => $nik_ck,
+            'nm_checker'  => $nama_ck,
+        ]);
+    }
+
+    public function assign_checker_lk($id, $nik_ck, $nama_ck)
+    {
+        return $this->db->where('id', (int)$id)->update('tb_loading_lk', [
+            'nik_checker' => $nik_ck,
+            'nm_checker'  => $nama_ck,
+        ]);
     }
 
     // Ambil id_bongkaran yang sedang aktif (PROSES) milik checker ini

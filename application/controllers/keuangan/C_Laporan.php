@@ -3831,4 +3831,476 @@ class C_Laporan extends CI_Controller
                 'rows'       => $rows,
             ]));
     }
+
+    // ====================================================
+    // Laporan Transaksi Operasional (View & Export Excel)
+    // ====================================================
+    public function operasional_report()
+    {
+        $this->load->model('M_LaporanOperasional');
+        $dateFrom = trim((string)($this->input->get('date_from', true) ?: date('Y-m-01')));
+        $dateTo   = trim((string)($this->input->get('date_to', true) ?: date('Y-m-d')));
+
+        $data['page_title']     = 'KARISMA - LAPORAN TRANSAKSI OPERASIONAL';
+        $data['date_from']      = $dateFrom;
+        $data['date_to']        = $dateTo;
+        $data['initial_report'] = $this->M_LaporanOperasional->get_operasional_report($dateFrom, $dateTo);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_lainnya/operasional_report.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function operasional_data()
+    {
+        $this->load->model('M_LaporanOperasional');
+        $dateFrom = trim((string)($this->input->get_post('date_from', true) ?: date('Y-m-01')));
+        $dateTo   = trim((string)($this->input->get_post('date_to', true) ?: date('Y-m-d')));
+
+        $report = $this->M_LaporanOperasional->get_operasional_report($dateFrom, $dateTo);
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'success' => true,
+                'data'    => $report,
+            ]));
+    }
+
+    public function operasional_export()
+    {
+        if (!file_exists(FCPATH . 'vendor/autoload.php')) {
+            show_error('Library PhpSpreadsheet tidak ditemukan.', 500);
+            return;
+        }
+        require_once FCPATH . 'vendor/autoload.php';
+        $this->load->model('M_LaporanOperasional');
+
+        $dateFrom = trim((string)($this->input->get('date_from', true) ?: date('Y-m-01')));
+        $dateTo   = trim((string)($this->input->get('date_to', true) ?: date('Y-m-d')));
+        $report   = $this->M_LaporanOperasional->get_operasional_report($dateFrom, $dateTo);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet->getProperties()
+            ->setCreator('KARISMA ERP')
+            ->setTitle('Laporan Transaksi Operasional');
+
+        // 1. Sheet Ringkasan
+        $s1 = $spreadsheet->getActiveSheet();
+        $s1->setTitle('Ringkasan');
+        $ringkasanRows = array_map(function ($r) {
+            return [$r['indikator'], $r['nilai']];
+        }, $report['ringkasan']);
+        $this->_writeOperasionalTableSheet(
+            $s1,
+            'TRANSAKSI OPERASIONAL - KARISMA ERP',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Indikator', 'Nilai'],
+            $ringkasanRows
+        );
+
+        // 2. Sheet PO Detail
+        $s2 = $spreadsheet->createSheet(1);
+        $s2->setTitle('PO Detail');
+        $poRows = array_map(function ($r) {
+            return [
+                $r['no_po'],
+                $r['tgl_transaksi'],
+                $r['nama_suplier'],
+                $r['kd_barang'],
+                $r['nama_barang'],
+                (float)$r['qty'],
+                $r['satuan'],
+                (float)$r['harga_po'],
+                $r['skema_ppn'],
+                (float)$r['nilai_barang'],
+            ];
+        }, $report['po_detail']);
+        $this->_writeOperasionalTableSheet(
+            $s2,
+            'PURCHASE ORDER (PO DETAIL)',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['No. PO', 'Tanggal PO', 'Supplier', 'Kode Barang', 'Nama Barang', 'Qty', 'Satuan', 'Harga PO/Unit', 'Skema PPN', 'Nilai Barang'],
+            $poRows,
+            ['F' => '#,##0.##', 'H' => '#,##0.00', 'J' => '#,##0.00'],
+            ['F', 'J']
+        );
+
+        // 3. Sheet LPB Barang Datang (termasuk detail barang, harga barang, dan tanggal realisasi PO)
+        $s3 = $spreadsheet->createSheet(2);
+        $s3->setTitle('LPB Barang Datang');
+        $lpbRows = array_map(function ($r) {
+            return [
+                $r['tanggal_realisasi'],
+                $r['no_po'],
+                $r['nomor_lpb'],
+                $r['nama_suplier'],
+                $r['kd_barang'],
+                $r['nama_barang'],
+                $r['kategori_pajak'],
+                (float)$r['qty_po'],
+                (float)$r['qty_datang'],
+                (float)$r['qty_sisa'],
+                $r['satuan'],
+                (float)$r['harga_inc_ppn'],
+                (float)$r['harga_dpp'],
+                (float)$r['nilai_datang'],
+                (float)$r['nilai_datang_inc'],
+                $r['status_realisasi'],
+            ];
+        }, $report['lpb_detail']);
+        $this->_writeOperasionalTableSheet(
+            $s3,
+            'LPB BARANG DATANG & REALISASI PO',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tgl Realisasi PO', 'No. PO', 'No. LPB', 'Supplier', 'Kode Barang', 'Detail Barang', 'Kategori', 'Qty PO', 'Qty Datang', 'Qty Sisa', 'Satuan', 'Harga Inc PPN', 'Harga DPP', 'Nilai Datang (DPP)', 'Nilai Datang Inc PPN', 'Status Realisasi'],
+            $lpbRows,
+            ['H' => '#,##0.##', 'I' => '#,##0.##', 'J' => '#,##0.##', 'L' => '#,##0.00', 'M' => '#,##0.00', 'N' => '#,##0.00', 'O' => '#,##0.00'],
+            ['H', 'I', 'J', 'N', 'O']
+        );
+
+        // 4. Sheet Faktur Penjualan (HPP Moving Average sesuai jurnal)
+        $s4 = $spreadsheet->createSheet(3);
+        $s4->setTitle('Faktur Penjualan');
+        $fakturRows = array_map(function ($r) {
+            return [
+                $r['tanggal_faktur'],
+                $r['no_faktur'],
+                $r['customer_name'],
+                $r['cara_bayar_tempo'],
+                $r['kd_barang'],
+                $r['nama_barang'],
+                (float)$r['qty'],
+                $r['satuan'],
+                (float)$r['nilai_faktur'],
+                (float)$r['dpp'],
+                (float)$r['hpp_unit'],
+                (float)$r['hpp_total'],
+                (float)$r['laba_kotor'],
+            ];
+        }, $report['faktur_penjualan']);
+        $this->_writeOperasionalTableSheet(
+            $s4,
+            'FAKTUR PENJUALAN (HPP MOVING AVERAGE)',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tgl Faktur', 'No. Faktur', 'Customer', 'Cara Bayar / Tempo', 'Kode Barang', 'Barang', 'Qty', 'Satuan', 'Nilai Faktur', 'DPP', 'HPP Satuan', 'HPP Total', 'Laba Kotor'],
+            $fakturRows,
+            ['G' => '#,##0.##', 'I' => '#,##0.00', 'J' => '#,##0.00', 'K' => '#,##0.00', 'L' => '#,##0.00', 'M' => '#,##0.00'],
+            ['G', 'I', 'J', 'L', 'M']
+        );
+
+        // 5. Sheet Retur Pembelian (No. Jurnal di depan)
+        $s5 = $spreadsheet->createSheet(4);
+        $s5->setTitle('Retur Pembelian');
+        $rbRows = array_map(function ($r) {
+            return [
+                $r['tanggal_retur'],
+                $r['nomor_jurnal'],
+                $r['no_retur_pembelian'],
+                $r['nama_suplier'],
+                $r['referensi'],
+                $r['barang_lot'],
+                (float)$r['qty_retur'],
+                $r['satuan'],
+                (float)$r['dpp'],
+                (float)$r['ppn'],
+                (float)$r['total_retur'],
+            ];
+        }, $report['retur_pembelian']);
+        $this->_writeOperasionalTableSheet(
+            $s5,
+            'RETUR PEMBELIAN',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tgl Retur', 'No. Jurnal', 'No. Retur', 'Supplier', 'Referensi PO / LPB', 'Barang dan Lot', 'Qty Retur', 'Satuan', 'DPP', 'PPN', 'Total Retur'],
+            $rbRows,
+            ['G' => '#,##0.##', 'I' => '#,##0.00', 'J' => '#,##0.00', 'K' => '#,##0.00'],
+            ['G', 'I', 'J', 'K']
+        );
+
+        // 6. Sheet Retur Penjualan (No. Jurnal di depan)
+        $s6 = $spreadsheet->createSheet(5);
+        $s6->setTitle('Retur Penjualan');
+        $rpRows = array_map(function ($r) {
+            return [
+                $r['tanggal_retur'],
+                $r['nomor_jurnal'],
+                $r['no_retur'],
+                $r['nama_customer'],
+                $r['faktur_asal'],
+                $r['barang_lot'],
+                $r['alasan'],
+                (float)$r['qty_retur'],
+                $r['satuan'],
+                (float)$r['nilai_retur'],
+                (float)$r['saldo_retur_aktif'],
+                (float)$r['hpp_reversal'],
+            ];
+        }, $report['retur_penjualan']);
+        $this->_writeOperasionalTableSheet(
+            $s6,
+            'RETUR PENJUALAN',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tgl Retur', 'No. Jurnal', 'No. Retur', 'Customer', 'Faktur Asal', 'Barang dan Lot', 'Alasan', 'Qty Retur', 'Satuan', 'Nilai Retur', 'Saldo Retur Aktif', 'HPP Reversal'],
+            $rpRows,
+            ['H' => '#,##0.##', 'J' => '#,##0.00', 'K' => '#,##0.00', 'L' => '#,##0.00'],
+            ['H', 'J', 'K', 'L']
+        );
+
+        // 7. Sheet Pembayaran Customer
+        $s7 = $spreadsheet->createSheet(6);
+        $s7->setTitle('Pembayaran Customer');
+        $pcRows = array_map(function ($r) {
+            return [
+                $r['tanggal_pembayaran'],
+                $r['nomor_transaksi'],
+                $r['customer_kios'],
+                $r['no_faktur'],
+                $r['metode_rekening'],
+                $r['rincian'],
+                (float)$r['nilai'],
+                $r['status_bayar'],
+            ];
+        }, $report['pembayaran_customer']);
+        $this->_writeOperasionalTableSheet(
+            $s7,
+            'PEMBAYARAN CUSTOMER',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tanggal', 'No. Transaksi / Jurnal', 'Customer / Kios', 'Faktur', 'Metode / Rekening', 'Rincian', 'Nilai', 'Status'],
+            $pcRows,
+            ['G' => '#,##0.00'],
+            ['G']
+        );
+
+        // 8. Sheet Pembayaran Supplier (No. Jurnal di depan, No. Bukti Bayar di belakang)
+        $s8 = $spreadsheet->createSheet(7);
+        $s8->setTitle('Pembayaran Supplier');
+        $psRows = array_map(function ($r) {
+            return [
+                $r['tanggal_pembayaran'],
+                $r['nomor_jurnal'],
+                $r['nama_suplier'],
+                $r['no_lpb'],
+                $r['rekening'],
+                (float)$r['nilai'],
+                $r['status_bayar'],
+                $r['no_bukti_bayar'],
+            ];
+        }, $report['pembayaran_supplier']);
+        $this->_writeOperasionalTableSheet(
+            $s8,
+            'PEMBAYARAN SUPPLIER',
+            'Periode: ' . $report['date_from'] . ' s/d ' . $report['date_to'],
+            ['Tanggal', 'No. Jurnal', 'Supplier', 'No. LPB', 'Rekening', 'Nilai', 'Status', 'No. Bukti Bayar'],
+            $psRows,
+            ['F' => '#,##0.00'],
+            ['F']
+        );
+
+        // 9. Sheet Laba Rugi
+        $s9 = $spreadsheet->createSheet(8);
+        $s9->setTitle('Laba Rugi');
+        $this->_writeOperasionalLabaRugiSheet($s9, $report['laba_rugi'], $report['date_from'], $report['date_to']);
+
+        // 10. Sheet Neraca Saldo & Laba Kotor (sesuai format rekap akun & laba kotor)
+        $s10 = $spreadsheet->createSheet(9);
+        $s10->setTitle('Neraca Saldo & Laba Kotor');
+        $this->_writeOperasionalNeracaSaldoSheet($s10, $report['mutasi_akun']);
+
+        $spreadsheet->setActiveSheetIndex(0);
+        $filename = 'Operasional_' . $report['date_from'] . '_sd_' . $report['date_to'] . '_' . date('Ymd_His') . '.xlsx';
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        $prevErr = error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        error_reporting($prevErr);
+        exit;
+    }
+
+    private function _writeOperasionalTableSheet($sheet, $title, $subtitle, array $headers, array $rows, array $numFormats = [], array $sumCols = [])
+    {
+        $colCount = count($headers);
+        $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colCount);
+
+        $sheet->setCellValue('A1', $title);
+        $sheet->mergeCells('A1:' . $lastCol . '1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+
+        $sheet->setCellValue('A2', $subtitle);
+        $sheet->mergeCells('A2:' . $lastCol . '2');
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
+
+        $sheet->fromArray($headers, null, 'A4');
+        $sheet->getStyle('A4:' . $lastCol . '4')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType'   => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E5B5A'],
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        $rowNum = 5;
+        $sums = array_fill_keys($sumCols, 0.0);
+
+        if (empty($rows)) {
+            $sheet->setCellValue('A' . $rowNum, 'Tidak ada data pada periode ini.');
+            $sheet->mergeCells('A' . $rowNum . ':' . $lastCol . $rowNum);
+            $sheet->getStyle('A' . $rowNum)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle('A' . $rowNum)->getFont()->setItalic(true);
+            $rowNum++;
+        } else {
+            foreach ($rows as $r) {
+                foreach ($r as $colIdx => $val) {
+                    $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx + 1);
+                    if (is_float($val) || is_int($val)) {
+                        $sheet->setCellValue($colLetter . $rowNum, $val);
+                        if (isset($sums[$colLetter])) {
+                            $sums[$colLetter] += (float)$val;
+                        }
+                    } else {
+                        $sheet->setCellValueExplicit($colLetter . $rowNum, (string)$val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    }
+                }
+                $rowNum++;
+            }
+
+            if (!empty($sumCols)) {
+                $sheet->setCellValue('A' . $rowNum, 'TOTAL (' . count($rows) . ' baris)');
+                foreach ($sums as $colLetter => $totalVal) {
+                    $sheet->setCellValue($colLetter . $rowNum, $totalVal);
+                }
+                $sheet->getStyle('A' . $rowNum . ':' . $lastCol . $rowNum)->getFont()->setBold(true);
+                $sheet->getStyle('A' . $rowNum . ':' . $lastCol . $rowNum)->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('E2E8F0');
+            }
+        }
+
+        foreach ($numFormats as $colLetter => $fmt) {
+            $sheet->getStyle($colLetter . '5:' . $colLetter . $rowNum)->getNumberFormat()->setFormatCode($fmt);
+        }
+
+        $lastDataRow = empty($rows) ? 5 : ($emptyRow = !empty($sumCols) ? $rowNum : $rowNum - 1);
+        $sheet->getStyle('A4:' . $lastCol . $lastDataRow)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        for ($c = 1; $c <= $colCount; $c++) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+        }
+        $sheet->freezePane('A5');
+    }
+
+    private function _writeOperasionalLabaRugiSheet($sheet, array $labaRugi, $dateFrom, $dateTo)
+    {
+        $s = $labaRugi['summary'];
+        $sheet->setCellValue('A1', 'RINGKASAN LABA RUGI PENJUALAN');
+        $sheet->mergeCells('A1:B1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+
+        $sheet->setCellValue('A2', 'Periode: ' . $dateFrom . ' s/d ' . $dateTo);
+        $sheet->mergeCells('A2:B2');
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10);
+
+        $sheet->fromArray(['Ringkasan Laba Rugi Penjualan', 'Nilai'], null, 'A4');
+        $sheet->getStyle('A4:B4')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E5B5A']],
+        ]);
+
+        $summaryItems = [
+            ['Penjualan terfaktur sebelum retur (DPP)', (float)$s['penjualan_dpp']],
+            ['Retur penjualan (DPP)', (float)$s['retur_dpp']],
+            ['Penjualan bersih', (float)$s['penjualan_bersih']],
+            ['HPP penjualan sebelum retur (Moving Average)', (float)$s['hpp_faktur']],
+            ['Pengurang HPP atas barang yang diretur', (float)$s['hpp_retur']],
+            ['HPP bersih', (float)$s['hpp_bersih']],
+            ['Laba kotor setelah retur', (float)$s['laba_kotor']],
+            ['Margin laba kotor (%)', round((float)$s['margin'], 2)],
+        ];
+        $r = 5;
+        foreach ($summaryItems as $item) {
+            $sheet->setCellValue('A' . $r, $item[0]);
+            $sheet->setCellValue('B' . $r, $item[1]);
+            $r++;
+        }
+        $sheet->getStyle('B5:B11')->getNumberFormat()->setFormatCode('#,##0.00');
+        $sheet->getStyle('B12')->getNumberFormat()->setFormatCode('0.00"%"');
+        $sheet->getStyle('A4:B12')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        foreach (range('A', 'B') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+    }
+
+    private function _writeOperasionalNeracaSaldoSheet($sheet, array $ma)
+    {
+        $numFmt = '#,##0.00;(#,##0.00);"-"';
+        $r = 1;
+        foreach (($ma['neraca_saldo'] ?? []) as $item) {
+            $sheet->setCellValueExplicit('A' . $r, (string)$item['kode_akun'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('B' . $r, $item['nama_akun']);
+            if ($item['debit_saldo'] !== null) {
+                $sheet->setCellValue('C' . $r, (float)$item['debit_saldo']);
+            }
+            if ($item['kredit_saldo'] !== null) {
+                $sheet->setCellValue('D' . $r, (float)$item['kredit_saldo']);
+            }
+            $sheet->getStyle('A' . $r . ':D' . $r)->getFont()->setBold(true);
+            $r++;
+        }
+
+        // Baris total balance Debit & Kredit
+        $sheet->setCellValue('C' . $r, (float)($ma['total_debit'] ?? 0));
+        $sheet->setCellValue('D' . $r, (float)($ma['total_kredit'] ?? 0));
+        $sheet->getStyle('C' . $r . ':D' . $r)->getFont()->setBold(true);
+        $sheet->getStyle('C' . $r . ':D' . $r)->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        $r += 2;
+        $sheet->getStyle('A' . $r . ':D' . $r)->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_MEDIUM);
+        $r++;
+
+        // Penjualan & Retur
+        foreach (($ma['penjualan_accounts'] ?? []) as $p) {
+            $sheet->setCellValue('B' . $r, $p['nama_akun']);
+            $sheet->setCellValue('C' . $r, (float)$p['nilai']);
+            $sheet->getStyle('B' . $r . ':C' . $r)->getFont()->setBold(true);
+            $r++;
+        }
+        $sheet->setCellValue('D' . $r, (float)($ma['total_penjualan'] ?? 0));
+        $sheet->getStyle('D' . $r)->getFont()->setBold(true);
+        $sheet->getStyle('C' . ($r - 1))->getBorders()->getBottom()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $r++;
+
+        // HPP
+        foreach (($ma['hpp_accounts'] ?? []) as $h) {
+            $sheet->setCellValue('B' . $r, $h['nama_akun']);
+            $sheet->setCellValue('C' . $r, (float)$h['nilai']);
+            $sheet->getStyle('B' . $r . ':C' . $r)->getFont()->setBold(true);
+            $r++;
+        }
+        $sheet->setCellValue('D' . $r, (float)($ma['total_hpp'] ?? 0));
+        $sheet->getStyle('D' . $r)->getFont()->setBold(true);
+        $sheet->getStyle('C' . ($r - 1))->getBorders()->getBottom()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        $r++;
+
+        // Laba Kotor
+        $sheet->setCellValue('B' . $r, 'LABA KOTOR');
+        $sheet->setCellValue('D' . $r, (float)($ma['laba_kotor'] ?? 0));
+        $sheet->getStyle('B' . $r . ':D' . $r)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC2626']],
+        ]);
+
+        $sheet->getStyle('C1:D' . $r)->getNumberFormat()->setFormatCode($numFmt);
+        foreach (range('A', 'D') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+    }
 }

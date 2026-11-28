@@ -160,7 +160,10 @@
                             </li>
                             <?php endif; ?>
                         </ul>
-                        <div class="ml-auto my-1">
+                        <div class="ml-auto my-1 d-flex align-items-center" style="gap: 6px;">
+                            <button type="button" class="btn btn-success btn-sm font-weight-bold shadow-sm" id="btn-export-excel">
+                                <i class="fas fa-file-excel mr-1"></i> Export Excel
+                            </button>
                             <button type="button" class="btn btn-outline-teal btn-sm font-weight-bold shadow-sm" id="btn-open-activity-log">
                                 <i class="fas fa-history mr-1"></i> Activity Log
                             </button>
@@ -558,6 +561,18 @@ $(document).ready(function() {
         $('#filter-search').val('');
         currentPageOffset = 0;
         loadTransactions();
+    });
+
+    // Export Excel sesuai filter aktif
+    $('#btn-export-excel').on('click', function() {
+        const query = $.param({
+            category: currentCategory,
+            date_from: $('#filter-date-from').val(),
+            date_to: $('#filter-date-to').val(),
+            status: $('#filter-status').val(),
+            search: $('#filter-search').val()
+        });
+        window.location.href = "<?= base_url('admin/transaksi/export') ?>?" + query;
     });
 
     // Pagination buttons

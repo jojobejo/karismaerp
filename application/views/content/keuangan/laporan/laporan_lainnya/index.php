@@ -6,6 +6,12 @@ $menus = [
         'url'   => base_url('laporan/lainnya/tagpd'),
         'desc'  => 'Daftar Tagihan Piutang (TAGPD): saldo awal, faktur berjalan, pelunasan, BG, dan saldo PD.',
     ],
+    [
+        'title' => 'Transaksi Operasional',
+        'icon'  => 'fas fa-chart-line',
+        'url'   => base_url('laporan/lainnya/operasional'),
+        'desc'  => 'Lihat & export Excel transaksi operasional (PO, LPB, Penjualan, Retur, Pembayaran, Laba Rugi, Mutasi Akun) sesuai periode.',
+    ],
 ];
 $back_url   = base_url('laporan');
 $page_title = 'Laporan Lainnya';

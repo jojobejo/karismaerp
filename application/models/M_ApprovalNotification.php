@@ -411,6 +411,40 @@ class M_ApprovalNotification extends CI_Model
             }
         }
 
+        // 4C. Pending Adjustment Retur SPR (persetujuan Ahmad / MT Manager Accounting & Tax)
+        if ($this->db->table_exists('tbrp_spr_adjustment_request')) {
+            $nik = strtoupper(trim((string)($user['nik'] ?? '')));
+            $isAhmadOrAdmin = $isSuper
+                || $username === 'ahmad'
+                || $nik === 'QIU2108265'
+                || in_array($jobdesk, ['MANAGERACC', 'MT MANAGER ACCOUNTING & TAX'], true);
+
+            if ($isAhmadOrAdmin) {
+                $adjRows = $this->db
+                    ->select('a.*, s.nama_customer')
+                    ->from('tbrp_spr_adjustment_request a')
+                    ->join('tbrp_spr_header s', 's.id_spr = a.id_spr', 'left')
+                    ->where('a.status', 'PENDING')
+                    ->order_by('a.id_request', 'DESC')
+                    ->limit(15)
+                    ->get()->result_array();
+
+                foreach ($adjRows as $adj) {
+                    $items[] = [
+                        'category'    => 'Adjustment Retur SPR',
+                        'badge_class' => 'badge-warning',
+                        'icon'        => 'fas fa-sliders-h text-warning',
+                        'title'       => 'Approval Adjustment Retur · ' . $adj['no_request'],
+                        'subtitle'    => ($adj['requested_by'] ?: 'ADMLPB') . ' · ' . ($adj['no_spr'] ?: '-') . ' (' . ($adj['nama_customer'] ?: '-') . ')',
+                        'detail'      => 'Menunggu persetujuan MT Manager Accounting & Tax',
+                        'url'         => base_url('retur_penjualan/retur/adjustment/' . $adj['id_request']),
+                        'datetime'    => $adj['requested_at'] ?: date('Y-m-d H:i:s'),
+                        'time_label'  => !empty($adj['requested_at']) ? date('d M H:i', strtotime($adj['requested_at'])) : '-',
+                    ];
+                }
+            }
+        }
+
         return $items;
     }
 

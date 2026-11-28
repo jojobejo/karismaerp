@@ -30,6 +30,36 @@ class C_Checker extends CI_Controller
         return in_array($this->role(), [self::ROLE_MANAGERCK, self::ROLE_MANAGER_WH]);
     }
 
+    // Ahmad Fauzan (fauzan / QIU2502266) dan Admin berhak menentukan & mengubah daftar checker
+    private function isCheckerCoordinator()
+    {
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        $nik      = strtoupper(trim((string)$this->session->userdata('nik')));
+        $jobdesk  = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $lv       = (int)$this->session->userdata('lv');
+        return ($username === 'fauzan' || $nik === 'QIU2502266' || $jobdesk === 'ADMIN' || $lv >= 99);
+    }
+
+    // Validasi apakah user saat ini berhak mengeksekusi penyiapan/loading pada baris rute tertentu
+    private function _canExecuteAssignedRoute($row)
+    {
+        if ($this->isCheckerCoordinator()) {
+            return ['ok' => true, 'msg' => ''];
+        }
+        $nik = trim((string)$this->session->userdata('nik'));
+        if (!$this->M_Checker->is_registered_checker($nik)) {
+            return ['ok' => false, 'msg' => 'Akun Anda tidak terdaftar dalam daftar checker aktif.'];
+        }
+        $assignedNik = trim((string)($row['nik_checker'] ?? ''));
+        if ($assignedNik === '') {
+            return ['ok' => false, 'msg' => 'Checker untuk rute ini belum ditentukan oleh Ahmad Fauzan.'];
+        }
+        if ($assignedNik !== $nik) {
+            return ['ok' => false, 'msg' => 'Loading hanya dapat dilakukan oleh checker yang ditugaskan (' . ($row['nm_checker'] ?? $assignedNik) . ').'];
+        }
+        return ['ok' => true, 'msg' => ''];
+    }
+
     private function canView()
     {
         return in_array($this->role(), [
@@ -59,6 +89,12 @@ class C_Checker extends CI_Controller
         }
 
         if (in_array($jobdesk, ['CHECKER', 'MT CHECKER'], true)) {
+            return self::ROLE_CHECKER;
+        }
+
+        // User departemen LOGISTIC yang masuk daftar checker aktif oleh Ahmad Fauzan otomatis berperan sebagai CHECKER
+        $nik = trim((string)$this->session->userdata('nik'));
+        if (!$this->isCheckerCoordinator() && $nik !== '' && $this->M_Checker->is_registered_checker($nik)) {
             return self::ROLE_CHECKER;
         }
 
@@ -107,8 +143,11 @@ class C_Checker extends CI_Controller
         $data['my_active_id'] = ($this->role() === self::ROLE_CHECKER)
                               ? $this->M_Checker->get_active_id_by_checker($nik)
                               : null;
-        $data['list_checker'] = $this->isMCK()
-                              ? $this->M_Checker->get_list_checker()
+        $data['is_checker_coordinator'] = $this->isCheckerCoordinator();
+        $data['is_registered_checker']  = $this->M_Checker->is_registered_checker($nik);
+        $data['list_checker']           = $this->M_Checker->get_list_checker();
+        $data['logistic_candidates']    = $this->isCheckerCoordinator()
+                              ? $this->M_Checker->get_logistic_candidates()
                               : [];
         $data['kode_baru_kk'] = $this->M_Checker->generate_kode_kk();
         $data['kode_baru_lk'] = $this->M_Checker->generate_kode_lk();
@@ -464,16 +503,31 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Status harus BARANG SIAP sebelum bisa start loading']); return;
         }
 
+        $auth = $this->_canExecuteAssignedRoute($row);
+        if (!$auth['ok']) {
+            echo json_encode(['status' => false, 'msg' => $auth['msg']]); return;
+        }
+
         // Checker & pintu diambil dari data existing (sudah diset saat siapkan barang)
         $nik_ck  = $row['nik_checker'];
         $nama_ck = $row['nm_checker'];
         $pintu   = $row['pintu'];
 
-        // Override jika MANAGERCK kirim data baru
-        if ($this->isMCK()) {
-            if ($this->input->post('nik_checker')) $nik_ck  = $this->input->post('nik_checker', true);
-            if ($this->input->post('nm_checker'))  $nama_ck = $this->input->post('nm_checker',  true);
-            if ($this->input->post('pintu'))       $pintu   = (int)$this->input->post('pintu');
+        // Override hanya jika koordinator (fauzan) mengirim checker valid dari daftar checker aktif
+        if ($this->isCheckerCoordinator() && $this->input->post('nik_checker')) {
+            $reqNik = trim((string)$this->input->post('nik_checker', true));
+            $ck = $this->M_Checker->get_registered_checker($reqNik);
+            if (!$ck) {
+                echo json_encode(['status' => false, 'msg' => 'Checker tidak terdaftar dalam daftar checker aktif.']); return;
+            }
+            $nik_ck  = $ck['nik'];
+            $nama_ck = $ck['nama_lngkp'];
+        }
+        if ($this->isCheckerCoordinator() && $this->input->post('pintu')) {
+            $pintu = (int)$this->input->post('pintu');
+        }
+        if (empty($nik_ck)) {
+            echo json_encode(['status' => false, 'msg' => 'Checker untuk rute ini belum ditentukan oleh Ahmad Fauzan.']); return;
         }
 
         $ok = $this->M_Checker->start_kk($id, $nik_ck, $nama_ck, $pintu);
@@ -632,16 +686,31 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Status harus BARANG SIAP sebelum bisa start loading']); return;
         }
 
+        $auth = $this->_canExecuteAssignedRoute($row);
+        if (!$auth['ok']) {
+            echo json_encode(['status' => false, 'msg' => $auth['msg']]); return;
+        }
+
         // Checker & pintu diambil dari data existing
         $nik_ck  = $row['nik_checker'];
         $nama_ck = $row['nm_checker'];
         $pintu   = $row['pintu'];
 
-        // Override jika MANAGERCK kirim data baru
-        if ($this->isMCK()) {
-            if ($this->input->post('nik_checker')) $nik_ck  = $this->input->post('nik_checker', true);
-            if ($this->input->post('nm_checker'))  $nama_ck = $this->input->post('nm_checker',  true);
-            if ($this->input->post('pintu'))       $pintu   = (int)$this->input->post('pintu');
+        // Override hanya jika koordinator (fauzan) mengirim checker valid dari daftar checker aktif
+        if ($this->isCheckerCoordinator() && $this->input->post('nik_checker')) {
+            $reqNik = trim((string)$this->input->post('nik_checker', true));
+            $ck = $this->M_Checker->get_registered_checker($reqNik);
+            if (!$ck) {
+                echo json_encode(['status' => false, 'msg' => 'Checker tidak terdaftar dalam daftar checker aktif.']); return;
+            }
+            $nik_ck  = $ck['nik'];
+            $nama_ck = $ck['nama_lngkp'];
+        }
+        if ($this->isCheckerCoordinator() && $this->input->post('pintu')) {
+            $pintu = (int)$this->input->post('pintu');
+        }
+        if (empty($nik_ck)) {
+            echo json_encode(['status' => false, 'msg' => 'Checker untuk rute ini belum ditentukan oleh Ahmad Fauzan.']); return;
         }
 
         $ok = $this->M_Checker->start_lk($id, $nik_ck, $nama_ck, $pintu);
@@ -812,18 +881,33 @@ class C_Checker extends CI_Controller
         if (!$row || $row['status'] !== 'DO_SELESAI') {
             echo json_encode(['status' => false, 'msg' => 'Status harus DO SELESAI sebelum bisa siapkan barang']); return;
         }
-        if ($this->isMCK()) {
-            $nik_ck  = $this->input->post('nik_checker', true) ?: $this->session->userdata('nik');
-            $nama_ck = $this->input->post('nm_checker',  true) ?: $this->nama();
+        $auth = $this->_canExecuteAssignedRoute($row);
+        if (!$auth['ok']) {
+            echo json_encode(['status' => false, 'msg' => $auth['msg']]); return;
+        }
+
+        if ($this->isCheckerCoordinator() && $this->input->post('nik_checker')) {
+            $reqNik = trim((string)$this->input->post('nik_checker', true));
+            $ck = $this->M_Checker->get_registered_checker($reqNik);
+            if (!$ck) {
+                echo json_encode(['status' => false, 'msg' => 'Checker tidak terdaftar dalam daftar checker aktif.']); return;
+            }
+            $nik_ck  = $ck['nik'];
+            $nama_ck = $ck['nama_lngkp'];
         } else {
-            $nik_ck = $this->session->userdata('nik');
-            if ($this->M_Checker->get_active_id_by_checker($nik_ck) !== null) {
-                echo json_encode(['status' => false, 'msg' => 'Anda masih punya bongkaran aktif']); return;
+            $nik_ck  = trim((string)($row['nik_checker'] ?? ''));
+            $nama_ck = trim((string)($row['nm_checker'] ?? ''));
+            if ($nik_ck === '') {
+                echo json_encode(['status' => false, 'msg' => 'Checker untuk rute ini belum ditentukan oleh Ahmad Fauzan.']); return;
             }
-            if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
-                echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading/penyiapan aktif']); return;
+            if (!$this->isCheckerCoordinator()) {
+                if ($this->M_Checker->get_active_id_by_checker($nik_ck) !== null) {
+                    echo json_encode(['status' => false, 'msg' => 'Anda masih punya bongkaran aktif']); return;
+                }
+                if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
+                    echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading/penyiapan aktif']); return;
+                }
             }
-            $nama_ck = $this->nama();
         }
         $ok = $this->M_Checker->start_siapkan_kk($id, $nik_ck, $nama_ck, $pintu);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Penyiapan barang KK dimulai' : 'Gagal']);
@@ -908,18 +992,33 @@ class C_Checker extends CI_Controller
         if (!$row || $row['status'] !== 'DO_SELESAI') {
             echo json_encode(['status' => false, 'msg' => 'Status harus DO SELESAI sebelum bisa siapkan barang']); return;
         }
-        if ($this->isMCK()) {
-            $nik_ck  = $this->input->post('nik_checker', true) ?: $this->session->userdata('nik');
-            $nama_ck = $this->input->post('nm_checker',  true) ?: $this->nama();
+        $auth = $this->_canExecuteAssignedRoute($row);
+        if (!$auth['ok']) {
+            echo json_encode(['status' => false, 'msg' => $auth['msg']]); return;
+        }
+
+        if ($this->isCheckerCoordinator() && $this->input->post('nik_checker')) {
+            $reqNik = trim((string)$this->input->post('nik_checker', true));
+            $ck = $this->M_Checker->get_registered_checker($reqNik);
+            if (!$ck) {
+                echo json_encode(['status' => false, 'msg' => 'Checker tidak terdaftar dalam daftar checker aktif.']); return;
+            }
+            $nik_ck  = $ck['nik'];
+            $nama_ck = $ck['nama_lngkp'];
         } else {
-            $nik_ck = $this->session->userdata('nik');
-            if ($this->M_Checker->get_active_id_by_checker($nik_ck) !== null) {
-                echo json_encode(['status' => false, 'msg' => 'Anda masih punya bongkaran aktif']); return;
+            $nik_ck  = trim((string)($row['nik_checker'] ?? ''));
+            $nama_ck = trim((string)($row['nm_checker'] ?? ''));
+            if ($nik_ck === '') {
+                echo json_encode(['status' => false, 'msg' => 'Checker untuk rute ini belum ditentukan oleh Ahmad Fauzan.']); return;
             }
-            if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
-                echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading/penyiapan aktif']); return;
+            if (!$this->isCheckerCoordinator()) {
+                if ($this->M_Checker->get_active_id_by_checker($nik_ck) !== null) {
+                    echo json_encode(['status' => false, 'msg' => 'Anda masih punya bongkaran aktif']); return;
+                }
+                if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
+                    echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading/penyiapan aktif']); return;
+                }
             }
-            $nama_ck = $this->nama();
         }
         $ok = $this->M_Checker->start_siapkan_lk($id, $nik_ck, $nama_ck, $pintu);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Penyiapan barang LK dimulai' : 'Gagal']);
@@ -1012,47 +1111,75 @@ class C_Checker extends CI_Controller
     }
 
     // ================================================================
-    // GANTI CHECKER — LOADING KK
+    // GANTI & PENUGASAN CHECKER — LOADING KK & LK (HANYA AHMAD FAUZAN)
     // ================================================================
     public function ganti_checker_kk()
     {
-        if (!$this->isMCK()) {
-            echo json_encode(['status' => false, 'msg' => 'Hanya Manager Checker yang bisa mengganti checker']); return;
+        if (!$this->isCheckerCoordinator()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Ahmad Fauzan atau Admin yang dapat mengganti checker.']); return;
         }
-        $id      = (int)$this->input->post('id');
-        $nik_ck  = $this->input->post('nik_checker', true);
-        $nama_ck = $this->input->post('nm_checker',  true);
-        if (!$nik_ck || !$nama_ck) {
-            echo json_encode(['status' => false, 'msg' => 'Pilih checker terlebih dahulu']); return;
+        $id     = (int)$this->input->post('id');
+        $nik_ck = trim((string)$this->input->post('nik_checker', true));
+        $ck     = $this->M_Checker->get_registered_checker($nik_ck);
+        if (!$ck) {
+            echo json_encode(['status' => false, 'msg' => 'Checker harus berasal dari daftar checker aktif (departemen LOGISTIC).']); return;
         }
         $row = $this->M_Checker->get_kk_by_id($id);
-        if (!$row || !in_array($row['status'], ['PENYIAPAN_BARANG', 'SIAP_LOADING', 'PROSES_LOADING'])) {
+        if (!$row || $row['status'] === 'DONE') {
             echo json_encode(['status' => false, 'msg' => 'Status tidak memungkinkan untuk ganti checker']); return;
         }
-        $ok = $this->M_Checker->ganti_checker_kk($id, $nik_ck, $nama_ck);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker KK berhasil diganti' : 'Gagal mengganti checker']);
+        $ok = $this->M_Checker->ganti_checker_kk($id, $ck['nik'], $ck['nama_lngkp']);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker KK berhasil ditetapkan ke ' . $ck['nama_lngkp'] : 'Gagal menetapkan checker']);
     }
 
-    // ================================================================
-    // GANTI CHECKER — LOADING LK
-    // ================================================================
+    public function assign_checker_kk()
+    {
+        return $this->ganti_checker_kk();
+    }
+
     public function ganti_checker_lk()
     {
-        if (!$this->isMCK()) {
-            echo json_encode(['status' => false, 'msg' => 'Hanya Manager Checker yang bisa mengganti checker']); return;
+        if (!$this->isCheckerCoordinator()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Ahmad Fauzan atau Admin yang dapat mengganti checker.']); return;
         }
-        $id      = (int)$this->input->post('id');
-        $nik_ck  = $this->input->post('nik_checker', true);
-        $nama_ck = $this->input->post('nm_checker',  true);
-        if (!$nik_ck || !$nama_ck) {
-            echo json_encode(['status' => false, 'msg' => 'Pilih checker terlebih dahulu']); return;
+        $id     = (int)$this->input->post('id');
+        $nik_ck = trim((string)$this->input->post('nik_checker', true));
+        $ck     = $this->M_Checker->get_registered_checker($nik_ck);
+        if (!$ck) {
+            echo json_encode(['status' => false, 'msg' => 'Checker harus berasal dari daftar checker aktif (departemen LOGISTIC).']); return;
         }
         $row = $this->M_Checker->get_lk_by_id($id);
-        if (!$row || !in_array($row['status'], ['PENYIAPAN_BARANG', 'SIAP_LOADING', 'PROSES_LOADING'])) {
+        if (!$row || $row['status'] === 'DONE') {
             echo json_encode(['status' => false, 'msg' => 'Status tidak memungkinkan untuk ganti checker']); return;
         }
-        $ok = $this->M_Checker->ganti_checker_lk($id, $nik_ck, $nama_ck);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker LK berhasil diganti' : 'Gagal mengganti checker']);
+        $ok = $this->M_Checker->ganti_checker_lk($id, $ck['nik'], $ck['nama_lngkp']);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker LK berhasil ditetapkan ke ' . $ck['nama_lngkp'] : 'Gagal menetapkan checker']);
+    }
+
+    public function assign_checker_lk()
+    {
+        return $this->ganti_checker_lk();
+    }
+
+    // Kelola daftar checker (hanya Ahmad Fauzan, dan hanya user departemen LOGISTIC)
+    public function add_checker_master()
+    {
+        if (!$this->isCheckerCoordinator()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Ahmad Fauzan atau Admin yang dapat mengubah daftar checker.']); return;
+        }
+        $nik = trim((string)$this->input->post('nik', true));
+        $res = $this->M_Checker->add_checker_master($nik, (string)$this->session->userdata('username'));
+        echo json_encode($res);
+    }
+
+    public function remove_checker_master()
+    {
+        if (!$this->isCheckerCoordinator()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Ahmad Fauzan atau Admin yang dapat mengubah daftar checker.']); return;
+        }
+        $nik = trim((string)$this->input->post('nik', true));
+        $ok  = $this->M_Checker->remove_checker_master($nik);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker dihapus dari daftar aktif.' : 'Gagal menghapus checker.']);
     }
 
     // ================================================================
@@ -1133,6 +1260,12 @@ class C_Checker extends CI_Controller
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
         $data['routes'] = $routes;
         $data['role'] = $this->role();
+        $data['nik'] = (string)$this->session->userdata('nik');
+        $data['is_checker_coordinator'] = $this->isCheckerCoordinator();
+        $data['list_checker'] = $this->M_Checker->get_list_checker();
+        $data['logistic_candidates'] = $this->isCheckerCoordinator()
+            ? $this->M_Checker->get_logistic_candidates()
+            : [];
         $trip_rows = $this->db->where_in('status', ['SIAP_LOADING','PROSES_LOADING','PROSES_FAKTUR','SIAP_BERANGKAT','MENUNGGU_TAMBAHAN','PROSES_TAMBAHAN'])
             ->order_by('id_trip', 'DESC')->get('tb_delivery_trip')->result_array();
         $data['active_trips'] = [];
@@ -1448,6 +1581,51 @@ class C_Checker extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function assign_checker_so_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post' || !$this->isCheckerCoordinator()) {
+            echo json_encode(['status' => false, 'message' => 'Hanya Ahmad Fauzan atau Admin yang dapat menentukan checker rute.']);
+            exit;
+        }
+
+        $kd_rute = strtoupper(trim((string)$this->input->post('kd_rute', true)));
+        $id_trip = (int)$this->input->post('id_trip');
+        $nik_ck  = trim((string)$this->input->post('nik_checker', true));
+        if ($kd_rute === '') {
+            echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid.']);
+            exit;
+        }
+
+        $ck = $this->M_Checker->get_registered_checker($nik_ck);
+        if (!$ck) {
+            echo json_encode(['status' => false, 'message' => 'Checker harus berasal dari daftar checker aktif (departemen LOGISTIC).']);
+            exit;
+        }
+
+        $activity = $this->M_Checker->ensure_route_loading_activity($kd_rute, $ck['nama_lngkp'], $id_trip ?: null);
+        if (!$activity) {
+            echo json_encode(['status' => false, 'message' => 'Rute tidak terdaftar sebagai LK/KK.']);
+            exit;
+        }
+        if (($activity['status'] ?? '') === 'DONE') {
+            echo json_encode(['status' => false, 'message' => 'Loading rute sudah selesai (DONE).']);
+            exit;
+        }
+
+        $ok = ($activity['loading_type'] === 'kk')
+            ? $this->M_Checker->assign_checker_kk((int)$activity['id'], $ck['nik'], $ck['nama_lngkp'])
+            : $this->M_Checker->assign_checker_lk((int)$activity['id'], $ck['nik'], $ck['nama_lngkp']);
+
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok ? 'Checker rute ' . $kd_rute . ' ditetapkan ke ' . $ck['nama_lngkp'] : 'Gagal menetapkan checker.'
+        ]);
+        exit;
+    }
+
     public function start_so_loading_rute()
     {
         while (ob_get_level()) ob_end_clean();
@@ -1472,12 +1650,19 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'message' => 'Rute tidak terdaftar sebagai LK/KK atau aktivitas loading gagal disiapkan.']);
             exit;
         }
+        $auth = $this->_canExecuteAssignedRoute($activity);
+        if (!$auth['ok']) {
+            echo json_encode(['status' => false, 'message' => $auth['msg']]);
+            exit;
+        }
         if ($activity['status'] === 'PROSES_LOADING' && !empty($activity['waktu_mulai'])) {
             echo json_encode(['status' => true, 'message' => 'Loading sudah dimulai sebelumnya.']);
             exit;
         }
 
-        $ok = $this->M_Checker->start_route_loading($kd_rute, $nik, $nama, $id_trip ?: null);
+        $targetNik  = !empty($activity['nik_checker']) ? $activity['nik_checker'] : $nik;
+        $targetNama = !empty($activity['nm_checker']) ? $activity['nm_checker'] : $nama;
+        $ok = $this->M_Checker->start_route_loading($kd_rute, $targetNik, $targetNama, $id_trip ?: null);
         if ($ok && !empty($activity['id_trip'])) {
             $trip = $this->M_DeliveryTrip->get((int)$activity['id_trip']);
             $next_status = $trip && $trip['status'] === 'PROSES_TAMBAHAN' ? 'PROSES_TAMBAHAN' : 'PROSES_LOADING';

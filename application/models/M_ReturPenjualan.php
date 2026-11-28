@@ -954,6 +954,86 @@ class M_ReturPenjualan extends CI_Model
             ->row_array();
     }
 
+    /** Pastikan tabel pengajuan adjustment retur SPR tersedia */
+    public function ensure_spr_adjustment_table()
+    {
+        if ($this->db->table_exists('tbrp_spr_adjustment_request')) {
+            return;
+        }
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_spr_adjustment_request` (
+                `id_request` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                `no_request` VARCHAR(40) NOT NULL,
+                `id_spr` INT UNSIGNED NOT NULL,
+                `no_spr` VARCHAR(40) NOT NULL,
+                `status` ENUM('PENDING','APPROVED','REJECTED','USED') NOT NULL DEFAULT 'PENDING',
+                `alasan` TEXT NOT NULL,
+                `items_json` LONGTEXT NOT NULL,
+                `requested_by` VARCHAR(150) NOT NULL,
+                `requested_username` VARCHAR(100) NOT NULL,
+                `requested_at` DATETIME NOT NULL,
+                `approved_by` VARCHAR(150) DEFAULT NULL,
+                `approved_username` VARCHAR(100) DEFAULT NULL,
+                `approved_at` DATETIME DEFAULT NULL,
+                `approval_note` TEXT DEFAULT NULL,
+                `id_retur` INT UNSIGNED DEFAULT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+                KEY `idx_spr` (`id_spr`),
+                KEY `idx_status` (`status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    public function generate_no_adj_request()
+    {
+        $this->ensure_spr_adjustment_table();
+        $prefix = 'ADJ-RET-' . date('dmy') . '-';
+        $last = $this->db->like('no_request', $prefix, 'after')
+            ->order_by('id_request', 'DESC')->limit(1)
+            ->get('tbrp_spr_adjustment_request')->row_array();
+        $next = 1;
+        if ($last && !empty($last['no_request'])) {
+            $next = (int)substr($last['no_request'], -4) + 1;
+        }
+        return $prefix . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function get_latest_spr_adjustment($id_spr)
+    {
+        $this->ensure_spr_adjustment_table();
+        return $this->db
+            ->where('id_spr', (int)$id_spr)
+            ->order_by('id_request', 'DESC')
+            ->limit(1)
+            ->get('tbrp_spr_adjustment_request')
+            ->row_array();
+    }
+
+    public function get_spr_adjustment_by_id($id_request)
+    {
+        $this->ensure_spr_adjustment_table();
+        return $this->db
+            ->where('id_request', (int)$id_request)
+            ->get('tbrp_spr_adjustment_request')
+            ->row_array();
+    }
+
+    public function create_spr_adjustment_request(array $data)
+    {
+        $this->ensure_spr_adjustment_table();
+        $this->db->insert('tbrp_spr_adjustment_request', $data);
+        return $this->db->insert_id();
+    }
+
+    public function update_spr_adjustment_status($id_request, array $data)
+    {
+        $this->ensure_spr_adjustment_table();
+        return $this->db
+            ->where('id_request', (int)$id_request)
+            ->update('tbrp_spr_adjustment_request', $data);
+    }
+
 
     /**
      * Get history of SPR approvals and rejections processed by a specific user or role.

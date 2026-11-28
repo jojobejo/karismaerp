@@ -45,6 +45,57 @@
                 <?php endforeach; ?>
 
                 <?php
+                $adjStatus = $adjustment_req['status'] ?? '';
+                $adjItemsMap = [];
+                if (!empty($adjustment_req['items_json'])) {
+                    $decodedAdj = json_decode($adjustment_req['items_json'], true) ?: [];
+                    foreach ($decodedAdj as $ai) {
+                        $adjItemsMap[(int)($ai['id_spr_detail'] ?? 0)] = $ai;
+                    }
+                }
+                ?>
+
+                <?php if (!isset($retur['id_retur']) && !empty($spr['id_spr'])): ?>
+                    <?php if ($adjStatus === 'PENDING'): ?>
+                        <div class="alert alert-warning shadow-sm d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                <i class="fas fa-hourglass-half mr-1"></i>
+                                Pengajuan Adjustment <strong><?= htmlspecialchars($adjustment_req['no_request']) ?></strong> sedang menunggu persetujuan <strong>Ahmad (MT Manager Accounting &amp; Tax)</strong>. Adjustment belum dapat diproses sebelum disetujui.
+                            </div>
+                        </div>
+                    <?php elseif ($adjStatus === 'APPROVED'): ?>
+                        <div class="alert alert-success shadow-sm">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Adjustment <strong><?= htmlspecialchars($adjustment_req['no_request']) ?></strong> telah disetujui oleh <strong><?= htmlspecialchars($adjustment_req['approved_by']) ?></strong>. Data barang di bawah telah disesuaikan dengan adjustment yang disetujui.
+                            <?php if (!empty($adjustment_req['approval_note'])): ?>
+                                <br><small>Catatan Ahmad: <i><?= htmlspecialchars($adjustment_req['approval_note']) ?></i></small>
+                            <?php endif; ?>
+                        </div>
+                    <?php elseif ($adjStatus === 'REJECTED'): ?>
+                        <div class="alert alert-danger shadow-sm d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                <i class="fas fa-times-circle mr-1"></i>
+                                Pengajuan Adjustment <strong><?= htmlspecialchars($adjustment_req['no_request']) ?></strong> ditolak oleh <strong><?= htmlspecialchars($adjustment_req['approved_by']) ?></strong>:
+                                <i><?= htmlspecialchars($adjustment_req['approval_note'] ?? '-') ?></i>
+                            </div>
+                            <button type="button" class="btn btn-warning btn-sm font-weight-bold mt-2 mt-md-0" data-toggle="modal" data-target="#modalAdjustmentRetur">
+                                <i class="fas fa-sliders-h mr-1"></i> Ajukan Adjustment Ulang
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-info shadow-sm d-flex justify-content-between align-items-center flex-wrap py-2">
+                            <div>
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Barang datang tidak sesuai SPR? Ajukan adjustment terlebih dahulu untuk persetujuan <strong>Ahmad (MT Manager Accounting &amp; Tax)</strong>.
+                            </div>
+                            <button type="button" class="btn btn-warning btn-sm font-weight-bold mt-2 mt-md-0" data-toggle="modal" data-target="#modalAdjustmentRetur">
+                                <i class="fas fa-sliders-h mr-1"></i> Ajukan Adjustment
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <?php
                 $action_url = isset($retur['id_retur']) 
                     ? base_url('retur_penjualan/retur/update/' . $retur['id_retur']) 
                     : base_url('retur_penjualan/retur/simpan/' . $spr['id_spr']);
@@ -158,7 +209,13 @@
                                         <?php if (empty($spr_detail)): ?>
                                             <tr><td colspan="9" class="text-center text-muted py-3">Tidak ada data barang dalam SPR ini</td></tr>
                                         <?php else: ?>
-                                            <?php foreach ($spr_detail as $i => $d): ?>
+                                            <?php foreach ($spr_detail as $i => $d):
+                                                $sid = (int)($d['id_spr_detail'] ?? 0);
+                                                $adjItem = ($adjStatus === 'APPROVED' && isset($adjItemsMap[$sid])) ? $adjItemsMap[$sid] : null;
+                                                $valBatch = $adjItem ? ($adjItem['no_batch_adj'] ?? '') : ($d['no_batch'] ?? '');
+                                                $valExp   = $adjItem ? ($adjItem['expired_date_adj'] ?? '') : ($d['expired_date'] ?? '');
+                                                $valQty   = $adjItem ? (float)($adjItem['qty_adj'] ?? 0) : (float)($d['qty'] ?? 0);
+                                            ?>
                                             <tr class="item-row">
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td>
@@ -177,16 +234,15 @@
                                                 </td>
                                                 <td>
                                                     <input type="text" name="no_batch[]" class="form-control form-control-sm field-retur"
-                                                           value="<?= htmlspecialchars($d['no_batch'] ?? '') ?>" readonly>
+                                                           value="<?= htmlspecialchars($valBatch) ?>" readonly>
                                                 </td>
                                                 <td>
-                                                    <?php $exp = $d['expired_date'] ?? null; ?>
                                                     <input type="date" name="expired_date[]" class="form-control form-control-sm field-retur"
-                                                           value="<?= $exp ? date('Y-m-d', strtotime($exp)) : '' ?>" readonly>
+                                                           value="<?= $valExp ? date('Y-m-d', strtotime($valExp)) : '' ?>" readonly>
                                                 </td>
                                                 <td>
                                                     <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input field-retur"
-                                                           value="<?= (float)($d['qty'] ?? 0) ?>" min="0.001" step="0.001" readonly required>
+                                                           value="<?= $valQty ?>" min="0" step="0.001" readonly required>
                                                 </td>
                                                 <td class="<?= $hide_harga ? 'd-none' : '' ?>">
                                                     <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input field-retur"
@@ -268,6 +324,80 @@
             </div>
         </section>
     </div>
+
+    <?php if (!isset($retur['id_retur']) && !empty($spr['id_spr']) && !in_array($adjStatus, ['PENDING', 'APPROVED'], true)): ?>
+    <!-- Modal Pengajuan Adjustment Retur SPR (Persetujuan Ahmad / MT Manager Accounting & Tax) -->
+    <div class="modal fade" id="modalAdjustmentRetur" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="post" action="<?= base_url('retur_penjualan/retur/request_adjustment/' . $spr['id_spr']) ?>">
+                    <?php if ($this->config->item('csrf_protection') === TRUE): ?>
+                        <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+                    <?php endif; ?>
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title font-weight-bold"><i class="fas fa-sliders-h mr-2"></i>Ajukan Adjustment Retur (Approval Ahmad)</h5>
+                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info py-2 small mb-3">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Sesuaikan Qty, Batch/Lot, atau Expired Date sesuai barang fisik yang datang. Pengajuan ini harus disetujui <b>Ahmad (MT Manager Accounting &amp; Tax)</b> sebelum retur dapat disimpan.
+                        </div>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered table-sm mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Barang</th>
+                                        <th class="text-right" style="width:90px;">Qty SPR</th>
+                                        <th style="width:110px;">Qty Datang</th>
+                                        <th style="width:130px;">Batch/Lot</th>
+                                        <th style="width:140px;">Exp Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($spr_detail as $sd):
+                                        $sid = (int)$sd['id_spr_detail'];
+                                        $sdExp = !empty($sd['expired_date']) ? date('Y-m-d', strtotime($sd['expired_date'])) : '';
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?= htmlspecialchars($sd['nama_barang'] ?? '') ?></strong>
+                                            <br><small class="text-muted"><?= htmlspecialchars($sd['satuan'] ?? '') ?></small>
+                                        </td>
+                                        <td class="text-right align-middle"><?= (float)($sd['qty'] ?? 0) ?></td>
+                                        <td>
+                                            <input type="number" name="adj_qty[<?= $sid ?>]" class="form-control form-control-sm text-right"
+                                                   value="<?= (float)($sd['qty'] ?? 0) ?>" min="0" step="0.001" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="adj_no_batch[<?= $sid ?>]" class="form-control form-control-sm"
+                                                   value="<?= htmlspecialchars($sd['no_batch'] ?? '') ?>">
+                                        </td>
+                                        <td>
+                                            <input type="date" name="adj_expired_date[<?= $sid ?>]" class="form-control form-control-sm"
+                                                   value="<?= $sdExp ?>">
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="font-weight-bold small">Alasan Ketidaksesuaian / Adjustment <span class="text-danger">*</span></label>
+                            <textarea name="alasan_adjustment" class="form-control form-control-sm" rows="2" required placeholder="Contoh: Barang yang datang fisik hanya 5 pcs, beda batch..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning btn-sm font-weight-bold">
+                            <i class="fas fa-paper-plane mr-1"></i> Kirim Pengajuan ke Ahmad
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>

@@ -102,6 +102,18 @@ class C_ReturPenjualan extends CI_Controller
         return $lv >= 99 || $username === 'admin' || in_array($jobdesk, ['ADMIN', 'SUPER ADMIN', 'SUPERADMIN'], true);
     }
 
+    /** Ahmad (MT Manager Accounting & Tax) atau Admin — pemberi approval adjustment retur SPR */
+    private function _isManagerAccountingTax()
+    {
+        if ($this->_isAdminUser()) {
+            return true;
+        }
+        $username = strtolower(trim((string)($this->session->userdata('username') ?? '')));
+        $nik      = strtoupper(trim((string)($this->session->userdata('nik') ?? '')));
+        $jobdesk  = strtoupper(trim((string)($this->session->userdata('jobdesk') ?? '')));
+        return ($username === 'ahmad' || $nik === 'QIU2108265' || in_array($jobdesk, ['MT MANAGER ACCOUNTING & TAX', 'MANAGERACC'], true));
+    }
+
     /** Siapa saja yang berhak mengubah Setting Approval Retur Penjualan */
     private function _canManageApprovalSetting()
     {
@@ -1564,6 +1576,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['gudang_list'] = $data['is_consignment_return']
             ? [$data['consignment_warehouse']]
             : $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
+        $data['adjustment_req'] = $this->M_ReturPenjualan->get_latest_spr_adjustment($id_spr);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/retur_form.php', $data);
@@ -1603,6 +1616,38 @@ class C_ReturPenjualan extends CI_Controller
 
         if ($gudang_id <= 0) {
             $this->session->set_flashdata('error', 'Gudang tujuan retur wajib dipilih.');
+            redirect('retur_penjualan/retur/buat/' . $id_spr);
+            return;
+        }
+
+        // Validasi: jika ada item yang di-adjust (berbeda dari SPR), wajib ada approval dari Ahmad (MT Manager Accounting & Tax)
+        $sprDetails = $this->M_ReturPenjualan->get_spr_detail($id_spr);
+        $sprMap = [];
+        foreach ($sprDetails as $sd) {
+            $sprMap[(int)$sd['id_spr_detail']] = $sd;
+        }
+        $postIds   = $this->input->post('id_spr_detail') ?: [];
+        $postQtys  = $this->input->post('qty_retur') ?: [];
+        $postBatch = $this->input->post('no_batch') ?: [];
+        $postExp   = $this->input->post('expired_date') ?: [];
+        $hasDiffFromSpr = false;
+        foreach ($postIds as $idx => $sid) {
+            $sd = $sprMap[(int)$sid] ?? null;
+            if (!$sd) continue;
+            $qPost = $this->_parseQty($postQtys[$idx] ?? 0);
+            $qSpr  = (float)($sd['qty'] ?? 0);
+            $bPost = trim((string)($postBatch[$idx] ?? ''));
+            $bSpr  = trim((string)($sd['no_batch'] ?? ''));
+            $ePost = !empty($postExp[$idx]) ? date('Y-m-d', strtotime($postExp[$idx])) : '';
+            $eSpr  = !empty($sd['expired_date']) ? date('Y-m-d', strtotime($sd['expired_date'])) : '';
+            if (abs($qPost - $qSpr) > 0.0001 || $bPost !== $bSpr || $ePost !== $eSpr) {
+                $hasDiffFromSpr = true;
+                break;
+            }
+        }
+        $approvedAdj = $this->M_ReturPenjualan->get_latest_spr_adjustment($id_spr);
+        if ($hasDiffFromSpr && (!$approvedAdj || $approvedAdj['status'] !== 'APPROVED')) {
+            $this->session->set_flashdata('error', 'Adjustment retur yang tidak sesuai SPR wajib mendapat persetujuan Ahmad (MT Manager Accounting & Tax) terlebih dahulu.');
             redirect('retur_penjualan/retur/buat/' . $id_spr);
             return;
         }
@@ -1764,8 +1809,168 @@ class C_ReturPenjualan extends CI_Controller
         }
         $this->db->trans_commit();
 
+        if (!empty($approvedAdj) && ($approvedAdj['status'] ?? '') === 'APPROVED') {
+            $this->M_ReturPenjualan->update_spr_adjustment_status((int)$approvedAdj['id_request'], [
+                'status'   => 'USED',
+                'id_retur' => (int)$id_retur,
+            ]);
+        }
+
         $this->session->set_flashdata('success', "Retur Penjualan <strong>{$no_retur}</strong> berhasil dibuat dan menunggu verifikasi Admin Retur.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
+    }
+
+    /** ADMLPB (Yunika): mengajukan permohonan adjustment SPR sebelum membuat Retur Penjualan */
+    public function retur_request_adjustment($id_spr)
+    {
+        if (!$this->_isAdmlpb() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            redirect('retur_penjualan/admlpb');
+            return;
+        }
+
+        $spr = $this->M_ReturPenjualan->get_spr($id_spr);
+        if (!$spr || $spr['status'] !== 'disetujui_kadep') {
+            $this->session->set_flashdata('error', 'SPR tidak valid atau belum berstatus Disetujui Kadep.');
+            redirect('retur_penjualan/admlpb');
+            return;
+        }
+
+        $latest = $this->M_ReturPenjualan->get_latest_spr_adjustment($id_spr);
+        if ($latest && $latest['status'] === 'PENDING') {
+            $this->session->set_flashdata('error', 'Pengajuan adjustment (' . $latest['no_request'] . ') masih menunggu persetujuan Ahmad.');
+            redirect('retur_penjualan/retur/buat/' . $id_spr);
+            return;
+        }
+
+        $alasan = trim((string)$this->input->post('alasan_adjustment', true));
+        if ($alasan === '') {
+            $this->session->set_flashdata('error', 'Alasan adjustment wajib diisi.');
+            redirect('retur_penjualan/retur/buat/' . $id_spr);
+            return;
+        }
+
+        $sprDetails = $this->M_ReturPenjualan->get_spr_detail($id_spr);
+        $adjQtys   = $this->input->post('adj_qty') ?: [];
+        $adjBatch  = $this->input->post('adj_no_batch') ?: [];
+        $adjExp    = $this->input->post('adj_expired_date') ?: [];
+
+        $items = [];
+        foreach ($sprDetails as $sd) {
+            $sid = (int)$sd['id_spr_detail'];
+            $items[] = [
+                'id_spr_detail'    => $sid,
+                'kd_barang'        => $sd['kd_barang'] ?? '',
+                'nama_barang'      => $sd['nama_barang'] ?? '',
+                'satuan'           => $sd['satuan'] ?? '',
+                'no_faktur'        => $sd['no_faktur'] ?? '',
+                'qty_spr'          => (float)($sd['qty'] ?? 0),
+                'no_batch_spr'     => trim((string)($sd['no_batch'] ?? '')),
+                'expired_date_spr' => !empty($sd['expired_date']) ? date('Y-m-d', strtotime($sd['expired_date'])) : '',
+                'qty_adj'          => isset($adjQtys[$sid]) ? $this->_parseQty($adjQtys[$sid]) : (float)($sd['qty'] ?? 0),
+                'no_batch_adj'     => isset($adjBatch[$sid]) ? trim((string)$adjBatch[$sid]) : trim((string)($sd['no_batch'] ?? '')),
+                'expired_date_adj' => !empty($adjExp[$sid]) ? date('Y-m-d', strtotime($adjExp[$sid])) : (!empty($sd['expired_date']) ? date('Y-m-d', strtotime($sd['expired_date'])) : ''),
+                'harga_satuan'     => (float)($sd['harga'] ?? 0),
+            ];
+        }
+
+        $user = $this->_getUser();
+        $noReq = $this->M_ReturPenjualan->generate_no_adj_request();
+        $this->M_ReturPenjualan->create_spr_adjustment_request([
+            'no_request'         => $noReq,
+            'id_spr'             => (int)$id_spr,
+            'no_spr'             => $spr['no_spr'],
+            'status'             => 'PENDING',
+            'alasan'             => $alasan,
+            'items_json'         => json_encode($items, JSON_UNESCAPED_UNICODE),
+            'requested_by'       => $user['nama'],
+            'requested_username' => $user['username'],
+            'requested_at'       => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->session->set_flashdata('success', "Pengajuan adjustment <strong>{$noReq}</strong> berhasil dikirim ke Ahmad (MT Manager Accounting &amp; Tax) untuk persetujuan.");
+        redirect('retur_penjualan/retur/buat/' . $id_spr);
+    }
+
+    /** Halaman review & approval adjustment retur SPR (Ahmad / MT Manager Accounting & Tax) */
+    public function retur_adjustment_review($id_request)
+    {
+        $req = $this->M_ReturPenjualan->get_spr_adjustment_by_id($id_request);
+        if (!$req) {
+            show_404();
+            return;
+        }
+        $spr = $this->M_ReturPenjualan->get_spr((int)$req['id_spr']);
+        $data['page_title']  = 'KARISMA — Approval Adjustment Retur ' . $req['no_request'];
+        $data['req']         = $req;
+        $data['spr']         = $spr;
+        $data['items']       = json_decode($req['items_json'] ?? '[]', true) ?: [];
+        $data['can_approve'] = $this->_isManagerAccountingTax();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/retur_adjustment_review.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /** Ahmad (MT Manager Accounting & Tax): setujui pengajuan adjustment */
+    public function retur_adjustment_approve($id_request)
+    {
+        if (!$this->_isManagerAccountingTax() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_denyAccess('Hanya Ahmad (MT Manager Accounting & Tax) atau Admin yang dapat menyetujui adjustment retur.');
+            return;
+        }
+        $req = $this->M_ReturPenjualan->get_spr_adjustment_by_id($id_request);
+        if (!$req || $req['status'] !== 'PENDING') {
+            $this->session->set_flashdata('error', 'Pengajuan adjustment tidak ditemukan atau sudah diproses.');
+            redirect('dashboard');
+            return;
+        }
+
+        $user = $this->_getUser();
+        $note = trim((string)$this->input->post('approval_note', true));
+        $this->M_ReturPenjualan->update_spr_adjustment_status($id_request, [
+            'status'            => 'APPROVED',
+            'approved_by'       => $user['nama'],
+            'approved_username' => $user['username'],
+            'approved_at'       => date('Y-m-d H:i:s'),
+            'approval_note'     => $note,
+        ]);
+
+        $this->session->set_flashdata('success', "Adjustment Retur <strong>{$req['no_request']}</strong> disetujui. Admin LPB dapat melanjutkan proses retur.");
+        redirect('retur_penjualan/retur/adjustment/' . $id_request);
+    }
+
+    /** Ahmad (MT Manager Accounting & Tax): tolak pengajuan adjustment */
+    public function retur_adjustment_reject($id_request)
+    {
+        if (!$this->_isManagerAccountingTax() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            $this->_denyAccess('Hanya Ahmad (MT Manager Accounting & Tax) atau Admin yang dapat menolak adjustment retur.');
+            return;
+        }
+        $req = $this->M_ReturPenjualan->get_spr_adjustment_by_id($id_request);
+        if (!$req || $req['status'] !== 'PENDING') {
+            $this->session->set_flashdata('error', 'Pengajuan adjustment tidak ditemukan atau sudah diproses.');
+            redirect('dashboard');
+            return;
+        }
+
+        $note = trim((string)$this->input->post('approval_note', true));
+        if ($note === '') {
+            $this->session->set_flashdata('error', 'Catatan alasan penolakan wajib diisi.');
+            redirect('retur_penjualan/retur/adjustment/' . $id_request);
+            return;
+        }
+
+        $user = $this->_getUser();
+        $this->M_ReturPenjualan->update_spr_adjustment_status($id_request, [
+            'status'            => 'REJECTED',
+            'approved_by'       => $user['nama'],
+            'approved_username' => $user['username'],
+            'approved_at'       => date('Y-m-d H:i:s'),
+            'approval_note'     => $note,
+        ]);
+
+        $this->session->set_flashdata('success', "Adjustment Retur <strong>{$req['no_request']}</strong> telah ditolak.");
+        redirect('retur_penjualan/retur/adjustment/' . $id_request);
     }
 
     /** Detail Retur Penjualan */

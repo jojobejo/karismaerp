@@ -131,6 +131,13 @@ tr.row-pending { background:#fafafa !important; }
                             <i class="fas fa-tasks mr-1"></i> Checker Loading SO
                         </a>
                     </div>
+                    <?php if (!empty($is_checker_coordinator)) : ?>
+                    <div class="col-auto">
+                        <button class="btn btn-warning font-weight-bold" data-toggle="modal" data-target="#modalKelolaChecker">
+                            <i class="fas fa-users-cog mr-1"></i> Kelola Daftar Checker
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- ============================================================
@@ -742,9 +749,15 @@ tr.row-pending { background:#fafafa !important; }
 
                                     <?php elseif ($role === 'CHECKER'): ?>
                                         <?php if ($lk['status'] === 'DO_SELESAI' && !$is_paused_siapkan && !$is_paused): ?>
-                                            <button class="btn btn-sm btn-siapkan btn-start-siapkan-lk" data-id="<?= $lk['id'] ?>">
-                                                <i class="fas fa-boxes mr-1"></i> Siapkan Barang
-                                            </button>
+                                            <?php if (empty($lk['nik_checker'])): ?>
+                                                <span class="badge badge-secondary"><i class="fas fa-user-clock mr-1"></i>Menunggu penentuan checker (Ahmad Fauzan)</span>
+                                            <?php elseif ($lk['nik_checker'] !== $nik): ?>
+                                                <span class="text-muted small"><i class="fas fa-lock mr-1"></i>Ditugaskan ke <?= htmlspecialchars($lk['nm_checker'] ?? '') ?></span>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-siapkan btn-start-siapkan-lk" data-id="<?= $lk['id'] ?>">
+                                                    <i class="fas fa-boxes mr-1"></i> Siapkan Barang
+                                                </button>
+                                            <?php endif; ?>
                                         <?php elseif ($lk_siapkan && $lk['nik_checker'] === $nik): ?>
                                             <?php if ($is_paused_siapkan) : ?>
                                                 <button class="btn btn-sm btn-resume btn-resume-siapkan-lk" data-id="<?= $lk['id'] ?>">
@@ -762,10 +775,12 @@ tr.row-pending { background:#fafafa !important; }
                                             <?php endif; ?>
                                         <?php elseif ($lk_siapkan): ?>
                                             <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($lk['nm_checker'] ?? '') ?> sedang menyiapkan</span>
-                                        <?php elseif ($lk_barang_siap): ?>
+                                        <?php elseif ($lk_barang_siap && $lk['nik_checker'] === $nik): ?>
                                             <button class="btn btn-sm btn-success btn-start-loading-lk" data-id="<?= $lk['id'] ?>">
                                                 <i class="fas fa-play mr-1"></i> Start Loading
                                             </button>
+                                        <?php elseif ($lk_barang_siap): ?>
+                                            <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= !empty($lk['nm_checker']) ? 'Ditugaskan ke ' . htmlspecialchars($lk['nm_checker']) : 'Menunggu penentuan checker' ?></span>
                                         <?php elseif ($lk_started && $lk['nik_checker'] === $nik): ?>
                                             <?php if ($is_paused) : ?>
                                                 <button class="btn btn-sm btn-resume btn-resume-lk" data-id="<?= $lk['id'] ?>">
@@ -873,6 +888,13 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php endif; ?>
                                     <?php endif; // end can_ops_lk roles ?>
                                     <?php endif; // end can_ops_lk ?>
+                                    <?php if (!empty($is_checker_coordinator) && $lk['status'] !== 'DONE' && !in_array($lk['status'], ['PENYIAPAN_BARANG','PROSES_LOADING'], true)): ?>
+                                        <button class="btn btn-sm <?= empty($lk['nik_checker']) ? 'btn-outline-primary' : 'btn-warning' ?> btn-ganti-checker mt-1"
+                                                data-id="<?= $lk['id'] ?>" data-type="lk"
+                                                data-checker-lama="<?= htmlspecialchars($lk['nm_checker'] ?? '') ?>">
+                                            <i class="fas fa-user-check mr-1"></i><?= empty($lk['nik_checker']) ? 'Tentukan Checker' : 'Ganti CK' ?>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -1091,9 +1113,15 @@ tr.row-pending { background:#fafafa !important; }
 
                                     <?php elseif ($role === 'CHECKER'): ?>
                                         <?php if ($kk['status'] === 'DO_SELESAI' && !$is_paused_siapkan && !$is_paused): ?>
-                                            <button class="btn btn-sm btn-siapkan btn-start-siapkan-kk" data-id="<?= $kk['id'] ?>">
-                                                <i class="fas fa-boxes mr-1"></i> Siapkan Barang
-                                            </button>
+                                            <?php if (empty($kk['nik_checker'])): ?>
+                                                <span class="badge badge-secondary"><i class="fas fa-user-clock mr-1"></i>Menunggu penentuan checker (Ahmad Fauzan)</span>
+                                            <?php elseif ($kk['nik_checker'] !== $nik): ?>
+                                                <span class="text-muted small"><i class="fas fa-lock mr-1"></i>Ditugaskan ke <?= htmlspecialchars($kk['nm_checker'] ?? '') ?></span>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-siapkan btn-start-siapkan-kk" data-id="<?= $kk['id'] ?>">
+                                                    <i class="fas fa-boxes mr-1"></i> Siapkan Barang
+                                                </button>
+                                            <?php endif; ?>
                                         <?php elseif ($kk_siapkan && $kk['nik_checker'] === $nik): ?>
                                             <?php if ($is_paused_siapkan) : ?>
                                                 <button class="btn btn-sm btn-resume btn-resume-siapkan-kk" data-id="<?= $kk['id'] ?>">
@@ -1111,10 +1139,12 @@ tr.row-pending { background:#fafafa !important; }
                                             <?php endif; ?>
                                         <?php elseif ($kk_siapkan): ?>
                                             <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($kk['nm_checker'] ?? '') ?> sedang menyiapkan</span>
-                                        <?php elseif ($kk_barang_siap): ?>
+                                        <?php elseif ($kk_barang_siap && $kk['nik_checker'] === $nik): ?>
                                             <button class="btn btn-sm btn-success btn-start-loading-kk" data-id="<?= $kk['id'] ?>">
                                                 <i class="fas fa-play mr-1"></i> Start Loading
                                             </button>
+                                        <?php elseif ($kk_barang_siap): ?>
+                                            <span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= !empty($kk['nm_checker']) ? 'Ditugaskan ke ' . htmlspecialchars($kk['nm_checker']) : 'Menunggu penentuan checker' ?></span>
                                         <?php elseif ($kk_started && $kk['nik_checker'] === $nik): ?>
                                             <?php if ($is_paused) : ?>
                                                 <button class="btn btn-sm btn-resume btn-resume-kk" data-id="<?= $kk['id'] ?>">
@@ -1222,6 +1252,13 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php endif; ?>
                                     <?php endif; ?>
                                     <?php endif; // end can_ops_kk ?>
+                                    <?php if (!empty($is_checker_coordinator) && $kk['status'] !== 'DONE' && !in_array($kk['status'], ['PENYIAPAN_BARANG','PROSES_LOADING'], true)): ?>
+                                        <button class="btn btn-sm <?= empty($kk['nik_checker']) ? 'btn-outline-primary' : 'btn-warning' ?> btn-ganti-checker mt-1"
+                                                data-id="<?= $kk['id'] ?>" data-type="kk"
+                                                data-checker-lama="<?= htmlspecialchars($kk['nm_checker'] ?? '') ?>">
+                                            <i class="fas fa-user-check mr-1"></i><?= empty($kk['nik_checker']) ? 'Tentukan Checker' : 'Ganti CK' ?>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -1410,11 +1447,11 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if (in_array($role, ['MANAGERCK', 'MANAGERWH'])) : ?>
+<?php if (!empty($is_checker_coordinator)) : ?>
 <div class="modal fade" id="modalGantiChecker" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-warning">
-            <h5 class="modal-title"><i class="fas fa-exchange-alt mr-2"></i> Ganti Checker</h5>
+            <h5 class="modal-title"><i class="fas fa-exchange-alt mr-2"></i> Tentukan / Ganti Checker</h5>
             <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
         </div>
         <div class="modal-body">
@@ -1422,17 +1459,16 @@ tr.row-pending { background:#fafafa !important; }
             <input type="hidden" id="gc_type">
             <div class="alert alert-info py-2 mb-3" style="font-size:13px;">
                 <i class="fas fa-info-circle mr-1"></i>
-                Checker baru akan langsung menggantikan checker saat ini.
-                Waktu mulai dan durasi <b>tidak akan berubah</b>.
+                Checker yang dipilih akan ditugaskan untuk melakukan loading rute ini.
             </div>
             <div class="form-group mb-0">
-                <label class="font-weight-bold">Pilih Checker Pengganti <span class="text-danger">*</span></label>
+                <label class="font-weight-bold">Pilih Checker <span class="text-danger">*</span></label>
                 <select id="gc_checker" class="form-control">
                     <option value="">-- Pilih Checker --</option>
                     <?php foreach ($list_checker as $ck) : ?>
                         <option value="<?= $ck['nik'] ?>"
                                 data-nama="<?= htmlspecialchars($ck['nm_karyawan']) ?>">
-                            <?= htmlspecialchars($ck['nm_karyawan']) ?>
+                            <?= htmlspecialchars($ck['nm_karyawan']) ?> (<?= htmlspecialchars($ck['username'] ?: $ck['nik']) ?>)
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -1441,8 +1477,80 @@ tr.row-pending { background:#fafafa !important; }
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
             <button type="button" class="btn btn-warning" id="btnKonfirmasiGantiChecker">
-                <i class="fas fa-exchange-alt mr-1"></i> Ganti Checker
+                <i class="fas fa-check mr-1"></i> Simpan Checker
             </button>
+        </div>
+    </div></div>
+</div>
+
+<!-- Modal Kelola Daftar Checker (Khusus Ahmad Fauzan, Departemen LOGISTIC) -->
+<div class="modal fade" id="modalKelolaChecker" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header bg-warning">
+            <h5 class="modal-title font-weight-bold"><i class="fas fa-users-cog mr-2"></i> Kelola Daftar Checker (Departemen LOGISTIC)</h5>
+            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-info py-2 mb-3" style="font-size:13px;">
+                <i class="fas fa-info-circle mr-1"></i>
+                Hanya user aktif dari departemen <b>LOGISTIC</b> yang dapat ditambahkan ke daftar checker.
+            </div>
+            <div class="form-row align-items-end mb-3">
+                <div class="col-md-9">
+                    <label class="font-weight-bold small mb-1">Tambah Checker dari Departemen LOGISTIC:</label>
+                    <select id="kc_new_nik" class="form-control form-control-sm">
+                        <option value="">-- Pilih Karyawan LOGISTIC --</option>
+                        <?php foreach (($logistic_candidates ?? []) as $cand) : ?>
+                            <option value="<?= htmlspecialchars($cand['nik']) ?>">
+                                <?= htmlspecialchars($cand['nama_lngkp']) ?> (<?= htmlspecialchars($cand['username']) ?> - <?= htmlspecialchars($cand['bagian']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-success btn-sm btn-block font-weight-bold" id="btnAddCheckerMaster">
+                        <i class="fas fa-plus mr-1"></i> Tambah Checker
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Nama</th>
+                            <th>Username</th>
+                            <th>NIK</th>
+                            <th>Departemen / Bagian</th>
+                            <th class="text-center" style="width:90px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($list_checker)) : ?>
+                            <tr><td colspan="5" class="text-center text-muted py-3">Belum ada checker aktif.</td></tr>
+                        <?php else : ?>
+                            <?php foreach ($list_checker as $ck) : ?>
+                                <tr>
+                                    <td class="font-weight-bold"><?= htmlspecialchars($ck['nm_karyawan']) ?></td>
+                                    <td><code><?= htmlspecialchars($ck['username'] ?? '-') ?></code></td>
+                                    <td><?= htmlspecialchars($ck['nik']) ?></td>
+                                    <td><?= htmlspecialchars(($ck['departement'] ?? 'LOGISTIC') . ' — ' . ($ck['bagian'] ?? '-')) ?></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-xs btn-danger btn-remove-checker-master"
+                                                data-nik="<?= htmlspecialchars($ck['nik']) ?>"
+                                                data-nama="<?= htmlspecialchars($ck['nm_karyawan']) ?>">
+                                            <i class="fas fa-trash"></i> Hapus
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
         </div>
     </div></div>
 </div>
@@ -1903,21 +2011,70 @@ $(document).ready(function () {
             });
         });
     });
-    // ── GANTI CHECKER ──────────────────────────────────────────────
+    // ── TENTUKAN / GANTI CHECKER ──────────────────────────────────
     $(document).on('click', '.btn-ganti-checker', function () {
         var id          = $(this).data('id');
         var type        = $(this).data('type');       // bongkaran | kk | lk
-        var checkerLama = $(this).data('checker-lama') || '-';
+        var checkerLama = $(this).data('checker-lama') || '';
         $('#gc_id').val(id);
         $('#gc_type').val(type);
         $('#gc_checker').val('');
-        // Tampilkan info checker lama di alert
-        $('#modalGantiChecker .alert').html(
-            '<i class="fas fa-info-circle mr-1"></i>' +
-            'Checker saat ini: <b>' + checkerLama + '</b>.<br>' +
-            'Waktu mulai dan durasi <b>tidak akan berubah</b>.'
-        );
+        if (checkerLama) {
+            $('#modalGantiChecker .modal-title').html('<i class="fas fa-exchange-alt mr-2"></i> Ganti Checker');
+            $('#modalGantiChecker .alert').html(
+                '<i class="fas fa-info-circle mr-1"></i>' +
+                'Checker saat ini: <b>' + checkerLama + '</b>.<br>' +
+                'Waktu mulai dan durasi <b>tidak akan berubah</b>.'
+            );
+        } else {
+            $('#modalGantiChecker .modal-title').html('<i class="fas fa-user-check mr-2"></i> Tentukan Checker');
+            $('#modalGantiChecker .alert').html(
+                '<i class="fas fa-info-circle mr-1"></i>' +
+                'Pilih checker yang ditugaskan untuk melakukan loading rute ini.'
+            );
+        }
         $('#modalGantiChecker').modal('show');
+    });
+
+    // ── KELOLA DAFTAR CHECKER (KHUSUS FAUZAN) ─────────────────────
+    $('#btnAddCheckerMaster').on('click', function () {
+        var nik = $('#kc_new_nik').val();
+        if (!nik) { alert('Pilih karyawan departemen LOGISTIC terlebih dahulu.'); return; }
+        ajaxPost('checker/add_checker_master', { nik: nik }, function (res) {
+            Swal.fire({
+                icon: res.status ? 'success' : 'error',
+                title: res.status ? 'Berhasil' : 'Gagal',
+                text: res.msg,
+                timer: res.status ? 1500 : 0,
+                showConfirmButton: !res.status
+            }).then(function () { if (res.status) location.reload(); });
+        });
+    });
+
+    $(document).on('click', '.btn-remove-checker-master', function () {
+        var nik  = $(this).data('nik');
+        var nama = $(this).data('nama');
+        Swal.fire({
+            title: 'Hapus dari Daftar Checker?',
+            html: '<b>' + nama + '</b> tidak akan bisa melakukan loading kecuali ditambahkan kembali.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+        }).then(function (r) {
+            if (!r.isConfirmed) return;
+            ajaxPost('checker/remove_checker_master', { nik: nik }, function (res) {
+                Swal.fire({
+                    icon: res.status ? 'success' : 'error',
+                    title: res.status ? 'Berhasil' : 'Gagal',
+                    text: res.msg,
+                    timer: res.status ? 1500 : 0,
+                    showConfirmButton: !res.status
+                }).then(function () { if (res.status) location.reload(); });
+            });
+        });
     });
 
     $('#btnKonfirmasiGantiChecker').on('click', function () {

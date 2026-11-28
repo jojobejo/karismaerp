@@ -40,7 +40,7 @@ class M_Transaksi extends CI_Model
         $date_to   = !empty($filters['date_to']) ? $filters['date_to'] : $today;
         $search    = trim((string)($filters['search'] ?? ''));
         $status    = trim((string)($filters['status'] ?? ''));
-        $limit     = max(1, (int)$limit);
+        $limit     = ($limit === null || (int)$limit <= 0) ? null : (int)$limit;
         $offset    = max(0, (int)$offset);
 
         $subqueries = [];
@@ -440,13 +440,14 @@ class M_Transaksi extends CI_Model
         $summaryParams = array_merge($queryParams, $outerParams);
         $summary = $this->db->query($summarySql, $summaryParams)->row_array();
 
-        // Paginated Query with embedded LIMIT & OFFSET
+        // Query data (dengan atau tanpa LIMIT untuk kebutuhan export)
+        $limitSql = $limit !== null ? "LIMIT {$limit} OFFSET {$offset}" : "";
         $dataSql = "
             SELECT u.*
             FROM ({$unionSql}) u
             {$whereClause}
             ORDER BY u.tanggal_transaksi DESC, u.created_at DESC, u.id_transaksi DESC
-            LIMIT {$limit} OFFSET {$offset}
+            {$limitSql}
         ";
 
         $rows = $this->db->query($dataSql, $summaryParams)->result_array();
@@ -461,6 +462,87 @@ class M_Transaksi extends CI_Model
                 'total_unposted' => (int)($summary['total_unposted'] ?? 0),
             ]
         ];
+    }
+
+    /**
+     * Mengambil peta rincian item barang per ID transaksi secara batch untuk kebutuhan Export Excel
+     */
+    public function get_transaction_items_map($category, array $ids)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $category = strtolower(trim((string)$category));
+        $rows = [];
+
+        switch ($category) {
+            case 'penjualan':
+            case 'faktur_penjualan':
+                if ($this->db->table_exists('tbso_faktur_detail')) {
+                    $rows = $this->db
+                        ->select('d.id_faktur AS parent_id, d.kd_barang, d.nama_barang, d.qty, d.satuan, d.hrg_satuan AS harga_satuan, d.subtotal_after_disc AS subtotal')
+                        ->from('tbso_faktur_detail d')
+                        ->where_in('d.id_faktur', $ids)
+                        ->order_by('d.id', 'ASC')
+                        ->get()->result_array();
+                }
+                break;
+
+            case 'faktur_konsinyasi':
+            case 'faktur_test_market':
+                if ($this->db->table_exists('tb_konsinyasi_faktur')) {
+                    $rows = $this->db
+                        ->select('kf.id_faktur_konsinyasi AS parent_id, kf.kd_barang, kf.nama_barang, kf.qty, kf.satuan, kf.hrg_satuan AS harga_satuan, kf.subtotal')
+                        ->from('tb_konsinyasi_faktur kf')
+                        ->where_in('kf.id_faktur_konsinyasi', $ids)
+                        ->get()->result_array();
+                }
+                break;
+
+            case 'pembelian':
+                if ($this->db->table_exists('tb_lpb_detail')) {
+                    $rows = $this->db
+                        ->select('d.id_lpb AS parent_id, d.kd_barang, COALESCE(mb.nm_barang, d.kd_barang) AS nama_barang, d.qty_diterima AS qty, COALESCE(mb.satuan, "") AS satuan, d.harga_satuan, d.total_harga AS subtotal')
+                        ->from('tb_lpb_detail d')
+                        ->join('tb_master_barang mb', 'mb.kode_barang = d.kd_barang OR mb.kd_system = d.kd_barang', 'left')
+                        ->where_in('d.id_lpb', $ids)
+                        ->order_by('d.id_detail_lpb', 'ASC')
+                        ->get()->result_array();
+                }
+                break;
+
+            case 'retur_penjualan':
+                if ($this->db->table_exists('tbrp_retur_penjualan_detail')) {
+                    $rows = $this->db
+                        ->select('d.id_retur AS parent_id, COALESCE(mb.kode_barang, mb.kd_system, "") AS kd_barang, d.nama_barang, d.qty_retur AS qty, COALESCE(mb.satuan, "") AS satuan, d.harga_satuan, (d.qty_retur * d.harga_satuan) AS subtotal')
+                        ->from('tbrp_retur_penjualan_detail d')
+                        ->join('tb_master_barang mb', 'mb.nm_barang = d.nama_barang', 'left')
+                        ->where_in('d.id_retur', $ids)
+                        ->get()->result_array();
+                }
+                break;
+
+            case 'retur_pembelian':
+                if ($this->db->table_exists('tb_retur_pembelian_detail')) {
+                    $rows = $this->db
+                        ->select('d.id_retur_pembelian AS parent_id, d.kd_barang, COALESCE(mb.nm_barang, d.kd_barang) AS nama_barang, d.qty_retur AS qty, COALESCE(mb.satuan, "") AS satuan, d.harga_satuan, d.total AS subtotal')
+                        ->from('tb_retur_pembelian_detail d')
+                        ->join('tb_master_barang mb', 'mb.kode_barang = d.kd_barang OR mb.kd_system = d.kd_barang', 'left')
+                        ->where_in('d.id_retur_pembelian', $ids)
+                        ->get()->result_array();
+                }
+                break;
+        }
+
+        $map = [];
+        foreach ($rows as $r) {
+            $pid = (int)($r['parent_id'] ?? 0);
+            if ($pid <= 0) continue;
+            $map[$pid][] = $r;
+        }
+        return $map;
     }
 
     // =========================================================================
